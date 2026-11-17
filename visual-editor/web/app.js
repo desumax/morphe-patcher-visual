@@ -877,7 +877,18 @@ function device(orient, inner, extra = "") {
   return `<div class="dev ${orient}" style="width:${w}px;height:${h}px;${extra}"><div class="waves l"></div><div class="waves r"></div>${inner}<div class="finger" id="scFinger">${I("gesture")}</div></div>`;
 }
 const playerArea = (i, overlay = "") => `<div class="dv-video" style="background:${ART[i]}">${overlay}</div><div class="dv-below"><i></i><i></i><i></i></div>`;
-function rotate(dev, orient) { const [w, h] = DEV_SIZE[orient]; dev.classList.remove("port", "land"); dev.classList.add(orient); dev.style.width = w + "px"; dev.style.height = h + "px"; }
+function rotate(dev, orient) { const [w, h] = DEV_SIZE[orient]; dev.classList.remove("port", "land"); dev.classList.add(orient); dev.style.width = w + "px"; dev.style.height = h + "px"; fitDev(orient); }
+// The phone in a scenario is drawn at a fixed small size (so all coordinates stay simple) and then
+// scaled up to fill the space the canvas has, between the caption line and the footer.
+function fitDev(orient) {
+  const canvas = $("canvas"), box = canvas.querySelector(".scbox"), dev = box && box.querySelector(".dev"); if (!dev) return;
+  const o = orient || (dev.classList.contains("land") ? "land" : "port"), [w, h] = DEV_SIZE[o];
+  const sit = canvas.querySelector(".sit"), availW = canvas.clientWidth - 28, availH = canvas.clientHeight - 64 - (sit ? sit.offsetHeight + 8 : 0) - 10;
+  const sc = Math.max(.35, Math.min(3, availW / (w + 6), availH / (h + 6)));
+  dev.style.scale = sc.toFixed(3);
+  box.style.width = Math.round((w + 6) * sc) + "px"; box.style.height = Math.round((h + 6) * sc) + "px";
+}
+const devScale = dev => (dev.getBoundingClientRect().width / (dev.offsetWidth || 1)) || 1;
 function situation(text) { const el = document.querySelector("#canvas .sit"); if (!el) return; el.style.opacity = 0; setTimeout(() => { el.textContent = text; el.style.opacity = 1; }, 160); }
 function setFoot(text) { const el = document.querySelector("#canvas .foot"); if (el) el.textContent = text; }
 function buzz(dev, on) {
@@ -1511,6 +1522,7 @@ function playScenario(k, prevValue) {
   canvas.classList.add("show");
   const prev = prevValue !== undefined ? prevValue : PREF[k].type === "boolean" ? !V(k) : V(k);
   const foot = fn(canvas.querySelector(".scbox"), V(k), prev);
+  fitDev();
   if (foot && !canvas.querySelector(".foot").textContent) canvas.querySelector(".foot").textContent = foot;
   const prog = canvas.querySelector(".prog");
   prog.animate([{ width: "0%" }, { width: "100%" }], { duration: SC_HOLD, delay: SC_FADE, fill: "forwards" });
@@ -1753,7 +1765,7 @@ Object.assign(DEMOS, {
   },
 });
 // Shared pieces for small "phone" scenarios: a page made of rows, a toast, a sheet.
-const pageRows = (rows) => `<div class="pg7" style="position:absolute;inset:0;background:#0f0f0f;padding:6px;display:grid;gap:5px;align-content:start;font-size:7px;color:#ddd">${rows}</div>`;
+const pageRows = (rows) => `<div class="pg7" style="position:absolute;inset:0;background:#0f0f0f;padding:6px;display:grid;grid-template-columns:minmax(0,1fr);gap:5px;align-content:start;font-size:7px;color:#ddd">${rows}</div>`;
 const bar7 = (w = 100, c = "#2a2a2a", h = 6) => `<i style="display:block;height:${h}px;width:${w}%;border-radius:3px;background:${c}"></i>`;
 const cmt7 = (i, txt) => `<div class="cm7" style="display:flex;gap:4px;align-items:flex-start;padding:3px;border-radius:4px;transition:background .2s"><span style="width:12px;height:12px;border-radius:50%;background:${AV[i % AV.length]};flex:none"></span><span style="line-height:1.3">${txt}</span></div>`;
 function toast7(dev, text, top = "78%") { dev.querySelectorAll(".t7").forEach(n => n.remove()); dev.insertAdjacentHTML("beforeend", `<div class="toastin t7" style="top:${top};font-size:8px;padding:3px 8px">${text}</div>`); }
@@ -1848,7 +1860,7 @@ SCENES.dearrow = () => {
     const on = !!V("morphe_" + k);
     const t = on ? (casual && i % 2 ? "I built a tiny cabin in Norway (original title kept)" : "Building a 12 m² cabin from reclaimed pine in two weeks") : "I BUILT a TINY CABIN in the FOREST?! 😱 (insane)";
     return C(k, `<div style="display:flex;gap:10px;padding:8px 12px;align-items:flex-start"><div style="width:132px;flex:none;position:relative">${thumb(on ? 3 : 0, "border-radius:8px")}${on ? `<span class="dur" style="left:4px;right:auto">still · ${entryLabel("morphe_dearrow_thumbnail_stills_time", V("morphe_dearrow_thumbnail_stills_time"))}</span>` : ""}</div>
-      <div style="min-width:0"><div class="t2" style="font-size:10.5px;margin-bottom:2px">${where}</div><div class="t1" style="font-size:13px;line-height:1.3">${on && icon ? C("dearrow_titles_icon", `<span style="display:inline-grid;place-items:center;width:15px;height:15px;border-radius:4px;background:#1e88e5;margin-right:4px;vertical-align:-2px;font-size:9px">DA</span>`, { tag: "span" }) : ""}${esc(t)}</div><div class="t2">Fjord & Timber · 1.2M views</div></div></div>`, { blk: 1 });
+      <div style="min-width:0"><div class="t2" style="font-size:10.5px;margin-bottom:2px">${where}</div><div class="t1" style="font-size:13px;line-height:1.3">${on && icon ? C("dearrow_titles_icon", `<span style="display:inline-grid;place-items:center;width:15px;height:15px;border-radius:4px;background:#1e88e5;margin-right:4px;vertical-align:1px;font-size:9px;line-height:1">DA</span>`, { tag: "span" }) : ""}${esc(t)}</div><div class="t2">Fjord & Timber · 1.2M views</div></div></div>`, { blk: 1 });
   };
   return `<div class="inner-scroll" style="background:#0f0f0f;max-height:350px;overflow-y:auto;padding:4px 0">
     ${places.map(card).join("")}
@@ -1945,8 +1957,9 @@ const tgt7 = (html, w) => `<div class="tgt7${w ? " w7" : ""}">${html}</div>`;
 const nav7 = (tabs = ["home", "shorts", "plus", "subs", "you"]) => `<div style="position:absolute;left:0;right:0;bottom:0;height:16px;background:#0f0f0f;border-top:1px solid #222;display:flex;justify-content:space-around;align-items:center">${tabs.map(n => typeof n === "string" ? ico7(n, 8) : n).join("")}</div>`;
 const sheetRows = (rows) => rows.map(r => typeof r === "string" ? `<div>${r}</div>` : item7(r[0], r[1])).join("");
 function x7(dev, el) {
-  const d = dev.getBoundingClientRect(), r = el.getBoundingClientRect(), s = Math.min(r.width, r.height, 22) + 6;
-  dev.insertAdjacentHTML("beforeend", `<div class="x7" style="left:${r.left - d.left + r.width / 2 - s / 2}px;top:${r.top - d.top + r.height / 2 - s / 2}px;width:${s}px;height:${s}px">${ico7("close", s, "#ff0033")}</div>`);
+  const k = devScale(dev), d = dev.getBoundingClientRect(), r0 = el.getBoundingClientRect();
+  const r = { left: (r0.left - d.left) / k, top: (r0.top - d.top) / k, width: r0.width / k, height: r0.height / k }, s = Math.min(r.width, r.height, 22) + 6;
+  dev.insertAdjacentHTML("beforeend", `<div class="x7" style="left:${r.left + r.width / 2 - s / 2 - 3}px;top:${r.top + r.height / 2 - s / 2 - 3}px;width:${s}px;height:${s}px">${ico7("close", s, "#ff0033")}</div>`);
 }
 function clock7(dev, label) {
   dev.insertAdjacentHTML("beforeend", `<div class="clock7"><div class="face"><i class="h"></i><i class="m"></i></div><span>${label}</span></div>`);
@@ -1993,7 +2006,7 @@ scen("feed", "feed_long_press_menu", (box, on) => {
   at(1100, () => { f.classList.remove("hold", "show"); if (on) sheet7(dev, sheetRows([["clock", "Save to Watch later"], ["plist", "Save to playlist"], ["dl", "Download"], ["share", "Share"], ["close", "Not interested"]])); else { dev.querySelector(".pg7").style.filter = "brightness(.6)"; toast7(dev, "Inline preview plays", "40%"); } });
   return on ? "Hold a video: its menu opens" : "Hold a video: it starts an inline preview (stock)";
 });
-hidePage("feed", "feed_view_count", "Video rows in the feed", feed7(`<div style="display:flex;gap:4px;align-items:center"><div style="width:30px;height:17px;border-radius:2px;background:${ART[4]};flex:none"></div><div style="font-size:6.5px">Night train to Bodø<div style="display:flex;gap:2px;font-size:5.5px;color:#aaa">Fjord & Timber ${tgt7("· 1.2M views", 1)} · 3 days</div></div></div>`), { invert: true, shown: "View counts are shown where YouTube left them out", hidden: "Some rows have no view count (stock)" });
+hidePage("feed", "feed_view_count", "Video rows in the feed", feed7(`<div style="display:flex;gap:4px;align-items:center"><div style="width:30px;height:17px;border-radius:2px;background:${ART[4]};flex:none"></div><div style="font-size:6.5px;flex:1;min-width:0">Night train to Bodø<div style="display:flex;gap:2px;font-size:5.5px;color:#aaa;white-space:nowrap">Fjord & Timber ${tgt7("· 1.2M views", 1)} · 3 days</div></div></div>`), { invert: true, shown: "View counts are shown where YouTube left them out", hidden: "Some rows have no view count (stock)" });
 hidePage("feed", "hide_account_menu", "The account menu", you7(`<div style="display:grid;gap:1px">${item7("clock", "History")}${item7("plist", "Playlists")}${tgt7(item7("spark", "Get YouTube Premium"))}${item7("dl", "Downloads")}${tgt7(item7("dollar", "Purchases and memberships"))}</div>`), { hidden: "Menu items you filtered are removed" });
 hidePage("feed", "hide_album_cards", "Searching for an artist", search7("midnight tapes", tgt7(`<div style="display:flex;gap:4px;align-items:center;padding:3px;border-radius:3px;background:#1b1b1b"><div style="width:22px;height:22px;background:${ART[6]};border-radius:2px"></div><div style="font-size:6.5px">Neon Fjord<div style="font-size:5.5px;color:#aaa">Album · 2025</div></div></div>`) + row7(2, "Midnight Tapes live") + row7(3, "Lo-fi to study to")));
 hidePage("feed", "hide_artist_cards", "Searching for an artist", search7("midnight tapes", tgt7(`<div style="display:flex;gap:5px;align-items:center;padding:3px;border-radius:3px;background:#1b1b1b"><span style="width:22px;height:22px;border-radius:50%;background:${AV[4]}"></span><div style="font-size:6.5px">Midnight Tapes<div style="font-size:5.5px;color:#aaa">Artist · 1.1M subscribers</div></div></div>`) + row7(2, "Midnight Tapes live") + row7(3, "Lo-fi to study to")));
@@ -2137,7 +2150,7 @@ scen("look", "theme_color_change_foreground", (box, on) => {
   const dev = box.querySelector(".dev");
   dev.querySelectorAll(".fg7").forEach(e => { e.style.color = "#f1f1f1"; e.style.transition = "color .3s"; });
   at(700, () => dev.querySelectorAll(".fg7").forEach(e => { e.style.color = on ? "#111" : "#f1f1f1"; }));
-  at(1100, () => toast7(dev, on ? "Text turns dark on a light colour" : "White text on a light colour is hard to read", "84%"));
+  at(1100, () => toast7(dev, on ? "Text turns dark on a light colour" : "White text on a light colour is hard to read", "74%"));
   return on ? "Text colour adapts to your theme colour" : "Text stays white (stock)";
 });
 scen("look", "custom_filter", (box, on) => {
@@ -2288,7 +2301,27 @@ scen("playback", "disable_playlist_autoplay", (box, on) => {
   at(1400, () => { cd.innerHTML = on ? `${ico7("pause", 7)} Stopped` : `${ico7("play", 7)} Playing 3 / 12`; });
   return on ? "Playlists stop after each video" : "Playlists play on (stock)";
 });
-hidePage("playback", "disable_player_popup_panels", "Opening a video with chapters", pageRows(player7(3) + `<b style="font-size:7px">Building a tiny cabin</b>` + row7(2, "Up next")) + `<div class="tgt7" style="position:absolute;left:0;right:0;bottom:0;height:60%;background:#212121;border-radius:6px 6px 0 0;padding:4px;font-size:6.5px;z-index:4"><b>Chapters</b><div>0:00 Intro</div><div>2:10 Beams</div></div>`, { raw: true, hidden: "Panels no longer pop open by themselves" });
+scen("playback", "disable_player_popup_panels", (box, on) => {
+  situation("Opening a video from a playlist, then a live stream");
+  box.innerHTML = device("port", pageRows(player7(3) + `<b style="font-size:7px">Night train to Bodø</b><div class="pbar7" style="display:flex;justify-content:space-between;padding:2px 4px;border-radius:3px;background:#1b1b1b;font-size:6px"><span>Road trip mix · 2 / 12</span>${ico7("expand", 7)}</div>` + row7(2, "Up next") + row7(4, "Up next")));
+  const dev = box.querySelector(".dev");
+  const panel = (title, rows) => `<div class="pp7" style="position:absolute;left:0;right:0;top:52px;bottom:0;background:#1b1b1b;padding:4px;display:grid;gap:3px;align-content:start;font-size:6px;animation:sheetup .3s var(--ease);z-index:4"><b style="font-size:6.5px">${title}</b>${rows}</div>`;
+  at(500, () => { if (on) { check7(dev, "Panel stays closed"); return; } dev.insertAdjacentHTML("beforeend", panel("Road trip mix", [1, 2, 4, 5].map(i => row7(i, "Video " + i)).join(""))); });
+  at(1500, () => { dev.querySelectorAll(".pp7,.check7").forEach(e => e.remove()); dev.querySelector(".pg7 > div").style.background = ART[5]; dev.querySelector(".pg7 b").textContent = "LIVE · Northern lights"; dev.querySelector(".pbar7").innerHTML = `<span>Live chat · 1.2K watching</span>${ico7("expand", 7)}`; });
+  at(1900, () => { if (on) { check7(dev, "Chat stays closed, the page stays readable"); return; } dev.insertAdjacentHTML("beforeend", panel("Live chat", chat7([[1, "ola", "so pretty"], [2, "mia", "green!!"], [3, "ken", "😍"], [4, "liv", "where is this?"]]))); });
+  return on ? "Playlist and live chat panels only open when you tap them" : "Playlist and live chat panels pop open by themselves (stock)";
+});
+scen("playback", "continue_watching_prompt", (box, v) => {
+  situation("Watching for a long time without touching the phone");
+  box.innerHTML = device("port", watch7(`<span class="tm7" style="position:absolute;left:3px;bottom:3px;font-size:5.5px;background:rgba(0,0,0,.6);padding:0 3px;border-radius:3px">1:12:40</span>`));
+  const dev = box.querySelector(".dev"); let c;
+  at(300, () => { c = clock7(dev, "Hours of autoplay later"); });
+  at(1300, () => { c.remove(); const pv = dev.querySelector(".pg7 > div");
+    if (v === "DEFAULT") { pv.style.filter = "brightness(.5)"; dev.insertAdjacentHTML("beforeend", `<div style="position:absolute;left:8px;right:8px;top:30%;background:#212121;border-radius:6px;padding:5px;font-size:6.5px;display:grid;gap:4px;z-index:5;animation:pop .25s"><b>Video paused. Continue watching?</b><div style="text-align:right;color:#3ea6ff">Yes</div></div>`); }
+    else if (v === "ALWAYS_COUNTDOWN") dev.insertAdjacentHTML("beforeend", `<div style="position:absolute;left:6px;right:6px;top:14px;background:rgba(0,0,0,.75);border-radius:5px;padding:4px;font-size:6px;z-index:5;animation:pop .25s">Up next in <b>5</b> · Cancel</div>`);
+    else check7(dev, "Keeps playing, no prompt"); });
+  return v === "DEFAULT" ? "YouTube pauses and asks 'Continue watching?' (stock)" : v === "ALWAYS_COUNTDOWN" ? "No prompt; the autoplay countdown always shows before the next video" : "No prompt: playback just continues";
+});
 scen("playback", "do_not_remember_loop_video", (box, on) => {
   situation("Loop was on, then you open the next video");
   box.innerHTML = device("port", watch7(`<span class="lp7" style="position:absolute;right:3px;top:3px;width:12px;height:12px;border-radius:50%;background:rgba(62,166,255,.9);display:grid;place-items:center">${ico7("loop", 8, "#000")}</span>`));
@@ -2415,6 +2448,8 @@ function buildMembers() {
 // offset, and only shows while that dependency is met. MANUAL_PARENT adds groupings that
 // Morphe does not express as a dependency.
 const MANUAL_PARENT = {
+  // the list of speeds is what the custom speed menu shows
+  morphe_custom_playback_speeds: { key: "morphe_custom_speed_menu" },
   // restoring free pinch zoom means nothing while pinch is switched off altogether
   morphe_restore_pinch_to_zoom: { key: "morphe_disable_fullscreen_zoom_gesture", mode: "not" },
   morphe_player_overlay_opacity: { key: "morphe_hide_player_control_buttons_background", always: true },

@@ -241,7 +241,10 @@ button { font: inherit; color: inherit; }
 .dev .dv-below i:nth-child(2) { width: 70%; }
 .dev.land .dv-below { opacity: 0; }
 .canvas .prog { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--m-primary); width: 0; }
-.dev { position: relative; background: #111; border: 3px solid #555; border-radius: 14px; overflow: hidden; transition: width .5s var(--ease), height .5s var(--ease), transform .5s var(--ease); }
+.dev { position: relative; background: #111; border: 3px solid #555; border-radius: 14px; overflow: hidden; transition: width .5s var(--ease), height .5s var(--ease), transform .5s var(--ease), scale .5s var(--ease); flex: none; }
+.scbox { transition: width .5s var(--ease), height .5s var(--ease); position: relative; flex: none; }
+/* the phone is centred on its scaled box, so scaling it never pushes it off-centre */
+.scbox > .dev { position: absolute; left: 50%; top: 50%; translate: -50% -50%; }
 .dev.buzz { animation: buzz .16s linear 2; }
 @keyframes buzz { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-3px) rotate(-1deg); } 75% { transform: translateX(3px) rotate(1deg); } }
 .waves { position: absolute; top: 50%; width: 14px; height: 40px; transform: translateY(-50%); opacity: 0; }
@@ -606,6 +609,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .sechead .nolive { font-weight: 400; color: var(--m-on-var); opacity: .75; font-size: 12px; }
 .theme-yt .sechead .nolive { color: #888; }
 /* round 9 scenario kit */
+.pg7 * { min-width: 0; }
 .dev .toastin { white-space: normal; width: max-content; max-width: 88%; text-align: center; line-height: 1.25; }
 .tgt7 { transition: max-height .45s var(--ease), max-width .45s var(--ease), opacity .3s, margin .45s, padding .45s; max-height: 90px; overflow: hidden; }
 .tgt7.w7 { display: inline-flex; max-width: 90px; vertical-align: bottom; }

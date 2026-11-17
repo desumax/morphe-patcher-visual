@@ -138,3 +138,5 @@ swipe to seek, entering and leaving fullscreen, pinch to zoom); the shared overl
 sides. Restore pinch to zoom sits under Disable pinch-to-zoom and hides while pinch is disabled. Orientation
 scenarios turn the phone visibly before the layout changes (`turn()`), and scenario steps only run for the
 scenario that scheduled them.
+
+Round 11: scenario phones are a fixed logical size and scale to fill the preview canvas (no more shrunk or cut-off animations); custom playback speeds nest under the custom speed menu; new animations for the "Continue watching?" prompt and "Disable player popup panels"; DeArrow icon centred.
