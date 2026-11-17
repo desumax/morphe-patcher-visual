@@ -81,6 +81,13 @@ const P = {
   palette: "M12 3a9 9 0 0 0 0 18c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3-4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3 4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z",
   layers: "M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z",
   toggle: "M17 7H7a5 5 0 0 0 0 10h10a5 5 0 0 0 0-10zm0 8a3 3 0 1 1 0-6 3 3 0 0 1 0 6z",
+  vibrate: "M0 15h2V9H0v6zm3 2h2V7H3v10zm19-8v6h2V9h-2zm-3 8h2V7h-2v10zM16.5 3h-9C6.67 3 6 3.67 6 4.5v15c0 .83.67 1.5 1.5 1.5h9c.83 0 1.5-.67 1.5-1.5v-15c0-.83-.67-1.5-1.5-1.5zM16 19H8V5h8v14z",
+  lockopen: "M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h1.9c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H6V10h12v10z",
+  arrow: "M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z",
+  back: "M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z",
+  expand: "M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z",
+  phone: "M17 1.01 7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z",
+  restart: "M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z",
   list: "M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z",
 };
 const I = (n, cls = "ico", extra = "") => `<svg class="${cls}" viewBox="0 0 24 24" ${extra}><path d="${P[n] || P.info}"/></svg>`;
@@ -113,19 +120,19 @@ const av = (i, s = 36) => `<div class="av" style="width:${s}px;height:${s}px;bac
 // scopes: [screen, subScreen] pairs from the catalogue. A preference that has no adapter
 // but lives in one of a section's scopes is listed under that section's Misc.
 const SECTIONS = [
-  { id: "player", title: "Player controls", scopes: [["PLAYER", "morphe_overlay_buttons_screen"]] },
-  { id: "endscreen", title: "End screen", scopes: [] },
-  { id: "seekbar", title: "Seekbar & gestures", scopes: [["SEEKBAR", null], ["PLAYER", "morphe_disable_haptic_feedback"]] },
-  { id: "watch", title: "Watch page", scopes: [["PLAYER", "morphe_action_buttons_screen"], ["PLAYER", "morphe_hide_description_components_screen"]] },
-  { id: "fullscreen", title: "Fullscreen", scopes: [["SWIPE_CONTROLS", null], ["PLAYER", "morphe_disable_fullscreen_gestures"]] },
-  { id: "feed", title: "Home feed", scopes: [["FEED", null], ["FEED", "morphe_hide_filter_bar_screen"]] },
-  { id: "shorts", title: "Shorts", scopes: [["SHORTS", null], ["SHORTS", "morphe_shorts_player_screen"]] },
-  { id: "nav", title: "Navigation", scopes: [["GENERAL", "morphe_navigation_bar_screen"], ["GENERAL", "morphe_toolbar_screen"]] },
-  { id: "comments", title: "Comments", scopes: [["PLAYER", "morphe_comments_screen"]] },
-  { id: "flyout", title: "Player menu", scopes: [["PLAYER", "morphe_hide_player_flyout"]] },
-  { id: "captions", title: "Captions", scopes: [["PLAYER", "morphe_captions_screen"], ["PLAYER", "morphe_captions_advanced"]] },
-  { id: "miniplayer", title: "Miniplayer", scopes: [["PLAYER", "morphe_miniplayer_screen"], ["PLAYER", "morphe_notification_media_screen"]] },
-  { id: "misc", title: "Misc", scopes: null },
+  { id: "player", icon: "play", title: "Player controls", scopes: [["PLAYER", "morphe_overlay_buttons_screen"]] },
+  { id: "endscreen", icon: "tv", title: "End screen", scopes: [] },
+  { id: "seekbar", icon: "gesture", title: "Seekbar & gestures", scopes: [["SEEKBAR", null], ["PLAYER", "morphe_disable_haptic_feedback"]] },
+  { id: "watch", icon: "like", title: "Watch page", scopes: [["PLAYER", "morphe_action_buttons_screen"], ["PLAYER", "morphe_hide_description_components_screen"]] },
+  { id: "fullscreen", icon: "full", title: "Fullscreen", scopes: [["SWIPE_CONTROLS", null], ["PLAYER", "morphe_disable_fullscreen_gestures"]] },
+  { id: "feed", icon: "home", title: "Home feed", scopes: [["FEED", null], ["FEED", "morphe_hide_filter_bar_screen"]] },
+  { id: "shorts", icon: "shorts", title: "Shorts", scopes: [["SHORTS", null], ["SHORTS", "morphe_shorts_player_screen"]] },
+  { id: "nav", icon: "layout", title: "Navigation", scopes: [["GENERAL", "morphe_navigation_bar_screen"], ["GENERAL", "morphe_toolbar_screen"]] },
+  { id: "comments", icon: "comment", title: "Comments", scopes: [["PLAYER", "morphe_comments_screen"]] },
+  { id: "flyout", icon: "tune", title: "Player menu", scopes: [["PLAYER", "morphe_hide_player_flyout"]] },
+  { id: "captions", icon: "cc", title: "Captions", scopes: [["PLAYER", "morphe_captions_screen"], ["PLAYER", "morphe_captions_advanced"]] },
+  { id: "miniplayer", icon: "pip", title: "Miniplayer", scopes: [["PLAYER", "morphe_miniplayer_screen"], ["PLAYER", "morphe_notification_media_screen"]] },
+  { id: "misc", icon: "list", title: "Misc", scopes: null },
 ];
 
 // ------------------------------------------------------------------ adapters
@@ -273,8 +280,9 @@ function C(k, inner, o = {}) {
   if (o.cls) cls.push(o.cls);
   if (a && (a.kind === "vis" || a.kind === "overlay") && !shown(full)) cls.push("off");
   if (ghosts.has(full)) cls.push("ghost");
-  if (selected === full) cls.push("sel");
-  return `<${o.tag || "div"} class="${cls.join(" ")}" data-k="${full}" data-label="${esc(title(full))}" style="${o.style || ""}">${inner}</${o.tag || "div"}>`;
+  if (fading.has(full)) cls.push("ghost", "ghost-out");
+  if (selected === full || (o.also && selected === "morphe_" + o.also)) cls.push("sel");
+  return `<${o.tag || "div"} class="${cls.join(" ")}" data-k="${full}" ${o.also ? `data-also="morphe_${o.also}"` : ""} data-label="${esc(title(full))}" style="${o.style || ""}">${inner}</${o.tag || "div"}>`;
 }
 const pb = (k, icon, o = {}) => C(k, `<div class="pbtn ${o.bg ? "ctrlbg" : ""}" style="${o.s ? `width:${o.s}px;height:${o.s}px` : ""}">${icon}</div>`, o);
 
@@ -287,45 +295,54 @@ function videoFrame(i = 0, extra = "") {
 
 SCENES.player = () => {
   const bgHidden = !!V("morphe_hide_player_control_buttons_background");
-  const bgOp = bgHidden ? 0 : (Number(V("morphe_player_control_buttons_background_opacity")) / 100);
+  const shade = bgHidden ? 0 : (Number(V("morphe_player_control_buttons_background_opacity")) / 100);
   const op = Number(V("morphe_player_overlay_opacity")) / 100;
   const qual = `<span class="badge-txt">HD</span>`;
-  const custom = [
+  const list = [
     ["copy_video_link_button", I("link")], ["playback_speed_dialog_button", I("speed")], ["video_quality_dialog_button", qual],
     ["loop_video_button", I("loop")], ["mute_video_button", I("vol")], ["pip_button_overlay", I("pip")], ["reload_video_button", I("reload")],
     ["save_to_watch_later_button", I("clock")], ["playlist_panel_button", I("plist")], ["play_all_button", I("queue")],
     ["fullscreen_video_scale_button", I("crop")], ["video_delay_button_overlay", `<span class="badge-txt">ms</span>`], ["external_downloader_overlay_button", I("dl")],
-  ].map(([k, ic]) => C(k, `<div class="pbtn" style="width:32px;height:32px">${ic}</div>`, { cls: "mini" })).join("");
-  return `<div class="video" style="--ctrl-bg:${bgOp}">
+  ];
+  const btn = ([k, ic], extra = "") => C(k, `<div class="pbtn" style="width:32px;height:32px">${ic}</div>`, { cls: extra });
+  const on = list.filter(([k]) => shown("morphe_" + k));
+  const off = list.filter(([k]) => !shown("morphe_" + k));
+  const pill = off.length && (showSlots || trayOpen)
+    ? `<button class="traypill" data-tray aria-expanded="${trayOpen}" title="Buttons that are off">${I(trayOpen ? "close" : "plus")}<span>${off.length}</span></button>` : "";
+  const tray = trayOpen && off.length
+    ? `<div class="tray" role="group" aria-label="Buttons that are off"><div class="trayhead">Off · tap to preview, hold to add</div><div class="trayrow">${off.map(b => btn(b, "intray")).join("")}</div></div>` : "";
+  return `<div class="video">
     ${videoFrame(0)}
-    <div class="scrim" style="opacity:${op}"></div>
-    <div style="position:absolute;inset:0;opacity:${Math.max(op, .08)}">
+    ${C("hide_player_control_buttons_background", "", { also: "player_control_buttons_background_opacity", cls: "shade", style: `position:absolute;inset:0;background:rgba(0,0,0,${shade})` })}
+    <div class="ctrls" style="position:absolute;inset:0;opacity:${Math.max(op, .08)};pointer-events:none">
       <div style="position:absolute;left:6px;top:6px">${pb("hide_collapse_button", I("down"))}</div>
       <div style="position:absolute;right:6px;top:6px;display:flex;gap:2px;align-items:center">
         ${C("hide_autoplay_button", `<div class="pbtn" style="width:48px"><div class="toggle-auto">${I("play")}</div></div>`)}
         ${pb("hide_captions_button", I("cc"))}${pb("hide_cast_button", I("cast"))}${pb("hide_settings_button", I("gear"))}
       </div>
-      ${C("hide_player_control_buttons_background", `<div style="display:flex;gap:28px;align-items:center">
-          ${pb("hide_player_previous_next_buttons", I("prev"), { bg: 1 })}
-          <div class="pbtn ctrlbg bigbtn">${I("pause")}</div>
-          ${pb("hide_player_previous_next_buttons", I("next"), { bg: 1 })}
-        </div>`, { style: "position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:4px;border-radius:40px" })}
-      <div style="position:absolute;right:6px;bottom:18px;display:flex;flex-wrap:wrap-reverse;justify-content:flex-end;gap:2px;max-width:330px;align-items:center">${custom}${pb("hide_fullscreen_button", I("full"))}</div>
+      <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:28px;align-items:center">
+        ${pb("hide_player_previous_next_buttons", I("prev"))}
+        <div class="pbtn bigbtn">${I("pause")}</div>
+        ${pb("hide_player_previous_next_buttons", I("next"))}
+      </div>
+      <div style="position:absolute;right:6px;bottom:18px;display:flex;gap:2px;max-width:340px;align-items:center">${pill}${on.map(b => btn(b)).join("")}${pb("hide_fullscreen_button", I("full"))}</div>
       <div class="time" style="position:absolute;left:12px;bottom:24px">3:12 / 18:42</div>
       <div class="seek" style="bottom:10px"><div class="buf" style="width:40%"></div><div class="played" style="width:17%"></div><div class="knob" style="left:17%"></div></div>
     </div>
+    ${tray}
   </div>`;
 };
+const CUSTOM_KEYS = new Set(["copy_video_link_button", "playback_speed_dialog_button", "video_quality_dialog_button", "loop_video_button", "mute_video_button", "pip_button_overlay", "reload_video_button", "save_to_watch_later_button", "playlist_panel_button", "play_all_button", "fullscreen_video_scale_button", "video_delay_button_overlay", "external_downloader_overlay_button"].map(k => "morphe_" + k));
 
 SCENES.endscreen = () => {
   const auto = V("morphe_autoplay_mode");
   const card = (i) => `<div style="display:flex;gap:6px;align-items:center;background:rgba(0,0,0,.55);border-radius:6px;padding:4px;width:150px">${thumb(i, "width:64px;flex:none;border-radius:4px")}<div class="t2" style="color:#fff;font-size:10.5px;line-height:1.25">${esc(VIDEOS[i].t.slice(0, 38))}…</div></div>`;
   const upnext = auto === "AUTO"
-    ? C("hide_autoplay_preview", `<div style="width:140px;background:rgba(0,0,0,.6);border-radius:8px;padding:6px">
+    ? C("hide_autoplay_preview", `<div style="width:124px;background:rgba(0,0,0,.6);border-radius:8px;padding:6px">
         <div style="font-size:10px;color:#ddd;margin-bottom:4px">Up next in <b style="color:#fff" class="cd">5</b></div>${thumb(3, "border-radius:6px")}
         <div style="font-size:10.5px;margin-top:4px;line-height:1.25">${esc(VIDEOS[3].t)}</div>
         <div style="display:flex;gap:6px;margin-top:6px"><span class="chip" style="height:22px;font-size:10.5px;padding:0 8px">Cancel</span><span class="chip" style="height:22px;font-size:10.5px;padding:0 8px;background:#fff;color:#000">Play now</span></div></div>`, { cls: "upnext" })
-    : C("hide_end_screen_suggested_video", `<div style="width:140px;background:rgba(0,0,0,.6);border-radius:8px;padding:6px">
+    : C("hide_end_screen_suggested_video", `<div style="width:124px;background:rgba(0,0,0,.6);border-radius:8px;padding:6px">
         <div style="font-size:10px;color:#ddd;margin-bottom:4px">You may also like</div>${thumb(5, "border-radius:6px")}
         <div style="font-size:10.5px;margin-top:4px;line-height:1.25">${esc(VIDEOS[5].t)}</div></div>`);
   return `<div class="video">
@@ -333,8 +350,8 @@ SCENES.endscreen = () => {
     <div style="position:absolute;left:8px;top:8px">${C("hide_end_screen_store_banner", `<div class="chip" style="height:24px;font-size:11px;background:rgba(0,0,0,.65)">${I("shop")} Official store · 4 items</div>`)}</div>
     <div style="position:absolute;right:8px;top:8px">${C("hide_info_cards", `<div class="pbtn" style="width:28px;height:28px;background:rgba(0,0,0,.5)">${I("info")}</div>`)}</div>
     <div style="position:absolute;left:10px;top:44px">${C("hide_end_screen_cards", `<div style="display:grid;gap:6px">${card(1)}${card(2)}</div>`)}</div>
-    <div style="position:absolute;right:10px;top:42px">${upnext}</div>
-    <div style="position:absolute;right:10px;bottom:10px">${C("hide_channel_watermark", `<div style="opacity:.8">${av(2, 26)}</div>`)}</div>
+    <div style="position:absolute;right:46px;top:30px">${upnext}</div>
+    <div style="position:absolute;right:10px;bottom:12px">${C("hide_channel_watermark", `<div style="opacity:.8">${av(2, 26)}</div>`)}</div>
     <div class="seek" style="bottom:4px"><div class="played" style="width:100%"></div></div>
   </div>`;
 };
@@ -609,102 +626,376 @@ function navBarStatic() {
   return `<div style="display:flex;justify-content:space-around;align-items:center;height:52px;background:#0f0f0f;border-top:1px solid #222">${["home", "shorts", "plus", "subs", "you"].map(n => I(n)).join("")}</div>`;
 }
 
-// ------------------------------------------------------------------ demos (gesture / behaviour)
+// ------------------------------------------------------------------ more sections and scenes
+let fading = new Set(), trayOpen = false, baseline = {}, returnTo = null, pickerOpen = false;
+
+const EXTRA_SECTIONS = [
+  { id: "description", icon: "list", title: "Description", scopes: [["PLAYER", "morphe_hide_description_components_screen"]] },
+  { id: "ambient", icon: "bright", title: "Ambient mode", scopes: [["PLAYER", "morphe_ambient_mode_screen"]] },
+  { id: "danmaku", icon: "chat", title: "Flying comments", scopes: [["PLAYER", "morphe_niconico_comments_screen"]] },
+  { id: "channel", icon: "you", title: "Channel page", scopes: [["FEED", "morphe_channel_screen"]] },
+  { id: "explore", icon: "search", title: "Explore menu", scopes: [["FEED", "morphe_explore_menu_screen"]] },
+];
+{
+  const watch = SECTIONS.find(s => s.id === "watch");
+  watch.scopes = watch.scopes.filter(([, sub]) => sub !== "morphe_hide_description_components_screen");
+  const order = ["player", "endscreen", "seekbar", "fullscreen", "flyout", "captions", "watch", "description", "comments", "ambient", "danmaku", "miniplayer", "feed", "channel", "explore", "shorts", "nav", "misc"];
+  const all = [...SECTIONS, ...EXTRA_SECTIONS];
+  SECTIONS.length = 0;
+  order.forEach(id => SECTIONS.push(all.find(s => s.id === id)));
+}
+
+const DESC = [
+  ["hide_video_details_section", "Details", "1.2M views · 3 days ago · #cabin #norway"],
+  ["hide_ai_generated_video_summary_section", "✦ Summary", "A two-week build of a 12 m² cabin using reclaimed pine."],
+  ["hide_ask_section", "Ask", "Ask questions about this video"],
+  ["hide_hype_points", "Hype", "2,410 points this week"],
+  ["hide_key_concepts_section", "Key concepts", "Timber framing · Wood stove · Insulation"],
+  ["hide_chapters_section", "Chapters", "0:00 Intro · 2:14 Foundation · 7:40 Walls · 12:04 Stove"],
+  ["hide_search_inside_this_video_section", "Search inside this video", "Find moments by keyword"],
+  ["hide_transcript_section", "Transcript", "Follow along using the transcript"],
+  ["hide_how_this_was_made_section", "How this was made", "Altered or synthetic content: No"],
+  ["hide_corrections_section", "Corrections", "1:20 The wall is 2.4 m, not 2.6 m"],
+  ["hide_attributes_section", "Music", "Northern Lights · Midnight Tapes"],
+  ["hide_featured_links_section", "Featured links", "fjordtimber.no · Tool list"],
+  ["hide_featured_videos_section", "Featured videos", "Part 1 · Part 2 · Roofing"],
+  ["hide_featured_playlists_section", "Featured playlists", "Cabin build (14 videos)"],
+  ["hide_featured_channels_section", "Featured channels", "Slow Rails · Darkroom Diaries"],
+  ["hide_channel_links_section", "Channel links", "Instagram · Patreon"],
+  ["hide_hashtag_section", "Hashtags", "#cabin #norway #woodworking"],
+  ["hide_info_cards_section", "Info cards", "Part 1 of the build · Video"],
+  ["hide_explore_section", "Explore", "Explore more in Woodworking"],
+  ["hide_explore_course_section", "Course", "Timber framing basics · 8 lessons"],
+  ["hide_course_progress_section", "Course progress", "Lesson 3 of 8 completed"],
+  ["hide_quizzes_section", "Quiz", "Which joint holds the roof beam?"],
+  ["hide_explore_podcast_section", "Podcast", "Fjord & Timber Talks"],
+];
+SCENES.description = () => `<div class="inner-scroll" style="background:#212121;height:350px;overflow-y:auto;scrollbar-width:thin">
+  <div style="display:flex;align-items:center;gap:10px;padding:12px 14px 6px"><b style="font-size:17px;flex:1">Description</b>${I("close", "ico", 'style="width:20px;height:20px"')}</div>
+  <div style="display:flex;align-items:center;gap:10px;padding:4px 14px 10px">${av(0, 30)}<span class="t1" style="flex:1">${VIDEOS[0].c}</span>
+    ${C("hide_subscribe_button", `<span class="chip" style="background:#f1f1f1;color:#0f0f0f;height:30px">Subscribe</span>`)}</div>
+  ${DESC.map(([k, t, b]) => C(k, `<div style="margin:0 12px 8px;padding:9px 12px;border-radius:10px;background:#2c2c2c"><div class="t1" style="font-size:13px">${esc(t)}</div><div class="t2" style="margin-top:2px">${esc(b)}</div></div>`, { blk: 1 })).join("")}
+</div>`;
+
+SCENES.ambient = () => {
+  const off = !!V("morphe_disable_ambient_mode");
+  const enh = !!V("morphe_enhanced_ambient_mode");
+  const strength = enh ? Number(V("morphe_enhanced_ambient_mode_strength")) / 100 : .55;
+  const blur = enh ? 30 + Number(V("morphe_enhanced_ambient_mode_blur")) : 40;
+  return `<div style="background:#0f0f0f;height:300px;position:relative;overflow:hidden;padding:26px 30px">
+    ${C("disable_ambient_mode", `<div style="position:absolute;inset:0;background:${ART[0]};filter:blur(${blur}px) saturate(1.6);opacity:${strength};transform:scale(1.1)"></div>`, { style: "position:absolute;left:10px;right:10px;top:6px;height:200px" })}
+    <div style="position:relative;border-radius:12px;overflow:hidden">${thumb(0, "border-radius:0")}</div>
+    <div style="position:relative;margin-top:14px"><div class="t1">${esc(VIDEOS[0].t)}</div><div class="t2">${VIDEOS[0].v} · ${VIDEOS[0].a}</div></div>
+    ${enh ? `<div class="demo-label" style="top:auto;bottom:8px">Enhanced ambient mode</div>` : ""}${off ? "" : ""}
+  </div>`;
+};
+
+const DANMAKU = ["8888888", "the stove!!", "cosy", "草", "need this cabin", "wow the view", "who else is here in 2026", "beautiful", "the snow sound", "lol", "this is so calming", "ASMR vibes"];
+SCENES.danmaku = () => {
+  const on = !!V("morphe_niconico_comments");
+  const fs = Number(V("morphe_niconico_comments_font_size")) || 20;
+  const op = (Number(V("morphe_niconico_comments_opacity")) || 100) / 100;
+  const area = (Number(V("morphe_niconico_comments_display_area")) || 100) / 100;
+  const dur = Number(V("morphe_niconico_comments_travel_duration")) || 7;
+  const lanes = Math.max(1, Math.floor(203 * area / (fs * .8)));
+  const items = on ? DANMAKU.map((t, i) => `<span style="position:absolute;white-space:nowrap;left:100%;top:${(i % lanes) * fs * .8}px;font-size:${fs * .6}px;font-weight:700;color:#fff;text-shadow:0 0 2px #000,0 0 2px #000;animation:fly ${dur * .55}s linear ${-(i * dur * .55 / DANMAKU.length) * 1.7}s infinite">${esc(t)}</span>`).join("") : "";
+  return `<div class="video">${videoFrame(0)}<div class="scrim" style="opacity:.15"></div>
+    <style>@keyframes fly{from{transform:translateX(0)}to{transform:translateX(calc(-360px - 100%))}}</style>
+    ${C("niconico_comments", `<div style="position:absolute;left:0;right:0;top:0;height:${area * 100}%;overflow:hidden;opacity:${op};outline:${on ? "1px dashed rgba(255,255,255,.18)" : "0"}">${items}</div>`, { style: "position:absolute;inset:0", also: "niconico_comments_display_area" })}
+    ${on ? "" : `<div class="demo-label">Flying comments are off</div>`}
+  </div>`;
+};
+
+SCENES.channel = () => `<div class="inner-scroll" style="background:#0f0f0f;height:350px;overflow-y:auto;scrollbar-width:thin">
+  <div style="height:70px;background:${ART[3]}"></div>
+  <div style="display:flex;gap:12px;padding:12px">${av(0, 64)}<div style="min-width:0"><div style="font-size:20px;font-weight:700">${VIDEOS[0].c}</div><div class="t2">@fjordtimber · 412K subscribers · 230 videos</div>
+    ${C("hide_links_preview", `<div class="t2" style="color:#ddd;margin-top:4px">fjordtimber.no and 3 more links</div>`)}</div></div>
+  <div style="display:flex;gap:8px;padding:0 12px 10px;flex-wrap:wrap">
+    ${C("hide_subscribe_button_in_channel_page", `<span class="chip" style="background:#f1f1f1;color:#0f0f0f">Subscribe</span>`)}
+    ${C("hide_join_button", `<span class="chip" style="background:transparent;border:1px solid #555">Join</span>`)}
+    ${C("hide_store_button", `<span class="chip">${I("shop")} Store</span>`)}
+    ${C("hide_community_button", `<span class="chip">${I("chat")} Community</span>`)}
+  </div>
+  <div style="display:flex;gap:18px;padding:6px 12px 0;border-bottom:1px solid #333;font-size:14px;font-weight:500">${["Home", "Videos", "Shorts", "Live", "Posts", "Store"].map((t, i) => `<span style="padding-bottom:8px;${i === 0 ? "border-bottom:2px solid #fff" : "color:#aaa"}">${t}</span>`).join("")}</div>
+  ${C("hide_filter_bar_in_channel_page", `<div style="display:flex;gap:8px;padding:10px 12px">${["Latest", "Popular", "Oldest"].map((t, i) => `<span class="chip" style="height:28px;${i === 0 ? "background:#f1f1f1;color:#0f0f0f" : ""}">${t}</span>`).join("")}</div>`, { blk: 1 })}
+  ${C("hide_members_shelf", `<div style="padding:8px 12px"><b style="font-size:15px">Members-only videos</b><div style="display:flex;gap:8px;margin-top:8px">${[4, 5].map(i => thumb(i, "width:150px;flex:none")).join("")}</div></div>`, { blk: 1 })}
+  <div style="display:flex;gap:10px;padding:10px 12px"><div style="position:relative;width:150px;flex:none">${thumb(1)}${C("hide_members_only_chip", `<span style="position:absolute;left:4px;top:4px;background:#2ba640;font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px">Members only</span>`, { tag: "span", style: "position:absolute;inset:0" })}</div><div><div class="t1" style="font-size:13px">Behind the build: the stove</div><div class="t2">Members only · 2 days ago</div></div></div>
+  ${C("hide_posts_shelf", `<div style="margin:6px 12px 12px;border:1px solid #333;border-radius:12px;padding:12px"><b style="font-size:13px">Posts</b><div style="font-size:13px;margin-top:6px">Roof video drops Friday. What should we build next?</div></div>`, { blk: 1 })}
+</div>`;
+
+const EXPLORE = [["hide_music_menu", "music", "Music"], ["hide_movies_menu", "tv", "Movies & TV"], ["hide_live_menu", "speed", "Live"], ["hide_gaming_menu", "vr", "Gaming"], ["hide_news_menu", "list", "News"], ["hide_sports_menu", "fire", "Sports"], ["hide_learning_menu", "help", "Learning"], ["hide_courses_menu", "layers", "Courses"], ["hide_fashion_menu", "spark", "Fashion & Beauty"], ["hide_podcasts_menu", "mic", "Podcasts"], ["hide_playables_menu", "play", "Playables"], ["hide_shopping_menu", "shop", "Shopping"], ["hide_hype_menu", "fire", "Hype"], ["hide_memberships_menu", "you", "Memberships"]];
+const MORE_YT = [["hide_youtube_premium_menu", "YouTube Premium"], ["hide_youtube_studio_menu", "YouTube Studio"], ["hide_youtube_music_menu", "YouTube Music"], ["hide_youtube_kids_menu", "YouTube Kids"], ["hide_youtube_create_menu", "YouTube Create"], ["hide_youtube_works_menu", "YouTube Works"]];
+SCENES.explore = () => {
+  const row = (k, ic, t, red) => C(k, `<div style="display:flex;align-items:center;gap:20px;padding:9px 18px">${I(ic, "ico", red ? 'style="fill:#ff0033"' : "")}<span style="font-size:14px">${t}</span></div>`, { blk: 1 });
+  return `<div class="inner-scroll" style="background:#0f0f0f;height:350px;overflow-y:auto;scrollbar-width:thin">
+    ${C("hide_explore_button", `<div style="padding:12px 18px 4px;font-size:16px;font-weight:700">Explore</div>`, { blk: 1 })}
+    ${EXPLORE.map(([k, ic, t]) => row(k, ic, t)).join("")}
+    <div style="padding:12px 18px 4px;font-size:16px;font-weight:700;border-top:1px solid #333;margin-top:6px">More from YouTube</div>
+    ${MORE_YT.map(([k, t]) => row(k, "play", t, true)).join("")}
+    ${C("hide_privacy_tos_footer", `<div class="t2" style="padding:12px 18px 16px">Privacy Policy · Terms of Service</div>`, { blk: 1 })}
+  </div>`;
+};
+
+// Extra adapters on existing scenes, for coverage
+def("description", "vis", DESC.map(d => d[0]).join(" ") + " hide_subscribe_button");
+def("ambient", "vis", "disable_ambient_mode");
+def("ambient", "style", "enhanced_ambient_mode enhanced_ambient_mode_strength enhanced_ambient_mode_blur");
+def("danmaku", "behaviour", "niconico_comments");
+def("danmaku", "style", "niconico_comments_font_size niconico_comments_opacity niconico_comments_display_area niconico_comments_travel_duration");
+def("channel", "vis", "hide_links_preview hide_subscribe_button_in_channel_page hide_join_button hide_store_button hide_community_button hide_filter_bar_in_channel_page hide_members_shelf hide_members_only_chip hide_posts_shelf");
+def("explore", "vis", ["hide_explore_button", "hide_privacy_tos_footer", ...EXPLORE.map(e => e[0]), ...MORE_YT.map(e => e[0])].join(" "));
+def("watch", "vis", "hide_crowdfunding_box hide_emergency_box hide_medical_panels");
+def("flyout", "vis", "hide_player_flyout_quality_header hide_player_flyout_quality_footer hide_player_flyout_captions_header hide_player_flyout_captions_footer hide_player_flyout_audio_track_footer");
+def("comments", "vis", "hide_comments_top_fans_button hide_comments_gifs_and_images hide_comments_by_members_header");
+def("feed", "vis", "hide_post_like_dislike_buttons hide_post_dislike_button hide_post_comment_button hide_post_share_button hide_post_comments_preview hide_horizontal_shelves hide_playables hide_surveys hide_ticket_shelf");
+def("seekbar", "style", "fullscreen_large_seekbar");
+
+// Patch extra components into existing scenes without rewriting them
+{
+  const wrap = (id, fn) => { const base = SCENES[id]; SCENES[id] = () => fn(base()); };
+  wrap("watch", html => html
+    .replace(/(<div class="c[^"]*" data-k="morphe_hide_player_related_videos")/, `${C("hide_emergency_box", `<div style="margin:0 12px 10px;background:#3b1f1f;border-radius:12px;padding:10px 12px"><div class="t1" style="font-size:13px">Emergency information</div><div class="t2">Call 112 for emergency services in Norway</div></div>`, { blk: 1 })}
+      ${C("hide_medical_panels", `<div style="margin:0 12px 10px;border:1px solid #333;border-radius:12px;padding:10px 12px"><div class="t1" style="font-size:13px">Health info from a licensed source</div><div class="t2">Carbon monoxide safety · NHS</div></div>`, { blk: 1 })}
+      ${C("hide_crowdfunding_box", `<div style="margin:0 12px 10px;background:#272727;border-radius:12px;padding:10px 12px;display:flex;gap:10px;align-items:center">${I("heart", "ico", 'style="fill:#f06292;flex:none"')}<div><div class="t1" style="font-size:13px">Support the cabin on Patreon</div><div class="t2">Crowdfunding</div></div></div>`, { blk: 1 })}$1`));
+  wrap("flyout", html => html
+    .replace(/(data-k="morphe_hide_player_flyout_quality"[\s\S]*?<\/div><\/div>)/, `$1${C("hide_player_flyout_quality_header", `<div class="t2" style="padding:0 18px 2px 58px">Header: Quality for current video</div>`, { blk: 1 })}${C("hide_player_flyout_quality_footer", `<div class="t2" style="padding:0 18px 6px 58px">Footer: Change default quality in Settings</div>`, { blk: 1 })}`)
+    .replace(/(data-k="morphe_hide_player_flyout_captions"[\s\S]*?<\/div><\/div>)/, `$1${C("hide_player_flyout_captions_header", `<div class="t2" style="padding:0 18px 2px 58px">Header: Captions</div>`, { blk: 1 })}${C("hide_player_flyout_captions_footer", `<div class="t2" style="padding:0 18px 6px 58px">Footer: Caption preferences</div>`, { blk: 1 })}`)
+    .replace(/(data-k="morphe_hide_player_flyout_audio_track"[\s\S]*?<\/div><\/div>)/, `$1${C("hide_player_flyout_audio_track_footer", `<div class="t2" style="padding:0 18px 6px 58px">Footer: Original audio is marked</div>`, { blk: 1 })}`));
+  wrap("comments", html => html
+    .replace('<b style="font-size:16px">Comments</b>', `<b style="font-size:16px">Comments</b>${C("hide_comments_top_fans_button", `<span class="chip" style="height:24px;font-size:11px;padding:0 8px;background:#3a3a3a">Top fans</span>`, { tag: "span" })}`)
+    .replace(/(Kom igjen! Taket trenger en egen video\.)/, `$1${C("hide_comments_gifs_and_images", `<div style="width:120px;height:68px;border-radius:8px;margin-top:6px;background:${ART[4]}"></div>`)}`)
+    .replace(/(<div style="display:flex;align-items:center;gap:8px;padding:6px 12px 8px">)/, `${C("hide_comments_by_members_header", `<div style="margin:0 12px 6px;padding:6px 10px;border-radius:8px;background:#1f3324;font-size:12px">Comments by members</div>`, { blk: 1 })}$1`));
+  wrap("feed", html => html
+    .replace(/(<div style="display:flex;gap:16px;margin-top:10px" class="t2">)[\s\S]*?(<\/div><\/div>)/, `<div style="display:flex;gap:14px;margin-top:10px;align-items:center" class="t2">
+      ${C("hide_post_like_dislike_buttons", `<span style="display:flex;gap:10px;align-items:center">${I("like", "ico", 'style="width:18px;height:18px;fill:#aaa"')}2.1K ${C("hide_post_dislike_button", I("dislike", "ico", 'style="width:18px;height:18px;fill:#aaa"'), { tag: "span" })}</span>`, { tag: "span" })}
+      ${C("hide_post_comment_button", `<span style="display:flex;gap:4px;align-items:center">${I("comment", "ico", 'style="width:18px;height:18px;fill:#aaa"')}340</span>`, { tag: "span" })}
+      ${C("hide_post_share_button", I("share", "ico", 'style="width:18px;height:18px;fill:#aaa"'), { tag: "span" })}</div>
+      ${C("hide_post_comments_preview", `<div class="t2" style="margin-top:8px;color:#ccc">@sam: Because of a thin water layer!</div>`)}</div>`)
+    .replace(/(<div class="c[^"]*" data-k="morphe_hide_mix_playlists")/, `${C("hide_horizontal_shelves", `<div style="padding:0 12px 14px"><b style="font-size:15px">Breaking news</b><div style="display:flex;gap:8px;margin-top:8px;overflow:hidden">${[1, 2, 3].map(i => thumb(i, "width:140px;flex:none")).join("")}</div></div>`, { blk: 1 })}
+      ${C("hide_playables", `<div style="margin:0 12px 14px;padding:10px 12px;border-radius:12px;background:#1d2a3a;display:flex;gap:10px;align-items:center">${I("vr")}<div><div class="t1" style="font-size:13px">Playables</div><div class="t2">Play instant games on YouTube</div></div></div>`, { blk: 1 })}
+      ${C("hide_surveys", `<div style="margin:0 12px 14px;padding:10px 12px;border-radius:12px;border:1px solid #333"><div class="t1" style="font-size:13px">How are your recommendations?</div><div style="display:flex;gap:6px;margin-top:8px">${["Great", "OK", "Bad"].map(t => `<span class="chip" style="height:26px">${t}</span>`).join("")}</div></div>`, { blk: 1 })}
+      ${C("hide_ticket_shelf", `<div style="margin:0 12px 14px;padding:10px 12px;border-radius:12px;background:#272727"><div class="t1" style="font-size:13px">Tickets · Midnight Tapes live in Oslo</div><div class="t2">Sat, 21 Nov · Rockefeller</div></div>`, { blk: 1 })}$1`));
+  wrap("seekbar", html => V("morphe_fullscreen_large_seekbar") ? html.replace('id="seek" style="position:relative;left:0;right:0;height:4px;', 'id="seek" style="position:relative;left:0;right:0;height:9px;') : html);
+}
+
+// ------------------------------------------------------------------ scenario animations (standard canvas)
+// Every scenario uses the same frame: fade the preview to black (220 ms), caption top-left with the
+// setting and its new state, device illustration in the middle, one-line outcome at the bottom,
+// a progress line, then fade back (220 ms). Body length is SC_HOLD.
+const SC_FADE = 220, SC_HOLD = 2400;
+const SCN = {};
+const scen = (section, keys, fn) => keys.split(/\s+/).forEach(k => { A["morphe_" + k] = { section, kind: "scenario" }; SCN["morphe_" + k] = fn; });
+function device(orient, inner, extra = "") {
+  const [w, h] = orient === "land" ? [190, 108] : [92, 172];
+  return `<div class="dev" style="width:${w}px;height:${h}px;${extra}"><div class="waves l"></div><div class="waves r"></div>${inner}<div class="finger" id="scFinger">${I("gesture")}</div></div>`;
+}
+function buzz(dev, on) {
+  if (!on) return;
+  dev.classList.remove("buzz"); void dev.offsetWidth; dev.classList.add("buzz");
+  dev.querySelectorAll(".waves").forEach(w => { w.classList.remove("go"); void w.offsetWidth; w.classList.add("go"); });
+  try { navigator.vibrate && navigator.vibrate(40); } catch { /* not supported */ }
+}
+const at = (ms, f) => setTimeout(() => { if (scenarioToken.alive) f(); }, ms);
+function fingerTo(f, x, y, ms = 0) { f.style.transition = ms ? `left ${ms}ms var(--ease), top ${ms}ms var(--ease), opacity 120ms` : "opacity 120ms"; f.style.left = x + "px"; f.style.top = y + "px"; f.classList.add("show"); }
+function tapF(f) { f.classList.remove("tap"); void f.offsetWidth; f.classList.add("tap"); }
+const miniSeek = (pct = 30, marks = []) => `<div class="msk" style="position:absolute;left:8%;right:8%;bottom:16%;height:3px;background:rgba(255,255,255,.3)"><div class="mp" style="position:absolute;left:0;top:0;bottom:0;width:${pct}%;background:#ff0033;transition:width .9s linear"></div>${marks.map(m => `<i style="position:absolute;left:${m}%;top:-1px;width:2px;height:5px;background:#000"></i>`).join("")}</div>`;
+const miniVideo = (i = 0, h = "100%") => `<div style="position:absolute;left:0;right:0;top:0;height:${h};background:${ART[i]}"></div>`;
+function haptic(eventLabel, script) {
+  return (box, disabled) => {
+    const portrait = script.portrait;
+    box.innerHTML = device(portrait ? "port" : "land", portrait ? `${miniVideo(1, "34%")}<div style="position:absolute;left:0;right:0;top:34%;bottom:0;background:#0f0f0f"></div>` : `${miniVideo(1)}${miniSeek(30, [45, 62, 80])}`);
+    const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger");
+    script.run(dev, f, () => buzz(dev, !disabled));
+    return disabled ? `${eventLabel}: no vibration` : `${eventLabel}: phone vibrates`;
+  };
+}
+scen("seekbar", "disable_haptic_feedback_chapters", haptic("Crossing a chapter", { run(dev, f, b) {
+  const W = dev.clientWidth, H = dev.clientHeight, y = H * .84 - 2, x0 = W * .3;
+  at(100, () => fingerTo(f, x0, y)); at(300, () => { fingerTo(f, W * .85, y, 1500); dev.querySelector(".mp").style.width = "85%"; });
+  [0.45, 0.62, 0.80].forEach(m => at(300 + 1500 * (m * W - x0) / (W * .85 - x0), b));
+} }));
+scen("seekbar", "disable_haptic_feedback_precise_seeking", haptic("Entering precise seeking", { run(dev, f, b) {
+  const W = dev.clientWidth, H = dev.clientHeight;
+  at(100, () => fingerTo(f, W * .4, H * .84)); at(400, () => fingerTo(f, W * .4, H * .45, 600));
+  at(1000, () => { b(); dev.insertAdjacentHTML("beforeend", `<div style="position:absolute;left:6%;right:6%;top:30%;display:flex;gap:2px">${[1, 2, 3, 4].map(i => `<div style="flex:1;aspect-ratio:16/9;background:${ART[i]}"></div>`).join("")}</div>`); });
+} }));
+scen("seekbar", "disable_haptic_feedback_seek_undo", haptic("Release to cancel", { run(dev, f, b) {
+  const W = dev.clientWidth, H = dev.clientHeight;
+  at(100, () => fingerTo(f, W * .3, H * .84)); at(300, () => { fingerTo(f, W * .7, H * .84, 700); dev.querySelector(".mp").style.width = "70%"; });
+  at(1100, () => fingerTo(f, W * .7, H * .2, 500)); at(1600, () => { b(); dev.querySelector(".mp").style.width = "30%"; dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px;font-size:9px">Release to cancel</div>`); });
+} }));
+scen("seekbar", "disable_haptic_feedback_tap_and_hold", haptic("Tap and hold for 2x", { run(dev, f, b) {
+  const W = dev.clientWidth, H = dev.clientHeight;
+  at(150, () => { fingerTo(f, W * .55, H * .45); f.classList.add("hold"); }); at(800, () => { b(); dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px;font-size:9px">2x ▸▸</div>`); });
+  at(2000, () => f.classList.remove("hold"));
+} }));
+scen("seekbar", "disable_haptic_feedback_zoom", haptic("Pinch to zoom snaps to fill", { run(dev, f, b) {
+  const W = dev.clientWidth, H = dev.clientHeight; const v = dev.firstElementChild.nextElementSibling.nextElementSibling;
+  at(150, () => fingerTo(f, W * .45, H * .5)); at(400, () => { fingerTo(f, W * .8, H * .25, 700); v.style.transition = "transform .7s"; v.style.transform = "scale(1.25)"; });
+  at(1100, () => { b(); dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px;font-size:9px">Zoomed to fill</div>`); });
+} }));
+scen("fullscreen", "swipe_haptic_feedback", (box, on) => {
+  box.innerHTML = device("land", `${miniVideo(6)}`);
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
+  at(100, () => fingerTo(f, W * .82, H * .8)); at(300, () => fingerTo(f, W * .82, H * .2, 1400));
+  [500, 800, 1100, 1400].forEach(t => at(t, () => buzz(dev, on)));
+  return on ? "Swiping volume or brightness: a tick at each step" : "Swiping volume or brightness: no ticks";
+});
+scen("player", "fullscreen_video_scale_button_fullscreen_only", (box, on) => {
+  const btn = `<div class="scb" style="position:absolute;right:6px;bottom:8px;width:18px;height:18px;border-radius:4px;display:grid;place-items:center;transition:opacity .35s">${I("crop", "ico", 'style="width:14px;height:14px"')}</div>`;
+  box.innerHTML = device("port", `<div class="pv" style="position:absolute;left:0;right:0;top:0;height:34%;background:${ART[0]};transition:all .5s">${btn}</div><div style="position:absolute;left:0;right:0;top:34%;bottom:0;background:#0f0f0f"></div>`);
+  const dev = box.querySelector(".dev"), b = box.querySelector(".scb"), pv = box.querySelector(".pv");
+  b.style.opacity = on ? "0" : "1";
+  at(1000, () => { dev.style.width = "190px"; dev.style.height = "108px"; pv.style.height = "100%"; b.style.opacity = "1"; });
+  return on ? "Portrait: button hidden · Fullscreen: button shown" : "Button shown in portrait and fullscreen";
+});
+scen("player", "copy_video_link_with_timestamp_button", (box, on) => {
+  box.innerHTML = device("land", `${miniVideo(0)}<div style="position:absolute;right:8px;top:8px">${I("link", "ico", 'style="width:18px;height:18px"')}</div>${miniSeek(17)}`);
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth;
+  at(100, () => fingerTo(f, W - 17, 17)); at(400, () => tapF(f));
+  at(600, () => dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="bottom:10px;top:auto;font-size:9px">Copied: youtu.be/cAb1n${on ? "?t=192" : ""}</div>`));
+  return on ? "Tap copies the link with the current time; hold copies it without" : "Tap copies the plain link; hold adds the current time";
+});
+scen("player", "loop_video", (box, on) => {
+  box.innerHTML = device("land", `${miniVideo(2)}${miniSeek(80)}`);
+  const dev = box.querySelector(".dev"); const mp = dev.querySelector(".mp");
+  at(100, () => { mp.style.width = "100%"; });
+  at(1100, () => { if (on) { mp.style.transition = "none"; mp.style.width = "0%"; dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:40%;font-size:10px">⟲ Replaying</div>`); } else dev.insertAdjacentHTML("beforeend", `<div style="position:absolute;inset:0;background:rgba(0,0,0,.6);display:grid;place-items:center;font-size:10px">Up next</div>`); });
+  return on ? "At the end the video starts again" : "At the end YouTube moves on";
+});
+scen("shorts", "shorts_autoplay", (box, on) => {
+  box.innerHTML = device("port", `<div class="sh" style="position:absolute;left:0;right:0;top:0;height:200%;transition:transform .5s var(--ease)"><div style="height:50%;background:${ART[5]}"></div><div style="height:50%;background:${ART[7]}"></div></div>${miniSeek(70)}`);
+  const dev = box.querySelector(".dev"); const mp = dev.querySelector(".mp");
+  at(100, () => { mp.style.width = "100%"; });
+  at(1100, () => { mp.style.transition = "none"; mp.style.width = "0%"; if (on) dev.querySelector(".sh").style.transform = "translateY(-50%)"; else dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:40%;font-size:9px">⟲ Repeats</div>`); });
+  return on ? "When a Short ends, the next one starts" : "When a Short ends, it repeats";
+});
+scen("seekbar", "disable_chapter_skip_double_tap", (box, disabled) => {
+  box.innerHTML = device("land", `${miniVideo(3)}${miniSeek(30, [45, 70])}`);
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
+  at(100, () => fingerTo(f, W * .8, H * .45)); at(350, () => tapF(f)); at(550, () => tapF(f));
+  at(700, () => { dev.querySelector(".mp").style.width = disabled ? "35%" : "45%"; dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px;font-size:9px">${disabled ? "+10 seconds" : "Next chapter ▸"}</div>`); });
+  return disabled ? "Double-tap skips 10 seconds" : "Double-tap can jump to the next chapter (stock)";
+});
+scen("seekbar", "speed_tap_and_hold", (box) => {
+  const v = state.morphe_speed_tap_and_hold;
+  box.innerHTML = device("land", `${miniVideo(4)}${miniSeek(30)}`);
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
+  at(150, () => { fingerTo(f, W * .5, H * .45); f.classList.add("hold"); });
+  at(600, () => { dev.querySelector(".mp").style.transition = "width 1.2s linear"; dev.querySelector(".mp").style.width = "75%"; dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px;font-size:9px">${v}x ▸▸</div>`); });
+  at(2000, () => f.classList.remove("hold"));
+  return `Hold the video: plays at ${v}x`;
+});
+
+let scenarioToken = { alive: false };
+function playScenario(k) {
+  const fn = SCN[k]; if (!fn) return;
+  scenarioToken.alive = false;
+  const token = scenarioToken = { alive: true };
+  const canvas = $("canvas"); const stick = $("stick");
+  const wasHidden = stick.hidden;
+  if (wasHidden) { stick.hidden = false; $("stage").innerHTML = `<div style="height:200px"></div>`; }
+  const on = !!V(k);
+  const valueTxt = PREF[k].type === "boolean" ? (on ? "On" : "Off") : String(V(k));
+  canvas.innerHTML = `<div class="cap"><b>${esc(title(k))}</b><span class="st ${on ? "on" : ""}">${esc(valueTxt)}</span></div><div class="scbox" style="display:grid;place-items:center"></div><div class="foot"></div><div class="prog"></div>`;
+  canvas.classList.add("show");
+  const foot = fn(canvas.querySelector(".scbox"), V(k));
+  canvas.querySelector(".foot").textContent = foot || "";
+  const prog = canvas.querySelector(".prog");
+  prog.animate([{ width: "0%" }, { width: "100%" }], { duration: SC_HOLD, delay: SC_FADE, fill: "forwards" });
+  setTimeout(() => {
+    if (!token.alive) return;
+    canvas.classList.remove("show");
+    setTimeout(() => { if (!token.alive) return; token.alive = false; canvas.innerHTML = ""; if (wasHidden && section === "misc") { stick.hidden = true; } }, SC_FADE);
+  }, SC_FADE + SC_HOLD);
+}
+function stopScenario() { scenarioToken.alive = false; $("canvas").classList.remove("show"); }
+
+// ------------------------------------------------------------------ demos (gesture / behaviour), faster loop
+const LOOP_MS = 1500;
 let demoTimer = null, demoStep = 0;
 function stopDemo() { clearInterval(demoTimer); demoTimer = null; }
 function label(text, bad) {
-  const st = document.getElementById("stage");
+  const st = $("stage");
   st.querySelectorAll(".demo-label.dyn").forEach(n => n.remove());
   const d = document.createElement("div");
   d.className = "demo-label dyn" + (bad ? " bad" : "");
   d.textContent = text;
   st.firstElementChild?.appendChild(d);
 }
-function tapAt(x, y) {
-  const f = document.getElementById("finger"); if (!f) return;
-  f.style.left = x + "px"; f.style.top = y + "px";
-  f.classList.remove("tap"); void f.offsetWidth; f.classList.add("tap");
+function finger() { return document.querySelector("#stage .finger"); }
+function place(f, x, y, ms) { f.style.transition = ms ? `left ${ms}ms var(--ease), top ${ms}ms var(--ease), opacity 120ms` : "opacity 120ms"; f.style.left = x + "px"; f.style.top = y + "px"; f.classList.add("show"); }
+function hideF(f, after) { setTimeout(() => { f.classList.remove("show", "hold"); }, after); }
+function tapAt(x, y) { const f = finger(); if (!f) return; place(f, x, y); f.classList.remove("tap"); void f.offsetWidth; f.classList.add("tap"); hideF(f, 520); }
+function fmt(total, pct) { const s = Math.round(total * pct / 100); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }
+function setSeek(pct) { const p = $("played"), k = $("knob"); if (p) p.style.width = pct + "%"; if (k) k.style.left = pct + "%"; }
+function showPill(text, ms = 1100) {
+  const st = $("stage").firstElementChild; if (!st) return;
+  const d = document.createElement("div"); d.className = "toastin"; d.style.top = "14px"; d.textContent = text; st.appendChild(d);
+  setTimeout(() => d.remove(), ms);
 }
 const DEMOS = {
   morphe_tap_to_seek(on) {
-    const seek = document.getElementById("seek"); if (!seek) return;
-    const st = document.getElementById("stage").getBoundingClientRect(), r = seek.getBoundingClientRect();
+    const seek = $("seek"); if (!seek) return;
+    const st = $("stage").getBoundingClientRect(), r = seek.getBoundingClientRect();
     const pct = [72, 30, 55, 88, 12][demoStep % 5];
     tapAt(r.left - st.left + r.width * pct / 100, r.top - st.top + r.height / 2);
-    if (on) {
-      setTimeout(() => { setSeek(pct); }, 180);
-      label(`Tap on seekbar: jumps to ${fmt(18 * 60 + 42, pct)}`);
-    } else label("Tap on seekbar: nothing happens. Stock YouTube needs a drag.", true);
+    if (on) { setTimeout(() => setSeek(pct), 120); label(`Tap on seekbar: jumps to ${fmt(18 * 60 + 42, pct)}`); }
+    else label("Tap on seekbar: nothing happens. Stock YouTube needs a drag.", true);
   },
   morphe_slide_to_seek(on) {
-    const st = document.getElementById("stage"); const f = document.getElementById("finger"); if (!f) return;
-    const W = st.clientWidth;
-    f.style.transition = "none"; f.style.left = W * .3 + "px"; f.style.top = "90px"; f.style.opacity = "1"; f.style.transform = "translate(-50%,-50%) scale(.7)";
-    if (on) {
-      label("Press and hold the video, then slide: seeks");
-      setTimeout(() => { f.style.transition = "left 1.2s ease-in-out"; f.style.left = W * .7 + "px"; setSeek(60); }, 350);
-    } else {
-      label("Press and hold the video: plays at 2x speed (stock)", true);
-      showPill("2x ▸▸");
-    }
-    setTimeout(() => { f.style.opacity = "0"; f.style.transition = ""; }, 1900);
+    const f = finger(); if (!f) return; const W = $("stage").clientWidth;
+    place(f, W * .3, 90); f.classList.add("hold");
+    if (on) { label("Press and hold the video, then slide: seeks"); setTimeout(() => { place(f, W * .7, 90, 700); setSeek(60); }, 250); }
+    else { label("Press and hold the video: plays at 2x speed (stock)", true); showPill("2x ▸▸"); }
+    hideF(f, 1150);
   },
-  morphe_disable_precise_seeking_gesture(on) {
-    const film = document.getElementById("film"); const f = document.getElementById("finger"); if (!film || !f) return;
-    const st = document.getElementById("stage");
-    f.style.transition = "none"; f.style.left = st.clientWidth * .42 + "px"; f.style.top = st.clientHeight - 40 + "px"; f.style.opacity = "1"; f.style.transform = "translate(-50%,-50%) scale(.7)";
-    setTimeout(() => { f.style.transition = "top .7s"; f.style.top = st.clientHeight - 110 + "px"; }, 200);
-    if (!on) { setTimeout(() => { film.style.display = "flex"; }, 700); label("Pull up on the seekbar: precise seeking film strip opens"); }
+  morphe_disable_precise_seeking_gesture(disabled) {
+    const film = $("film"), f = finger(); if (!film || !f) return; const st = $("stage");
+    place(f, st.clientWidth * .42, st.clientHeight - 40);
+    setTimeout(() => place(f, st.clientWidth * .42, st.clientHeight - 110, 450), 120);
+    if (!disabled) { setTimeout(() => { film.style.display = "flex"; }, 450); label("Pull up on the seekbar: precise seeking opens"); }
     else label("Pull up on the seekbar: precise seeking stays off", true);
-    setTimeout(() => { film.style.display = "none"; f.style.opacity = "0"; f.style.transition = ""; }, 2000);
+    setTimeout(() => { film.style.display = "none"; }, 1250); hideF(f, 1150);
   },
   morphe_swipe_left_zone(v) { swipeDemo("left", v); },
   morphe_swipe_right_zone(v) { swipeDemo("right", v); },
   morphe_swipe_overlay_style() { swipeDemo("right", state.morphe_swipe_right_zone !== "OFF" ? state.morphe_swipe_right_zone : "VOLUME"); },
   morphe_swipe_seek(on) {
-    const st = document.getElementById("stage"); const f = document.getElementById("finger"); if (!f) return;
-    f.style.transition = "none"; f.style.left = st.clientWidth * .35 + "px"; f.style.top = "80px"; f.style.opacity = "1"; f.style.transform = "translate(-50%,-50%) scale(.7)";
-    setTimeout(() => { f.style.transition = "left 1s"; f.style.left = st.clientWidth * .7 + "px"; }, 250);
+    const f = finger(); if (!f) return; const W = $("stage").clientWidth;
+    place(f, W * .35, 80); setTimeout(() => place(f, W * .7, 80, 650), 150);
     if (on) { label("Swipe sideways in fullscreen: +1:30, release to seek"); showPill("+1:30  ▸▸"); } else label("Swipe sideways: does nothing (stock)", true);
-    setTimeout(() => { f.style.opacity = "0"; f.style.transition = ""; }, 1700);
+    hideF(f, 1100);
   },
   morphe_disable_shorts_double_tap_to_like(disabled) {
-    const st = document.getElementById("stage");
-    tapAt(st.clientWidth * .45, 170); setTimeout(() => tapAt(st.clientWidth * .45, 170), 220);
-    const h = document.getElementById("heart");
-    if (!disabled && h) { setTimeout(() => { h.style.transform = "translate(-50%,-50%) scale(1)"; }, 300); setTimeout(() => { h.style.transform = "translate(-50%,-50%) scale(0)"; }, 1100); label("Double-tap: likes the Short (stock)"); }
+    const W = $("stage").clientWidth;
+    tapAt(W * .45, 170); setTimeout(() => tapAt(W * .45, 170), 180);
+    const h = $("heart");
+    if (!disabled && h) { setTimeout(() => { h.style.transform = "translate(-50%,-50%) scale(1)"; }, 260); setTimeout(() => { h.style.transform = "translate(-50%,-50%) scale(0)"; }, 900); label("Double-tap: likes the Short (stock)"); }
     else label("Double-tap: does nothing, no accidental likes", true);
   },
   morphe_autoplay_mode(v) {
     const cd = document.querySelector("#stage .cd");
-    if (cd) { let n = 5; cd.textContent = n; const t = setInterval(() => { n--; if (n < 1 || !document.body.contains(cd)) { clearInterval(t); return; } cd.textContent = n; }, 400); }
+    if (cd) { let n = 5; cd.textContent = n; const t = setInterval(() => { n--; if (n < 1 || !document.body.contains(cd)) { clearInterval(t); return; } cd.textContent = n; }, 250); }
     label(`Autoplay: ${entryLabel("morphe_autoplay_mode", v)}`, v === "OFF");
   },
   morphe_disable_like_subscribe_glow(disabled) {
     const chip = document.querySelector("#stage .likechip");
-    if (chip && !disabled) { chip.animate([{ boxShadow: "0 0 0 0 rgba(62,166,255,.0)" }, { boxShadow: "0 0 14px 4px rgba(62,166,255,.8)" }, { boxShadow: "0 0 0 0 rgba(62,166,255,0)" }], { duration: 1400 }); label("Creator says \"hit like\": button glows (stock)"); }
+    if (chip && !disabled) { chip.animate([{ boxShadow: "0 0 0 0 rgba(62,166,255,0)" }, { boxShadow: "0 0 14px 4px rgba(62,166,255,.8)" }, { boxShadow: "0 0 0 0 rgba(62,166,255,0)" }], { duration: 1100 }); label("Creator says \"hit like\": button glows (stock)"); }
     else label("Creator says \"hit like\": no glow", true);
   },
   morphe_stable_caption_blocks(on) {
-    const line = document.getElementById("capLine"); if (!line) return;
+    const line = $("capLine"); if (!line) return;
     const words = "the pancake needs to rest for one minute".split(" ");
-    if (on) { line.textContent = words.join(" "); line.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300 }); label("Stable blocks: whole sentence appears at once"); }
-    else { let i = 0; line.textContent = ""; const t = setInterval(() => { if (!document.body.contains(line) || i >= words.length) { clearInterval(t); return; } line.textContent += (i ? " " : "") + words[i++]; }, 170); label("Word by word: text shifts as it is spoken (stock)"); }
+    if (on) { line.textContent = words.join(" "); line.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 250 }); label("Stable blocks: whole sentence at once"); }
+    else { let i = 0; line.textContent = ""; const t = setInterval(() => { if (!document.body.contains(line) || i >= words.length) { clearInterval(t); return; } line.textContent += (i ? " " : "") + words[i++]; }, 120); label("Word by word: text shifts as spoken (stock)"); }
   },
+  morphe_niconico_comments(on) { label(on ? "Comments fly across the video" : "Flying comments are off", !on); },
 };
-function fmt(total, pct) { const s = Math.round(total * pct / 100); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }
-function setSeek(pct) { const p = document.getElementById("played"), k = document.getElementById("knob"); if (p) p.style.width = pct + "%"; if (k) k.style.left = pct + "%"; }
-function showPill(text) {
-  const st = document.getElementById("stage").firstElementChild; if (!st) return;
-  const d = document.createElement("div"); d.className = "toastin"; d.style.top = "14px"; d.textContent = text; st.appendChild(d);
-  setTimeout(() => d.remove(), 1600);
-}
 function swipeDemo(side, action) {
-  const st = document.getElementById("stage"); const f = document.getElementById("finger"); const hud = document.getElementById("hud"); if (!f || !hud) return;
-  const W = st.clientWidth, H = st.firstElementChild.clientHeight;
-  const x = side === "left" ? W * .2 : W * .8;
-  f.style.transition = "none"; f.style.left = x + "px"; f.style.top = H * .75 + "px"; f.style.opacity = "1"; f.style.transform = "translate(-50%,-50%) scale(.7)";
-  setTimeout(() => { f.style.transition = "top 1.1s ease-in-out"; f.style.top = H * .25 + "px"; }, 200);
+  const st = $("stage"), f = finger(), hud = $("hud"); if (!f || !hud) return;
+  const W = st.clientWidth, H = st.firstElementChild.clientHeight, x = side === "left" ? W * .2 : W * .8;
+  place(f, x, H * .75); setTimeout(() => place(f, x, H * .25, 800), 120);
   if (!action || action === "OFF") { label(`${side === "left" ? "Left" : "Right"} side swipe: does nothing (off)`, true); hud.style.display = "none"; }
   else {
     const ic = action === "VOLUME" ? "vol" : action === "BRIGHTNESS" ? "bright" : "speed";
@@ -712,18 +1003,18 @@ function swipeDemo(side, action) {
     const circ = style.startsWith("CIRCULAR"), vert = style.startsWith("VERTICAL"), min = style.includes("MINIMAL");
     let inner;
     if (circ) inner = `<div style="width:64px;height:64px;border-radius:50%;background:conic-gradient(#fff var(--p,0%),rgba(255,255,255,.25) 0);display:grid;place-items:center"><div style="width:52px;height:52px;border-radius:50%;background:rgba(0,0,0,.75);display:grid;place-items:center">${I(ic)}</div></div>`;
-    else if (vert) inner = `<div style="display:grid;justify-items:center;gap:6px;background:${min ? "transparent" : "rgba(0,0,0,.6)"};padding:8px;border-radius:14px">${I(ic)}<div style="width:6px;height:80px;background:rgba(255,255,255,.25);border-radius:3px;position:relative"><div class="hb" style="position:absolute;bottom:0;left:0;right:0;height:var(--p,0%);background:#fff;border-radius:3px"></div></div></div>`;
+    else if (vert) inner = `<div style="display:grid;justify-items:center;gap:6px;background:${min ? "transparent" : "rgba(0,0,0,.6)"};padding:8px;border-radius:14px">${I(ic)}<div style="width:6px;height:80px;background:rgba(255,255,255,.25);border-radius:3px;position:relative"><div style="position:absolute;bottom:0;left:0;right:0;height:var(--p,0%);background:#fff;border-radius:3px"></div></div></div>`;
     else inner = `<div style="display:flex;align-items:center;gap:8px;background:${min ? "transparent" : "rgba(0,0,0,.6)"};padding:8px 12px;border-radius:18px">${I(ic)}<div style="width:110px;height:5px;background:rgba(255,255,255,.25);border-radius:3px;position:relative"><div style="position:absolute;left:0;top:0;bottom:0;width:var(--p,0%);background:#fff;border-radius:3px"></div></div></div>`;
     hud.innerHTML = inner; hud.style.display = "block";
-    if (style === "HORIZONTAL_MINIMAL_TOP") { hud.style.left = "50%"; hud.style.top = "12px"; hud.style.transform = "translateX(-50%)"; }
+    if (style === "HORIZONTAL_MINIMAL_TOP") { hud.style.left = "50%"; hud.style.right = "auto"; hud.style.top = "12px"; hud.style.transform = "translateX(-50%)"; }
     else if (vert) { hud.style.left = side === "left" ? "auto" : "14px"; hud.style.right = side === "left" ? "14px" : "auto"; hud.style.top = "50%"; hud.style.transform = "translateY(-50%)"; }
     else { hud.style.left = "50%"; hud.style.right = "auto"; hud.style.top = "50%"; hud.style.transform = "translate(-50%,-50%)"; }
     let p = 20; hud.style.setProperty("--p", p + "%");
-    const t = setInterval(() => { p += 8; hud.style.setProperty("--p", Math.min(p, 90) + "%"); if (p > 90) clearInterval(t); }, 110);
+    const t = setInterval(() => { p += 10; hud.style.setProperty("--p", Math.min(p, 90) + "%"); if (p > 90) clearInterval(t); }, 80);
     label(`${side === "left" ? "Left" : "Right"} side swipe: ${entryLabel("morphe_swipe_" + side + "_zone", action)}`);
-    setTimeout(() => { hud.style.display = "none"; }, 1900);
+    setTimeout(() => { hud.style.display = "none"; }, 1200);
   }
-  setTimeout(() => { f.style.opacity = "0"; f.style.transition = ""; }, 1500);
+  hideF(f, 1050);
 }
 function startDemo(k) {
   stopDemo();
@@ -731,32 +1022,47 @@ function startDemo(k) {
   demoStep = 0;
   const run = () => { if (selected !== k) return stopDemo(); fn(V(k)); demoStep++; };
   setTimeout(run, 60);
-  demoTimer = setInterval(run, 2600);
+  demoTimer = setInterval(run, LOOP_MS);
 }
+const isAnimated = k => { const a = A[k]; return !!a && (a.kind === "gesture" || a.kind === "behaviour" || a.kind === "scenario" || !!DEMOS[k]); };
 
 // ------------------------------------------------------------------ section membership
-let MEMBERS = {}; // section id -> {live:[keys], misc:[keys]}
+let MEMBERS = {};
 function inScope(p, scopes) { return scopes.some(([s, sub]) => p.screen === s && (p.subScreen || null) === sub); }
 function buildMembers() {
   MEMBERS = {};
   SECTIONS.forEach(s => (MEMBERS[s.id] = { live: [], misc: [] }));
   const assigned = new Set();
-  for (const k in A) if (PREF[k]) { MEMBERS[A[k].section].live.push(k); assigned.add(k); }
+  for (const k in A) if (PREF[k] && MEMBERS[A[k].section]) { MEMBERS[A[k].section].live.push(k); assigned.add(k); }
   for (const p of CAT.preferences) {
     if (assigned.has(p.key)) continue;
     const s = SECTIONS.find(s => s.scopes && inScope(p, s.scopes));
     (s ? MEMBERS[s.id].misc : MEMBERS.misc.misc).push(p.key);
   }
 }
+const sectionOf = k => SECTIONS.find(s => MEMBERS[s.id].live.includes(k) || MEMBERS[s.id].misc.includes(k))?.id || "misc";
 
 // ------------------------------------------------------------------ rendering
 const $ = id => document.getElementById(id);
+const secInfo = () => SECTIONS.find(s => s.id === section);
 
-function renderTabs() {
-  $("tabs").innerHTML = SECTIONS.map(s => {
-    const n = s.id === "misc" ? MEMBERS.misc.misc.length : MEMBERS[s.id].live.length;
-    return `<button class="tab" role="tab" data-sec="${s.id}" aria-selected="${s.id === section}">${s.title}<span class="n">${n}</span></button>`;
+function renderBar() {
+  const s = secInfo();
+  $("secLabel").textContent = s.title;
+  $("secIcon").innerHTML = `<path d="${P[s.icon] || P.list}"/>`;
+  $("pickGrid").innerHTML = SECTIONS.map((x, i) => {
+    const m = MEMBERS[x.id];
+    const sub = x.id === "misc" ? `${m.misc.length} settings` : `${m.live.length} visual · ${m.misc.length} misc`;
+    return `<button class="pick" role="menuitem" data-sec="${x.id}" aria-current="${x.id === section}" style="transition-delay:${Math.min(i, 12) * 12}ms"><span class="pi">${I(x.icon)}</span><span><div class="pt">${esc(x.title)}</div><div class="ps">${sub}</div></span></button>`;
   }).join("");
+  const n = pendingRestart().length;
+  $("rcount").textContent = n;
+  $("rchip").classList.toggle("show", n > 0);
+}
+function setPicker(open) {
+  pickerOpen = open;
+  $("picker").classList.toggle("open", open); $("pickScrim").classList.toggle("open", open);
+  $("secPill").setAttribute("aria-expanded", String(open));
 }
 
 function renderStage() {
@@ -765,9 +1071,12 @@ function renderStage() {
   $("stick").hidden = !scene;
   if (!scene) { st.innerHTML = ""; return; }
   const scrollers = [...st.querySelectorAll(".inner-scroll")].map(e => e.scrollTop);
+  const hscroll = [...st.querySelectorAll("[data-hs]")].map(e => e.scrollLeft);
   st.className = "stage " + (showSlots ? "slots" : "noslots") + (mode === "orig" ? " original" : "");
   st.innerHTML = scene();
+  st.querySelectorAll(".finger").forEach(f => { if (!f.firstChild) f.innerHTML = I("gesture"); });
   st.querySelectorAll(".inner-scroll").forEach((e, i) => { if (scrollers[i]) e.scrollTop = scrollers[i]; });
+  st.querySelectorAll('[style*="overflow-x:auto"]').forEach((e, i) => { e.dataset.hs = ""; if (hscroll[i]) e.scrollLeft = hscroll[i]; });
 }
 
 function stateChip(k) {
@@ -778,25 +1087,16 @@ function stateChip(k) {
   }
   return "";
 }
-function summaryFor(k) {
-  const p = PREF[k]; const v = state[k];
-  if (p.type === "boolean") return (v ? p.summaryOn : p.summaryOff) || p.summary || "";
-  return p.summary || "";
-}
-
-function controlFor(k, compact) {
+function summaryFor(k) { const p = PREF[k]; const v = state[k]; if (p.type === "boolean") return (v ? p.summaryOn : p.summaryOff) || p.summary || ""; return p.summary || ""; }
+const RANGES = { font_size: [8, 48], travel_duration: [2, 15], width_dip: [100, 400], caption_scale: [50, 300], corner_radius: [0, 24], blur: [0, 100], smoothing: [0, 100], dim_duration: [0, 10] };
+function controlFor(k) {
   const p = PREF[k]; const v = state[k]; const dis = mode === "orig" || !parentsOk(k) ? "disabled" : "";
-  if (p.entries && p.entries.length && p.entries.length <= 8 && !compact) {
-    return `<div class="ctl">${p.entries.map(e => `<button class="opt" data-set="${k}" data-val="${esc(e.value)}" aria-pressed="${String(e.value) === String(v)}" ${dis}>${esc(e.label)}</button>`).join("")}</div>`;
-  }
-  if (p.entries && p.entries.length) {
-    return `<div class="ctl"><select data-set="${k}" ${dis} aria-label="${esc(title(k))}">${p.entries.map(e => `<option value="${esc(e.value)}" ${String(e.value) === String(v) ? "selected" : ""}>${esc(e.label)}</option>`).join("")}</select></div>`;
-  }
+  if (p.entries && p.entries.length && p.entries.length <= 8) return `<div class="ctl">${p.entries.map(e => `<button class="opt" data-set="${k}" data-val="${esc(e.value)}" aria-pressed="${String(e.value) === String(v)}" ${dis}>${esc(e.label)}</button>`).join("")}</div>`;
+  if (p.entries && p.entries.length) return `<div class="ctl"><select data-set="${k}" ${dis} aria-label="${esc(title(k))}">${p.entries.map(e => `<option value="${esc(e.value)}" ${String(e.value) === String(v) ? "selected" : ""}>${esc(e.label)}</option>`).join("")}</select></div>`;
   if (p.type === "integer" || p.type === "float" || p.type === "long") {
-    const isPct = /opacity|scale|strength|display_area/.test(k);
-    if (isPct || /width_dip|radius|blur/.test(k)) {
-      const max = /width_dip/.test(k) ? 400 : /caption_scale/.test(k) ? 300 : 100;
-      const min = /width_dip/.test(k) ? 100 : /caption_scale/.test(k) ? 50 : 0;
+    const r = Object.entries(RANGES).find(([n]) => k.includes(n));
+    if (r || /opacity|scale|strength|display_area/.test(k)) {
+      const [min, max] = r ? r[1] : [0, 100];
       return `<div class="ctl"><input type="range" min="${min}" max="${max}" step="1" value="${v}" data-set="${k}" ${dis} aria-label="${esc(title(k))}"><span class="val" data-val-of="${k}">${v}</span></div>`;
     }
     return `<div class="ctl"><input type="number" value="${v}" data-set="${k}" ${dis} aria-label="${esc(title(k))}" step="${p.type === "float" ? "0.05" : "1"}"></div>`;
@@ -808,43 +1108,48 @@ function controlFor(k, compact) {
   }
   return "";
 }
+function needText(k) { return PREF[k].parents.map(x => `“${esc(title(x.key))}” ${x.mode === "not" ? "off" : "on"}`).join(", "); }
 
 function rowHTML(k, live) {
-  const p = PREF[k]; const a = A[k]; const kind = live ? a.kind : "fallback";
+  const p = PREF[k]; const a = A[k]; const kind = live ? (a.kind === "scenario" ? "behaviour" : a.kind) : "fallback";
   const chg = JSON.stringify(state[k]) !== JSON.stringify(defaults[k]);
   const dis = !parentsOk(k);
   const isBool = p.type === "boolean";
   const info = !p.type || p.type === "screen" || p.widget === "NonInteractivePreference" || p.widget === "IntentPreference";
   let right = "", ctl = "";
-  if (live) { right = stateChip(k); if (!isBool) ctl = controlFor(k); }
-  else if (isBool) right = `<button class="sw" role="switch" data-sw="${k}" aria-checked="${!!state[k]}" ${dis || mode === "orig" ? "disabled" : ""} aria-label="${esc(title(k))}"></button>`;
+  if (live && a.kind !== "scenario") { right = stateChip(k); if (!isBool) ctl = controlFor(k); }
+  else if (isBool) right = `<button class="sw" role="switch" data-sw="${k}" aria-checked="${!!state[k]}" ${mode === "orig" ? "disabled" : ""} aria-label="${esc(title(k))}"></button>`;
   else if (!info) ctl = controlFor(k);
+  if (SCN[k]) right = `<button class="replay" data-replay="${k}" aria-label="Play animation">${I("play")}</button>` + right;
   const cls = ["row", live ? "live" : "fallback"];
   if (selected === k) cls.push("sel");
   if (dis) cls.push("dis");
   if (live && (a.kind === "vis" || a.kind === "overlay") && !shown(k)) cls.push("offstate");
   const sum = info ? (p.summary || (p.type === "screen" ? "Opens a sub-screen in Morphe settings" : "Information")) : summaryFor(k);
-  const need = dis ? `<div class="sum" style="color:#f2b84b">Needs: ${p.parents.map(x => (x.mode === "not" ? "“" + title(x.key) + "” off" : "“" + title(x.key) + "” on")).join(", ")}</div>` : "";
-  return `<div class="${cls.join(" ")}" data-row="${k}" ${live ? `data-k="${k}"` : ""}>
-    <div class="kind" title="${KIND_NAME[kind]}">${I(KIND_ICON[kind])}</div>
-    <div class="txt"><div class="ttl">${esc(title(k))}${chg ? '<span class="changed-dot" title="Changed from default"></span>' : ""}${p.rebootApp ? '<span class="reboot">restart</span>' : ""}</div>
+  const need = dis ? `<div class="sum need">${I("lock", "ico", 'style="width:14px;height:14px;fill:currentColor"')}Needs ${needText(k)}<button class="goto" data-goto="${k}">Take me there ${I("arrow")}</button></div>` : "";
+  const tags = (isAnimated(k) ? `<span class="tag">${I("play")}Animated</span>` : "") + (p.rebootApp ? `<span class="tag rs">Restart</span>` : "");
+  return `<div class="${cls.join(" ")}" data-row="${k}" data-k="${k}" tabindex="0">
+    <div class="kind" title="${KIND_NAME[kind]}">${I(KIND_ICON[kind])}${dis ? `<span class="lockb">${I("lock")}</span>` : ""}</div>
+    <div class="txt"><div class="ttl">${esc(title(k))}${chg ? '<span class="changed-dot" title="Changed from default"></span>' : ""}${tags}</div>
       ${sum ? `<div class="sum">${esc(sum)}</div>` : ""}${need}${ctl}</div>${right}</div>`;
 }
+const groupHTML = (name, icon, keys, live) => keys.length ? `<div class="gtitle">${I(icon)}${name} · ${keys.length}</div><div class="group">${keys.map(k => rowHTML(k, live)).join("")}</div>` : "";
 
 let miscQuery = "";
 function renderList() {
   const m = MEMBERS[section];
   let html = "";
   if (section !== "misc") {
+    const anim = m.live.filter(isAnimated), stat = m.live.filter(k => !isAnimated(k));
     html += `<div class="sechead">Live view <span>${m.live.length} visual · ${m.misc.length} misc</span></div>`;
-    html += m.live.map(k => rowHTML(k, true)).join("");
+    html += groupHTML("Animated", "play", anim, true) + groupHTML("Static", "eye", stat, true);
     if (m.misc.length) {
-      html += `<div class="sechead">Misc <span>no visual adapter yet</span></div><div class="secnote">These use their normal Morphe widget. When an adapter is written for one, it moves up into Live view by itself.</div>`;
-      html += m.misc.map(k => rowHTML(k, false)).join("");
+      html += `<div class="sechead">Misc <span>no visual adapter currently available</span></div><div class="secnote">These use their normal Morphe widget. When an adapter is written for one, it moves up into Live view by itself.</div>`;
+      html += `<div class="group">${m.misc.map(k => rowHTML(k, false)).join("")}</div>`;
     }
   } else {
     html += `<div class="search"><svg viewBox="0 0 24 24"><path d="${P.search}"/></svg><input id="miscSearch" placeholder="Search ${m.misc.length} settings" value="${esc(miscQuery)}" aria-label="Search settings"></div>`;
-    html += `<div class="secnote" style="padding-top:10px">Every Morphe YouTube preference that no Live view section claims yet, grouped by its original settings screen.</div>`;
+    html += `<div class="secnote" style="padding-top:10px">Every Morphe YouTube setting that no Live view screen claims yet, grouped by its original settings screen. No visual adapter is currently available for these.</div>`;
     const q = miscQuery.trim().toLowerCase();
     const groups = {};
     for (const k of m.misc) {
@@ -855,7 +1160,7 @@ function renderList() {
     }
     const names = Object.keys(groups).sort();
     if (!names.length) html += `<div class="secnote">No settings match “${esc(miscQuery)}”.</div>`;
-    for (const g of names) html += `<div class="grp">${esc(g)} · ${groups[g].length}</div>` + groups[g].map(k => rowHTML(k, false)).join("");
+    for (const g of names) html += `<div class="gtitle">${esc(g)} · ${groups[g].length}</div><div class="group">${groups[g].map(k => rowHTML(k, false)).join("")}</div>`;
   }
   $("list").innerHTML = html;
   const s = $("miscSearch");
@@ -864,16 +1169,15 @@ function renderList() {
 
 function renderInspector() {
   const k = selected, p = k && PREF[k];
-  if (!p) {
-    $("selCard").innerHTML = `<h2>Selected</h2><p>Nothing selected. Tap a component in the preview or a row in the list.</p>`;
-  } else {
+  if (!p) $("selCard").innerHTML = `<h2>Selected</h2><p>Nothing selected. Tap a component in the preview or a row in the list.</p>`;
+  else {
     const a = A[k];
     const src = p.sourceFile ? `<a href="https://github.com/MorpheApp/morphe-patches/blob/main/${esc(p.sourceFile)}" target="_blank" rel="noopener">${esc(p.sourceFile.split("/").pop())}</a>` : "–";
     $("selCard").innerHTML = `<h2>Selected</h2><h3>${esc(title(k))}</h3><p>${esc(p.summary || summaryFor(k) || "")}</p>
       <dl class="kv">
         <dt>Key</dt><dd>${esc(k)}</dd>
-        <dt>Adapter</dt><dd><span class="pill">${a ? KIND_NAME[a.kind] : KIND_NAME.fallback}</span></dd>
-        <dt>Type</dt><dd>${esc(p.type || p.widget)}${p.rebootApp ? ' · <span style="color:var(--warn)">restarts app</span>' : ""}</dd>
+        <dt>Adapter</dt><dd><span class="pill">${a ? (a.kind === "scenario" ? "ScenarioAnimation" : KIND_NAME[a.kind]) : KIND_NAME.fallback}</span></dd>
+        <dt>Type</dt><dd>${esc(p.type || p.widget)}${p.rebootApp ? ' · <span style="color:var(--m-warning)">restarts app</span>' : ""}</dd>
         <dt>Default</dt><dd>${esc(JSON.stringify(defaults[k]))}</dd>
         <dt>Current</dt><dd>${esc(JSON.stringify(state[k]))}</dd>
         <dt>Stock</dt><dd>${esc(JSON.stringify(stockOf(k)))}</dd>
@@ -885,114 +1189,164 @@ function renderInspector() {
   }
   const total = CAT.preferences.length;
   const live = Object.keys(A).filter(k => PREF[k]).length;
-  const missing = Object.keys(A).filter(k => !PREF[k]);
+  const anim = Object.keys(A).filter(k => PREF[k] && isAnimated(k)).length;
   $("covCard").innerHTML = `<h2>Coverage</h2>
-    <div class="statrow"><div><div class="big">${live}</div><span>visualized</span></div><div><div class="big">${total - live}</div><span>in Misc</span></div><div><div class="big">${total}</div><span>prefs found</span></div></div>
+    <div class="statrow"><div><div class="big">${live}</div><span>visualized</span></div><div><div class="big">${anim}</div><span>animated</span></div><div><div class="big">${total - live}</div><span>in Misc</span></div><div><div class="big">${total}</div><span>prefs found</span></div></div>
     <div class="cov">${SECTIONS.filter(s => s.id !== "misc").map(s => { const m = MEMBERS[s.id]; const t = m.live.length + m.misc.length; return `<div class="r"><span>${s.title}</span><div class="bar"><i style="width:${t ? (m.live.length / t * 100) : 0}%"></i></div><span class="num">${m.live.length}/${t}</span></div>`; }).join("")}</div>
-    <p style="margin-top:12px;font-size:12px">Source: <span style="font-family:var(--mono)">${esc(CAT.source)}</span>${missing.length ? `<br>Adapters without a matching pref: ${missing.length}` : ""}</p>`;
-  const ch = changedOnly();
-  const n = Object.keys(ch).length;
+    <p style="margin-top:12px;font-size:12px">Source: <span style="font-family:var(--mono)">${esc(CAT.source)}</span></p>`;
+  const ch = changedOnly(); const n = Object.keys(ch).length;
   $("chgCard").innerHTML = `<h2>Changed settings</h2><p>${n ? `${n} setting${n > 1 ? "s" : ""} differ from Morphe's defaults. Saved in this browser only.` : "All settings are at Morphe's defaults."}</p>
     ${n ? `<pre class="json" id="json">${esc(JSON.stringify(ch, null, 1))}</pre>` : ""}
     <div class="btnrow">${n ? `<button class="btn" id="copyJson">Copy as JSON</button><button class="btn danger" id="resetAll">Reset all</button>` : ""}</div>`;
   const cp = $("copyJson");
-  if (cp) cp.onclick = () => { const txt = JSON.stringify(ch, null, 1); navigator.clipboard?.writeText(txt).then(() => snack("Copied changed settings"), () => selectPre()); };
+  if (cp) cp.onclick = () => { const txt = JSON.stringify(ch, null, 1); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => snack("Copied changed settings"), () => selectPre()); };
   const rs = $("resetAll");
   if (rs) rs.onclick = () => { const before = { ...state }; Object.assign(state, defaults); commit(); snack("Reset all settings to defaults", () => { Object.assign(state, before); commit(); }); };
 }
 function selectPre() { const pre = $("json"); if (!pre) return; const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(r); snack("Press Ctrl+C to copy"); }
 
-function renderAll() { renderTabs(); renderStage(); renderList(); renderInspector(); store.save(); }
-function commit() { renderStage(); renderList(); renderInspector(); store.save(); }
+function renderAll() { renderBar(); renderStage(); renderList(); renderInspector(); store.save(); }
+function commit() { renderBar(); renderStage(); renderList(); renderInspector(); store.save(); }
+
+// ------------------------------------------------------------------ restart handling
+const pendingRestart = () => Object.keys(PREF).filter(k => PREF[k].rebootApp && JSON.stringify(state[k]) !== JSON.stringify(baseline[k]));
+function openDialog(html) { $("dlgBox").innerHTML = html; $("dlg").classList.add("open"); setTimeout(() => $("dlgBox").querySelector("button")?.focus(), 50); }
+function closeDialog() { $("dlg").classList.remove("open"); }
+function restartDialog() {
+  const keys = pendingRestart();
+  openDialog(`<div class="di">${I("restart")}</div><h2 id="dlgTitle">Restart to apply</h2>
+    <p>${keys.length} setting${keys.length > 1 ? "s" : ""} only take effect after YouTube restarts.</p>
+    <ul>${keys.map(k => `<li>${esc(title(k))}</li>`).join("")}</ul>
+    <div class="acts"><button class="dbtn primary" id="dRestart">Restart now</button><button class="dbtn tonal" id="dStay">Keep editing</button></div>`);
+  $("dRestart").onclick = () => { closeDialog(); $("restarting").classList.add("on"); setTimeout(() => { baseline = { ...state }; storeBaseline(); renderBar(); $("restarting").classList.remove("on"); snack("YouTube restarted. All changes are applied."); }, 1400); };
+  $("dStay").onclick = closeDialog;
+}
+function storeBaseline() { try { localStorage.setItem(LS + "-baseline", JSON.stringify(baseline)); } catch { /* storage unavailable */ } }
+$("btnBack").onclick = () => {
+  if (pendingRestart().length) return restartDialog();
+  const app = $("app"); app.classList.remove("exitflash"); void app.offsetWidth; app.classList.add("exitflash");
+  setTimeout(() => snack("Back to Morphe settings (demo: the editor reopens)"), 350);
+};
+$("rchip").onclick = restartDialog;
+$("dlg").addEventListener("click", e => { if (e.target.id === "dlg") closeDialog(); });
 
 // ------------------------------------------------------------------ interactions
 let snackTimer = null, undoFn = null;
 function snack(msg, undo) {
-  $("snackMsg").innerHTML = msg;
-  undoFn = undo || null;
-  $("snackUndo").hidden = !undo;
-  $("snack").classList.add("show");
-  clearTimeout(snackTimer);
+  $("snackMsg").innerHTML = msg; undoFn = undo || null; $("snackUndo").hidden = !undo;
+  $("snack").classList.add("show"); clearTimeout(snackTimer);
   snackTimer = setTimeout(() => $("snack").classList.remove("show"), 3200);
 }
 $("snackUndo").onclick = () => { if (undoFn) undoFn(); undoFn = null; $("snack").classList.remove("show"); };
 
+function highlight(k) {
+  document.querySelectorAll(".sel").forEach(e => e.classList.remove("sel"));
+  document.querySelectorAll(`[data-k="${k}"], [data-row="${k}"], [data-also="${k}"]`).forEach(e => e.classList.add("sel"));
+}
+function scrollRowIntoView(k, center) {
+  const row = document.querySelector(`[data-row="${k}"]`); if (!row) return;
+  const sc = $("scroller"), two = $("content").offsetWidth >= 600, stickH = two ? 0 : $("stick").offsetHeight;
+  const top = row.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop;
+  const target = center ? top - stickH - (sc.clientHeight - stickH) / 2 + row.offsetHeight / 2 : top - stickH - 8;
+  if (center || top < sc.scrollTop + stickH || top + row.offsetHeight > sc.scrollTop + sc.clientHeight) sc.scrollTo({ top: target, behavior: "smooth" });
+}
 function select(k, from) {
   selected = k;
-  document.querySelectorAll(".sel").forEach(e => e.classList.remove("sel"));
-  document.querySelectorAll(`[data-k="${k}"], [data-row="${k}"]`).forEach(e => e.classList.add("sel"));
+  if (CUSTOM_KEYS.has(k) && !shown(k) && section === "player" && !trayOpen) { trayOpen = true; renderStage(); }
+  highlight(k);
   renderInspector();
-  if (from === "stage") {
-    const row = document.querySelector(`[data-row="${k}"]`);
-    if (row) {
-      const sc = $("scroller"), stickH = $("stick").offsetHeight;
-      const top = row.offsetTop - stickH - 8;
-      if (row.offsetTop < sc.scrollTop + stickH || row.offsetTop + row.offsetHeight > sc.scrollTop + sc.clientHeight) sc.scrollTo({ top, behavior: "smooth" });
-    }
-  }
+  if (from === "stage") scrollRowIntoView(k);
   if (from === "list") {
     const el = document.querySelector(`#stage [data-k="${k}"]`);
     const box = el && el.closest(".inner-scroll");
     if (el && box) { const r = el.getBoundingClientRect(), b = box.getBoundingClientRect(); if (r.top < b.top || r.bottom > b.bottom) box.scrollBy({ top: r.top - b.top - 40, behavior: "smooth" }); }
   }
+  if (DEMOS[k]) startDemo(k); else stopDemo();
+  if (SCN[k] && from) playScenario(k);
   const a = A[k];
-  if (a && (a.kind === "gesture" || a.kind === "behaviour" || DEMOS[k])) startDemo(k); else stopDemo();
-  const notApplicable = a && section === a.section && !document.querySelector(`#stage [data-k="${k}"]`);
+  const notApplicable = a && a.kind !== "scenario" && a.section === section && !document.querySelector(`#stage [data-k="${k}"], #stage [data-also="${k}"]`);
   if (notApplicable && SCENES[section]) {
     const why = k === "morphe_hide_end_screen_suggested_video" ? "Appears only when autoplay is off. Set Autoplay mode to Off to see it."
       : k === "morphe_hide_autoplay_preview" ? "Appears only when autoplay is on."
       : /^morphe_miniplayer_/.test(k) ? "Not part of the current miniplayer type." : "Not shown in the current layout.";
     label(why, true);
   }
+  if (!parentsOk(k)) pointToParents(k);
 }
-
+function pointToParents(k) {
+  for (const x of PREF[k].parents) {
+    document.querySelectorAll(`[data-row="${x.key}"], #stage [data-k="${x.key}"]`).forEach(el => { el.classList.remove("attn"); void el.offsetWidth; el.classList.add("attn"); });
+  }
+}
 function ghost(k) {
-  ghosts.add(k);
-  renderStage();
-  document.querySelectorAll(`#stage [data-k="${k}"]`).forEach(e => e.classList.add("sel"));
-  setTimeout(() => { ghosts.delete(k); renderStage(); }, 1800);
+  ghosts.add(k); renderStage(); highlight(k);
+  setTimeout(() => { ghosts.delete(k); fading.add(k); renderStage(); highlight(k);
+    setTimeout(() => { fading.delete(k); renderStage(); highlight(k); }, 460); }, 1500);
 }
 
 function toggle(k) {
   const p = PREF[k];
-  if (mode === "orig") { snack("Switch to <b>Modified</b> to change settings"); return; }
-  if (!parentsOk(k)) { snack(`Needs ${p.parents.map(x => "“" + esc(title(x.key)) + "”" + (x.mode === "not" ? " off" : " on")).join(", ")}`); return; }
+  if (mode === "orig") { snack("Switch to <b>Morphe</b> to change settings"); return; }
+  if (!parentsOk(k)) { pointToParents(k); snack(`Needs ${needText(k)}`); return; }
   const before = state[k];
   if (p.type === "boolean") state[k] = !state[k];
   else if (p.entries && p.entries.length) { const vals = p.entries.map(e => e.value); const i = vals.indexOf(String(state[k])); state[k] = coerce(k, vals[(i + 1) % vals.length]); }
   else { snack("Use the control in the list to change this one"); return; }
-  commit();
-  select(k);
-  document.querySelectorAll(`#stage [data-k="${k}"]`).forEach(e => { e.classList.add("flash"); });
-  if (navigator.vibrate) try { navigator.vibrate(20); } catch { /* ignore */ }
+  afterChange(k, before);
+}
+function afterChange(k, before) {
+  const p = PREF[k];
+  commit(); select(k);
+  document.querySelectorAll(`#stage [data-k="${k}"]`).forEach(e => e.classList.add("flash"));
+  try { navigator.vibrate && navigator.vibrate(20); } catch { /* ignore */ }
   const a = A[k];
   const now = p.type === "boolean" ? (a && (a.kind === "vis" || a.kind === "overlay") ? (shown(k) ? "shown" : "hidden") : (state[k] ? "on" : "off")) : entryLabel(k, state[k]);
-  snack(`<b>${esc(title(k))}</b>: ${esc(now)}${p.rebootApp ? " · needs app restart" : ""}<br><code>${esc(k)} = ${esc(JSON.stringify(state[k]))}</code>`, () => { state[k] = before; commit(); select(k); });
+  snack(`<b>${esc(title(k))}</b>: ${esc(now)}<br><code>${esc(k)} = ${esc(JSON.stringify(state[k]))}</code>`, () => { state[k] = before; commit(); select(k); });
+  if (SCN[k]) playScenario(k);
+  // teleport back to the setting that was waiting on this one
+  if (returnTo && parentsOk(returnTo.key) && PREF[returnTo.key].parents.some(x => x.key === k)) {
+    const back = returnTo; returnTo = null;
+    setTimeout(() => goToSetting(back.key, () => {
+      const row = document.querySelector(`[data-row="${back.key}"]`);
+      if (row) { row.classList.remove("unlock"); void row.offsetWidth; row.classList.add("unlock"); }
+      snack(`<b>${esc(title(back.key))}</b> is unlocked`);
+    }), 650);
+  }
 }
-function coerce(k, v) {
-  const t = PREF[k].type;
-  if (t === "integer" || t === "long" || t === "float") return Number(v);
-  if (t === "boolean") return v === true || v === "true";
-  return v;
+function coerce(k, v) { const t = PREF[k].type; if (t === "integer" || t === "long" || t === "float") return Number(v); if (t === "boolean") return v === true || v === "true"; return v; }
+
+function switchSection(id, after) {
+  if (id === section) { after && after(); return; }
+  const from = SECTIONS.findIndex(s => s.id === section), to = SECTIONS.findIndex(s => s.id === id);
+  const content = $("content"); content.style.setProperty("--dir", (to > from ? -24 : 24) + "px");
+  content.classList.remove("swap-in"); content.classList.add("swap-out");
+  stopDemo(); stopScenario();
+  setTimeout(() => {
+    section = id; selected = null; miscQuery = ""; trayOpen = false;
+    $("scroller").scrollTop = 0; renderAll();
+    content.classList.remove("swap-out"); void content.offsetWidth; content.classList.add("swap-in");
+    after && setTimeout(after, 120);
+  }, 120);
+}
+function goToSetting(k, after) {
+  switchSection(sectionOf(k), () => {
+    select(k); scrollRowIntoView(k, true);
+    const row = document.querySelector(`[data-row="${k}"]`);
+    setTimeout(() => { if (row) { row.classList.remove("attn"); void row.offsetWidth; row.classList.add("attn"); } after && after(); }, 380);
+  });
 }
 
-// press handling (tap vs long-press), shared by stage and list
+// press handling (tap vs hold), shared by stage and list
 let press = null;
 const LONG = 480;
 function down(e) {
   if (e.button > 0) return;
-  if (e.target.closest("input,select,textarea,button.opt,.sw")) return;
-  const el = e.target.closest("[data-k]");
-  if (!el) return;
-  const k = el.dataset.k;
-  const from = el.closest("#stage") ? "stage" : "list";
+  if (e.target.closest("input,select,textarea,button.opt,.sw,.goto,.replay,[data-tray]")) return;
+  const el = e.target.closest("[data-k]"); if (!el) return;
+  const k = el.dataset.k; const from = el.closest("#stage") ? "stage" : "list";
   el.classList.add("pressing");
   press = { el, k, from, x: e.clientX, y: e.clientY, long: false };
-  press.t = setTimeout(() => {
-    if (!press) return;
-    press.long = true; el.classList.remove("pressing");
-    toggle(k);
-  }, LONG);
+  press.t = setTimeout(() => { if (!press) return; press.long = true; el.classList.remove("pressing"); toggle(k); }, LONG);
 }
 function cancelPress() { if (press) { clearTimeout(press.t); press.el.classList.remove("pressing"); press = null; } }
 function move(e) { if (press && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 10) cancelPress(); }
@@ -1002,83 +1356,159 @@ function up() {
   const { k, from, long } = press; press = null;
   if (long) return;
   const a = A[k];
-  if (mode === "mod" && a && (a.kind === "vis" || a.kind === "overlay") && !shown(k) && document.querySelector(`#stage [data-k="${k}"]`)) {
-    select(k, from); ghost(k);
-    label("Preview only: the setting still hides it");
+  if (mode === "mod" && a && (a.kind === "vis" || a.kind === "overlay") && !shown(k)) {
+    select(k, from);
+    if (document.querySelector(`#stage [data-k="${k}"]`)) { ghost(k); label("Preview only: the setting still hides it"); }
   } else select(k, from);
 }
 ["stage", "list"].forEach(id => {
   const el = $(id);
-  el.addEventListener("pointerdown", down);
-  el.addEventListener("pointermove", move);
-  el.addEventListener("pointerup", up);
-  el.addEventListener("pointercancel", cancelPress);
+  el.addEventListener("pointerdown", down); el.addEventListener("pointermove", move);
+  el.addEventListener("pointerup", up); el.addEventListener("pointercancel", cancelPress);
   el.addEventListener("pointerleave", e => { if (e.target === el) cancelPress(); });
   el.addEventListener("contextmenu", e => { if (e.target.closest("[data-k]")) e.preventDefault(); });
 });
-// keyboard: Enter selects, Space toggles
+$("stage").addEventListener("click", e => {
+  if (e.target.closest("[data-tray]")) { trayOpen = !trayOpen; renderStage(); if (selected) highlight(selected); }
+});
+// mouse wheel scrolls horizontal strips (action bars, chips)
+$("app").addEventListener("wheel", e => {
+  const h = e.target.closest('[style*="overflow-x:auto"], .picker');
+  if (h && !h.classList.contains("picker") && Math.abs(e.deltaY) > Math.abs(e.deltaX) && h.scrollWidth > h.clientWidth) { h.scrollLeft += e.deltaY; e.preventDefault(); }
+}, { passive: false });
 $("list").addEventListener("keydown", e => {
   const row = e.target.closest("[data-row]"); if (!row || e.target !== row) return;
   if (e.key === "Enter") { select(row.dataset.row, "list"); e.preventDefault(); }
   if (e.key === " ") { toggle(row.dataset.row); e.preventDefault(); }
 });
-
-// list controls
 $("list").addEventListener("click", e => {
+  const go = e.target.closest("[data-goto]");
+  if (go) { const k = go.dataset.goto; const parent = PREF[k].parents.find(x => (x.mode === "not") === !!state[x.key]) || PREF[k].parents[0]; returnTo = { key: k }; goToSetting(parent.key); snack(`Turn on <b>${esc(title(parent.key))}</b> by holding it, and you'll be brought back`); return; }
+  const rp = e.target.closest("[data-replay]");
+  if (rp) { select(rp.dataset.replay); playScenario(rp.dataset.replay); return; }
   const sw = e.target.closest("[data-sw]");
-  if (sw) { const k = sw.dataset.sw; select(k, "list"); toggle(k); return; }
+  if (sw) { const k = sw.dataset.sw; select(k); toggle(k); return; }
   const opt = e.target.closest("button.opt[data-set]");
-  if (opt) { const k = opt.dataset.set; const before = state[k]; state[k] = coerce(k, opt.dataset.val); commit(); select(k, "list"); snack(`<b>${esc(title(k))}</b>: ${esc(entryLabel(k, state[k]))}`, () => { state[k] = before; commit(); }); }
+  if (opt) { const k = opt.dataset.set; const before = state[k]; state[k] = coerce(k, opt.dataset.val); afterChange(k, before); }
 });
 $("list").addEventListener("input", e => {
   const t = e.target; const k = t.dataset && t.dataset.set; if (!k || t.tagName === "SELECT") return;
   if (t.type === "range" || t.type === "color") {
     state[k] = t.type === "range" ? Number(t.value) : t.value.toUpperCase();
     const lab = document.querySelector(`[data-val-of="${k}"]`); if (lab) lab.textContent = t.value;
-    if (selected !== k) { selected = k; }
-    renderStage(); document.querySelectorAll(`#stage [data-k="${k}"]`).forEach(x => x.classList.add("sel"));
+    selected = k; renderStage(); highlight(k);
   }
 });
 $("list").addEventListener("change", e => {
   const t = e.target; const k = t.dataset && t.dataset.set; if (!k) return;
-  state[k] = t.type === "range" ? Number(t.value) : t.type === "number" ? Number(t.value) : t.type === "color" ? t.value.toUpperCase() : coerce(k, t.value);
-  commit(); select(k);
+  const before = state[k];
+  state[k] = t.type === "range" || t.type === "number" ? Number(t.value) : t.type === "color" ? t.value.toUpperCase() : coerce(k, t.value);
+  if (t.type === "range" || t.type === "color") { commit(); select(k); if (returnTo) afterChange(k, before); } else afterChange(k, before);
 });
 
-$("tabs").addEventListener("click", e => {
-  const b = e.target.closest("[data-sec]"); if (!b) return;
-  section = b.dataset.sec; selected = null; stopDemo(); miscQuery = "";
-  $("scroller").scrollTop = 0;
-  renderAll();
-  b.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
-});
-$("btnOrig").onclick = () => { mode = "orig"; $("btnOrig").setAttribute("aria-pressed", "true"); $("btnMod").setAttribute("aria-pressed", "false"); $("hint").textContent = "Stock YouTube, read-only"; commit(); if (selected) select(selected); };
-$("btnMod").onclick = () => { mode = "mod"; $("btnMod").setAttribute("aria-pressed", "true"); $("btnOrig").setAttribute("aria-pressed", "false"); $("hint").textContent = "Tap to select · long-press to toggle"; commit(); if (selected) select(selected); };
+$("secPill").onclick = () => setPicker(!pickerOpen);
+$("pickScrim").onclick = () => setPicker(false);
+$("pickGrid").addEventListener("click", e => { const b = e.target.closest("[data-sec]"); if (!b) return; setPicker(false); returnTo = null; switchSection(b.dataset.sec); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") { setPicker(false); closeDialog(); } });
+function setMode(m) {
+  mode = m;
+  $("btnOrig").setAttribute("aria-pressed", String(m === "orig")); $("btnMod").setAttribute("aria-pressed", String(m === "mod"));
+  $("hint").textContent = m === "orig" ? "Stock YouTube, read-only" : "Tap to select · hold to switch";
+  commit(); if (selected) select(selected);
+}
+$("btnOrig").onclick = () => setMode("orig");
+$("btnMod").onclick = () => setMode("mod");
 $("slots").onchange = e => { showSlots = e.target.checked; renderStage(); store.save(); };
+
+// ------------------------------------------------------------------ devices and UI scale
+const DEVICES = [
+  { id: "phone", label: "Phone", w: 400, h: 820 },
+  { id: "land", label: "Phone landscape", w: 860, h: 420 },
+  { id: "tablet", label: "Tablet", w: 820, h: 1100 },
+  { id: "desktop", label: "Desktop", w: 1180, h: 760, desktop: true },
+];
+let device_ = "phone", uiScale = 100;
+function applyDevice() {
+  const d = DEVICES.find(x => x.id === device_);
+  const ph = $("phone");
+  ph.style.width = d.w + "px"; ph.style.height = d.h + "px"; ph.classList.toggle("desktop", !!d.desktop);
+  $("app").style.zoom = uiScale / 100;
+  const avail = Math.min(window.innerWidth - 40, d.w), availH = window.innerHeight - 40;
+  const s = Math.min(1, avail / d.w, Math.max(.45, availH / d.h));
+  ph.style.transform = s < 1 ? `scale(${s})` : "";
+  $("devwrap").style.width = d.w * s + "px"; $("devwrap").style.height = d.h * s + "px";
+  $("devBtns").innerHTML = DEVICES.map(x => `<button class="btn" data-dev="${x.id}" aria-pressed="${x.id === device_}">${x.label}</button>`).join("");
+}
+$("devBtns").addEventListener("click", e => { const b = e.target.closest("[data-dev]"); if (!b) return; device_ = b.dataset.dev; applyDevice(); store.save(); });
+$("uiScale").addEventListener("input", e => { uiScale = Number(e.target.value); $("uiScaleOut").textContent = uiScale + "%"; applyDevice(); });
+window.addEventListener("resize", () => { if (window.innerWidth > 860) applyDevice(); else { $("phone").style.transform = ""; $("devwrap").style.width = ""; $("devwrap").style.height = ""; $("phone").style.width = ""; $("phone").style.height = ""; } });
+
+// ------------------------------------------------------------------ first-run tutorial (loops, OK after first loop)
+const TUT_STEPS = [
+  { cap: "Tap a button to select it", sub: "Its setting is highlighted in the list" },
+  { cap: "Hold it to switch it off", sub: "The setting changes right away" },
+  { cap: "Tap an empty slot to peek", sub: "You see it briefly, the setting stays off" },
+  { cap: "Hold the slot to bring it back", sub: "Hold again any time to undo" },
+];
+const TUT_STEP_MS = 1700;
+let tutTimer = null;
+function runTutorial() {
+  const t = $("tut");
+  t.innerHTML = `<h2>Visual settings</h2><p class="tsub">See what each Morphe setting changes</p>
+    <div class="tstage"><div class="tbtns"><div class="tb" id="tbCC">${I("cc")}</div><div class="tb" id="tbCast">${I("cast")}<div class="tring" id="tring"></div></div><div class="tb">${I("gear")}</div></div>
+      <div style="position:absolute;left:12px;right:12px;bottom:12px;height:3px;background:rgba(255,255,255,.3)"><div style="width:30%;height:3px;background:#ff0033"></div></div>
+      <div class="finger" id="tFinger">${I("gesture")}</div></div>
+    <div class="steps">${TUT_STEPS.map(() => "<i></i>").join("")}</div>
+    <div class="tcap" id="tcap"></div><button class="ok" id="tutOk">OK</button><div class="wait" id="tutWait">Watch once to continue</div>`;
+  t.classList.add("on");
+  let step = 0, loops = 0;
+  const cast = $("tbCast"), f = $("tFinger"), ring = $("tring");
+  const stageEl = t.querySelector(".tstage");
+  const pos = () => { const r = cast.getBoundingClientRect(), s = stageEl.getBoundingClientRect(); return [r.left - s.left + r.width / 2, r.top - s.top + r.height / 2]; };
+  const show = () => {
+    t.querySelectorAll(".steps i").forEach((i, n) => i.classList.toggle("on", n <= step));
+    $("tcap").innerHTML = `${TUT_STEPS[step].cap}<small>${TUT_STEPS[step].sub}</small>`;
+    const [x, y] = pos();
+    f.style.transition = "left .35s var(--ease), top .35s var(--ease), opacity 120ms"; f.style.left = x + "px"; f.style.top = y + "px"; f.classList.add("show");
+    ring.classList.remove("go"); f.classList.remove("tap", "hold");
+    if (step === 0) { cast.className = "tb"; setTimeout(() => { f.classList.add("tap"); cast.classList.add("sel"); }, 400); }
+    if (step === 1) { cast.className = "tb sel"; setTimeout(() => { f.classList.add("hold"); ring.classList.add("go"); }, 300); setTimeout(() => { cast.className = "tb off"; f.classList.remove("hold"); }, 820); setTimeout(() => { cast.className = "tb slot"; }, 1150); }
+    if (step === 2) { cast.className = "tb slot"; setTimeout(() => { f.classList.add("tap"); cast.className = "tb slot peek"; }, 400); setTimeout(() => { cast.className = "tb slot"; }, 1350); }
+    if (step === 3) { cast.className = "tb slot"; setTimeout(() => { f.classList.add("hold"); ring.classList.add("go"); }, 300); setTimeout(() => { cast.className = "tb sel"; f.classList.remove("hold"); }, 820); setTimeout(() => { f.classList.remove("show"); }, 1400); }
+  };
+  show();
+  clearInterval(tutTimer);
+  tutTimer = setInterval(() => {
+    step = (step + 1) % TUT_STEPS.length;
+    if (step === 0) { loops++; if (loops === 1) { $("tutOk").classList.add("show"); $("tutWait").textContent = ""; } }
+    show();
+  }, TUT_STEP_MS);
+  $("tutOk").onclick = () => { clearInterval(tutTimer); t.classList.remove("on"); try { localStorage.setItem(LS + "-tutorial", "1"); } catch { /* storage unavailable */ } };
+}
+$("replayTut").onclick = runTutorial;
 
 function tick() { const d = new Date(); $("clock").textContent = `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`; }
 
 // ------------------------------------------------------------------ boot
 async function boot() {
-  try {
-    const r = await fetch("catalogue.json");
-    CAT = await r.json();
-  } catch (err) {
-    $("list").innerHTML = `<div class="secnote" style="padding:20px 16px">Could not load catalogue.json. Serve this folder over HTTP (for example <code>python3 -m http.server</code>) and reload.</div>`;
-    return;
-  }
+  try { const r = await fetch("catalogue.json"); CAT = await r.json(); }
+  catch (err) { $("list").innerHTML = `<div class="secnote" style="padding:20px 16px">Could not load catalogue.json. Serve this folder over HTTP (for example <code>python3 -m http.server</code>) and reload.</div>`; return; }
   for (const p of CAT.preferences) { PREF[p.key] = p; defaults[p.key] = initialValue(p); }
   Object.assign(state, defaults);
   const saved = store.load();
   if (saved.state) for (const k in saved.state) if (k in PREF) state[k] = saved.state[k];
+  baseline = { ...state };
+  try { const b = JSON.parse(localStorage.getItem(LS + "-baseline") || "null"); if (b) for (const k in b) if (k in PREF) baseline[k] = b[k]; } catch { /* storage unavailable */ }
   if (saved.section && SECTIONS.some(s => s.id === saved.section)) section = saved.section;
   if (typeof saved.slots === "boolean") { showSlots = saved.slots; $("slots").checked = showSlots; }
+  if (saved.device && DEVICES.some(d => d.id === saved.device)) device_ = saved.device;
   buildMembers();
   renderAll();
+  if (window.innerWidth > 860) applyDevice(); else $("devBtns").innerHTML = "";
   tick(); setInterval(tick, 30000);
-  // make list rows keyboard reachable
-  new MutationObserver(() => document.querySelectorAll("#list [data-row]").forEach(r => r.tabIndex = 0)).observe($("list"), { childList: true });
-  document.querySelectorAll("#list [data-row]").forEach(r => r.tabIndex = 0);
+  let seen = false; try { seen = localStorage.getItem(LS + "-tutorial") === "1"; } catch { /* storage unavailable */ }
+  if (!seen) runTutorial();
 }
+store.save = function () { try { localStorage.setItem(LS, JSON.stringify({ state: changedOnly(), section, slots: showSlots, device: device_ })); localStorage.setItem(LS + "-baseline", JSON.stringify(baseline)); } catch { /* storage unavailable */ } };
 boot();
 })();

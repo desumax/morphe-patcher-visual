@@ -52,6 +52,12 @@ cd visual-editor/web && python3 -m http.server 8000
   Misc heading of its section, or under the Misc tab when no section claims its screen.
   New Morphe preferences therefore show up automatically after regenerating the catalogue.
 
+Round 2 adds: a screen picker pill instead of tabs, restart prompt only when leaving the
+editor, "Take me there" for settings blocked by another setting (and back again once it is
+enabled), Animated / Static grouping, standard black-canvas scenario animations for settings
+with no on-screen effect (haptics vibrate the device in sync), a looping first-run tutorial,
+device presets and UI scale, and Morphe Manager's colours, shapes and motion timings.
+
 Interaction model: tap selects (and plays a demo for gestures and behaviours),
 long-press switches the setting, tapping a hidden component shows it for a moment
 without changing the setting, and Original / Modified compares stock YouTube with
