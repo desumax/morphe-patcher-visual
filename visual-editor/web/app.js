@@ -886,7 +886,8 @@ function buzz(dev, on) {
   dev.querySelectorAll(".waves").forEach(w => { w.classList.remove("go"); void w.offsetWidth; w.classList.add("go"); });
   try { navigator.vibrate && navigator.vibrate(40); } catch { /* not supported */ }
 }
-const at = (ms, f) => setTimeout(() => { if (scenarioToken.alive) f(); }, ms);
+// steps belong to the scenario that scheduled them; a replaced scenario never runs its leftover steps
+const at = (ms, f) => { const tk = scenarioToken; return setTimeout(() => { if (tk.alive && tk === scenarioToken) f(); }, ms); };
 function fingerTo(f, x, y, ms = 0) { f.style.transition = ms ? `left ${ms}ms var(--ease), top ${ms}ms var(--ease), opacity 120ms` : "opacity 120ms"; f.style.left = x + "px"; f.style.top = y + "px"; f.classList.add("show"); }
 function tapF(f) { f.classList.remove("tap"); void f.offsetWidth; f.classList.add("tap"); }
 const miniSeek = (pct = 30, marks = []) => `<div class="msk" style="position:absolute;left:8%;right:8%;bottom:16%;height:3px;background:rgba(255,255,255,.3)"><div class="mp" style="position:absolute;left:0;top:0;bottom:0;width:${pct}%;background:#ff0033;transition:width .9s linear"></div>${marks.map(m => `<i style="position:absolute;left:${m}%;top:-1px;width:2px;height:5px;background:#000"></i>`).join("")}</div>`;
