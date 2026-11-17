@@ -140,3 +140,5 @@ scenarios turn the phone visibly before the layout changes (`turn()`), and scena
 scenario that scheduled them.
 
 Round 11: scenario phones are a fixed logical size and scale to fill the preview canvas (no more shrunk or cut-off animations); custom playback speeds nest under the custom speed menu; new animations for the "Continue watching?" prompt and "Disable player popup panels"; DeArrow icon centred.
+
+Round 12: scenarios can run longer than the default (`SCN_HOLD`); "Disable player popup panels" is now a two-act story (playlist, then live stream) where stock panels jump open and cover the page while the patched ones wait as a bar until tapped; "Continue watching?" shows a run of autoplayed videos, with the stock prompt crossed out when Disabled.

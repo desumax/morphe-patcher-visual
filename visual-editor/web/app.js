@@ -866,6 +866,7 @@ let flySub = null;
 // setting and its new state, device illustration in the middle, one-line outcome at the bottom,
 // a progress line, then fade back (220 ms). Body length is SC_HOLD.
 const SC_FADE = 220, SC_HOLD = 3000;
+const SCN_HOLD = {}; // per-scenario body length when a story needs longer than SC_HOLD
 const SCN = {};
 const scen = (section, keys, fn) => keys.split(/\s+/).forEach(k => { A["morphe_" + k] = { section, kind: "scenario" }; SCN["morphe_" + k] = fn; });
 // Device illustration. Content that depends on orientation goes in .dv-video (the player area)
@@ -1525,12 +1526,13 @@ function playScenario(k, prevValue) {
   fitDev();
   if (foot && !canvas.querySelector(".foot").textContent) canvas.querySelector(".foot").textContent = foot;
   const prog = canvas.querySelector(".prog");
-  prog.animate([{ width: "0%" }, { width: "100%" }], { duration: SC_HOLD, delay: SC_FADE, fill: "forwards" });
+  const hold = SCN_HOLD[k] || SC_HOLD;
+  prog.animate([{ width: "0%" }, { width: "100%" }], { duration: hold, delay: SC_FADE, fill: "forwards" });
   setTimeout(() => {
     if (!token.alive) return;
     canvas.classList.remove("show");
     setTimeout(() => { if (!token.alive) return; token.alive = false; canvas.innerHTML = ""; if (wasHidden && section === "misc") { stick.hidden = true; } }, SC_FADE);
-  }, SC_FADE + SC_HOLD);
+  }, SC_FADE + hold);
 }
 function stopScenario() { scenarioToken.alive = false; $("canvas").classList.remove("show"); }
 
@@ -2301,26 +2303,78 @@ scen("playback", "disable_playlist_autoplay", (box, on) => {
   at(1400, () => { cd.innerHTML = on ? `${ico7("pause", 7)} Stopped` : `${ico7("play", 7)} Playing 3 / 12`; });
   return on ? "Playlists stop after each video" : "Playlists play on (stock)";
 });
+// Two acts (playlist, then live stream). Stock: the panel jumps up on its own and buries the page.
+// On: the panel waits as a small bar and only opens when the finger taps it.
+SCN_HOLD.morphe_disable_player_popup_panels = 5600;
 scen("playback", "disable_player_popup_panels", (box, on) => {
-  situation("Opening a video from a playlist, then a live stream");
-  box.innerHTML = device("port", pageRows(player7(3) + `<b style="font-size:7px">Night train to Bodø</b><div class="pbar7" style="display:flex;justify-content:space-between;padding:2px 4px;border-radius:3px;background:#1b1b1b;font-size:6px"><span>Road trip mix · 2 / 12</span>${ico7("expand", 7)}</div>` + row7(2, "Up next") + row7(4, "Up next")));
-  const dev = box.querySelector(".dev");
-  const panel = (title, rows) => `<div class="pp7" style="position:absolute;left:0;right:0;top:52px;bottom:0;background:#1b1b1b;padding:4px;display:grid;gap:3px;align-content:start;font-size:6px;animation:sheetup .3s var(--ease);z-index:4"><b style="font-size:6.5px">${title}</b>${rows}</div>`;
-  at(500, () => { if (on) { check7(dev, "Panel stays closed"); return; } dev.insertAdjacentHTML("beforeend", panel("Road trip mix", [1, 2, 4, 5].map(i => row7(i, "Video " + i)).join(""))); });
-  at(1500, () => { dev.querySelectorAll(".pp7,.check7").forEach(e => e.remove()); dev.querySelector(".pg7 > div").style.background = ART[5]; dev.querySelector(".pg7 b").textContent = "LIVE · Northern lights"; dev.querySelector(".pbar7").innerHTML = `<span>Live chat · 1.2K watching</span>${ico7("expand", 7)}`; });
-  at(1900, () => { if (on) { check7(dev, "Chat stays closed, the page stays readable"); return; } dev.insertAdjacentHTML("beforeend", panel("Live chat", chat7([[1, "ola", "so pretty"], [2, "mia", "green!!"], [3, "ken", "😍"], [4, "liv", "where is this?"]]))); });
-  return on ? "Playlist and live chat panels only open when you tap them" : "Playlist and live chat panels pop open by themselves (stock)";
+  situation("1 · You open a video from a playlist");
+  const desc = `<div class="ds7" style="display:grid;gap:3px"><b style="font-size:7px" class="tt7">Night train to Bodø</b><div style="display:flex;gap:3px">${chip7("Like")}${chip7("Share")}${chip7("Save")}</div><div style="font-size:6px;color:#aaa">Comments 312</div>${chat7([[1, "ola", "this view!"], [2, "mia", "take me there"], [3, "ken", "pure calm"]])}</div>`;
+  const feed = `<div class="fd7" style="display:grid;gap:5px">${top7()}${row7(2, "Road trip mix", "", "Playlist · 12 videos")}${row7(4, "Lo-fi beats")}${row7(1, "Northern lights LIVE", `<span style="position:absolute;left:1px;bottom:1px;font-size:4.5px;background:#f03;padding:0 2px;border-radius:2px">LIVE</span>`, "1.2K watching")}${row7(5, "Cabin build")}</div>`;
+  box.innerHTML = device("port", pageRows(feed));
+  const dev = box.querySelector(".dev"), pg = dev.querySelector(".pg7"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
+  const bar = (label) => `<div class="pb7" style="position:absolute;left:4px;right:4px;bottom:4px;height:15px;border-radius:4px;background:#272727;display:flex;align-items:center;gap:3px;padding:0 5px;font-size:6px;z-index:3;animation:sheetup .3s var(--ease)">${ico7(label[0], 7)}<span style="flex:1;white-space:nowrap;overflow:hidden">${label[1]}</span>${ico7("expand", 7)}</div>`;
+  const panel = (title, rows) => `<div class="pp7" style="position:absolute;left:0;right:0;top:52px;bottom:0;background:#1b1b1b;border-radius:5px 5px 0 0;padding:5px;display:grid;gap:3px;align-content:start;font-size:6px;animation:sheetup .35s var(--ease);z-index:4"><div style="width:16px;height:2px;border-radius:1px;background:#555;justify-self:center"></div><b style="font-size:6.5px">${title}</b>${rows}</div>`;
+  const openWatch = (art, live) => { pg.innerHTML = player7(art, live ? `<span style="position:absolute;left:3px;top:3px;font-size:5px;background:#f03;padding:0 3px;border-radius:2px">LIVE</span>` : "") + desc; if (live) pg.querySelector(".tt7").textContent = "Northern lights · live"; };
+  // Stock: a burst of "pop" lines and a red frame on the buried page. On: a lock on the bar, then a tap opens it.
+  const popAct = (t0, label, title, rows) => {
+    at(t0, () => dev.insertAdjacentHTML("beforeend", bar(label)));
+    if (!on) {
+      at(t0 + 450, () => { const b = dev.querySelector(".pb7"); b.insertAdjacentHTML("beforeend", `<span class="bz7" style="position:absolute;left:50%;top:-9px;transform:translateX(-50%);display:flex;gap:2px;font-size:7px;color:#ffcc00;animation:pop .2s">${ico7("spark", 9, "#ffcc00")}</span>`); b.style.animation = "buzz .25s 2"; });
+      at(t0 + 800, () => { dev.querySelectorAll(".pb7").forEach(e => e.remove()); dev.insertAdjacentHTML("beforeend", panel(title, rows)); });
+      at(t0 + 1150, () => { dev.insertAdjacentHTML("beforeend", `<div class="cv7" style="position:absolute;left:3px;right:3px;top:54px;bottom:3px;border:1.5px dashed #ff0033;border-radius:5px;z-index:5;animation:ghostin .2s"></div>`); toast7(dev, `${ico7("spark", 7, "#ffcc00")} Opened by itself`, "13%"); });
+    } else {
+      at(t0 + 450, () => { const b = dev.querySelector(".pb7"); b.style.boxShadow = "0 0 0 1.5px #4caf50"; b.insertAdjacentHTML("beforeend", `<span style="position:absolute;right:-3px;top:-6px;width:11px;height:11px;border-radius:50%;background:#4caf50;display:grid;place-items:center;animation:pop .2s">${ico7("lock", 7, "#000")}</span>`); toast7(dev, "Waits as a bar", "13%"); });
+      at(t0 + 1000, () => { dev.querySelectorAll(".t7").forEach(e => e.remove()); fingerTo(f, W * .5, H - 12, 0); f.style.opacity = 0; requestAnimationFrame(() => { f.style.opacity = ""; fingerTo(f, W * .5, H - 12); }); });
+      at(t0 + 1300, () => tapF(f));
+      at(t0 + 1450, () => { f.classList.remove("show"); dev.querySelectorAll(".pb7").forEach(e => e.remove()); dev.insertAdjacentHTML("beforeend", panel(title, rows)); toast7(dev, `${ico7("toggle", 7, "#4caf50")} Opens on your tap`, "13%"); });
+    }
+  };
+  // act 1: tap the playlist in the feed
+  at(250, () => fingerTo(f, W * .35, 36)); at(550, () => tapF(f));
+  at(750, () => { f.classList.remove("show"); openWatch(2, false); });
+  popAct(900, ["plist", "Playlist · 2 / 12"], "Road trip mix · 2 / 12", [1, 2, 4, 5].map(i => row7(i, "Video " + i)).join(""));
+  // act 2: back to the feed, open the live stream
+  at(3000, () => { situation("2 · Then you open a live stream"); dev.querySelectorAll(".pp7,.pb7,.cv7,.t7").forEach(e => e.remove()); pg.innerHTML = feed; });
+  at(3150, () => fingerTo(f, W * .35, 78)); at(3400, () => tapF(f));
+  at(3600, () => { f.classList.remove("show"); openWatch(1, true); });
+  popAct(3750, ["chat", "Live chat"], "Live chat", chat7([[1, "ola", "so pretty"], [2, "mia", "green!!"], [3, "ken", "😍"], [4, "liv", "where is this?"], [5, "bo", "hi from Oslo"]]));
+  return on ? "Playlist and live chat panels wait as a bar and open only when you tap them" : "Playlist and live chat panels jump open by themselves and cover the page (stock)";
 });
+// A long session with nobody touching the phone, shown as a run of videos with a clock.
+SCN_HOLD.morphe_continue_watching_prompt = 5200;
 scen("playback", "continue_watching_prompt", (box, v) => {
-  situation("Watching for a long time without touching the phone");
-  box.innerHTML = device("port", watch7(`<span class="tm7" style="position:absolute;left:3px;bottom:3px;font-size:5.5px;background:rgba(0,0,0,.6);padding:0 3px;border-radius:3px">1:12:40</span>`));
-  const dev = box.querySelector(".dev"); let c;
-  at(300, () => { c = clock7(dev, "Hours of autoplay later"); });
-  at(1300, () => { c.remove(); const pv = dev.querySelector(".pg7 > div");
-    if (v === "DEFAULT") { pv.style.filter = "brightness(.5)"; dev.insertAdjacentHTML("beforeend", `<div style="position:absolute;left:8px;right:8px;top:30%;background:#212121;border-radius:6px;padding:5px;font-size:6.5px;display:grid;gap:4px;z-index:5;animation:pop .25s"><b>Video paused. Continue watching?</b><div style="text-align:right;color:#3ea6ff">Yes</div></div>`); }
-    else if (v === "ALWAYS_COUNTDOWN") dev.insertAdjacentHTML("beforeend", `<div style="position:absolute;left:6px;right:6px;top:14px;background:rgba(0,0,0,.75);border-radius:5px;padding:4px;font-size:6px;z-index:5;animation:pop .25s">Up next in <b>5</b> · Cancel</div>`);
-    else check7(dev, "Keeps playing, no prompt"); });
-  return v === "DEFAULT" ? "YouTube pauses and asks 'Continue watching?' (stock)" : v === "ALWAYS_COUNTDOWN" ? "No prompt; the autoplay countdown always shows before the next video" : "No prompt: playback just continues";
+  situation("Autoplay runs for hours, nobody touches the phone");
+  const vids = [[3, "Building a tiny cabin"], [2, "Night train to Bodø"], [4, "Lo-fi beats to relax"], [5, "Rain on a tin roof"]];
+  box.innerHTML = device("port", pageRows(player7(3, `<span class="tm7" style="position:absolute;left:3px;bottom:3px;font-size:5.5px;background:rgba(0,0,0,.6);padding:0 3px;border-radius:3px">0:58</span><span class="pz7" style="position:absolute;left:0;bottom:0;height:2px;background:#f03;width:0"></span>`) + `<b class="tt7" style="font-size:7px">Building a tiny cabin</b><div class="run7" style="display:flex;gap:2px;align-items:center;font-size:5.5px;color:#aaa;white-space:nowrap;overflow:hidden">${ico7("clock", 7, "#aaa")}<span class="hrs7">0 h idle</span></div>` + row7(2, "Up next · Night train") + row7(4, "Up next · Lo-fi beats")));
+  const dev = box.querySelector(".dev"), pv = dev.querySelector(".pg7 > div"), pz = dev.querySelector(".pz7"), hrs = dev.querySelector(".hrs7"), run = dev.querySelector(".run7");
+  const play = (i, ms) => { const [art, t] = vids[i]; pv.style.background = ART[art]; dev.querySelector(".tt7").textContent = t; hrs.textContent = `${i + 1} h idle`; run.insertAdjacentHTML("beforeend", `<span style="width:7px;height:4px;border-radius:1px;background:${ART[art]};animation:pop .2s"></span>`); pz.style.transition = "none"; pz.style.width = "0"; void pz.offsetWidth; pz.style.transition = `width ${ms}ms linear`; pz.style.width = "100%"; };
+  const prompt = (ghost) => `<div class="pr7" style="position:absolute;left:8px;right:8px;top:62%;background:#212121;border-radius:6px;padding:5px;font-size:6.5px;display:grid;gap:4px;z-index:5;animation:pop .25s;${ghost ? "color:#999;filter:grayscale(1);outline:1.5px dashed #888;outline-offset:1px" : ""}"><b>Video paused. Continue watching?</b><div style="text-align:right;color:#3ea6ff">Yes</div></div>`;
+  play(0, 700);
+  if (v === "DEFAULT") {
+    at(800, () => play(1, 700));
+    at(1600, () => { pz.style.transition = "none"; pz.style.width = "40%"; pv.style.filter = "brightness(.45)"; pv.insertAdjacentHTML("beforeend", `<span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)">${ico7("pause", 14)}</span>`); dev.insertAdjacentHTML("beforeend", prompt(false)); });
+    at(2500, () => { hrs.textContent = "Paused"; run.style.color = "#ff6b6b"; });
+    at(3200, () => toast7(dev, "Playback waits for you", "86%"));
+  } else if (v === "DISABLED") {
+    // the stock prompt tries to appear, gets crossed out, and the run of videos simply continues
+    at(800, () => play(1, 700));
+    at(1550, () => { dev.insertAdjacentHTML("beforeend", prompt(true)); });
+    at(1850, () => x7(dev, dev.querySelector(".pr7")));
+    at(2300, () => { dev.querySelectorAll(".pr7,.x7").forEach(e => { e.style.transition = "opacity .25s"; e.style.opacity = 0; }); play(2, 900); });
+    at(2650, () => dev.querySelectorAll(".pr7,.x7").forEach(e => e.remove()));
+    at(3250, () => play(3, 900));
+    at(3500, () => { check7(dev, "Keeps playing"); dev.querySelector(".check7").style.top = "70%"; });
+  } else {
+    // no pause prompt; every handover shows the autoplay countdown first
+    const cd = (t0, next) => {
+      at(t0, () => { pz.style.transition = "none"; pz.style.width = "100%"; dev.insertAdjacentHTML("beforeend", `<div class="cd7" style="position:absolute;left:6px;right:6px;top:12px;background:rgba(0,0,0,.8);border-radius:5px;padding:4px;font-size:6px;z-index:5;display:flex;gap:4px;align-items:center;animation:pop .25s"><span class="rg7" style="width:12px;height:12px;border-radius:50%;border:1.5px solid #fff;display:grid;place-items:center;font-size:6px;font-weight:700">5</span><span style="flex:1">Up next</span><span style="color:#3ea6ff">Cancel</span></div>`); });
+      [4, 3, 2, 1].forEach((n, i) => at(t0 + 150 + i * 150, () => { const r = dev.querySelector(".rg7"); if (r) r.textContent = n; }));
+      at(t0 + 800, () => { dev.querySelectorAll(".cd7").forEach(e => e.remove()); play(next, 800); });
+    };
+    cd(800, 1); cd(2400, 2);
+    at(4000, () => { check7(dev, "Never pauses"); dev.querySelector(".check7").style.top = "70%"; });
+  }
+  return v === "DEFAULT" ? "YouTube pauses and asks 'Continue watching?' (stock)" : v === "ALWAYS_COUNTDOWN" ? "No pause prompt; the autoplay countdown shows before every next video" : "No prompt at all: playback just keeps going";
 });
 scen("playback", "do_not_remember_loop_video", (box, on) => {
   situation("Loop was on, then you open the next video");
