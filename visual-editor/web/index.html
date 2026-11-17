@@ -148,6 +148,10 @@ button { font: inherit; color: inherit; }
 /* Hidden components collapse, like Morphe's filters remove them from the real layout. */
 .c.off:not(.ghost):not(.charging):not(.intray):not(.leaving) { display: none; }
 .c.sizing { overflow: hidden; }
+/* text keeps its line while a component narrows, instead of wrapping into a taller block */
+.c.sizew { white-space: nowrap; flex-shrink: 0; min-width: 0; }
+.c.sizew > * { white-space: nowrap; }
+.c.sizei { display: inline-block; vertical-align: bottom; }
 .c.ghost { opacity: .6 !important; outline: 1.5px dashed var(--yt-red) !important; display: revert; animation: ghostin var(--dur) var(--ease); }
 .c.ghost > * { visibility: visible !important; }
 /* a hidden setting that is selected stays revealed and pulses slowly in red until you pick another one */
@@ -454,7 +458,7 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 @keyframes ulkopen { 0%, 25% { transform: none; } 45% { transform: translateY(-3px) rotate(-18deg); } 100% { transform: translateY(-3px) rotate(-18deg); } }
 
 /* live preview: no scrollbars (space is scarce), scrolling still works */
-.stage *, .canvas * { scrollbar-width: none !important; }
+.stage *, .canvas *, .phone, .phone * { scrollbar-width: none !important; }
 .stage .inner-scroll { overflow-x: hidden !important; }
 .navbar .ntab { flex: 1 1 0; min-width: 0; transition: flex .5s var(--ease), opacity var(--dur) var(--ease); }
 .navbar.narrow .ntab { flex: 0 0 52px; }
@@ -492,7 +496,7 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 #thumbBubble:not(.dragging) > .c:not(.sel):not(.ghost) { opacity: 0; transition: opacity .2s; }
 .stage.dragging, .stage.dragging * { cursor: grabbing !important; user-select: none; }
 .stage [style*="overflow-x:auto"] > * { flex-shrink: 0; }
-.stage *::-webkit-scrollbar, .canvas *::-webkit-scrollbar { display: none !important; }
+.stage *::-webkit-scrollbar, .canvas *::-webkit-scrollbar, .phone::-webkit-scrollbar, .phone *::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
 
 /* ---------- default theme: YouTube's own settings look ----------
    The editor lives inside YouTube's settings, so by default it matches YouTube (flat list,
@@ -574,6 +578,42 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .dlgwhere { font-size: 13px; color: var(--m-on-var); margin: 6px 0 10px; line-height: 1.45; }
 .dlglist { background: var(--m-c-high); border-radius: 12px; overflow: hidden; text-align: left; }
 .dlglist .row { cursor: default; }
+/* YouTube look: dialogs follow the YouTube app (dark grey sheet, left-aligned text, blue text buttons on the right) */
+.theme-yt .dlg { background: #212121; border-radius: 12px; padding: 22px 22px 10px; max-width: 340px; box-shadow: 0 8px 28px rgba(0,0,0,.6); }
+.theme-yt .dlg h2 { text-align: left; font-size: 18px; font-weight: 500; color: #f1f1f1; margin-bottom: 6px; }
+.theme-yt .dlg p, .theme-yt .dlgwhere { text-align: left; color: #aaa; font-size: 14px; }
+.theme-yt .dlg .di { margin: 0 0 10px; }
+.theme-yt .dlg .di svg { fill: #f1f1f1; }
+.theme-yt .dlg ul { background: transparent; padding: 0 0 0 2px; color: #f1f1f1; }
+.theme-yt .dlg .acts { display: flex; justify-content: flex-end; gap: 4px; margin: 8px -10px 0 0; }
+.theme-yt .dbtn, .theme-yt .dbtn.primary, .theme-yt .dbtn.tonal { height: 36px; padding: 0 14px; border-radius: 18px; background: transparent; color: #3ea6ff; font-weight: 500; font-size: 14px; }
+.theme-yt .dbtn:hover { background: rgba(62,166,255,.12); }
+.theme-yt .dlglist { background: transparent; margin: 4px -22px 0; border-top: 1px solid rgba(255,255,255,.1); border-bottom: 1px solid rgba(255,255,255,.1); border-radius: 0; }
+.goto.more { opacity: .9; }
+.dlglist .kidbtn, .dlglist .kidhid { display: none; }
+.stage.measure .c.off { display: revert !important; }
+.sechead .nolive { font-weight: 400; color: var(--m-on-var); opacity: .75; font-size: 12px; }
+.theme-yt .sechead .nolive { color: #888; }
+/* round 9 scenario kit */
+.dev .toastin { white-space: normal; width: max-content; max-width: 88%; text-align: center; line-height: 1.25; }
+.tgt7 { transition: max-height .45s var(--ease), max-width .45s var(--ease), opacity .3s, margin .45s, padding .45s; max-height: 90px; overflow: hidden; }
+.tgt7.w7 { display: inline-flex; max-width: 90px; vertical-align: bottom; }
+.tgt7.gone7 { max-height: 0 !important; opacity: 0; margin-top: 0 !important; margin-bottom: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }
+.tgt7.w7.gone7 { max-width: 0 !important; max-height: none !important; }
+.tgt7.instant7 { transition: none !important; }
+.tgt7.mark7 { outline: 1.5px dashed #ff0033; outline-offset: 1px; border-radius: 3px; animation: mark7 .9s ease-in-out infinite alternate; }
+@keyframes mark7 { from { outline-color: rgba(255,0,51,.35); } to { outline-color: #ff0033; } }
+.x7 { position: absolute; z-index: 32; display: grid; place-items: center; background: rgba(0,0,0,.35); border-radius: 50%; animation: pop .25s var(--ease); pointer-events: none; }
+.clock7 { position: absolute; inset: 0; z-index: 32; display: grid; place-content: center; justify-items: center; gap: 4px; background: rgba(0,0,0,.72); font-size: 7px; color: #fff; animation: ghostin .2s; }
+.clock7 .face { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #fff; position: relative; }
+.clock7 .face i { position: absolute; left: 50%; bottom: 50%; width: 2px; margin-left: -1px; background: #fff; transform-origin: 50% 100%; border-radius: 1px; }
+.clock7 .face .h { height: 7px; animation: clock7 6s linear infinite; }
+.clock7 .face .m { height: 10px; animation: clock7 .5s linear infinite; }
+@keyframes clock7 { to { transform: rotate(360deg); } }
+.check7 { position: absolute; left: 50%; top: 46%; transform: translateX(-50%); z-index: 32; display: flex; gap: 3px; align-items: center; background: rgba(0,0,0,.8); border-radius: 8px; padding: 3px 7px; font-size: 6.5px; width: max-content; max-width: 84%; line-height: 1.25; animation: pop .25s var(--ease); }
+.ref7 { position: absolute; left: 50%; top: 36%; transform: translateX(-50%); z-index: 31; width: 22px; height: 22px; border-radius: 50%; background: #f1f1f1; display: grid; place-items: center; animation: pop .25s var(--ease); }
+.ref7 svg { fill: #0f0f0f !important; }
+.ref7.spin svg { animation: clock7 .6s linear 2; }
 .demo-label.dyn { transition: opacity .3s; }
 .knob[data-thumb] { background: transparent !important; box-shadow: none !important; }
 .knob[data-thumb]::after { content: "⭐"; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 15px; line-height: 1; }

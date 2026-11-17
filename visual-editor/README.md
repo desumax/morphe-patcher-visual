@@ -116,3 +116,15 @@ collapse is brought into view first, and a restored one is centred once it has g
 hidden setting that you select stays revealed with a slow red pulse until you pick another setting,
 instead of disappearing on a timer. A collapsing component keeps its content clipped until it is gone,
 which removes a one-frame flash at the end of the collapse. The channel search scenario was redrawn.
+
+Round 9 is about order and coverage. List rows now follow the position of their component in the preview,
+top to bottom and left to right, measured once per screen with every hidden component drawn; settings
+without a component follow after. A setting that unlocks when any one of several settings is on (DeArrow
+titles in any place, any swipe zone) is no longer nested under the first of them; it stays a normal row,
+greyed out until one is on. Component wrappers take over their card's margins and corner radius
+(`hugComponents`), so outlines, flashes and ghost dashes hug the card instead of the full preview width.
+Narrowing components keep their text on one line and pull in the flex gap. A setting unlocked through the
+cross-screen popup gets a "More" button that reopens it, and screen Reset clears that. Popups follow the
+YouTube dialog style in the YouTube look. An experimental menu option lists only hidden components: what you
+can see is removed in the preview by double-tap or hold. Around a hundred scenario pages were added through a
+small kit (`hidePage`, `x7`, `clock7`, `check7`), covering most settings that had no preview.
