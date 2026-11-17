@@ -324,6 +324,8 @@ def first_string_arg(text, open_idx, close_idx):
     return m.group(1) if m else None
 
 def named_arg(body, name):
+    # Only the preference's own arguments: stop before nested child preferences.
+    body = re.split(r'\bpreferences\s*=|\b[A-Z]\w*Preference(?:Category)?\s*\(', body, maxsplit=1)[0]
     m = re.search(r'\b%s\s*=\s*"([^"]+)"' % name, body)
     return m.group(1) if m else None
 

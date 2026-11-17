@@ -217,12 +217,12 @@ const KIND_ICON = { vis: "eye", overlay: "layers", gesture: "gesture", layout: "
 const KIND_NAME = { vis: "VisibilityPreview", overlay: "OverlayPreview", gesture: "GesturePreview", layout: "LayoutPreview", style: "StylePreview", behaviour: "BehaviourPreview", fallback: "FallbackPreference" };
 
 // ------------------------------------------------------------------ state
-let CAT, PREF = {}, state = {}, mode = "mod", section = "player", selected = null, showSlots = true;
+let CAT, PREF = {}, state = {}, mode = "mod", section = "player", selected = null;
 const ghosts = new Set();
 const LS = "morphe-visual-editor-v1";
 const store = {
   load() { try { return JSON.parse(localStorage.getItem(LS) || "{}"); } catch { return {}; } },
-  save() { try { localStorage.setItem(LS, JSON.stringify({ state: changedOnly(), section, slots: showSlots })); } catch { /* storage unavailable */ } },
+  save() { try { localStorage.setItem(LS, JSON.stringify({ state: changedOnly(), section })); } catch { /* storage unavailable */ } },
 };
 
 function initialValue(p) {
@@ -265,9 +265,7 @@ function classicParentsOk(k) {
 }
 const title = k => {
   const p = PREF[k]; if (!p) return k;
-  const t = p.title || k.replace(/^morphe_/, "").replace(/_/g, " ");
-  // Some Morphe titles only make sense inside their sub-screen ("Hide in feeds" under "Filter bar").
-  return /^(hide|show) in /i.test(t) && p.subScreenTitle ? `${p.subScreenTitle}: ${t.charAt(0).toLowerCase()}${t.slice(1)}` : t;
+  return p.title || k.replace(/^morphe_/, "").replace(/_/g, " ");
 };
 function entryLabel(k, v) { const e = (PREF[k]?.entries || []).find(x => String(x.value) === String(v)); return e ? e.label : String(v); }
 
@@ -454,15 +452,14 @@ SCENES.feed = () => {
 };
 
 SCENES.shorts = () => {
-  const rb = (k, icon, label) => C(k, `<div style="display:grid;justify-items:center;gap:2px"><div class="pbtn" style="width:44px;height:44px;background:rgba(255,255,255,.12)">${icon}</div><span style="font-size:11px;font-weight:500">${label}</span></div>`);
+  const rb = (k, icon, label) => C(k, `<div style="display:grid;justify-items:center;gap:1px"><div class="pbtn" style="width:36px;height:36px;background:rgba(255,255,255,.12)">${icon}</div><span style="font-size:10px;font-weight:500;line-height:12px">${label}</span></div>`);
   return `<div style="position:relative;height:420px;background:${ART[5]};overflow:hidden" id="shortsStage">
     <div style="position:absolute;inset:0;background:linear-gradient(transparent 55%,rgba(0,0,0,.7))"></div>
     <div style="position:absolute;right:10px;top:8px;display:flex;gap:6px">${I("search")}${I("more")}</div>
-    <div style="position:absolute;right:6px;bottom:${shown("morphe_hide_shorts_navigation_bar") ? 64 : 14}px;display:grid;gap:10px;justify-items:center">
+    <div style="position:absolute;right:6px;bottom:${shown("morphe_hide_shorts_navigation_bar") ? 64 : 14}px;display:grid;gap:6px;justify-items:center">
       ${rb("hide_shorts_like_button", I("like"), "12K")}
-      <div style="display:grid;justify-items:center;gap:2px"><div class="pbtn" style="width:44px;height:44px;background:rgba(255,255,255,.12)">${I("dislike")}</div><span style="font-size:11px">Dislike</span></div>
       ${rb("hide_shorts_comments_button", I("comment"), "341")}${rb("hide_shorts_share_button", I("share"), "Share")}${rb("hide_shorts_save_button", I("save"), "Save")}${rb("hide_shorts_remix_button", I("remix"), "Remix")}
-      ${C("hide_shorts_sound_button", `<div style="width:34px;height:34px;border-radius:8px;border:2px solid #fff;background:${ART[3]}"></div>`)}
+      ${C("hide_shorts_sound_button", `<div style="width:30px;height:30px;border-radius:8px;border:2px solid #fff;background:${ART[3]}"></div>`)}
     </div>
     <div style="position:absolute;left:10px;right:70px;bottom:${shown("morphe_hide_shorts_navigation_bar") ? 60 : 12}px;display:grid;gap:6px">
       <div style="display:flex;flex-wrap:wrap;gap:6px">
@@ -760,14 +757,6 @@ def("seekbar", "style", "fullscreen_large_seekbar");
 // Patch extra components into existing scenes without rewriting them
 {
   const wrap = (id, fn) => { const base = SCENES[id]; SCENES[id] = () => fn(base()); };
-  wrap("watch", html => html
-    .replace(/(<div class="c[^"]*" data-k="morphe_hide_player_related_videos")/, `${C("hide_emergency_box", `<div style="margin:0 12px 10px;background:#3b1f1f;border-radius:12px;padding:10px 12px"><div class="t1" style="font-size:13px">Emergency information</div><div class="t2">Call 112 for emergency services in Norway</div></div>`, { blk: 1 })}
-      ${C("hide_medical_panels", `<div style="margin:0 12px 10px;border:1px solid #333;border-radius:12px;padding:10px 12px"><div class="t1" style="font-size:13px">Health info from a licensed source</div><div class="t2">Carbon monoxide safety · NHS</div></div>`, { blk: 1 })}
-      ${C("hide_crowdfunding_box", `<div style="margin:0 12px 10px;background:#272727;border-radius:12px;padding:10px 12px;display:flex;gap:10px;align-items:center">${I("heart", "ico", 'style="fill:#f06292;flex:none"')}<div><div class="t1" style="font-size:13px">Support the cabin on Patreon</div><div class="t2">Crowdfunding</div></div></div>`, { blk: 1 })}$1`));
-  wrap("flyout", html => html
-    .replace(/(data-k="morphe_hide_player_flyout_quality"[\s\S]*?<\/div><\/div>)/, `$1${C("hide_player_flyout_quality_header", `<div class="t2" style="padding:0 18px 2px 58px">Header: Quality for current video</div>`, { blk: 1 })}${C("hide_player_flyout_quality_footer", `<div class="t2" style="padding:0 18px 6px 58px">Footer: Change default quality in Settings</div>`, { blk: 1 })}`)
-    .replace(/(data-k="morphe_hide_player_flyout_captions"[\s\S]*?<\/div><\/div>)/, `$1${C("hide_player_flyout_captions_header", `<div class="t2" style="padding:0 18px 2px 58px">Header: Captions</div>`, { blk: 1 })}${C("hide_player_flyout_captions_footer", `<div class="t2" style="padding:0 18px 6px 58px">Footer: Caption preferences</div>`, { blk: 1 })}`)
-    .replace(/(data-k="morphe_hide_player_flyout_audio_track"[\s\S]*?<\/div><\/div>)/, `$1${C("hide_player_flyout_audio_track_footer", `<div class="t2" style="padding:0 18px 6px 58px">Footer: Original audio is marked</div>`, { blk: 1 })}`));
   wrap("comments", html => html
     .replace('<b style="font-size:16px">Comments</b>', `<b style="font-size:16px">Comments</b>${C("hide_comments_top_fans_button", `<span class="chip" style="height:24px;font-size:11px;padding:0 8px;background:#3a3a3a">Top fans</span>`, { tag: "span" })}`)
     .replace(/(Kom igjen! Taket trenger en egen video\.)/, `$1${C("hide_comments_gifs_and_images", `<div style="width:120px;height:68px;border-radius:8px;margin-top:6px;background:${ART[4]}"></div>`)}`)
@@ -783,6 +772,40 @@ def("seekbar", "style", "fullscreen_large_seekbar");
       ${C("hide_surveys", `<div style="margin:0 12px 14px;padding:10px 12px;border-radius:12px;border:1px solid #333"><div class="t1" style="font-size:13px">How are your recommendations?</div><div style="display:flex;gap:6px;margin-top:8px">${["Great", "OK", "Bad"].map(t => `<span class="chip" style="height:26px">${t}</span>`).join("")}</div></div>`, { blk: 1 })}
       ${C("hide_ticket_shelf", `<div style="margin:0 12px 14px;padding:10px 12px;border-radius:12px;background:#272727"><div class="t1" style="font-size:13px">Tickets · Midnight Tapes live in Oslo</div><div class="t2">Sat, 21 Nov · Rockefeller</div></div>`, { blk: 1 })}$1`));
   wrap("seekbar", html => V("morphe_fullscreen_large_seekbar") ? html.replace('id="seek" style="position:relative;left:0;right:0;height:4px;', 'id="seek" style="position:relative;left:0;right:0;height:9px;') : html);
+}
+
+// Player menu sub-sheets: the header and footer settings belong to the Quality, Captions and
+// Audio track sheets, so selecting one of them opens that sheet in the preview.
+const FLY_SUB = {
+  morphe_hide_player_flyout_quality_header: "quality", morphe_hide_player_flyout_quality_footer: "quality",
+  morphe_hide_player_flyout_captions_header: "captions", morphe_hide_player_flyout_captions_footer: "captions",
+  morphe_hide_player_flyout_audio_track_footer: "audio",
+};
+let flySub = null;
+{
+  const base = SCENES.flyout;
+  const opt = (t, sel, sub = "") => `<div style="display:flex;align-items:center;gap:14px;padding:10px 18px"><span style="width:20px;display:grid;place-items:center">${sel ? '<span style="width:8px;height:8px;border-radius:50%;background:#f1f1f1;display:block"></span>' : ""}</span><div><div style="font-size:14px">${t}</div>${sub ? `<div class="t2">${sub}</div>` : ""}</div></div>`;
+  const SHEETS = {
+    quality: () => `${C("hide_player_flyout_quality_header", `<div style="padding:2px 18px 8px;font-size:15px;font-weight:500">Quality for current video</div>`, { blk: 1 })}
+      ${opt("Auto (recommended)", true, "Adjusts to give you the best experience")}${opt("Higher picture quality", false, "Uses more data")}${opt("Data saver", false, "Lower picture quality")}${opt("Advanced", false, "Select a specific resolution")}
+      ${C("hide_player_flyout_quality_footer", `<div class="t2" style="padding:8px 18px 12px;border-top:1px solid #333;margin-top:4px">Applies to this video only. To change quality for all videos, go to Settings › Video quality preferences</div>`, { blk: 1 })}`,
+    captions: () => `${C("hide_player_flyout_captions_header", `<div style="padding:2px 18px 8px;font-size:15px;font-weight:500">Captions</div>`, { blk: 1 })}
+      ${opt("Turn off captions", true)}${opt("English (auto-generated)", false)}${opt("Norwegian", false)}${opt("Auto-translate", false)}
+      ${C("hide_player_flyout_captions_footer", `<div style="padding:10px 18px 12px;border-top:1px solid #333;margin-top:4px;display:flex;align-items:center;gap:14px">${I("gear")}<span style="font-size:14px">Caption preferences</span></div>`, { blk: 1 })}`,
+    audio: () => `<div style="padding:2px 18px 8px;font-size:15px;font-weight:500">Audio track</div>
+      ${opt("English (original)", true)}${opt("Spanish (dubbed)", false)}${opt("German (dubbed)", false)}
+      ${C("hide_player_flyout_audio_track_footer", `<div class="t2" style="padding:8px 18px 12px;border-top:1px solid #333;margin-top:4px">Dubbed tracks are generated automatically. The original track is marked as original.</div>`, { blk: 1 })}`,
+  };
+  SCENES.flyout = () => {
+    flySub = FLY_SUB[selected] || null;
+    if (!flySub) return base();
+    return `<div style="background:#0f0f0f;height:350px;position:relative;overflow:hidden">
+      <div style="height:100px;position:relative">${videoFrame(4)}<div class="scrim" style="opacity:.6"></div></div>
+      <div style="position:absolute;left:0;right:0;top:56px;bottom:0;background:#212121;border-radius:14px 14px 0 0;overflow-y:auto;scrollbar-width:thin" class="inner-scroll">
+        <div style="width:36px;height:4px;border-radius:2px;background:#555;margin:8px auto 6px"></div>
+        ${SHEETS[flySub]()}
+      </div></div>`;
+  };
 }
 
 // ------------------------------------------------------------------ scenario animations (standard canvas)
@@ -856,21 +879,39 @@ scen("fullscreen", "swipe_haptic_feedback", (box, on) => {
   [500, 800, 1100, 1400].forEach(t => at(t, () => buzz(dev, on)));
   return on ? "Swiping volume or brightness: a tick at each step" : "Swiping volume or brightness: no ticks";
 });
-scen("player", "fullscreen_video_scale_button_fullscreen_only", (box, on, prev) => {
-  const btn = `<div class="scb" style="position:absolute;right:5px;bottom:5px;width:20px;height:20px;border-radius:5px;background:rgba(0,0,0,.45);display:grid;place-items:center;transition:opacity .4s var(--ease)">${I("crop", "ico", 'style="width:14px;height:14px"')}</div>`;
+// Where a component really sits in the live preview, as fractions of its video frame, so a
+// scenario draws its button in the same place. Measured before the canvas covers the stage;
+// the fallback is used when the component is not on screen (switched off or in the tray).
+function anchor(k, fx, fy) {
+  const el = [...document.querySelectorAll(`#stage [data-k="${k}"]`)].find(e => e.offsetParent && !e.classList.contains("intray"));
+  const frame = el && el.closest(".video");
+  if (!el || !frame) return [fx, fy];
+  const r = el.getBoundingClientRect(), b = frame.getBoundingClientRect();
+  if (!r.width || !b.width) return [fx, fy];
+  return [(r.left + r.width / 2 - b.left) / b.width, (r.top + r.height / 2 - b.top) / b.height];
+}
+const at_ = (fx, fy, size) => `position:absolute;left:calc(${(fx * 100).toFixed(1)}% - ${size / 2}px);top:calc(${(fy * 100).toFixed(1)}% - ${size / 2}px);width:${size}px;height:${size}px`;
+scen("player", "fullscreen_video_scale_button_fullscreen_only", (box, on) => {
+  const [fx, fy] = anchor("morphe_fullscreen_video_scale_button", .78, .86);
+  const btn = `<div class="scb" style="${at_(fx, fy, 18)};border-radius:5px;background:rgba(0,0,0,.45);display:grid;place-items:center;transition:opacity .4s var(--ease)">${I("crop", "ico", 'style="width:13px;height:13px"')}</div>`;
   box.innerHTML = device("port", playerArea(0, btn));
   const dev = box.querySelector(".dev"), b = box.querySelector(".scb");
+  // Start in the new state: with the option on, the portrait player never shows the button.
   situation("Portrait player");
-  b.style.opacity = prev ? "0" : "1";
-  at(650, () => { b.style.opacity = on ? "0" : "1"; setFoot(on ? "Portrait: the button fades out" : "Portrait: the button fades in"); });
-  at(1700, () => { situation("Fullscreen"); rotate(dev, "land"); b.style.opacity = "1"; setFoot("Fullscreen: the button is shown either way"); });
-  return on ? "Portrait: the button fades out" : "Portrait: the button fades in";
+  b.style.opacity = on ? "0" : "1";
+  setFoot(on ? "Portrait: no video scale button" : "Portrait: the button is shown");
+  at(1300, () => { situation("Fullscreen"); rotate(dev, "land"); b.style.opacity = "1"; setFoot("Fullscreen: the button is shown"); });
+  at(2500, () => { situation("Portrait player"); rotate(dev, "port"); b.style.opacity = on ? "0" : "1"; setFoot(on ? "Back in portrait: hidden again" : "Back in portrait: still shown"); });
+  return on ? "Portrait: no video scale button" : "Portrait: the button is shown";
 });
 scen("player", "copy_video_link_with_timestamp_button", (box, on) => {
-  box.innerHTML = device("land", `${miniVideo(0)}<div style="position:absolute;right:8px;top:8px">${I("link", "ico", 'style="width:18px;height:18px"')}</div>${miniSeek(17)}`);
-  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth;
-  at(100, () => fingerTo(f, W - 17, 17)); at(400, () => tapF(f));
-  at(600, () => dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="bottom:10px;top:auto;font-size:9px">Copied: youtu.be/cAb1n${on ? "?t=192" : ""}</div>`));
+  const [fx, fy] = anchor("morphe_copy_video_link_button", .8, .86);
+  box.innerHTML = device("land", `${miniVideo(0)}<div style="${at_(fx, fy, 18)};display:grid;place-items:center;border-radius:50%;background:rgba(0,0,0,.3)">${I("link", "ico", 'style="width:13px;height:13px"')}</div>${miniSeek(17)}`);
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
+  const toast = t => { dev.querySelectorAll(".toastin").forEach(e => e.remove()); dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px;font-size:9px">${t}</div>`); };
+  at(100, () => fingerTo(f, W * fx, H * fy)); at(450, () => tapF(f));
+  at(600, () => { situation("Tap"); toast(`Copied: youtu.be/cAb1n${on ? "?t=192" : ""}`); });
+  at(1500, () => f.classList.add("hold")); at(2000, () => { f.classList.remove("hold"); situation("Tap and hold"); toast(`Copied: youtu.be/cAb1n${on ? "" : "?t=192"}`); });
   return on ? "Tap copies the link with the current time; hold copies it without" : "Tap copies the plain link; hold adds the current time";
 });
 scen("player", "loop_video", (box, on) => {
@@ -944,7 +985,7 @@ function applyVersion() {
     const nd = versionDefault(k);
     const vals = entriesFor(k).map(e => e.value);
     const target = nd !== undefined ? nd : defaults[k];
-    const fix = v => (v === defaults[k] ? target : (vals.length && !vals.includes(String(v)) ? (vals.includes(String(target)) ? target : vals[0]) : v));
+    const fix = v => { let x = v === defaults[k] ? target : v; if (vals.length && !vals.includes(String(x))) x = vals.includes(String(target)) ? target : vals[0]; return x; };
     if (nd !== undefined || (p.entryVariants && vals.length)) {
       state[k] = coerceVal(k, fix(state[k])); baseline[k] = coerceVal(k, fix(baseline[k]));
       defaults[k] = coerceVal(k, vals.length && !vals.includes(String(target)) ? vals[0] : target);
@@ -991,6 +1032,12 @@ SCENES.watch = () => {
 };
 def("watch", "vis", "hide_channel_profile_button hide_channel_profile_subscribe_button hide_comments_button hide_connect_button");
 def("watch", "style", "ryd_enabled ryd_dislike_percentage");
+// Extra panels (emergency, medical, crowdfunding) go above the related videos on every layout.
+const watchExtras = html => html
+    .replace(/(<div class="c[^"]*" data-k="morphe_hide_player_related_videos")/, `${C("hide_emergency_box", `<div style="margin:0 12px 10px;background:#3b1f1f;border-radius:12px;padding:10px 12px"><div class="t1" style="font-size:13px">Emergency information</div><div class="t2">Call 112 for emergency services in Norway</div></div>`, { blk: 1 })}
+      ${C("hide_medical_panels", `<div style="margin:0 12px 10px;border:1px solid #333;border-radius:12px;padding:10px 12px"><div class="t1" style="font-size:13px">Health info from a licensed source</div><div class="t2">Carbon monoxide safety · NHS</div></div>`, { blk: 1 })}
+      ${C("hide_crowdfunding_box", `<div style="margin:0 12px 10px;background:#272727;border-radius:12px;padding:10px 12px;display:flex;gap:10px;align-items:center">${I("heart", "ico", 'style="fill:#f06292;flex:none"')}<div><div class="t1" style="font-size:13px">Support the cabin on Patreon</div><div class="t2">Crowdfunding</div></div></div>`, { blk: 1 })}$1`);
+{ const base = SCENES.watch; SCENES.watch = () => watchExtras(base()); }
 
 // ------------------------------------------------------------------ miniplayer, one design per type
 SCENES.miniplayer = () => {
@@ -1235,9 +1282,78 @@ scen("player", "exit_fullscreen", (box) => {
   return v === "DISABLED" ? "The player stays in fullscreen" : `Leaves fullscreen when the video ends (${entryLabel("morphe_exit_fullscreen", v).toLowerCase()})`;
 });
 
+// ------------------------------------------------------------------ Ads, App look, Snackbar, Playback, DeArrow
+SECTIONS.push(
+  { id: "ads", icon: "dollar", title: "Ads", scopes: [["ADS", null]] },
+  { id: "look", icon: "palette", title: "App look", scopes: [["GENERAL", null], ["GENERAL", "morphe_custom_filter_screen"], ["GENERAL", "morphe_series_tracker_screen"]] },
+  { id: "snackbar", icon: "chat", title: "Snackbar", scopes: [["GENERAL", "morphe_snackbar_screen"]] },
+  { id: "playback", icon: "speed", title: "Playback", scopes: [["VIDEO", null], ["VIDEO", "morphe_vot_screen"], ["PLAYER", null], ["PLAYER", "morphe_loop_count_screen"], ["PLAYER", "morphe_live_chat_translate_screen"], ["PLAYER", "morphe_external_downloader_screen"]] },
+  { id: "dearrow", icon: "eye", title: "DeArrow", scopes: [["DEARROW", null]] },
+);
+SECTIONS.find(s => s.id === "watch").scopes.push(["RETURN_YOUTUBE_DISLIKE", null]);
+SECTIONS.find(s => s.id === "feed").scopes.push(["FEED", "morphe_post_buttons_screen"], ["FEED", "morphe_hide_aislist_screen"], ["FEED", "morphe_hide_keyword_content_screen"]);
+
+SCENES.ads = () => {
+  const card = (k, inner, o = {}) => C(k, inner, { blk: 1, ...o });
+  return `<div class="inner-scroll" style="background:#0f0f0f;height:350px;overflow-y:auto">
+    <div style="position:relative;height:118px;background:${ART[1]}">
+      ${C("hide_video_ads", `<div style="position:absolute;inset:0;background:${ART[5]};display:flex;align-items:flex-end;justify-content:space-between;padding:8px"><span style="font-size:11px;background:#ffcc00;color:#000;font-weight:700;padding:1px 5px;border-radius:3px">Ad · 0:05</span><span class="chip" style="height:26px;font-size:11.5px;background:rgba(0,0,0,.7)">Skip ▸|</span></div>`, { style: "position:absolute;inset:0" })}
+      ${C("hide_paid_promotion_labels", `<span style="font-size:11px;background:rgba(0,0,0,.7);padding:2px 6px;border-radius:3px">Includes paid promotion</span>`, { style: "position:absolute;left:8px;top:8px" })}
+      ${C("hide_player_popup_ads", `<div style="display:flex;gap:6px;align-items:center;background:#fff;color:#000;border-radius:8px;padding:4px 8px 4px 4px;font-size:11px"><div style="width:26px;height:26px;border-radius:5px;background:${ART[7]}"></div><div><b>Pocket Planner</b><div style="color:#555">Install · Free</div></div></div>`, { style: "position:absolute;right:8px;top:8px" })}
+      <div class="seek" style="bottom:0;left:0;right:0;border-radius:0"><div class="played" style="width:22%"></div></div>
+    </div>
+    <div style="padding:10px 12px 4px"><div class="t1" style="font-size:15px">${esc(VIDEOS[1].t)}</div><div class="t2">${VIDEOS[1].c} · ${VIDEOS[1].v}</div></div>
+    ${card("hide_merchandise_banners", `<div style="margin:6px 12px;padding:10px;border-radius:12px;background:#272727;display:flex;gap:10px;align-items:center">${I("shop")}<div><div class="t1" style="font-size:13px">Switch Lab merch</div><div class="t2">Keycap set · €29</div></div></div>`)}
+    ${card("hide_creator_store_shelf", `<div style="padding:6px 12px"><div class="t1" style="font-size:13px;margin-bottom:6px">Store</div><div style="display:flex;gap:8px">${[2, 3, 4].map(i => `<div style="width:90px"><div style="aspect-ratio:1;border-radius:8px;background:${ART[i]}"></div><div class="t2" style="font-size:11px;margin-top:3px">€${12 + i * 5}</div></div>`).join("")}</div></div>`)}
+    ${card("hide_shopping_links", `<div style="margin:6px 12px;font-size:12.5px;color:#3ea6ff">${I("link", "ico", 'style="width:14px;height:14px;fill:#3ea6ff;vertical-align:-2px"')} Products in this video · 3 links</div>`)}
+    ${card("hide_youtube_premium_promotions", `<div style="margin:8px 12px;padding:10px 12px;border-radius:12px;background:linear-gradient(90deg,#3a0d12,#1d1d1d)"><div class="t1" style="font-size:13px">Try YouTube Premium</div><div class="t2">Ad-free, background play, downloads</div></div>`)}
+    ${card("hide_self_sponsor_ads", `<div style="margin:8px 12px;padding:10px 12px;border-radius:12px;border:1px solid #333"><div class="t2" style="font-size:11px">Sponsored by the creator</div><div class="t1" style="font-size:13px">Get 20% off at switchlab.shop</div></div>`)}
+    ${card("hide_general_ads", `<div style="margin:8px 12px 12px;border-radius:12px;overflow:hidden;background:#1c1c1c">${thumb(6, "border-radius:0")}<div style="display:flex;gap:8px;padding:8px 10px;align-items:center"><span style="font-size:10.5px;background:#ffcc00;color:#000;font-weight:700;padding:0 4px;border-radius:3px">Sponsored</span><div class="t1" style="font-size:13px;flex:1">Learn to code in 30 days</div><span class="chip" style="height:26px;background:#3ea6ff;color:#000;font-size:11.5px">Sign up</span></div></div>`)}
+  </div>`;
+};
+def("ads", "vis", "hide_video_ads hide_paid_promotion_labels hide_player_popup_ads hide_merchandise_banners hide_creator_store_shelf hide_shopping_links hide_youtube_premium_promotions hide_self_sponsor_ads hide_general_ads");
+
+const THEME_DARK = { APP_DEFAULT: "#0f0f0f", PURE_BLACK: "#000000", MATERIAL_YOU_PURE_BLACK: "#000000", MATERIAL_YOU_NEUTRAL: "#1b1b1f", MATERIAL_YOU_PRIMARY: "#1a2433", MATERIAL_YOU_SECONDARY: "#22262e", MATERIAL_YOU_TERTIARY: "#2a2230", CATPPUCCIN_MOCHA: "#1e1e2e" };
+SCENES.look = () => {
+  const t = V("morphe_theme_color_dark");
+  const bg = t === "CUSTOM" ? String(V("morphe_theme_color_dark_custom") || "#0f0f0f").replace(/^#(..)(......)$/, "#$2") : (THEME_DARK[t] || "#0f0f0f");
+  const font = V("morphe_custom_font_type") === "SYSTEM" ? "system-ui, sans-serif" : V("morphe_custom_font_type") === "CUSTOM" ? "Georgia, serif" : "inherit";
+  const wide = V("morphe_searchbar_type") === "EXTRA_WIDE";
+  const grad = !!V("morphe_gradient_loading_screen");
+  return `<div style="background:${bg};height:330px;position:relative;overflow:hidden;font-family:${font};transition:background .3s">
+    ${C("hide_status_bar", `<div style="height:20px;display:flex;justify-content:space-between;align-items:center;padding:0 12px;font-size:11px;color:#ddd"><span>9:41</span><span>5G ▮</span></div>`, { blk: 1 })}
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 10px 6px 12px">
+      ${wide ? "" : `<div style="width:24px;height:17px;border-radius:5px;background:#ff0033"></div><b style="font-size:16px;letter-spacing:-.4px">YouTube</b><div style="flex:1"></div>`}
+      ${C("searchbar_type", wide ? `<div style="flex:1;display:flex;align-items:center;gap:8px;height:34px;border-radius:17px;background:rgba(255,255,255,.1);padding:0 12px;color:#aaa;font-size:13px;min-width:250px">${I("search", "ico", 'style="width:18px;height:18px;fill:#aaa"')}Search YouTube</div>` : `<div class="pbtn">${I("search")}</div>`, { style: wide ? "flex:1" : "" })}
+      <div class="pbtn">${I("bell")}</div>
+    </div>
+    ${C("gradient_loading_screen", `<div style="margin:6px 12px;height:110px;border-radius:12px;background:${grad ? "linear-gradient(110deg,#222 30%,#3a3a3a 50%,#222 70%) 0 0/300% 100%;animation:shimmer 1.4s linear infinite" : "#272727"}"></div>
+      <div style="margin:8px 12px;height:12px;width:70%;border-radius:6px;background:#272727"></div><div style="margin:6px 12px;height:12px;width:45%;border-radius:6px;background:#272727"></div>`, { blk: 1 })}
+    <div style="display:flex;gap:10px;padding:10px 12px">${av(2, 32)}<div><div class="t1">${esc(VIDEOS[2].t)}</div><div class="t2">${VIDEOS[2].c} · ${VIDEOS[2].v}</div></div></div>
+    <style>@keyframes shimmer{to{background-position:-300% 0}}</style>
+  </div>`;
+};
+def("look", "vis", "hide_status_bar");
+def("look", "style", "theme_color_dark theme_color_dark_custom custom_font_type searchbar_type gradient_loading_screen");
+
+SCENES.snackbar = () => {
+  const custom = !!V("morphe_custom_snackbar_theme");
+  const bg = custom ? String(V("morphe_custom_snackbar_color_dark") || "#212121") : "#212121";
+  const r = custom ? Number(V("morphe_custom_snackbar_corner_radius")) || 0 : 8;
+  const stroke = custom ? String(V("morphe_custom_snackbar_stroke_color") || "#00000000") : "#00000000";
+  const hex8 = h => { const m = /^#(..)(......)$/.exec(h); return m ? `#${m[2]}${m[1]}` : h; };
+  return `<div style="background:#0f0f0f;height:300px;position:relative;overflow:hidden">
+    ${thumb(0, "border-radius:0")}
+    <div style="display:flex;gap:10px;padding:10px 12px">${av(0, 32)}<div><div class="t1">${esc(VIDEOS[0].t)}</div><div class="t2">${VIDEOS[0].c}</div></div></div>
+    ${C("hide_snackbar", `<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:${hex8(bg)};border-radius:${r}px;border:1px solid ${hex8(stroke)};box-shadow:0 4px 12px rgba(0,0,0,.5);font-size:13px">Saved to Watch later<span style="margin-left:auto;color:#3ea6ff;font-weight:500">Change</span></div>`, { style: "position:absolute;left:12px;right:12px;bottom:14px", also: "custom_snackbar_theme" })}
+  </div>`;
+};
+def("snackbar", "vis", "hide_snackbar");
+def("snackbar", "style", "custom_snackbar_theme custom_snackbar_color_dark custom_snackbar_corner_radius custom_snackbar_stroke_color");
+
 // ------------------------------------------------------------------ section order with the new ones
 {
-  const order = ["player", "endscreen", "seekbar", "fullscreen", "flyout", "captions", "sponsorblock", "watch", "description", "comments", "ambient", "danmaku", "miniplayer", "feed", "channel", "explore", "shorts", "nav", "misc"];
+  const order = ["player", "endscreen", "seekbar", "fullscreen", "flyout", "captions", "sponsorblock", "playback", "watch", "description", "comments", "ambient", "danmaku", "miniplayer", "feed", "channel", "explore", "shorts", "nav", "ads", "look", "snackbar", "dearrow", "misc"];
   const all = [...SECTIONS]; SECTIONS.length = 0;
   order.forEach(id => { const s = all.find(x => x.id === id); if (s) SECTIONS.push(s); });
 }
@@ -1416,11 +1532,31 @@ function buildMembers() {
   const assigned = new Set();
   for (const k in A) if (PREF[k] && MEMBERS[A[k].section] && inVersion(k)) { MEMBERS[A[k].section].live.push(k); assigned.add(k); }
   for (const p of CAT.preferences) {
-    if (assigned.has(p.key) || !inVersion(p.key)) continue;
+    if (assigned.has(p.key) || !inVersion(p.key) || p.type === "screen") continue; // sub-screen links are navigation, not settings
     const s = SECTIONS.find(s => s.scopes && inScope(p, s.scopes));
     (s ? MEMBERS[s.id].misc : MEMBERS.misc.misc).push(p.key);
   }
+  buildKids();
 }
+// Sub-options: a setting that depends on another setting of the same screen sits under it,
+// offset, and only shows while that dependency is met. MANUAL_PARENT adds groupings that
+// Morphe does not express as a dependency.
+const MANUAL_PARENT = { morphe_player_overlay_opacity: "morphe_hide_player_control_buttons_background" };
+let PARENT_OF = {}, KIDS = {};
+function buildKids() {
+  PARENT_OF = {}; KIDS = {};
+  for (const s of SECTIONS) {
+    const keys = [...MEMBERS[s.id].live, ...MEMBERS[s.id].misc], set = new Set(keys);
+    for (const k of keys) {
+      const par = MANUAL_PARENT[k] && set.has(MANUAL_PARENT[k]) ? MANUAL_PARENT[k] : (PREF[k].parents || []).map(x => x.key).find(x => x !== k && set.has(x));
+      if (par) PARENT_OF[k] = par;
+    }
+  }
+  for (const k in PARENT_OF) { let r = PARENT_OF[k], g = 0; while (PARENT_OF[r] && g++ < 6) r = PARENT_OF[r]; PARENT_OF[k] = r; }
+  for (const k in PARENT_OF) (KIDS[PARENT_OF[k]] = KIDS[PARENT_OF[k]] || []).push(k);
+}
+const kidVisible = k => !!MANUAL_PARENT[k] || classicParentsOk(k);
+const sectionKeys = () => MEMBERS[section] ? [...MEMBERS[section].live, ...MEMBERS[section].misc] : [];
 const sectionOf = k => SECTIONS.find(s => MEMBERS[s.id].live.includes(k) || MEMBERS[s.id].misc.includes(k))?.id || "misc";
 
 // ------------------------------------------------------------------ rendering
@@ -1433,12 +1569,10 @@ function renderBar() {
   $("secIcon").innerHTML = `<path d="${P[s.icon] || P.list}"/>`;
   $("pickGrid").innerHTML = SECTIONS.map((x, i) => {
     const m = MEMBERS[x.id];
-    const sub = x.id === "misc" ? `${m.misc.length} settings` : `${m.live.length} visual · ${m.misc.length} misc`;
+    const sub = `${m.live.length + m.misc.length} settings`;
     return `<button class="pick" role="menuitem" data-sec="${x.id}" aria-current="${x.id === section}" style="transition-delay:${Math.min(i, 12) * 12}ms"><span class="pi">${I(x.icon)}</span><span><div class="pt">${esc(x.title)}</div><div class="ps">${sub}</div></span></button>`;
-  }).join("");
-  const n = pendingRestart().length;
-  $("rcount").textContent = n;
-  $("rchip").classList.toggle("show", n > 0);
+  }).join("") + `<div class="themerow" data-theme-toggle role="menuitemcheckbox" aria-checked="${theme === "m3"}"><span class="pi">${I("palette")}</span><div class="tt">Morphe design<small>Experimental. Off: matches the YouTube app</small></div><span class="sw" role="presentation" aria-checked="${theme === "m3"}"></span></div>`;
+  $("btnReset").disabled = mode !== "mod" || !sectionKeys().some(k => JSON.stringify(state[k]) !== JSON.stringify(defaults[k]));
 }
 function setPicker(open) {
   pickerOpen = open;
@@ -1506,7 +1640,7 @@ function blockerOf(k) {
 const dependsOn = (k, parent) => PREF[k].parents.some(x => x.key === parent) || (PREF[k].availabilityParents || []).includes(parent);
 
 function rowHTML(k, live) {
-  const p = PREF[k]; const a = A[k]; const kind = live ? (a.kind === "scenario" ? "behaviour" : a.kind) : "fallback";
+  const p = PREF[k]; const a = A[k];
   const chg = mode === "mod" && JSON.stringify(state[k]) !== JSON.stringify(defaults[k]);
   const dis = !parentsOk(k);
   const isBool = p.type === "boolean";
@@ -1518,47 +1652,112 @@ function rowHTML(k, live) {
   const cls = ["row", live ? "live" : "fallback"];
   if (selected === k) cls.push("sel");
   if (dis) cls.push("dis");
+  if (PARENT_OF[k] && section !== "misc") { if (k === peekKid) cls.push("peek"); else if (!kidVisible(k)) cls.push("hide"); }
   if (live && (a.kind === "vis" || a.kind === "overlay") && !shown(k)) cls.push("offstate");
   const sum = info ? (p.summary || (p.type === "screen" ? "Opens a sub-screen in Morphe settings" : "Information")) : summaryFor(k);
-  const need = dis ? `<div class="sum need">${I("lock", "ico", 'style="width:14px;height:14px;fill:currentColor"')}${needText(k)}${blockerOf(k) ? `<button class="goto" data-goto="${k}">Take me there ${I("arrow")}</button>` : ""}</div>` : "";
+  const goto = dis && blockerOf(k) ? `<button class="goto" data-goto="${k}">Take me there ${I("arrow")}</button>` : "";
+  const need = dis ? `<div class="need2">${needText(k)}</div>` : "";
   const tags = isAnimated(k) ? `<span class="tag">${I("play")}Animated</span>` : "";
+  const kids = section !== "misc" && KIDS[k] ? KIDS[k].filter(x => kidVisible(x) || x === peekKid).length : 0;
+  const kidbtn = kids ? `<button class="kidbtn" data-kidtoggle="${k}" aria-expanded="${!collapsed.has(k)}" aria-label="${kids} sub-options">${kids}${I("expand")}</button>` : "";
+  const over = /^(hide|show) in /i.test(title(k)) && p.subScreenTitle ? `<div class="over">${esc(p.subScreenTitle)}</div>` : "";
   return `<div class="${cls.join(" ")}" data-row="${k}" data-k="${k}" tabindex="0">
-    <div class="txt"><div class="ttl">${esc(title(k))}${chg ? '<span class="changed-dot" title="Changed from default"></span>' : ""}${tags}</div>
-      ${sum ? `<div class="sum">${esc(sum)}</div>` : ""}${need}${ctl}</div>${right}</div>`;
+    <div class="txt">${over}<div class="ttl">${esc(title(k))}${dis ? I("lock", "lk") : ""}${chg ? '<span class="changed-dot" title="Changed from default"></span>' : ""}${tags}${kidbtn}</div>
+      ${sum ? `<div class="sum">${esc(sum)}</div>` : ""}${need}${ctl}</div>${right || goto ? `<div class="side">${right}${goto}</div>` : ""}</div>`;
 }
 const groupHTML = (name, icon, keys, live) => keys.length ? `<div class="gtitle">${I(icon)}${name} · ${keys.length}</div><div class="group">${keys.map(k => rowHTML(k, live)).join("")}</div>` : "";
 
-let miscQuery = "";
+let peekKid = null, lastOpen = new Set(), lastDis = { sec: null, keys: new Set() };
+const collapsed = new Set();
 function renderList() {
+  if (searching) return renderSearch();
   const m = MEMBERS[section];
   let html = "";
-  if (section !== "misc") {
-    const ordered = [...m.live.filter(isAnimated), ...m.live.filter(k => !isAnimated(k))];
-    html += `<div class="sechead">Live view <span>${m.live.length} visual · ${m.misc.length} misc</span></div>`;
-    if (ordered.length) html += `<div class="group">${ordered.map(k => rowHTML(k, true)).join("")}</div>`;
-    if (m.misc.length) {
-      html += `<div class="sechead">Misc <span>no visual adapter currently available</span></div><div class="secnote">These use their normal Morphe widget. When an adapter is written for one, it moves up into Live view by itself.</div>`;
-      html += `<div class="group">${m.misc.map(k => rowHTML(k, false)).join("")}</div>`;
+  const isLive = k => m.live.includes(k);
+  const wantOpen = new Set();
+  const withKids = k => {
+    let out = rowHTML(k, isLive(k));
+    const ks = KIDS[k];
+    if (ks && section !== "misc") {
+      const any = ks.some(x => kidVisible(x) || x === peekKid);
+      if (any && (!collapsed.has(k) || ks.includes(peekKid))) wantOpen.add(k);
+      out += `<div class="kids ${lastOpen.has(k) ? "open" : ""}" data-kids-of="${k}"><div class="kin">${ks.map(x => rowHTML(x, isLive(x))).join("")}</div></div>`;
     }
+    return out;
+  };
+  if (section !== "misc") {
+    const top = m.live.filter(k => !PARENT_OF[k]);
+    const ordered = [...top.filter(isAnimated), ...top.filter(k => !isAnimated(k))];
+    const rest = m.misc.filter(k => !PARENT_OF[k]);
+    if (ordered.length) html += `<div class="group">${ordered.map(withKids).join("")}</div>`;
+    if (rest.length) html += `${ordered.length ? `<div class="sechead">More settings</div>` : ""}<div class="group">${rest.map(withKids).join("")}</div>`;
   } else {
-    html += `<div class="search"><svg viewBox="0 0 24 24"><path d="${P.search}"/></svg><input id="miscSearch" placeholder="Search ${m.misc.length} settings" value="${esc(miscQuery)}" aria-label="Search settings"></div>`;
-    html += `<div class="secnote" style="padding-top:10px">Every Morphe YouTube setting that no Live view screen claims yet, grouped by its original settings screen. No visual adapter is currently available for these.</div>`;
-    const q = miscQuery.trim().toLowerCase();
+    html += `<div class="secnote" style="padding-top:12px">Settings that no screen above shows yet, grouped by their Morphe settings screen. They work exactly as in Morphe.</div>`;
     const groups = {};
     for (const k of m.misc) {
       const p = PREF[k];
-      if (q && !(`${title(k)} ${k} ${p.summary || ""}`.toLowerCase().includes(q))) continue;
       const g = (p.screenTitle || "Unplaced") + (p.subScreenTitle ? " › " + p.subScreenTitle : "");
       (groups[g] = groups[g] || []).push(k);
     }
-    const names = Object.keys(groups).sort();
-    if (!names.length) html += `<div class="secnote">No settings match “${esc(miscQuery)}”.</div>`;
-    for (const g of names) html += `<div class="gtitle">${esc(g)} · ${groups[g].length}</div><div class="group">${groups[g].map(k => rowHTML(k, false)).join("")}</div>`;
+    for (const g of Object.keys(groups).sort()) html += `<div class="gtitle">${esc(g)} · ${groups[g].length}</div><div class="group">${groups[g].map(k => rowHTML(k, false)).join("")}</div>`;
   }
-  $("list").innerHTML = html;
-  const s = $("miscSearch");
-  if (s) s.addEventListener("input", e => { miscQuery = e.target.value; const pos = e.target.selectionStart; renderList(); const n = $("miscSearch"); n.focus(); n.setSelectionRange(pos, pos); });
+  const list = $("list");
+  list.innerHTML = html;
+  // animate sub-option groups from their previous state to the new one
+  void list.offsetHeight;
+  list.querySelectorAll(".kids").forEach(e => e.classList.toggle("open", wantOpen.has(e.dataset.kidsOf)));
+  lastOpen = wantOpen;
+  // rows that just became available on this screen get the unlock animation
+  const dis = new Set([...list.querySelectorAll(".row.dis")].map(r => r.dataset.row));
+  if (lastDis.sec === section) lastDis.keys.forEach(k => { if (!dis.has(k)) { const r = list.querySelector(`[data-row="${k}"]`); if (r && !r.classList.contains("hide")) unlockFx(r); } });
+  lastDis = { sec: section, keys: dis };
 }
+function unlockFx(row) {
+  row.classList.remove("unlock"); void row.offsetWidth; row.classList.add("unlock");
+  row.querySelectorAll(".ulk").forEach(e => e.remove());
+  const u = document.createElement("div"); u.className = "ulk";
+  u.innerHTML = `<svg viewBox="0 0 24 24"><path class="sh" d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0" fill="none" stroke="var(--m-success)" stroke-width="2.2" stroke-linecap="round"/><rect x="6" y="10.5" width="12" height="9.5" rx="2.2"/></svg>`;
+  row.appendChild(u); setTimeout(() => { u.remove(); row.classList.remove("unlock"); }, 950);
+}
+
+// ------------------------------------------------------------------ search
+let searching = false, query = "";
+function setSearch(on) {
+  if (on === searching) return;
+  searching = on;
+  $("app").classList.toggle("searching", on);
+  $("btnSearch").setAttribute("aria-expanded", String(on));
+  $("q").tabIndex = on ? 0 : -1; $("qClose").tabIndex = on ? 0 : -1;
+  if (on) { stopDemo(); stopScenario(); setPicker(false); $("q").value = query; setTimeout(() => $("q").focus(), 60); $("scroller").scrollTop = 0; renderList(); }
+  else { $("q").blur(); renderStage(); renderList(); }
+}
+function renderSearch() {
+  const q = query.trim().toLowerCase();
+  const all = CAT.preferences.filter(p => inVersion(p.key));
+  if (!q) { $("list").innerHTML = `<div class="shint">Type to search all ${all.length} settings. Matches update as you type.</div>`; return; }
+  const words = q.split(/\s+/).filter(Boolean);
+  const hits = [];
+  for (const p of all) {
+    const sec = SECTIONS.find(s => s.id === sectionOf(p.key));
+    const hay = `${title(p.key)} ${p.summary || ""} ${p.summaryOn || ""} ${p.summaryOff || ""} ${p.subScreenTitle || ""} ${sec ? sec.title : ""} ${p.key}`.toLowerCase();
+    if (!words.every(w => hay.includes(w))) continue;
+    const t = title(p.key).toLowerCase();
+    hits.push({ p, sec, score: (t.startsWith(q) ? 0 : t.includes(q) ? 1 : 2) });
+  }
+  hits.sort((a, b) => a.score - b.score || SECTIONS.indexOf(a.sec) - SECTIONS.indexOf(b.sec));
+  const mark = t => { let h = esc(t); for (const w of words) h = h.replace(new RegExp(`(${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "ig"), "<mark>$1</mark>"); return h; };
+  $("list").innerHTML = hits.length
+    ? `<div class="sechead">${hits.length} result${hits.length > 1 ? "s" : ""}</div><div class="group">${hits.slice(0, 120).map(({ p, sec }) => {
+        const par = PARENT_OF[p.key];
+        return `<div class="sres" data-res="${p.key}" tabindex="0"><div class="ttl">${mark(title(p.key))}</div><div class="where">${esc(sec ? sec.title : "Misc")}${par ? ` › ${esc(title(par))}` : ""}</div>${summaryFor(p.key) ? `<div class="sum">${esc(summaryFor(p.key))}</div>` : ""}</div>`;
+      }).join("")}</div>`
+    : `<div class="shint">No settings match “${esc(query)}”.</div>`;
+}
+$("btnSearch").onclick = () => setSearch(true);
+$("qClose").onclick = () => { query = ""; setSearch(false); };
+$("q").addEventListener("input", e => { query = e.target.value; renderSearch(); });
+$("q").addEventListener("keydown", e => { if (e.key === "Escape") { query = ""; setSearch(false); } if (e.key === "Enter") { const f = $("list").querySelector("[data-res]"); if (f) openResult(f.dataset.res); } });
+function openResult(k) { setSearch(false); returnTo = null; goToSetting(k); }
 
 function renderInspector() {
   const k = selected, p = k && PREF[k];
@@ -1598,7 +1797,7 @@ function renderInspector() {
 }
 function selectPre() { const pre = $("json"); if (!pre) return; const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(r); snack("Press Ctrl+C to copy"); }
 
-function renderAll() { renderBar(); renderStage(); renderList(); renderInspector(); store.save(); }
+function renderAll() { renderBar(); renderStage(); renderList(); renderInspector(); applyLayout(); store.save(); }
 function commit() { renderBar(); renderStage(); renderList(); renderInspector(); store.save(); }
 
 // ------------------------------------------------------------------ restart handling
@@ -1620,7 +1819,12 @@ $("btnBack").onclick = () => {
   const app = $("app"); app.classList.remove("exitflash"); void app.offsetWidth; app.classList.add("exitflash");
   setTimeout(() => snack("Back to Morphe settings (demo: the editor reopens)"), 350);
 };
-$("rchip").onclick = restartDialog;
+$("btnReset").onclick = () => {
+  const keys = sectionKeys().filter(k => JSON.stringify(state[k]) !== JSON.stringify(defaults[k]));
+  if (!keys.length) return;
+  const before = {}; keys.forEach(k => { before[k] = state[k]; state[k] = defaults[k]; });
+  commit(); snack(`Reset ${keys.length} setting${keys.length > 1 ? "s" : ""} on this screen`, () => { Object.assign(state, before); commit(); });
+};
 $("dlg").addEventListener("click", e => { if (e.target.id === "dlg") closeDialog(); });
 
 // ------------------------------------------------------------------ interactions
@@ -1639,13 +1843,14 @@ function highlight(k) {
 }
 function scrollRowIntoView(k, center) {
   const row = document.querySelector(`[data-row="${k}"]`); if (!row) return;
-  const sc = $("scroller"), two = $("content").offsetWidth >= 600, stickH = two ? 0 : $("stick").offsetHeight;
+  const sc = $("scroller"), two = $("content").offsetWidth >= 600 && !$("content").classList.contains("stacked"), stickH = two ? 0 : $("stick").offsetHeight;
   const top = row.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop;
   const target = center ? top - stickH - (sc.clientHeight - stickH) / 2 + row.offsetHeight / 2 : top - stickH - 8;
   if (center || top < sc.scrollTop + stickH || top + row.offsetHeight > sc.scrollTop + sc.clientHeight) sc.scrollTo({ top: target, behavior: "smooth" });
 }
 function select(k, from) {
   selected = k;
+  if (section === "flyout" && (FLY_SUB[k] || null) !== flySub) renderStage();
   if (section === "player" && mode === "mod") {
     const want = CUSTOM_KEYS.has(k) && !shown(k);
     if (want !== trayOpen) { trayOpen = want; renderStage(); }
@@ -1742,7 +1947,7 @@ function sizeAnim(el, show, ms = SIZE_MS) {
   return a;
 }
 function afterChange(k, before) {
-  const p = PREF[k];
+  if (peekKid && kidVisible(peekKid)) peekKid = null;
   commit(); select(k);
   try { navigator.vibrate && navigator.vibrate(20); } catch { /* ignore */ }
   if (SCN[k]) playScenario(k, before);
@@ -1751,14 +1956,14 @@ function afterChange(k, before) {
     const back = returnTo; returnTo = null;
     setTimeout(() => goToSetting(back.key, () => {
       const row = document.querySelector(`[data-row="${back.key}"]`);
-      if (row) { row.classList.remove("unlock"); void row.offsetWidth; row.classList.add("unlock"); }
+      if (row) unlockFx(row);
       snack(`<b>${esc(title(back.key))}</b> is unlocked`);
     }), 650);
   }
 }
 // Colour inputs only take #RRGGBB; keep the alpha byte of Morphe's #AARRGGBB values.
 function fromColor(k, hex) { const cur = String(state[k] || ""); const alpha = cur.length === 9 ? cur.slice(1, 3) : ""; return ("#" + alpha + hex.slice(1)).toUpperCase(); }
-function ensureMod() { if (mode === "orig") { mode = "mod"; $("btnOrig").setAttribute("aria-pressed", "false"); $("btnMod").setAttribute("aria-pressed", "true"); $("hint").textContent = "Tap to select · hold to switch"; } }
+function ensureMod() { if (mode === "orig") { mode = "mod"; $("btnOrig").setAttribute("aria-pressed", "false"); $("btnMod").setAttribute("aria-pressed", "true"); } }
 function coerce(k, v) { const t = PREF[k].type; if (t === "integer" || t === "long" || t === "float") return Number(v); if (t === "boolean") return v === true || v === "true"; return v; }
 
 function switchSection(id, after) {
@@ -1768,7 +1973,7 @@ function switchSection(id, after) {
   content.classList.remove("swap-in"); content.classList.add("swap-out");
   stopDemo(); stopScenario();
   setTimeout(() => {
-    section = id; selected = null; miscQuery = ""; trayOpen = false;
+    section = id; selected = null; peekKid = null; trayOpen = false;
     $("scroller").scrollTop = 0; renderAll();
     content.classList.remove("swap-out"); void content.offsetWidth; content.classList.add("swap-in");
     after && setTimeout(after, 120);
@@ -1776,9 +1981,17 @@ function switchSection(id, after) {
 }
 function goToSetting(k, after) {
   switchSection(sectionOf(k), () => {
-    select(k); scrollRowIntoView(k, true);
-    const row = document.querySelector(`[data-row="${k}"]`);
-    setTimeout(() => { if (row) { row.classList.remove("attn"); void row.offsetWidth; row.classList.add("attn"); } after && after(); }, 380);
+    const par = PARENT_OF[k];
+    const hidden = par && !kidVisible(k);
+    if (hidden || (par && collapsed.has(par))) { if (hidden) peekKid = k; collapsed.delete(par); renderList(); }
+    select(k);
+    setTimeout(() => scrollRowIntoView(k, true), par ? 300 : 0);
+    setTimeout(() => {
+      const row = document.querySelector(`[data-row="${k}"]`);
+      if (row) { row.classList.remove("attn"); void row.offsetWidth; row.classList.add("attn"); }
+      if (hidden) setTimeout(() => pointToParents(k), 450);
+      after && after();
+    }, par ? 520 : 380);
   });
 }
 
@@ -1787,7 +2000,7 @@ let press = null;
 const LONG = 480;
 function down(e) {
   if (e.button > 0) return;
-  if (e.target.closest("input,select,textarea,button.opt,.sw,.goto,.replay,[data-tray]")) return;
+  if (e.target.closest("input,select,textarea,button.opt,.sw,.goto,.kidbtn,.replay,[data-tray]")) return;
   const el = e.target.closest("[data-k]"); if (!el) return;
   const k = el.dataset.k; const from = el.closest("#stage") ? "stage" : "list";
   el.classList.add("pressing");
@@ -1830,6 +2043,17 @@ $("list").addEventListener("keydown", e => {
   if (e.key === " ") { toggle(row.dataset.row); e.preventDefault(); }
 });
 $("list").addEventListener("click", e => {
+  const res = e.target.closest("[data-res]");
+  if (res) { openResult(res.dataset.res); return; }
+  const kb = e.target.closest("[data-kidtoggle]");
+  if (kb) {
+    const k = kb.dataset.kidtoggle, open = collapsed.has(k);
+    if (open) collapsed.delete(k); else collapsed.add(k);
+    kb.setAttribute("aria-expanded", String(open));
+    const box = document.querySelector(`[data-kids-of="${k}"]`); if (box) box.classList.toggle("open", open);
+    if (open) lastOpen.add(k); else lastOpen.delete(k);
+    return;
+  }
   const go = e.target.closest("[data-goto]");
   if (go) {
     const k = go.dataset.goto; const target = blockerOf(k); if (!target) return;
@@ -1862,16 +2086,29 @@ $("list").addEventListener("change", e => {
 
 $("secPill").onclick = () => setPicker(!pickerOpen);
 $("pickScrim").onclick = () => setPicker(false);
-$("pickGrid").addEventListener("click", e => { const b = e.target.closest("[data-sec]"); if (!b) return; setPicker(false); returnTo = null; switchSection(b.dataset.sec); });
-document.addEventListener("keydown", e => { if (e.key === "Escape") { setPicker(false); closeDialog(); } });
+$("pickGrid").addEventListener("click", e => {
+  if (e.target.closest("[data-theme-toggle]")) { theme = theme === "m3" ? "yt" : "m3"; applyTheme(); renderBar(); store.save(); return; }
+  const b = e.target.closest("[data-sec]"); if (!b) return; setPicker(false); returnTo = null; switchSection(b.dataset.sec); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") { setPicker(false); closeDialog(); if (searching) { query = ""; setSearch(false); } } });
 function setMode(m) {
   mode = m;
   $("btnOrig").setAttribute("aria-pressed", String(m === "orig")); $("btnMod").setAttribute("aria-pressed", String(m === "mod"));
-  $("hint").textContent = m === "orig" ? "Stock YouTube, read-only" : "Tap to select · hold to switch";
   commit(); if (selected) select(selected);
 }
 $("btnOrig").onclick = () => setMode("orig");
 $("btnMod").onclick = () => setMode("mod");
+
+// ------------------------------------------------------------------ theme and tablet layout
+let theme = "yt";
+function applyTheme() { const ph = $("phone"); ph.classList.toggle("theme-yt", theme !== "m3"); ph.classList.toggle("theme-m3", theme === "m3"); }
+// Sections whose preview is a 16:9 player: on a portrait tablet they sit on top, list below in two columns.
+const WIDE = new Set(["player", "endscreen", "seekbar", "fullscreen", "captions", "sponsorblock", "danmaku"]);
+function applyLayout() {
+  const ed = document.querySelector(".editor"); if (!ed) return;
+  const st = ed.clientWidth >= 600 && ed.clientHeight >= ed.clientWidth * 0.95 && WIDE.has(section);
+  $("content").classList.toggle("stacked", st);
+}
+window.addEventListener("resize", applyLayout);
 
 // ------------------------------------------------------------------ devices and UI scale
 const DEVICES = [
@@ -1890,6 +2127,7 @@ function applyDevice() {
   const s = Math.min(1, avail / d.w, Math.max(.45, availH / d.h));
   ph.style.transform = s < 1 ? `scale(${s})` : "";
   $("devwrap").style.width = d.w * s + "px"; $("devwrap").style.height = d.h * s + "px";
+  applyLayout();
   $("devBtns").innerHTML = DEVICES.map(x => `<button class="btn" data-dev="${x.id}" aria-pressed="${x.id === device_}">${x.label}</button>`).join("");
 }
 $("devBtns").addEventListener("click", e => { const b = e.target.closest("[data-dev]"); if (!b) return; device_ = b.dataset.dev; applyDevice(); store.save(); });
@@ -2000,6 +2238,8 @@ async function boot() {
   baseline = { ...state };
   try { const b = JSON.parse(localStorage.getItem(LS + "-baseline") || "null"); if (b) for (const k in b) if (k in PREF) baseline[k] = b[k]; } catch { /* storage unavailable */ }
   if (saved.section && SECTIONS.some(s => s.id === saved.section)) section = saved.section;
+  if (saved.theme === "m3") theme = "m3";
+  applyTheme();
   if (saved.device && DEVICES.some(d => d.id === saved.device)) device_ = saved.device;
   if (CAT.youtubeVersions && CAT.youtubeVersions.length) {
     YT_VERSIONS.length = 0; YT_EXPERIMENTAL.clear();
@@ -2017,6 +2257,6 @@ async function boot() {
   let seen = false; try { seen = localStorage.getItem(LS + "-tutorial") === "1"; } catch { /* storage unavailable */ }
   if (!seen) runTutorial();
 }
-store.save = function () { try { localStorage.setItem(LS, JSON.stringify({ state: changedOnly(), section, slots: showSlots, device: device_, yt: ytVersion })); localStorage.setItem(LS + "-baseline", JSON.stringify(baseline)); } catch { /* storage unavailable */ } };
+store.save = function () { try { localStorage.setItem(LS, JSON.stringify({ state: changedOnly(), section, device: device_, yt: ytVersion, theme })); localStorage.setItem(LS + "-baseline", JSON.stringify(baseline)); } catch { /* storage unavailable */ } };
 boot();
 })();

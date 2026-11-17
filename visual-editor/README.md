@@ -74,6 +74,16 @@ its options, and greys out settings exactly when the app would. In the native po
 knows its own version, so the picker goes away. Hidden components now always collapse (as Litho
 filters do in the real app), with a size animation when they are switched off or on.
 
+Round 5 reworks the editor for less clutter. The default look now matches YouTube's own settings
+screens, and Morphe Manager's Material 3 look is an experimental toggle at the end of the screen
+menu. A search button in the top bar finds any setting live and jumps to it. Settings that depend
+on another setting on the same screen sit under it as offset sub-options. They show only while
+the parent is on, and they can be folded away. A locked row only appears when you jump to a hidden
+sub-option, and an unlock animation plays when its dependency is met. Each screen has a Reset
+button. New screens cover Ads, App look, Snackbar, Playback and DeArrow. Scenario animations place
+buttons where the live preview draws them (`anchor()`). The extractor now reads only a
+preference's own `titleKey`, not one from a nested child, which fixes three screen titles.
+
 Interaction model: tap selects (and plays a demo for gestures and behaviours),
 long-press switches the setting, tapping a hidden component shows it for a moment
 without changing the setting, and Original / Modified compares stock YouTube with
