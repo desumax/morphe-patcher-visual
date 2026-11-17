@@ -283,7 +283,6 @@ function C(k, inner, o = {}) {
   if (o.cls) cls.push(o.cls);
   if (a && (a.kind === "vis" || a.kind === "overlay") && !shown(full)) cls.push("off");
   if (ghosts.has(full)) cls.push("ghost");
-  if (fading.has(full)) cls.push("ghost", "leaving");
   if (selected === full || (o.also && selected === "morphe_" + o.also)) cls.push("sel");
   return `<${o.tag || "div"} class="${cls.join(" ")}" data-k="${full}" ${o.also ? `data-also="morphe_${o.also}"` : ""} data-label="${esc(title(full))}" style="${o.style || ""}">${inner}</${o.tag || "div"}>`;
 }
@@ -1767,11 +1766,25 @@ scen("comments", "search_comments", (box, on) => {
 });
 scen("channel", "channel_search", (box, on) => {
   situation("A channel page");
-  box.innerHTML = device("port", pageRows(`<div style="display:flex;justify-content:flex-end;gap:5px">${on ? `<span style="position:relative">${I("search", "ico", 'style="width:10px;height:10px;fill:#3ea6ff"')}</span>` : ""}${I("search", "ico", 'style="width:10px;height:10px"')}</div><div style="height:22px;border-radius:4px;background:${ART[3]}"></div><div style="display:flex;gap:4px;align-items:center"><span style="width:16px;height:16px;border-radius:50%;background:${AV[0]}"></span><b style="font-size:8px">Fjord & Timber</b></div>${bar7(80)}${bar7(60)}<div class="res7" style="display:grid;gap:4px"></div>`));
+  const ico = (c) => I("search", "ico", `style="width:10px;height:10px;${c ? "fill:" + c : ""}"`);
+  box.innerHTML = device("port", pageRows(`<div class="top7" style="height:14px;display:flex;align-items:center;justify-content:flex-end;gap:6px;white-space:nowrap;overflow:hidden">${on ? `<span style="display:grid;place-items:center;width:14px;height:14px;border-radius:50%;background:rgba(62,166,255,.18)">${ico("#3ea6ff")}</span>` : ""}${ico()}</div><div style="height:22px;border-radius:4px;background:${ART[3]}"></div><div style="display:flex;gap:4px;align-items:center"><span style="width:16px;height:16px;border-radius:50%;background:${AV[0]}"></span><b style="font-size:8px">Fjord &amp; Timber</b></div><div class="body7" style="display:grid;gap:5px">${bar7(80)}${bar7(60)}${[0, 1, 2].map(i => `<div style="display:flex;gap:4px;align-items:center"><div style="width:26px;height:15px;border-radius:2px;background:${ART[i + 1]}"></div>${bar7(50)}</div>`).join("")}</div>`));
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
-  at(200, () => fingerTo(f, W * (on ? .78 : .9), H * .05)); at(550, () => tapF(f));
-  at(800, () => { f.classList.remove("show"); dev.insertAdjacentHTML("beforeend", `<div style="position:absolute;left:4px;right:4px;top:4px;height:13px;border-radius:7px;background:#2c2c2c;font-size:7px;line-height:13px;padding:0 6px;color:#ddd;animation:sheetup .2s reverse">${on ? "Search Fjord & Timber" : "Search YouTube"}</div>`); });
-  at(1200, () => { const r = dev.querySelector(".res7"); r.innerHTML = [0, 1].map(i => `<div style="display:flex;gap:4px;align-items:center"><div style="width:26px;height:15px;border-radius:2px;background:${ART[on ? i : i + 4]}"></div><span style="font-size:6.5px">${on ? "Fjord & Timber · " : "Other channel · "}stove</span></div>`).join(""); });
+  const top = dev.querySelector(".top7"), body = dev.querySelector(".body7");
+  const tx = on ? W - 6 - 10 - 6 - 7 : W - 6 - 5, ty = 6 + 7;
+  at(200, () => fingerTo(f, tx, ty)); at(550, () => tapF(f));
+  at(800, () => {
+    f.classList.remove("show");
+    top.style.justifyContent = "flex-start";
+    top.innerHTML = `${I("back", "ico", 'style="width:9px;height:9px;flex:none"')}<div style="flex:1;min-width:0;height:13px;border-radius:7px;background:#2c2c2c;font-size:7px;line-height:13px;padding:0 6px;color:#ddd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span class="q7" style="color:#fff"></span><span class="ph7" style="color:#888">${on ? "Search this channel" : "Search YouTube"}</span></div>`;
+  });
+  "stove".split("").forEach((ch, i) => at(1050 + i * 90, () => { dev.querySelector(".ph7")?.remove(); const q = dev.querySelector(".q7"); if (q) q.textContent += ch; }));
+  at(1600, () => {
+    body.style.transition = "opacity .2s"; body.style.opacity = "0";
+    setTimeout(() => {
+      body.innerHTML = `<span style="color:#aaa;font-size:6.5px">${on ? "Results from Fjord &amp; Timber" : "Results from all of YouTube"}</span>` + [0, 1, 2].map(i => `<div style="display:flex;gap:4px;align-items:center"><div style="width:26px;height:15px;border-radius:2px;background:${ART[on ? i : i + 4]};flex:none"></div><span style="font-size:6.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${on ? ["Stove install, part 1", "Stove vs rain", "Cabin stove tour"][i] : ["Other channel · stove", "Stove review 2026", "Camping stoves ranked"][i]}</span></div>`).join("");
+      body.style.opacity = "1";
+    }, 210);
+  });
   return on ? "Second search button: results only from this channel" : "Search button: searches all of YouTube (stock)";
 });
 scen("description", "copy_select_text", (box, on) => {
@@ -2044,13 +2057,15 @@ function setPicker(open) {
 }
 
 let stageHold = 0;
+let renderCount = 0;
 function renderStage() {
   if (stageHold) return;
   const st = $("stage");
   const scene = SCENES[section];
   $("stick").hidden = !scene;
   if (!scene) { st.innerHTML = ""; return; }
-  const same = st.dataset.sec === section; st.dataset.sec = section;
+  const same = st.dataset.sec === section; st.dataset.sec = section; renderCount++;
+  if (!same) { ghosts.clear(); fading.clear(); }
   const scrollers = same ? [...st.querySelectorAll(".inner-scroll")].map(e => e.scrollTop) : [];
   const hscroll = same ? [...st.querySelectorAll("[data-hs]")].map(e => e.scrollLeft) : [];
   st.className = "stage" + (mode === "orig" ? " original" : "");
@@ -2355,10 +2370,17 @@ function highlight(k, flash = true, reveal = false) {
     fitOutline(e);
     if (flash) { e.classList.remove("flash"); void e.offsetWidth; e.classList.add("flash"); setTimeout(() => e.classList.remove("flash"), 520); }
   });
-  if (!reveal) return finish();
-  // wait a frame so a ghost-revealed (collapsed) element has a size before scrolling to it
-  setTimeout(() => { if (selected !== k) return; const live = [...document.querySelectorAll(`#stage [data-k="${k}"], #stage [data-also="${k}"]`)]; els.splice(0, els.length, ...live); setTimeout(finish, revealInStage(live) ? 340 : 0); }, 60);
+  if (!reveal || skipReveal) { skipReveal = false; return finish(); }
+  // wait until a growing (ghost-revealed or restored) element has its full size, then scroll to it
+  const liveEls = () => [...document.querySelectorAll(`#stage [data-k="${k}"], #stage [data-also="${k}"]`)];
+  const go = () => { if (selected !== k) return; const live = liveEls(); els.splice(0, els.length, ...live); setTimeout(finish, revealInStage(live) ? 340 : 0); };
+  setTimeout(() => {
+    if (selected !== k) return;
+    const growing = liveEls().flatMap(e => e.getAnimations()).filter(a => a.playState === "running" && isFinite(a.effect?.getComputedTiming().endTime) && a.effect?.getComputedTiming().fill !== "forwards");
+    if (growing.length) Promise.all(growing.map(a => a.finished.catch(() => {}))).then(go); else go();
+  }, 60);
 }
+let skipReveal = false;
 // Scrollable boxes inside the preview (feeds, action bars, chip rows) scroll so the selected
 // element is centred before it flashes. Works for overflow:hidden strips too.
 function scrollBoxes(el) {
@@ -2402,6 +2424,7 @@ function scrollRowIntoView(k, center) {
 function select(k, from) {
   const prevSel = selected;
   selected = k;
+  const dropGhost = prevSel && prevSel !== k && ghosts.has(prevSel) ? prevSel : null, renders = renderCount;
   if (section === "flyout" && (FLY_SUB[k] || null) !== flySub) renderStage();
   if (section === "player" && mode === "mod") {
     // the tray of 13 buttons only opens from its own pill; selecting a hidden one previews it in place
@@ -2412,6 +2435,8 @@ function select(k, from) {
   if (section === "shorts" && (SHORTS_SHEET.has(k) || SHORTS_SHEET.has(prevSel))) renderStage();
   if (section === "feed" && (k === "morphe_feed_card_layout" || prevSel === "morphe_feed_card_layout")) renderStage();
   if (section === "captions" && (k === "morphe_secondary_caption_language" || prevSel === "morphe_secondary_caption_language")) renderStage();
+  // a hidden setting stays revealed while it is selected; it collapses once you move to another one
+  if (dropGhost) { if (renders === renderCount) unghost(dropGhost); else { clearGhost(dropGhost); renderStage(); } }
   highlight(k, true, from !== "stage");
   renderInspector();
   if (from === "stage") scrollRowIntoView(k);
@@ -2436,18 +2461,18 @@ function pointToParents(k) {
 const ghostTimers = new Map();
 const stageEls = k => document.querySelectorAll(`#stage [data-k="${k}"]`);
 function clearGhost(k) { (ghostTimers.get(k) || []).forEach(clearTimeout); ghostTimers.delete(k); ghosts.delete(k); fading.delete(k); stageEls(k).forEach(e => { e.classList.remove("leaving", "ghost-out"); e.getAnimations().forEach(a => a.cancel()); }); }
-function ghost(k) {
+function ghost(k, grow = true) {
   const already = ghosts.has(k) || fading.has(k);
   clearGhost(k);
   ghosts.add(k);
-  stageEls(k).forEach(e => { e.getAnimations().forEach(a => a.cancel()); e.classList.remove("ghost-out", "leaving"); e.classList.add("ghost"); if (!already && !e.classList.contains("intray")) sizeAnim(e, true); });
-  const t1 = setTimeout(() => {
-    ghosts.delete(k); fading.add(k);
-    stageEls(k).forEach(e => { if (e.classList.contains("intray")) e.classList.add("ghost-out"); else { e.classList.add("leaving"); sizeAnim(e, false, 420); } });
-    const t2 = setTimeout(() => { fading.delete(k); ghostTimers.delete(k); stageEls(k).forEach(e => { e.classList.remove("ghost", "ghost-out", "leaving"); e.getAnimations().forEach(a => a.cancel()); }); }, 440);
-    ghostTimers.set(k, [t2]);
-  }, 1600);
-  ghostTimers.set(k, [t1]);
+  stageEls(k).forEach(e => { e.getAnimations().forEach(a => a.cancel()); e.classList.remove("ghost-out", "leaving"); e.classList.add("ghost"); if (grow && !already && !e.classList.contains("intray")) sizeAnim(e, true); });
+}
+function unghost(k) {
+  (ghostTimers.get(k) || []).forEach(clearTimeout);
+  ghosts.delete(k); fading.add(k);
+  stageEls(k).forEach(e => { e.classList.remove("sel", "selin", "flash"); if (e.classList.contains("intray")) e.classList.add("ghost-out"); else { e.classList.add("leaving"); sizeAnim(e, false, 420); } });
+  const t2 = setTimeout(() => { fading.delete(k); ghostTimers.delete(k); stageEls(k).forEach(e => { e.classList.remove("ghost", "ghost-out", "leaving", "sizing"); e.getAnimations().forEach(a => a.cancel()); }); }, 440);
+  ghostTimers.set(k, [t2]);
 }
 
 // Settings with a value (number, colour, text) can't flip on a hold: jump to their control instead.
@@ -2480,8 +2505,10 @@ function toggle(k) {
     if (els.length) {
       stageHold++;
       const done = () => { if (!stageHold) return; stageHold = 0; renderStage(); if (selected) highlight(selected); };
-      els.forEach(e => { e.classList.remove("pressing", "charging"); sizeAnim(e, false); });
-      setTimeout(done, SIZE_MS + 20);
+      els.forEach(e => e.classList.remove("pressing", "charging"));
+      // scroll the component into view first so you see it go
+      const wait = revealInStage(els) ? 360 : 0; skipReveal = true;
+      setTimeout(() => { els.forEach(e => sizeAnim(e, false)); setTimeout(done, SIZE_MS + 20); }, wait);
     }
   }
   afterChange(k, before);
@@ -2506,12 +2533,15 @@ function sizeAnim(el, show, ms = SIZE_MS) {
   if (!r.width && !r.height && ax !== "none") return null;
   el.classList.add("sizing");
   const a = el.animate(show ? [zero, full] : [full, zero], { duration: ms, easing: "cubic-bezier(.4,0,.2,1)", fill: show ? "none" : "forwards" });
-  a.onfinish = () => { el.classList.remove("sizing"); };
+  // a collapsed element keeps overflow:hidden until it is hidden for good, otherwise its content
+  // would paint at full size for a frame between the end of the animation and display:none
+  if (show) a.onfinish = a.oncancel = () => el.classList.remove("sizing");
   return a;
 }
 function afterChange(k, before) {
   if (peekKid && kidVisible(peekKid)) peekKid = null;
   commit(); select(k);
+  const sb = document.querySelector(".stagebox"); if (sb) { sb.classList.remove("changed"); void sb.offsetWidth; sb.classList.add("changed"); }
   try { navigator.vibrate && navigator.vibrate(20); } catch { /* ignore */ }
   if (SCN[k]) playScenario(k, before);
   // teleport back to the setting that was waiting on this one
@@ -2583,7 +2613,7 @@ function down(e) {
   press = { el, k, from, x: e.clientX, y: e.clientY, long: false };
   // holding a preview element brings its setting into view while the hold is still charging
   if (from === "stage") press.peek = setTimeout(() => { if (!press || press.k !== k) return; document.querySelectorAll(".row.sel").forEach(r => r.classList.remove("sel")); document.querySelector(`[data-row="${k}"]`)?.classList.add("sel"); scrollRowIntoView(k); }, 160);
-  press.t = setTimeout(() => { if (!press) return; press.long = true; el.classList.remove("pressing"); if (from === "stage" && selected !== k) { selected = k; highlight(k, false); renderInspector(); } toggle(k); if (from === "stage") setTimeout(() => scrollRowIntoView(k), 30); }, LONG);
+  press.t = setTimeout(() => { if (!press) return; press.long = true; el.classList.remove("pressing"); if (from === "stage" && selected !== k) { if (ghosts.has(selected)) unghost(selected); selected = k; highlight(k, false); renderInspector(); } toggle(k); if (from === "stage") setTimeout(() => scrollRowIntoView(k), 30); }, LONG);
 }
 function cancelPress() { if (press) { clearTimeout(press.t); clearTimeout(press.peek); press.el.classList.remove("pressing", "charging"); press = null; } }
 function move(e) {
@@ -2606,8 +2636,9 @@ function up() {
   lastTap = { k, t: now };
   const a = A[k];
   if (mode === "mod" && a && (a.kind === "vis" || a.kind === "overlay") && !shown(k)) {
+    if (from === "stage") ghost(k, false);
     select(k, from);
-    if (document.querySelector(`#stage [data-k="${k}"]`)) ghost(k);
+    if (from !== "stage" && document.querySelector(`#stage [data-k="${k}"]`)) ghost(k);
   } else select(k, from);
 }
 ["stage", "list"].forEach(id => {

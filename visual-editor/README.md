@@ -109,3 +109,10 @@ be rearranged by holding a card, and has Reset order. Lists Morphe builds at run
 languages, custom speeds, SponsorBlock segment categories) get representative entries. Playback,
 DeArrow and the Description sheet have real previews, and new scenarios cover copying and searching
 comments, channel search, text selection, the share sheet, Open Shorts with and pinch to zoom.
+
+Round 8 tightens selection. The live preview has a frame that glows briefly when a setting changes.
+Holding to hide or restore a component now scrolls it into view as well: a component that is about to
+collapse is brought into view first, and a restored one is centred once it has grown to full size. A
+hidden setting that you select stays revealed with a slow red pulse until you pick another setting,
+instead of disappearing on a timer. A collapsing component keeps its content clipped until it is gone,
+which removes a one-frame flash at the end of the collapse. The channel search scenario was redrawn.

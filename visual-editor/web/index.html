@@ -118,7 +118,10 @@ button { font: inherit; color: inherit; }
 .editor { flex: 1; min-height: 0; container-type: inline-size; container-name: ed; position: relative; }
 .scroller { height: 100%; overflow-y: auto; overflow-x: hidden; position: relative; overscroll-behavior: contain; }
 .stick { position: sticky; top: 0; z-index: 5; background: var(--m-bg); }
-.stagebox { position: relative; }
+.stagebox { position: relative; margin: 8px 10px 6px; border: 1.5px solid var(--m-outline, #5f6368); border-radius: 14px; overflow: hidden; overflow: clip; box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 4px 14px rgba(0,0,0,.45); transition: border-color .25s; }
+.stagebox.changed { animation: framepulse .7s var(--ease); }
+@keyframes framepulse { 0% { border-color: var(--yt-blue); box-shadow: 0 0 0 3px rgba(62,166,255,.35), 0 4px 14px rgba(0,0,0,.45); } 100% { } }
+.stick { box-shadow: 0 1px 0 var(--m-outline, #444), 0 6px 10px -6px rgba(0,0,0,.6); }
 .ptools { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 14px; font-size: 12px; color: var(--m-on-var); }
 .ptools .hint { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ptools label { display: flex; gap: 6px; align-items: center; cursor: pointer; flex: none; }
@@ -147,6 +150,9 @@ button { font: inherit; color: inherit; }
 .c.sizing { overflow: hidden; }
 .c.ghost { opacity: .6 !important; outline: 1.5px dashed var(--yt-red) !important; display: revert; animation: ghostin var(--dur) var(--ease); }
 .c.ghost > * { visibility: visible !important; }
+/* a hidden setting that is selected stays revealed and pulses slowly in red until you pick another one */
+.stage .c.ghost.sel:not(.leaving):not(.charging):not(.flash) { animation: ghostpulse 1.8s ease-in-out .5s infinite; }
+@keyframes ghostpulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,0,51,0), inset 0 0 0 999px rgba(255,0,51,0); } 50% { box-shadow: 0 0 0 4px rgba(255,0,51,.35), inset 0 0 0 999px rgba(255,0,51,.16); } }
 .c.ghost-out { opacity: 0 !important; transition: opacity 450ms var(--ease) !important; animation: none; }
 @keyframes ghostin { from { opacity: 0; } }
 .c.intray { opacity: .55; outline: 1.5px dashed rgba(255,255,255,.5); outline-offset: 1px; border-radius: 8px; }
