@@ -88,3 +88,13 @@ Interaction model: tap selects (and plays a demo for gestures and behaviours),
 long-press switches the setting, tapping a hidden component shows it for a moment
 without changing the setting, and Original / Modified compares stock YouTube with
 the current settings.
+
+Round 6 polishes the interaction model. Double-tap toggles a setting as well as long-press. When a
+setting depends on one that lives on another screen, that setting opens in a popup that names its
+original location, and Reset also undoes it. Sub-options grow in and collapse out with the same size
+animation, and a parent says "Sub-settings hidden" while its children are folded or unavailable.
+Selecting a setting briefly flashes its element on the preview. Hidden Player buttons preview in
+place instead of opening the 13-button tray. The YouTube look follows Morphe's own dark theme colour
+(AMOLED black, Catppuccin and so on). Screens without a preview sit in a separate "No preview" group in
+the screen menu. Seekbar & gestures gains custom thumb, thumbnail preview, gesture hint and live DVR
+animations.

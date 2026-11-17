@@ -196,7 +196,7 @@ button { font: inherit; color: inherit; }
 /* finger: a hand whose fingertip sits on the touch point, plus a ripple */
 .finger { position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; z-index: 30; transition: opacity 120ms; }
 .finger::before { content: ""; position: absolute; left: -15px; top: -15px; width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,.35); border: 2px solid rgba(255,255,255,.85); transform: scale(.5); opacity: 0; }
-.finger svg { position: absolute; left: -15px; top: -6px; width: 40px; height: 40px; fill: #fff; filter: drop-shadow(0 2px 3px rgba(0,0,0,.7)); }
+.finger svg { position: absolute; left: -19px; top: -9px; width: 40px; height: 40px; fill: #fff; filter: drop-shadow(0 2px 3px rgba(0,0,0,.7)); }
 .finger.show { opacity: 1; }
 .finger.tap::before { animation: ripple .42s var(--ease); }
 .finger.hold::before { opacity: 1; transform: scale(.9); background: rgba(255,0,51,.35); transition: transform .3s, opacity .15s; }
@@ -510,6 +510,25 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   .content.stacked .group > .kids { grid-column: 1 / -1; }
   .content.stacked .row + .row { border-top: 0; }
 }
+
+/* round 6 */
+.c.flash::after { content: ""; position: absolute; inset: -2px; border-radius: 6px; background: rgba(62,166,255,.55); pointer-events: none; animation: cflash 480ms var(--ease) forwards; z-index: 21; }
+.c.off.flash::after, .c.ghost.flash::after { background: rgba(255,0,51,.5); }
+@keyframes cflash { from { opacity: 1; } to { opacity: 0; } }
+.kidhid { font-size: 11px; font-weight: 500; color: var(--m-on-var); margin-left: 8px; padding: 1px 7px; border-radius: 999px; background: var(--m-c-high); vertical-align: 2px; white-space: nowrap; }
+.row { touch-action: manipulation; }
+.plaincard { grid-column: 1 / -1; margin-top: 6px; border-radius: 10px; border: 1px dashed rgba(255,255,255,.18); padding: 6px; }
+.plaincard .ph { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--m-on-var); padding: 2px 6px 4px; }
+.plaincard .ph svg { width: 14px; height: 14px; fill: currentColor; }
+.plaincard .pg { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(150px, calc(50% - 2px)), 1fr)); gap: 4px; }
+.plaincard .pick .pi { opacity: .7; }
+.dlgwhere { font-size: 13px; color: var(--m-on-var); margin: 6px 0 10px; line-height: 1.45; }
+.dlglist { background: var(--m-c-high); border-radius: 12px; overflow: hidden; text-align: left; }
+.dlglist .row { cursor: default; }
+.demo-label.dyn { transition: opacity .3s; }
+.knob[data-thumb] { background: transparent !important; box-shadow: none !important; }
+.knob[data-thumb]::after { content: "⭐"; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 15px; line-height: 1; }
+.knob[data-thumb="big"]::after { font-size: 26px; }
 </style>
 
 <div class="bench">
@@ -558,7 +577,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
       <h2>How it works</h2>
       <div class="howto">
         <div><b>Tap</b> a component to select it. Animated settings play their demo.</div>
-        <div><b>Hold</b> it to switch the setting. Hold again to switch it back.</div>
+        <div><b>Hold</b> or <b>double-tap</b> it to switch the setting. Do it again to switch it back.</div>
         <div><b>Hidden components</b> collapse, as they do in the real app. Tap a hidden setting's row to see it for a moment without changing it.</div>
         <div><b>Sub-options</b> sit under the setting they depend on and appear only while it is on. The arrow next to its title folds them away.</div>
         <div><b>Search</b> (top bar) finds any setting and takes you to it, even a sub-option that is still locked.</div>

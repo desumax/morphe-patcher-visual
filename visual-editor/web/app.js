@@ -304,7 +304,7 @@ SCENES.player = () => {
     ["fullscreen_video_scale_button", I("crop")], ["video_delay_button_overlay", `<span class="badge-txt">ms</span>`], ["external_downloader_overlay_button", I("dl")],
   ];
   const btn = ([k, ic], extra = "") => C(k, `<div class="pbtn" style="width:32px;height:32px">${ic}</div>`, { cls: extra });
-  const on = list.filter(([k]) => shown("morphe_" + k));
+  const on = list.filter(([k]) => shown("morphe_" + k) || (mode === "mod" && selected === "morphe_" + k && !trayOpen));
   const off = list.filter(([k]) => !shown("morphe_" + k));
   const pill = off.length && mode === "mod"
     ? `<button class="traypill" data-tray aria-expanded="${trayOpen}" title="Buttons that are off">${I(trayOpen ? "close" : "plus")}<span>${off.length}</span></button>` : "";
@@ -336,7 +336,7 @@ const CUSTOM_KEYS = new Set(["copy_video_link_button", "playback_speed_dialog_bu
 SCENES.endscreen = () => {
   const auto = V("morphe_autoplay_mode");
   const card = (i) => `<div style="display:flex;gap:6px;align-items:center;background:rgba(0,0,0,.55);border-radius:6px;padding:4px;width:150px">${thumb(i, "width:64px;flex:none;border-radius:4px")}<div class="t2" style="color:#fff;font-size:10.5px;line-height:1.25">${esc(VIDEOS[i].t.slice(0, 38))}…</div></div>`;
-  const upnext = auto === "AUTO"
+  const upnext = (selected === "morphe_hide_autoplay_preview" || (auto === "AUTO" && selected !== "morphe_hide_end_screen_suggested_video"))
     ? C("hide_autoplay_preview", `<div style="width:124px;background:rgba(0,0,0,.6);border-radius:8px;padding:6px">
         <div style="font-size:10px;color:#ddd;margin-bottom:4px">Up next in <b style="color:#fff" class="cd">5</b></div>${thumb(3, "border-radius:6px")}
         <div style="font-size:10.5px;margin-top:4px;line-height:1.25">${esc(VIDEOS[3].t)}</div>
@@ -362,10 +362,10 @@ SCENES.seekbar = () => {
   const seekStyle = custom ? `--seek-1:${c1};` : "";
   return `<div class="video" style="${seekStyle}">
     ${videoFrame(3)}<div class="scrim" style="opacity:.35"></div>
-    <div style="position:absolute;left:50%;top:10px;transform:translateX(-50%)">${C("hide_player_gesture_hints", `<div class="toastin" style="position:static;transform:none">Pull up for precise seeking</div>`)}</div>
+    <div style="position:absolute;left:50%;top:38px;transform:translateX(-50%)">${C("hide_player_gesture_hints", `<div class="toastin" style="position:static;transform:none">Pull up for precise seeking</div>`)}</div>
     <div class="pbtn bigbtn" style="position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);background:rgba(0,0,0,.3)">${I("play")}</div>
     <div id="thumbBubble" style="position:absolute;left:calc(12px + 0.42 * (100% - 24px));bottom:40px;transform:translateX(-50%)">${C("seekbar_thumbnail_preview", `<div style="width:96px">${thumb(4, "border-radius:4px;border:2px solid #fff")}<div class="time" style="text-align:center;margin-top:2px">7:51</div></div>`)}</div>
-    ${C("hide_timestamp", `<div class="time">3:12 / 18:42</div>`, { style: "position:absolute;left:12px;bottom:22px" })}
+    ${C("hide_timestamp", `<div class="time">3:12 / 18:42</div>`, { style: "position:absolute;left:12px;bottom:30px" })}
     ${C("hide_seekbar", `<div class="seek" id="seek" style="position:relative;left:0;right:0;height:4px;${custom ? `background:linear-gradient(90deg,rgba(255,255,255,.3),rgba(255,255,255,.3))` : ""}">
         <div class="buf" style="width:55%"></div><div class="played" id="played" style="width:17%;${custom ? `background:linear-gradient(90deg,${c1},${c2})` : ""};transition:width .35s"></div>
         <div class="knob" id="knob" style="left:17%;transition:left .35s;${custom ? `background:${c2}` : ""}"></div></div>`, { style: "position:absolute;left:12px;right:12px;bottom:10px;padding:6px 0" })}
@@ -771,6 +771,7 @@ def("seekbar", "style", "fullscreen_large_seekbar");
       ${C("hide_playables", `<div style="margin:0 12px 14px;padding:10px 12px;border-radius:12px;background:#1d2a3a;display:flex;gap:10px;align-items:center">${I("vr")}<div><div class="t1" style="font-size:13px">Playables</div><div class="t2">Play instant games on YouTube</div></div></div>`, { blk: 1 })}
       ${C("hide_surveys", `<div style="margin:0 12px 14px;padding:10px 12px;border-radius:12px;border:1px solid #333"><div class="t1" style="font-size:13px">How are your recommendations?</div><div style="display:flex;gap:6px;margin-top:8px">${["Great", "OK", "Bad"].map(t => `<span class="chip" style="height:26px">${t}</span>`).join("")}</div></div>`, { blk: 1 })}
       ${C("hide_ticket_shelf", `<div style="margin:0 12px 14px;padding:10px 12px;border-radius:12px;background:#272727"><div class="t1" style="font-size:13px">Tickets · Midnight Tapes live in Oslo</div><div class="t2">Sat, 21 Nov · Rockefeller</div></div>`, { blk: 1 })}$1`));
+  wrap("seekbar", html => !V("morphe_custom_seekbar_thumb") ? html : html.replace('<div class="knob" id="knob" style="', `<div class="knob" id="knob" data-thumb="${V("morphe_custom_seekbar_thumb_scale_type") === "ORIGINAL" ? "big" : "fit"}" style="`));
   wrap("seekbar", html => V("morphe_fullscreen_large_seekbar") ? html.replace('id="seek" style="position:relative;left:0;right:0;height:4px;', 'id="seek" style="position:relative;left:0;right:0;height:9px;') : html);
 }
 
@@ -1095,9 +1096,7 @@ SCENES.miniplayer = () => {
   </div>`;
 };
 def("miniplayer", "vis", "miniplayer_disable_resuming");
-// Parents moved next to the settings that depend on them, so no row is locked by another screen.
-def("endscreen", "style", "autoplay_control autoplay_mix_stop_after");
-def("player", "style", "do_not_remember_loop_video");
+
 def("miniplayer", "style", "miniplayer_glass miniplayer_docked");
 
 // ------------------------------------------------------------------ SponsorBlock
@@ -1354,6 +1353,7 @@ SCENES.snackbar = () => {
 def("snackbar", "vis", "hide_snackbar");
 def("snackbar", "style", "custom_snackbar_theme custom_snackbar_color_dark custom_snackbar_corner_radius custom_snackbar_stroke_color");
 
+
 // ------------------------------------------------------------------ section order with the new ones
 {
   const order = ["player", "endscreen", "seekbar", "fullscreen", "flyout", "captions", "sponsorblock", "playback", "watch", "description", "comments", "ambient", "danmaku", "miniplayer", "feed", "channel", "explore", "shorts", "nav", "ads", "look", "snackbar", "dearrow", "misc"];
@@ -1390,14 +1390,16 @@ function stopScenario() { scenarioToken.alive = false; $("canvas").classList.rem
 const LOOP_MS = 1500;
 let demoTimer = null, demoStep = 0;
 function stopDemo() { clearInterval(demoTimer); demoTimer = null; }
-function label(text, bad) {
+function label(text, bad, ms) {
   const st = $("stage");
   st.querySelectorAll(".demo-label.dyn").forEach(n => n.remove());
   const d = document.createElement("div");
   d.className = "demo-label dyn" + (bad ? " bad" : "");
   d.textContent = text;
   st.firstElementChild?.appendChild(d);
+  if (ms) setTimeout(() => { d.style.opacity = "0"; setTimeout(() => d.remove(), 300); }, ms);
 }
+const ENDSCREEN_SEL = new Set(["morphe_hide_autoplay_preview", "morphe_hide_end_screen_suggested_video"]);
 function finger() { return document.querySelector("#stage .finger"); }
 function place(f, x, y, ms) { f.style.transition = ms ? `left ${ms}ms var(--ease), top ${ms}ms var(--ease), opacity 120ms` : "opacity 120ms"; f.style.left = x + "px"; f.style.top = y + "px"; f.classList.add("show"); }
 function hideF(f, after) { setTimeout(() => { f.classList.remove("show", "hold"); }, after); }
@@ -1526,6 +1528,45 @@ function startDemo(k) {
 }
 const isAnimated = k => { const a = A[k]; return !!a && (a.kind === "gesture" || a.kind === "behaviour" || a.kind === "scenario" || !!DEMOS[k]); };
 
+// ------------------------------------------------------------------ seekbar: more animations
+def("seekbar", "style", "custom_seekbar_thumb custom_seekbar_thumb_scale_type");
+Object.assign(DEMOS, {
+  morphe_seekbar_thumbnail_preview(on) {
+    const seek = $("seek"), f = finger(), bub = $("thumbBubble"); if (!seek || !f) return;
+    const st = $("stage").getBoundingClientRect(), r = seek.getBoundingClientRect();
+    const y = r.top - st.top + r.height / 2, x0 = r.left - st.left + r.width * .17, x1 = r.left - st.left + r.width * .7;
+    place(f, x0, y); f.classList.add("hold");
+    if (bub) { bub.style.transition = "none"; bub.style.left = (x0) + "px"; bub.style.opacity = on ? "1" : "0"; }
+    setTimeout(() => { place(f, x1, y, 900); setSeek(70); if (bub && on) { bub.style.transition = "left .9s var(--ease)"; bub.style.left = x1 + "px"; } }, 150);
+    label(on ? "Drag the seekbar: a thumbnail follows your finger" : "Drag the seekbar: no thumbnail, only the time", !on);
+    hideF(f, 1300); setTimeout(() => { if (bub) { bub.style.transition = ""; bub.style.left = ""; bub.style.opacity = ""; } setSeek(17); }, 1500);
+  },
+  morphe_hide_player_gesture_hints(hidden) {
+    const f = finger(); if (!f) return; const st = $("stage");
+    const hint = document.querySelector('#stage [data-k="morphe_hide_player_gesture_hints"]');
+    place(f, st.clientWidth * .42, st.clientHeight - 16); setTimeout(() => place(f, st.clientWidth * .42, st.clientHeight - 90, 600), 120);
+    if (hint) { hint.style.transition = "opacity .2s"; hint.style.opacity = "0"; setTimeout(() => { hint.style.opacity = hidden ? "0" : "1"; }, 300); setTimeout(() => { hint.style.opacity = ""; }, 1400); }
+    label(hidden ? "Pull up on the seekbar: no hint appears" : "Pull up on the seekbar: the hint explains the gesture", hidden);
+    hideF(f, 1100);
+  },
+});
+const liveDev = (rew) => `${miniVideo(5)}<span style="position:absolute;left:8px;top:7px;font-size:8px;font-weight:700;background:#cc0000;padding:1px 4px;border-radius:2px">LIVE</span><div class="msk" style="position:absolute;left:8%;right:8%;bottom:16%;height:3px;background:rgba(255,255,255,.3)"><div class="buf" style="position:absolute;left:${rew}%;right:0;top:0;bottom:0;background:rgba(255,255,255,.35)"></div><div class="mp" style="position:absolute;left:0;top:0;bottom:0;width:100%;background:#ff0033;transition:width .9s var(--ease)"></div></div>`;
+scen("seekbar", "live_stream_dvr", (box, on) => {
+  situation("A live stream that blocks rewinding");
+  box.innerHTML = device("land", liveDev(on ? 0 : 96));
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"), mp = dev.querySelector(".mp"); const W = dev.clientWidth, H = dev.clientHeight;
+  at(150, () => fingerTo(f, W * .9, H * .84)); at(450, () => { fingerTo(f, W * .35, H * .84, 900); if (on) mp.style.width = "35%"; });
+  at(1400, () => dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px;font-size:9px">${on ? "−1:12:40 · rewinding" : "This stream can't be rewound"}</div>`));
+  return on ? "You can drag back on any live stream" : "Rewinding is blocked on this stream (stock)";
+});
+scen("seekbar", "expand_live_stream_dvr_duration", (box, on) => {
+  situation("Dragging back on a long live stream");
+  box.innerHTML = device("land", liveDev(on ? 0 : 70));
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"), mp = dev.querySelector(".mp"); const W = dev.clientWidth, H = dev.clientHeight;
+  at(150, () => fingerTo(f, W * .9, H * .84)); at(450, () => { fingerTo(f, W * .1, H * .84, 1000); mp.style.width = on ? "3%" : "70%"; });
+  at(1500, () => dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px;font-size:9px">${on ? "−3 days · stream start" : "Stops at −4:00:00"}</div>`));
+  return on ? "Rewind up to 7 days back" : "Rewind stops after a few hours (stock)";
+});
 // ------------------------------------------------------------------ section membership
 let MEMBERS = {};
 function inScope(p, scopes) { return scopes.some(([s, sub]) => p.screen === s && (p.subScreen || null) === sub); }
@@ -1570,12 +1611,14 @@ function renderBar() {
   const s = secInfo();
   $("secLabel").textContent = s.title;
   $("secIcon").innerHTML = `<path d="${P[s.icon] || P.list}"/>`;
-  $("pickGrid").innerHTML = SECTIONS.map((x, i) => {
+  const pick = (x, i) => {
     const m = MEMBERS[x.id];
     const sub = `${m.live.length + m.misc.length} settings`;
     return `<button class="pick" role="menuitem" data-sec="${x.id}" aria-current="${x.id === section}" style="transition-delay:${Math.min(i, 12) * 12}ms"><span class="pi">${I(x.icon)}</span><span><div class="pt">${esc(x.title)}</div><div class="ps">${sub}</div></span></button>`;
-  }).join("") + `<div class="themerow" data-theme-toggle role="menuitemcheckbox" aria-checked="${theme === "m3"}"><span class="pi">${I("palette")}</span><div class="tt">Morphe design<small>Experimental. Off: matches the YouTube app</small></div><span class="sw" role="presentation" aria-checked="${theme === "m3"}"></span></div>`;
-  $("btnReset").disabled = mode !== "mod" || !sectionKeys().some(k => JSON.stringify(state[k]) !== JSON.stringify(defaults[k]));
+  };
+  const vis = SECTIONS.filter(x => SCENES[x.id]), plain = SECTIONS.filter(x => !SCENES[x.id]);
+  $("pickGrid").innerHTML = vis.map(pick).join("") + `<div class="plaincard"><div class="ph">${I("list")}No preview · standard settings</div><div class="pg">${plain.map(pick).join("")}</div></div>` + `<div class="themerow" data-theme-toggle role="menuitemcheckbox" aria-checked="${theme === "m3"}"><span class="pi">${I("palette")}</span><div class="tt">Morphe design<small>Experimental. Off: matches the YouTube app</small></div><span class="sw" role="presentation" aria-checked="${theme === "m3"}"></span></div>`;
+  $("btnReset").disabled = mode !== "mod" || ![...sectionKeys(), ...(borrowed[section] || [])].some(k => JSON.stringify(state[k]) !== JSON.stringify(defaults[k]));
 }
 function setPicker(open) {
   pickerOpen = open;
@@ -1593,7 +1636,7 @@ function renderStage() {
   const scrollers = [...st.querySelectorAll(".inner-scroll")].map(e => e.scrollTop);
   const hscroll = [...st.querySelectorAll("[data-hs]")].map(e => e.scrollLeft);
   st.className = "stage" + (mode === "orig" ? " original" : "");
-  st.innerHTML = scene();
+  st.innerHTML = scene().replace(/background:#0f0f0f/g, "background:var(--app-bg,#0f0f0f)");
   st.querySelectorAll(".finger").forEach(f => { if (!f.firstChild) f.innerHTML = I("gesture"); });
   st.querySelectorAll(".inner-scroll").forEach((e, i) => { if (scrollers[i]) e.scrollTop = scrollers[i]; });
   st.querySelectorAll('[style*="overflow-x:auto"]').forEach((e, i) => { e.dataset.hs = ""; if (hscroll[i]) e.scrollLeft = hscroll[i]; });
@@ -1629,8 +1672,9 @@ function controlFor(k) {
   }
   return "";
 }
+const whereOf = x => { const s = sectionOf(x); return s !== section ? ` (${esc(SECTIONS.find(z => z.id === s)?.title || "Misc")})` : ""; };
 function needText(k) {
-  if (!classicParentsOk(k)) return "Needs " + PREF[k].parents.map(x => `“${esc(title(x.key))}” ${x.mode === "not" ? "off" : "on"}`).join(", ");
+  if (!classicParentsOk(k)) return "Needs " + PREF[k].parents.map(x => `“${esc(title(x.key))}” ${x.mode === "not" ? "off" : "on"}${whereOf(x.key)}`).join(", ");
   const ap = (PREF[k].availabilityParents || []).filter(x => PREF[x]);
   return ap.length ? `Not available with the current ${ap.map(x => `“${esc(title(x))}”`).join(", ")}` : "Not available here";
 }
@@ -1658,11 +1702,13 @@ function rowHTML(k, live) {
   if (PARENT_OF[k]) { if (k === peekKid) cls.push("peek"); else if (!kidVisible(k)) cls.push("hide"); }
   if (live && (a.kind === "vis" || a.kind === "overlay") && !shown(k)) cls.push("offstate");
   const sum = info ? (p.summary || (p.type === "screen" ? "Opens a sub-screen in Morphe settings" : "Information")) : summaryFor(k);
-  const goto = dis && blockerOf(k) ? `<button class="goto" data-goto="${k}">Take me there ${I("arrow")}</button>` : "";
+  const blk = dis ? blockerOf(k) : null;
+  const goto = blk ? `<button class="goto" data-goto="${k}">${sectionOf(blk) !== section ? "Change it here" : "Take me there"} ${I("arrow")}</button>` : "";
   const need = dis ? `<div class="need2">${needText(k)}</div>` : "";
   const tags = isAnimated(k) ? `<span class="tag">${I("play")}Animated</span>` : "";
   const kids = KIDS[k] ? KIDS[k].filter(x => kidVisible(x) || x === peekKid).length : 0;
-  const kidbtn = kids ? `<button class="kidbtn" data-kidtoggle="${k}" aria-expanded="${!collapsed.has(k)}" aria-label="${kids} sub-options">${kids}${I("expand")}</button>` : "";
+  const kidbtn = kids ? `<button class="kidbtn" data-kidtoggle="${k}" aria-expanded="${!collapsed.has(k)}" aria-label="${kids} sub-options">${kids}${I("expand")}</button>`
+    : KIDS[k] ? `<span class="kidhid">Sub-settings hidden</span>` : "";
   const over = /^(hide|show) in /i.test(title(k)) && p.subScreenTitle ? `<div class="over">${esc(p.subScreenTitle)}</div>` : "";
   return `<div class="${cls.join(" ")}" data-row="${k}" data-k="${k}" tabindex="0">
     <div class="txt">${over}<div class="ttl">${esc(title(k))}${dis ? I("lock", "lk") : ""}${chg ? '<span class="changed-dot" title="Changed from default"></span>' : ""}${tags}${kidbtn}</div>
@@ -1670,6 +1716,7 @@ function rowHTML(k, live) {
 }
 const groupHTML = (name, icon, keys, live) => keys.length ? `<div class="gtitle">${I(icon)}${name} · ${keys.length}</div><div class="group">${keys.map(k => rowHTML(k, live)).join("")}</div>` : "";
 
+let lastVis = { sec: null, keys: new Set() };
 let peekKid = null, lastOpen = new Set(), lastDis = { sec: null, keys: new Set() };
 const collapsed = new Set();
 function renderList() {
@@ -1707,10 +1754,24 @@ function renderList() {
   }
   const list = $("list");
   list.innerHTML = html;
-  // animate sub-option groups from their previous state to the new one
+  // animate sub-option groups and rows from their previous state to the new one
   void list.offsetHeight;
+  const sameSec = lastVis.sec === section;
+  const nowVis = new Set();
+  list.querySelectorAll(".kids .row").forEach(r => {
+    const k = r.dataset.row, vis = !r.classList.contains("hide"), box = r.closest(".kids"), grp = box.dataset.kidsOf;
+    if (vis) nowVis.add(k);
+    if (!sameSec) return;
+    const was = lastVis.keys.has(k);
+    if (was && !vis) {
+      // keep it on screen while it folds away, then hide it
+      r.classList.remove("hide");
+      if (wantOpen.has(grp) && lastOpen.has(grp)) { const an = sizeAnim(r, false); const end = () => { r.classList.add("hide"); r.getAnimations().forEach(a => a.cancel()); }; if (an) an.onfinish = end; else end(); }
+      else setTimeout(() => r.classList.add("hide"), 300);
+    } else if (!was && vis && lastOpen.has(grp) && wantOpen.has(grp)) sizeAnim(r, true);
+  });
   list.querySelectorAll(".kids").forEach(e => e.classList.toggle("open", wantOpen.has(e.dataset.kidsOf)));
-  lastOpen = wantOpen;
+  lastOpen = wantOpen; lastVis = { sec: section, keys: nowVis };
   // rows that just became available on this screen get the unlock animation
   const dis = new Set([...list.querySelectorAll(".row.dis")].map(r => r.dataset.row));
   if (lastDis.sec === section) lastDis.keys.forEach(k => { if (!dis.has(k)) { const r = list.querySelector(`[data-row="${k}"]`); if (r && !r.classList.contains("hide")) unlockFx(r); } });
@@ -1802,7 +1863,7 @@ function renderInspector() {
 function selectPre() { const pre = $("json"); if (!pre) return; const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(r); snack("Press Ctrl+C to copy"); }
 
 function renderAll() { renderBar(); renderStage(); renderList(); renderInspector(); applyLayout(); store.save(); }
-function commit() { renderBar(); renderStage(); renderList(); renderInspector(); store.save(); }
+function commit() { applyAppColors(); renderBar(); renderStage(); renderList(); renderInspector(); store.save(); }
 
 // ------------------------------------------------------------------ restart handling
 const pendingRestart = () => Object.keys(PREF).filter(k => PREF[k].rebootApp && JSON.stringify(state[k]) !== JSON.stringify(baseline[k]));
@@ -1823,8 +1884,32 @@ $("btnBack").onclick = () => {
   const app = $("app"); app.classList.remove("exitflash"); void app.offsetWidth; app.classList.add("exitflash");
   setTimeout(() => snack("Back to Morphe settings (demo: the editor reopens)"), 350);
 };
+// Settings from other screens changed through the popup count as part of this screen for Reset.
+const borrowed = {};
+function borrowPopup(k, target) {
+  const sec = SECTIONS.find(z => z.id === sectionOf(target)), p = PREF[target];
+  const where = [p.screenTitle, p.subScreenTitle].filter(Boolean).join(" › ");
+  openDialog(`<h2 id="dlgTitle">${esc(title(target))}</h2>
+    <p class="dlgwhere">Lives on the <b>${esc(sec ? sec.title : "Misc")}</b> screen${where ? ` · in Morphe: ${esc(where)}` : ""}. “${esc(title(k))}” needs it.</p>
+    <div class="dlglist">${rowHTML(target, false).replace('class="row', 'class="row inpop')}</div>
+    <div class="acts"><button class="dbtn tonal" id="dDone">Done</button></div>`);
+  const box = $("dlgBox");
+  const after = () => {
+    (borrowed[section] = borrowed[section] || new Set()).add(target);
+    const r = box.querySelector(".dlglist"); if (r) r.innerHTML = rowHTML(target, false).replace('class="row', 'class="row inpop');
+    commit();
+    if (parentsOk(k)) setTimeout(() => { closeDialog(); const row = document.querySelector(`[data-row="${k}"]`); if (row) { scrollRowIntoView(k); unlockFx(row); } select(k); }, 350);
+  };
+  box.onclick = e => {
+    if (e.target.id === "dDone") return closeDialog();
+    const sw = e.target.closest("[data-sw]"), opt = e.target.closest("button.opt[data-set]");
+    if (sw) { ensureMod(); state[target] = !state[target]; after(); }
+    else if (opt) { ensureMod(); state[target] = coerce(target, opt.dataset.val); after(); }
+  };
+  box.onchange = e => { const t = e.target; if (!t.dataset || t.dataset.set !== target) return; ensureMod(); state[target] = t.type === "range" || t.type === "number" ? Number(t.value) : coerce(target, t.value); after(); };
+}
 $("btnReset").onclick = () => {
-  const keys = sectionKeys().filter(k => JSON.stringify(state[k]) !== JSON.stringify(defaults[k]));
+  const keys = [...new Set([...sectionKeys(), ...(borrowed[section] || [])])].filter(k => JSON.stringify(state[k]) !== JSON.stringify(defaults[k]));
   if (!keys.length) return;
   const before = {}; keys.forEach(k => { before[k] = state[k]; state[k] = defaults[k]; });
   commit(); snack(`Reset ${keys.length} setting${keys.length > 1 ? "s" : ""} on this screen`, () => { Object.assign(state, before); commit(); });
@@ -1841,9 +1926,10 @@ function snack(msg, undo) {
 $("canvas").addEventListener("click", () => stopScenario());
 $("snackUndo").onclick = () => { if (undoFn) undoFn(); undoFn = null; $("snack").classList.remove("show"); };
 
-function highlight(k) {
+function highlight(k, flash = true) {
   document.querySelectorAll(".sel").forEach(e => e.classList.remove("sel"));
   document.querySelectorAll(`[data-k="${k}"], [data-row="${k}"], [data-also="${k}"]`).forEach(e => e.classList.add("sel"));
+  if (flash) document.querySelectorAll(`#stage [data-k="${k}"], #stage [data-also="${k}"]`).forEach(e => { e.classList.remove("flash"); void e.offsetWidth; e.classList.add("flash"); setTimeout(() => e.classList.remove("flash"), 520); });
 }
 function scrollRowIntoView(k, center) {
   const row = document.querySelector(`[data-row="${k}"]`); if (!row) return;
@@ -1853,12 +1939,15 @@ function scrollRowIntoView(k, center) {
   if (center || top < sc.scrollTop + stickH || top + row.offsetHeight > sc.scrollTop + sc.clientHeight) sc.scrollTo({ top: target, behavior: "smooth" });
 }
 function select(k, from) {
+  const prevSel = selected;
   selected = k;
   if (section === "flyout" && (FLY_SUB[k] || null) !== flySub) renderStage();
   if (section === "player" && mode === "mod") {
-    const want = CUSTOM_KEYS.has(k) && !shown(k);
-    if (want !== trayOpen) { trayOpen = want; renderStage(); }
+    // the tray of 13 buttons only opens from its own pill; selecting a hidden one previews it in place
+    if (trayOpen && from !== "stage") trayOpen = false;
+    if (CUSTOM_KEYS.has(k) || CUSTOM_KEYS.has(prevSel)) renderStage();
   }
+  if (section === "endscreen" && (ENDSCREEN_SEL.has(k) || ENDSCREEN_SEL.has(prevSel))) renderStage();
   highlight(k);
   renderInspector();
   if (from === "stage") scrollRowIntoView(k);
@@ -1869,14 +1958,14 @@ function select(k, from) {
   }
   if (from === "list" && mode === "mod" && A[k] && (A[k].kind === "vis" || A[k].kind === "overlay") && !shown(k) && document.querySelector(`#stage [data-k="${k}"]`)) ghost(k);
   if (DEMOS[k]) startDemo(k); else stopDemo();
-  if (SCN[k] && from) playScenario(k);
+  if (SCN[k] && from) playScenario(k); else if (from && k !== prevSel) stopScenario();
   const a = A[k];
-  const notApplicable = a && (a.kind === "vis" || a.kind === "overlay") && a.section === section && !document.querySelector(`#stage [data-k="${k}"], #stage [data-also="${k}"]`);
+  const notApplicable = a && (a.kind === "vis" || a.kind === "overlay") && a.section === section && !CUSTOM_KEYS.has(k) && !document.querySelector(`#stage [data-k="${k}"], #stage [data-also="${k}"]`);
   if (notApplicable && SCENES[section]) {
     const why = k === "morphe_hide_end_screen_suggested_video" ? "Appears only when autoplay is off. Set Autoplay mode to Off to see it."
       : k === "morphe_hide_autoplay_preview" ? "Appears only when autoplay is on."
       : /^morphe_miniplayer_/.test(k) ? "Not part of the current miniplayer type." : "Not shown in the current layout.";
-    label(why, true);
+    label(why, true, 2600);
   }
   if (!parentsOk(k)) pointToParents(k);
 }
@@ -2000,7 +2089,7 @@ function goToSetting(k, after) {
 }
 
 // press handling (tap vs hold), shared by stage and list
-let press = null;
+let press = null, lastTap = null;
 const LONG = 480;
 function down(e) {
   if (e.button > 0) return;
@@ -2019,6 +2108,9 @@ function up() {
   clearTimeout(press.t); press.el.classList.remove("pressing", "charging");
   const { k, from, long } = press; press = null;
   if (long) return;
+  const now = performance.now();
+  if (lastTap && lastTap.k === k && now - lastTap.t < 330) { lastTap = null; toggle(k); return; }
+  lastTap = { k, t: now };
   const a = A[k];
   if (mode === "mod" && a && (a.kind === "vis" || a.kind === "overlay") && !shown(k)) {
     select(k, from);
@@ -2061,6 +2153,7 @@ $("list").addEventListener("click", e => {
   const go = e.target.closest("[data-goto]");
   if (go) {
     const k = go.dataset.goto; const target = blockerOf(k); if (!target) return;
+    if (sectionOf(target) !== section) { borrowPopup(k, target); return; }
     returnTo = { key: k }; goToSetting(target);
     snack(PREF[target].type === "boolean" ? `Switch <b>${esc(title(target))}</b> by holding it, and you'll be brought back` : `Change <b>${esc(title(target))}</b>, and you'll be brought back`);
     return;
@@ -2104,7 +2197,23 @@ $("btnMod").onclick = () => setMode("mod");
 
 // ------------------------------------------------------------------ theme and tablet layout
 let theme = "yt";
-function applyTheme() { const ph = $("phone"); ph.classList.toggle("theme-yt", theme !== "m3"); ph.classList.toggle("theme-m3", theme === "m3"); }
+function applyTheme() { const ph = $("phone"); ph.classList.toggle("theme-yt", theme !== "m3"); ph.classList.toggle("theme-m3", theme === "m3"); applyAppColors(); }
+// Morphe's theme patch (Pure black / AMOLED, Material You, Catppuccin, custom) changes YouTube's
+// background, so the preview and, in the YouTube look, the editor itself follow it.
+function appBg() {
+  if (mode === "orig") return "#0f0f0f";
+  const t = state.morphe_theme_color_dark;
+  if (t === "CUSTOM") return String(state.morphe_theme_color_dark_custom || "#0f0f0f").replace(/^#(..)(......)$/, "#$2");
+  return (typeof THEME_DARK !== "undefined" && THEME_DARK[t]) || "#0f0f0f";
+}
+function lift(hex, amt) { const n = parseInt(hex.slice(1), 16); const c = [n >> 16, (n >> 8) & 255, n & 255].map(v => Math.min(255, Math.round(v + (255 - v) * amt))); return "#" + c.map(v => v.toString(16).padStart(2, "0")).join(""); }
+function applyAppColors() {
+  const ph = $("phone"), bg = appBg();
+  ph.style.setProperty("--app-bg", bg);
+  if (theme === "m3") { ["--m-bg", "--m-surface", "--m-c", "--m-c-high", "--m-c-highest"].forEach(v => ph.style.removeProperty(v)); return; }
+  ph.style.setProperty("--m-bg", bg); ph.style.setProperty("--m-surface", bg); ph.style.setProperty("--m-c", bg);
+  ph.style.setProperty("--m-c-high", lift(bg, .13)); ph.style.setProperty("--m-c-highest", lift(bg, .22));
+}
 // Sections whose preview is a 16:9 player: on a portrait tablet they sit on top, list below in two columns.
 const WIDE = new Set(["player", "endscreen", "seekbar", "fullscreen", "captions", "sponsorblock", "danmaku"]);
 function applyLayout() {
@@ -2146,6 +2255,7 @@ const TUT_STEPS = [
   { cap: "Hold it to switch it off", sub: "It disappears, just like in the real app" },
   { cap: "Tap its row to peek", sub: "You see it for a moment, the setting stays off" },
   { cap: "Hold it while it shows to bring it back", sub: "Hold again any time to undo" },
+  { cap: "Double-tap works too", sub: "Double-tap a button or its row to switch it" },
   { cap: "Or use the switch", sub: "Every setting is also a row in the list" },
 ];
 const TUT_STEP_MS = 2600;
@@ -2205,6 +2315,14 @@ function runTutorial() {
       at2(2300, () => f.classList.remove("show"));
     }
     if (step === 4) {
+      cast.className = "tb sel"; row.classList.add("sel"); setHidden(false); move(cast, 0, 0, 60);
+      at2(60, () => move(cast, 500));
+      at2(700, tap); at2(860, () => { tap(); setHidden(true); cast.className = "tb off"; });
+      at2(1500, () => move(row, 450, -40));
+      at2(2000, tap); at2(2160, () => { tap(); setHidden(false); cast.className = "tb sel reveal"; });
+      at2(2500, () => f.classList.remove("show"));
+    }
+    if (step === 5) {
       cast.className = "tb"; setHidden(false); move(sw, 0, 0, 40);
       at2(60, () => move(sw, 500));
       at2(700, () => { tap(); setHidden(true); row.classList.add("sel"); cast.className = "tb off"; });
