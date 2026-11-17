@@ -128,3 +128,13 @@ cross-screen popup gets a "More" button that reopens it, and screen Reset clears
 YouTube dialog style in the YouTube look. An experimental menu option lists only hidden components: what you
 can see is removed in the preview by double-tap or hold. Around a hundred scenario pages were added through a
 small kit (`hidePage`, `x7`, `clock7`, `check7`), covering most settings that had no preview.
+
+Round 10 gives the preview more room. The top bar slides away while you scroll down the list and returns
+when you scroll up (jumps to a setting don't move it). Reset is an icon next to search and asks whether to
+reset only the current screen or everything. Switches on rows that have a preview behave like the row: tap
+selects, hold or double-tap switches. Large components only glow when selected instead of scaling. The
+Fullscreen screen is grouped with small captions (on the player, swipe zones, shared by every swipe zone,
+swipe to seek, entering and leaving fullscreen, pinch to zoom); the shared overlay style demo alternates
+sides. Restore pinch to zoom sits under Disable pinch-to-zoom and hides while pinch is disabled. Orientation
+scenarios turn the phone visibly before the layout changes (`turn()`), and scenario steps only run for the
+scenario that scheduled them.

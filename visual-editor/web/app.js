@@ -1235,19 +1235,29 @@ function devContent(dev, html) {
   const f = dev.querySelector(".finger");
   [...tmp.children].forEach(c => { c.style.opacity = "0"; c.style.transition = "opacity .3s .15s"; dev.insertBefore(c, f); requestAnimationFrame(() => requestAnimationFrame(() => { c.style.opacity = ""; })); });
 }
-const r1 = dev => { rotate(dev, "port"); devContent(dev, playerArea(6)); }; r1.text = "leaves fullscreen";
+// the phone turns visibly (its screen rotates with it), then the app lays out for the new orientation
+function turn(dev, orient, then) {
+  const cur = dev.classList.contains("land") ? "land" : "port";
+  if (cur === orient) { if (then) then(); return; }
+  dev.style.transition = "transform .5s var(--ease)"; dev.style.transform = `rotate(${orient === "land" ? -90 : 90}deg)`;
+  setTimeout(() => { dev.style.transition = "none"; dev.style.transform = ""; rotate(dev, orient); if (then) then(); }, 520);
+}
+const r1 = dev => turn(dev, "port", () => devContent(dev, playerArea(6))); r1.text = "leaves fullscreen";
 gestureScen("disable_fullscreen_dragged_down_gesture", "land", [.5, .25], [.5, .85], "Swipe down in fullscreen", r1);
-const r2 = dev => { rotate(dev, "land"); devContent(dev, miniVideo(6)); }; r2.text = "enters fullscreen";
+const r2 = dev => turn(dev, "land", () => devContent(dev, miniVideo(6))); r2.text = "enters fullscreen";
 gestureScen("disable_fullscreen_pulled_up_gesture", "port", [.5, .3], [.5, .08], "Swipe up on the player", r2);
 const r3 = dev => { const v = dev.querySelector(".dv-video"); if (v) { v.style.transition = "transform .4s"; v.style.transform = "translateY(70%) scale(.5)"; } }; r3.text = "shrinks to the miniplayer";
 gestureScen("disable_fullscreen_sliding_down_gesture", "port", [.5, .1], [.5, .45], "Swipe down on the player", r3);
 scen("fullscreen", "disable_fullscreen_zoom_gesture", (box, disabled) => {
-  situation("Fullscreen, two fingers");
-  box.innerHTML = device("land", `<div class="zv" style="position:absolute;left:10%;right:10%;top:0;bottom:0;background:${ART[6]};transition:all .6s var(--ease)"></div>`);
-  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"), zv = box.querySelector(".zv"); const W = dev.clientWidth, H = dev.clientHeight;
-  at(150, () => fingerTo(f, W * .45, H * .5)); at(400, () => fingerTo(f, W * .8, H * .2, 600));
-  at(900, () => { if (!disabled) { zv.style.left = "-5%"; zv.style.right = "-5%"; zv.style.top = "-10%"; zv.style.bottom = "-10%"; } });
-  return disabled ? "Pinch: the video stays fitted" : "Pinch: the video zooms to fill the screen";
+  situation("Fullscreen, two fingers spread");
+  box.innerHTML = device("land", `<div class="zv" style="position:absolute;left:10%;right:10%;top:0;bottom:0;background:${ART[6]};transition:all .5s var(--ease)"></div>`);
+  const dev = box.querySelector(".dev"), f1 = box.querySelector("#scFinger"), zv = box.querySelector(".zv"); const W = dev.clientWidth, H = dev.clientHeight;
+  const f2 = f1.cloneNode(true); f2.id = ""; dev.appendChild(f2);
+  at(150, () => { fingerTo(f1, W * .44, H * .55); fingerTo(f2, W * .56, H * .45); });
+  at(420, () => { fingerTo(f1, W * .2, H * .85, 600); fingerTo(f2, W * .8, H * .15, 600); });
+  at(800, () => { if (!disabled) { zv.style.left = "0"; zv.style.right = "0"; zv.style.transform = "scale(1.1)"; } });
+  at(1150, () => { f1.classList.remove("show"); f2.classList.remove("show"); if (disabled) dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:40%;font-size:9px">Nothing happens</div>`); });
+  return disabled ? "Pinch does nothing: the video stays fitted" : "Pinch: the video zooms to fill the screen";
 });
 
 scen("fullscreen", "restore_pinch_to_zoom", (box, on) => {
@@ -1563,7 +1573,12 @@ const DEMOS = {
   },
   morphe_swipe_left_zone(v) { swipeDemo("left", v); },
   morphe_swipe_right_zone(v) { swipeDemo("right", v); },
-  morphe_swipe_overlay_style() { swipeDemo("right", V("morphe_swipe_right_zone") !== "OFF" ? V("morphe_swipe_right_zone") : "VOLUME"); },
+  // the overlay style (and its opacity and text size) is shared by every swipe zone: alternate sides
+  morphe_swipe_overlay_style() {
+    const side = ["left", "right", "top"][demoStep % (V("morphe_swipe_top_zone") && V("morphe_swipe_top_zone") !== "OFF" ? 3 : 2)];
+    const v = V("morphe_swipe_" + side + "_zone");
+    swipeDemo(side, v && v !== "OFF" ? v : side === "left" ? "BRIGHTNESS" : side === "right" ? "VOLUME" : "SPEED", "Shared by every zone · ");
+  },
   morphe_swipe_top_zone(v) { swipeDemo("top", v); },
   morphe_swipe_overlay_background_opacity() { DEMOS.morphe_swipe_overlay_style(); },
   morphe_swipe_text_overlay_size() { DEMOS.morphe_swipe_overlay_style(); },
@@ -1617,7 +1632,7 @@ function swipeZones(ms = 900, labels = false) {
   st.appendChild(z);
   if (ms) { setTimeout(() => z.classList.add("out"), ms); setTimeout(() => z.remove(), ms + 400); }
 }
-function swipeDemo(side, action) {
+function swipeDemo(side, action, prefix = "") {
   const st = $("stage"), f = finger(), hud = $("hud"); if (!f || !hud) return;
   const zw = Math.max(5, Math.min(50, Number(V("morphe_swipe_zone_width")) || 37)) / 100;
   const W = st.clientWidth, H = st.firstElementChild.clientHeight, x = side === "top" ? W * .5 : side === "left" ? W * zw / 2 : W * (1 - zw / 2);
@@ -1644,7 +1659,7 @@ function swipeDemo(side, action) {
     else { hud.style.left = "50%"; hud.style.right = "auto"; hud.style.top = "50%"; hud.style.transform = "translate(-50%,-50%)"; }
     let p = 20; hud.style.setProperty("--p", p + "%");
     const t = setInterval(() => { p += 10; hud.style.setProperty("--p", Math.min(p, 90) + "%"); if (p > 90) clearInterval(t); }, 80);
-    label(`${sideName} swipe: ${entryLabel("morphe_swipe_" + side + "_zone", action)}`);
+    label(`${prefix}${sideName} swipe: ${entryLabel("morphe_swipe_" + side + "_zone", action) || action.toLowerCase()}`);
     setTimeout(() => { hud.style.display = "none"; }, 1200);
   }
   hideF(f, 1050);
@@ -2400,6 +2415,8 @@ function buildMembers() {
 // offset, and only shows while that dependency is met. MANUAL_PARENT adds groupings that
 // Morphe does not express as a dependency.
 const MANUAL_PARENT = {
+  // restoring free pinch zoom means nothing while pinch is switched off altogether
+  morphe_restore_pinch_to_zoom: { key: "morphe_disable_fullscreen_zoom_gesture", mode: "not" },
   morphe_player_overlay_opacity: { key: "morphe_hide_player_control_buttons_background", always: true },
   // with the swap on, Create lives in the top bar (its own toggle there); this one only acts on the bottom bar
   morphe_hide_create_button: { key: "morphe_swap_create_with_notifications_button", mode: "not" },
@@ -2460,7 +2477,7 @@ function renderBar() {
     + `<div class="themerow"><div class="themetog" data-theme-toggle role="menuitemcheckbox" aria-checked="${theme === "m3"}"><span class="pi">${I("palette")}</span><div class="tt">Morphe design</div><span class="sw" role="presentation" aria-checked="${theme === "m3"}"></span></div>`
     + `<button class="ordreset" data-order-reset ${customOrder ? "" : "disabled"} title="Hold a screen to move it. This restores Morphe's order.">${I("reset")}Reset order</button></div>`
     + `<div class="themerow simrow"><div class="themetog" data-simple-toggle role="menuitemcheckbox" aria-checked="${simple}"><span class="pi">${I("visibility_off")}</span><div class="tt">Hide shown UI element settings<small>Remove UI elements by double-tapping or holding them in the preview. The list only shows hidden elements.</small></div><span class="sw" role="presentation" aria-checked="${simple}"></span></div></div>`;
-  $("btnReset").disabled = mode !== "mod" || ![...sectionKeys(), ...(borrowed[section] || [])].some(k => JSON.stringify(state[k]) !== JSON.stringify(defaults[k]));
+  $("btnReset").disabled = mode !== "mod" || !Object.keys(PREF).some(k => JSON.stringify(state[k]) !== JSON.stringify(defaults[k]));
 }
 // Screen menu order: Morphe's own order by default (its settings screens, then their sub-screens);
 // hold a card to drag it somewhere else. The custom order is saved; Reset order restores Morphe's.
@@ -2668,6 +2685,16 @@ const groupHTML = (name, icon, keys, live) => keys.length ? `<div class="gtitle"
 // (doodle and top bar first). Settings without a component (scenarios) keep their order after them.
 // Measured once per screen with every hidden component drawn, so toggling never reshuffles the list.
 let posCache = { sec: null, pos: {} };
+const LAYOUT = {
+  fullscreen: [
+    ["On the player", ["hide_video_title", "hide_player_related_videos_overlay", "hide_quick_actions", "fullscreen_video_scale"]],
+    ["Swipe zones", ["swipe_left_zone", "swipe_right_zone", "swipe_top_zone", "swipe_zone_preview", "swipe_zone_width"]],
+    ["Shared by every swipe zone", ["swipe_overlay_style", "swipe_overlay_background_opacity", "swipe_overlay_progress_brightness_color", "swipe_overlay_progress_volume_color", "swipe_overlay_progress_speed_color", "swipe_text_overlay_size", "swipe_haptic_feedback", "swipe_press_to_engage", "volume_boost", "swipe_ignore_when_locked", "swipe_lowest_value_enable_auto_brightness", "swipe_save_and_restore_brightness"]],
+    ["Swipe to seek", ["swipe_seek"]],
+    ["Entering and leaving fullscreen", ["disable_fullscreen_dragged_down_gesture", "disable_fullscreen_pulled_up_gesture", "disable_fullscreen_sliding_down_gesture"]],
+    ["Pinch to zoom", ["disable_fullscreen_zoom_gesture", "restore_pinch_to_zoom"]],
+  ],
+};
 function stagePositions() {
   const st = $("stage");
   if (posCache.sec === section || st.dataset.sec !== section) return posCache.pos;
@@ -2718,7 +2745,19 @@ function renderList() {
     const top = m.live.filter(k => !PARENT_OF[k]);
     const ordered = byPosition(top);
     const rest = m.misc.filter(k => !PARENT_OF[k]);
-    const live = ordered.map(withKids).join("");
+    let live = "";
+    const lay = LAYOUT[section];
+    if (lay) {
+      // screens with a lot of related settings get small captions so it is clear what belongs together
+      const used = new Set();
+      for (const [cap, ks] of lay) {
+        const inSec = ks.map(x => "morphe_" + x).filter(x => ordered.includes(x)); inSec.forEach(x => used.add(x));
+        const body = inSec.map(withKids).join("");
+        if (body) live += `<div class="subhead">${esc(cap)}</div>${body}`;
+      }
+      const left = ordered.filter(x => !used.has(x)).map(withKids).join("");
+      if (left) live = left + live;
+    } else live = ordered.map(withKids).join("");
     if (simple && !live) html += `<div class="secnote" style="padding:16px 20px">Nothing on this screen is hidden. Double-tap or hold an element in the preview to hide it.</div>`;
     if (live) html += `<div class="group">${live}</div>`;
     if (rest.length) html += `${ordered.length ? `<div class="sechead">More settings<span class="nolive">No live preview or animation</span></div>` : ""}<div class="group">${rest.map(withKids).join("")}</div>`;
@@ -2889,13 +2928,49 @@ function borrowPopup(k, target) {
   };
   box.onchange = e => { const t = e.target; if (!t.dataset || t.dataset.set !== target) return; ensureMod(); state[target] = t.type === "range" || t.type === "number" ? Number(t.value) : coerce(target, t.value); after(); };
 }
-$("btnReset").onclick = () => {
-  const keys = [...new Set([...sectionKeys(), ...(borrowed[section] || [])])].filter(k => JSON.stringify(state[k]) !== JSON.stringify(defaults[k]));
+// Reset sits next to search and asks whether to reset this preview's screen or every setting.
+const changedKeys = keys => keys.filter(k => JSON.stringify(state[k]) !== JSON.stringify(defaults[k]));
+const screenChanges = () => changedKeys([...new Set([...sectionKeys(), ...(borrowed[section] || [])])]);
+const allChanges = () => changedKeys(Object.keys(PREF));
+function doReset(keys, all, label) {
   if (!keys.length) return;
   const before = {}; keys.forEach(k => { before[k] = state[k]; state[k] = defaults[k]; });
-  const lent = borrowed[section]; delete borrowed[section];
-  commit(); snack(`Reset ${keys.length} setting${keys.length > 1 ? "s" : ""} on this screen`, () => { Object.assign(state, before); if (lent) borrowed[section] = lent; commit(); });
+  const lent = all ? { ...borrowed } : { [section]: borrowed[section] };
+  if (all) Object.keys(borrowed).forEach(x => delete borrowed[x]); else delete borrowed[section];
+  commit(); snack(`Reset ${keys.length} setting${keys.length > 1 ? "s" : ""} ${label}`, () => { Object.assign(state, before); Object.entries(lent).forEach(([x, v]) => { if (v) borrowed[x] = v; }); commit(); });
+}
+$("btnReset").onclick = () => {
+  const scr = screenChanges(), all = allChanges(), name = SECTIONS.find(x => x.id === section)?.title || "this screen";
+  if (!all.length) return snack("Nothing to reset: everything is at its default");
+  const n = x => `${x} change${x === 1 ? "" : "s"}`;
+  openDialog(`<h2 id="dlgTitle">Reset settings?</h2><p>Put settings back to Morphe's defaults.</p>
+    <div class="choice"><button data-reset="screen" ${scr.length ? "" : "disabled"}><span>Only ${esc(name)}</span><small>${n(scr.length)}</small></button>
+    <button data-reset="all"><span>Everything</span><small>${n(all.length)}</small></button></div>
+    <div class="acts"><button class="dbtn tonal" id="dCancel">Cancel</button></div>`);
+  $("dlgBox").onclick = e => {
+    const b = e.target.closest("[data-reset]");
+    if (e.target.id === "dCancel") return closeDialog();
+    if (!b || b.disabled) return;
+    closeDialog();
+    if (b.dataset.reset === "all") doReset(allChanges(), true, "everywhere"); else doReset(screenChanges(), false, `on ${name}`);
+  };
 };
+// hide the top bar while scrolling down, show it again on the way up
+var progScrollUntil = 0;
+{
+  let lastY = 0, acc = 0;
+  $("scroller").addEventListener("scroll", () => {
+    const sc = $("scroller"), y = sc.scrollTop, app = $("app"), d = y - lastY; lastY = y;
+    if (app.classList.contains("searching") || pickerOpen) { app.classList.remove("barhidden"); acc = 0; return; }
+    // only your own scrolling moves the bar: jumps to a setting (and holds) leave it where it is
+    if (performance.now() < progScrollUntil || press) { acc = 0; return; }
+    acc = Math.sign(d) === Math.sign(acc) ? acc + d : d;
+    const bar = document.querySelector(".appbar"); if (bar && !app.classList.contains("barhidden")) app.style.setProperty("--abh", bar.offsetHeight + "px");
+    if (y < 8) app.classList.remove("barhidden");
+    else if (acc > 24) app.classList.add("barhidden");
+    else if (acc < -24) app.classList.remove("barhidden");
+  }, { passive: true });
+}
 $("dlg").addEventListener("click", e => { if (e.target.id === "dlg") closeDialog(); });
 
 // ------------------------------------------------------------------ interactions
@@ -2914,7 +2989,8 @@ function highlight(k, flash = true, reveal = false) {
   const els = [...document.querySelectorAll(`#stage [data-k="${k}"], #stage [data-also="${k}"]`)];
   const finish = () => els.forEach(e => {
     fitOutline(e);
-    if (flash) { e.classList.remove("flash"); void e.offsetWidth; e.classList.add("flash"); setTimeout(() => e.classList.remove("flash"), 520); }
+    // big components (bars, shelves) only glow: scaling them up looked like the whole preview jumping
+    if (flash) { const big = e.offsetWidth > $("stage").clientWidth * .5 || e.offsetHeight > 80; e.classList.remove("flash", "flat"); void e.offsetWidth; e.classList.add("flash"); e.classList.toggle("flat", big); setTimeout(() => e.classList.remove("flash", "flat"), 520); }
   });
   if (!reveal || skipReveal) { skipReveal = false; return finish(); }
   // wait until a growing (ghost-revealed or restored) element has its full size, then scroll to it
@@ -2965,7 +3041,7 @@ function scrollRowIntoView(k, center) {
   const sc = $("scroller"), two = $("content").offsetWidth >= 600 && !$("content").classList.contains("stacked"), stickH = two ? 0 : $("stick").offsetHeight;
   const top = row.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop;
   const target = center ? top - stickH - (sc.clientHeight - stickH) / 2 + row.offsetHeight / 2 : top - stickH - 8;
-  if (center || top < sc.scrollTop + stickH || top + row.offsetHeight > sc.scrollTop + sc.clientHeight) sc.scrollTo({ top: target, behavior: "smooth" });
+  if (center || top < sc.scrollTop + stickH || top + row.offsetHeight > sc.scrollTop + sc.clientHeight) { progScrollUntil = performance.now() + 900; sc.scrollTo({ top: target, behavior: "smooth" }); }
 }
 function select(k, from) {
   const prevSel = selected;
@@ -3157,7 +3233,9 @@ function scrollTargets(t) {
 function down(e) {
   if (e.button > 0) return;
   if (e.pointerType === "mouse" && e.target.closest("#stage")) drag = { x: e.clientX, y: e.clientY, t: e.target, on: false };
-  if (e.target.closest("input,select,textarea,button.opt,.sw,.goto,.kidbtn,.replay,[data-tray]")) return;
+  // a switch on a row with a preview behaves like the row: tap selects, hold or double-tap switches
+  const swb = e.target.closest(".sw"); if (swb && !(swb.dataset.sw && A[swb.dataset.sw] && swb.closest("#list"))) return;
+  if (e.target.closest("input,select,textarea,button.opt,.goto,.kidbtn,.replay,[data-tray]")) return;
   const el = e.target.closest("[data-k]"); if (!el) return;
   const k = el.dataset.k; const from = el.closest("#stage") ? "stage" : "list";
   el.classList.add("pressing");
@@ -3242,7 +3320,7 @@ $("list").addEventListener("click", e => {
   }
   const rp = e.target.closest("[data-replay]");
   const sw = e.target.closest("[data-sw]");
-  if (sw) { const k = sw.dataset.sw; select(k); toggle(k); return; }
+  if (sw) { const k = sw.dataset.sw; if (A[k]) return; select(k); toggle(k); return; }
   const opt = e.target.closest("button.opt[data-set]");
   if (opt) { ensureMod(); const k = opt.dataset.set; const before = state[k]; state[k] = coerce(k, opt.dataset.val); afterChange(k, before); }
 });

@@ -172,6 +172,7 @@ button { font: inherit; color: inherit; }
 .c.pressing::after { content: ""; position: absolute; inset: -4px; border-radius: 10px; border: 2px solid var(--yt-red); animation: press .48s linear forwards; pointer-events: none; }
 @keyframes press { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
 .c.flash { animation: flash .5s var(--ease); }
+.c.flash.flat { animation: none; }
 @keyframes flash { 0% { transform: scale(1); } 40% { transform: scale(1.12); } 100% { transform: scale(1); } }
 .attn { animation: attn .45s var(--ease) 3; }
 @keyframes attn { 0%, 100% { box-shadow: 0 0 0 0 rgba(164,201,255,0); } 50% { box-shadow: 0 0 0 3px rgba(164,201,255,.9); background-color: rgba(164,201,255,.12); } }
@@ -414,7 +415,16 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 .searchbar input { flex: 1; min-width: 0; background: transparent; border: 0; color: var(--m-on); font: inherit; font-size: 15px; outline: none; }
 .searchbar input::-webkit-search-cancel-button { display: none; }
 .app.searching .searchbar { clip-path: inset(0 round 20px); opacity: 1; pointer-events: auto; transition: clip-path 300ms var(--ease), opacity 80ms linear; }
-.app.searching #btnSearch { opacity: 0; }
+.app.searching #btnSearch, .app.searching #btnReset { opacity: 0; pointer-events: none; }
+#btnReset:disabled { opacity: .35; cursor: default; }
+/* the top bar slides away while you scroll down the list and comes back when you scroll up */
+.appbar { transition: margin-top 260ms var(--ease), opacity 200ms var(--ease); }
+.app.barhidden .appbar { margin-top: calc(-1 * var(--abh, 56px)); opacity: 0; pointer-events: none; }
+.dlg .choice { display: grid; gap: 2px; margin: 4px 0 6px; }
+.dlg .choice button { display: flex; justify-content: space-between; align-items: center; gap: 10px; text-align: left; padding: 12px 10px; border: 0; border-radius: 8px; background: transparent; color: inherit; font: inherit; font-size: 14px; cursor: pointer; }
+.dlg .choice button:hover:not(:disabled) { background: rgba(255,255,255,.06); }
+.dlg .choice button:disabled { opacity: .4; cursor: default; }
+.dlg .choice small { color: #aaa; font-size: 12px; white-space: nowrap; }
 .app.searching .stick { display: none; }
 .sres { display: flex; flex-direction: column; gap: 1px; padding: 10px 16px; cursor: pointer; }
 .sres + .sres { border-top: 1px solid rgba(67,71,78,.55); }
@@ -592,6 +602,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .goto.more { opacity: .9; }
 .dlglist .kidbtn, .dlglist .kidhid { display: none; }
 .stage.measure .c.off { display: revert !important; }
+.subhead { padding: 14px 16px 2px; font-size: 12px; font-weight: 500; color: #aaa; letter-spacing: .02em; }
 .sechead .nolive { font-weight: 400; color: var(--m-on-var); opacity: .75; font-size: 12px; }
 .theme-yt .sechead .nolive { color: #888; }
 /* round 9 scenario kit */
@@ -629,6 +640,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
           <button class="iconbtn" id="btnBack" aria-label="Leave visual settings"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
           <button class="secpill" id="secPill" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" id="secIcon"><path d=""/></svg><span class="lbl" id="secLabel">Player controls</span><svg class="chev" viewBox="0 0 24 24"><path d="M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z"/></svg></button>
           <button class="iconbtn" id="btnSearch" aria-label="Search settings" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></button>
+          <button class="iconbtn" id="btnReset" aria-label="Reset settings"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg></button>
           <div class="searchbar" id="searchBar" role="search"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><input id="q" type="search" placeholder="Search all settings" aria-label="Search all settings" autocomplete="off" tabindex="-1"><button class="iconbtn" id="qClose" aria-label="Close search" tabindex="-1"><svg viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button></div>
           <div class="seg" role="group" aria-label="Compare">
             <button id="btnOrig" aria-pressed="false">Original</button>
@@ -642,7 +654,6 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
             <div class="content" id="content">
               <div class="stick" id="stick">
                 <div class="stagebox"><div class="stage" id="stage"></div><div class="canvas" id="canvas"></div></div>
-                <div class="ptools"><button class="resetbtn" id="btnReset" aria-label="Reset this screen to defaults"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>Reset</button></div>
               </div>
               <div class="list" id="list"></div>
             </div>
