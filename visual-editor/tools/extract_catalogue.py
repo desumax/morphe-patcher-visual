@@ -476,8 +476,10 @@ for key, p in PREFS.items():
         continue
     o = best_occ(p["occurrences"])
     s = SETTINGS.get(key, {})
-    ek = o["entriesKey"] or (key + "_entries")
-    evk = o["entryValuesKey"] or (key + "_entry_values")
+    # a Kotlin template (e.g. "${arrayKeySuffix}") picks a version-specific array; fall back to the shared one
+    tmpl = lambda x: re.sub(r'\$\{[^}]*\}|\$[A-Za-z_]\w*', '', x) if x else x
+    ek = tmpl(o["entriesKey"]) or (key + "_entries")
+    evk = tmpl(o["entryValuesKey"]) or (key + "_entry_values")
     entries = [res(x) for x in ARRAYS.get(ek, [])]
     values = ARRAYS.get(evk, [])
     item = {

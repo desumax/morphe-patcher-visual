@@ -16,6 +16,8 @@
 
 // ------------------------------------------------------------------ icons
 const P = {
+  wifi: "M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8 3 3 3-3a4.237 4.237 0 0 0-6 0zm-4-4 2 2a7.074 7.074 0 0 1 10 0l2-2C15.14 9.14 8.87 9.14 5 13z",
+  reset: "M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z",
   cast: "M1 18v3h3c0-1.66-1.34-3-3-3zm0-4v2c2.76 0 5 2.24 5 5h2c0-3.87-3.13-7-7-7zm0-4v2c4.97 0 9 4.03 9 9h2c0-6.08-4.93-11-11-11zm20-7H3c-1.1 0-2 .9-2 2v3h2V5h18v14h-7v2h7c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z",
   cc: "M19 4H5c-1.11 0-2 .9-2 2v12c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-8 7H9.5v-.5h-2v3h2V13H11v1c0 .55-.45 1-1 1H7c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1zm7 0h-1.5v-.5h-2v3h2V13H18v1c0 .55-.45 1-1 1h-3c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1z",
   gear: "M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z",
@@ -263,9 +265,11 @@ function classicParentsOk(k) {
   const okAny = !any.length || any.some(x => !!state[x.key]);
   return okRest && okAny;
 }
+// Morphe leaves a few titles blank because the row is a drawing of its own
+const TITLE_FALLBACK = { morphe_swipe_zone_preview: "Swipe zone preview" };
 const title = k => {
   const p = PREF[k]; if (!p) return k;
-  return p.title || k.replace(/^morphe_/, "").replace(/_/g, " ");
+  return (p.title && p.title.trim()) || TITLE_FALLBACK[k] || k.replace(/^morphe_/, "").replace(/_/g, " ");
 };
 function entryLabel(k, v) { const e = (PREF[k]?.entries || []).find(x => String(x.value) === String(v)); return e ? e.label : String(v); }
 
@@ -417,7 +421,7 @@ SCENES.fullscreen = () => {
     ${C("hide_player_related_videos_overlay", `<div style="display:flex;gap:6px;padding:6px 8px;background:linear-gradient(transparent,rgba(0,0,0,.8))"><div class="t2" style="color:#fff;writing-mode:vertical-rl;transform:rotate(180deg);font-size:10px">More videos</div>${[1, 4, 5].map(i => `<div style="width:96px">${thumb(i, "border-radius:4px")}<div style="font-size:9.5px;line-height:1.2;margin-top:2px">${esc(VIDEOS[i].t.slice(0, 30))}…</div></div>`).join("")}</div>`, { cls: "moreoverlay", style: "position:absolute;left:0;right:0;bottom:46px" })}
     <div class="time" style="position:absolute;left:12px;bottom:30px">21:40 / 41:05</div>
     <div class="seek" style="bottom:24px"><div class="played" style="width:52%"></div><div class="knob" style="left:52%"></div></div>
-    ${C("hide_quick_actions", `<div style="display:flex;gap:5px;overflow:hidden">
+    ${C("hide_quick_actions", `<div style="display:flex;gap:5px;overflow-x:auto;scrollbar-width:none">
       ${q("hide_quick_actions_like_button", "like", "120K")}${q("hide_quick_actions_dislike_button", "dislike", "")}${q("hide_quick_actions_comments_button", "comment", "1.4K")}
       ${q("hide_quick_actions_save_button", "save", "")}${q("hide_quick_actions_share_button", "share", "")}${q("hide_quick_actions_playlist_button", "plist", "")}
       ${q("hide_quick_actions_mix_button", "queue", "")}${q("hide_quick_actions_more_videos_button", "tv", "")}${q("hide_quick_actions_ask_button", "spark", "")}${q("hide_quick_actions_more_button", "moreh", "")}</div>`, { style: "position:absolute;left:10px;right:10px;bottom:-1px;height:24px" })}
@@ -428,8 +432,10 @@ SCENES.fullscreen = () => {
 
 SCENES.feed = () => {
   const layout = V("morphe_feed_card_layout");
-  const cards = layout === "CARDS" || layout === "CARDS_WITH_ACTION_BUTTONS";
+  // Default leaves it to YouTube's A/B test, which on most accounts now sends the card layout
+  const cards = layout === "CARDS" || layout === "CARDS_WITH_ACTION_BUTTONS" || layout === "DEFAULT";
   const actions = layout === "CARDS_WITH_ACTION_BUTTONS";
+  const abNote = layout === "DEFAULT" && selected === "morphe_feed_card_layout" ? `<div class="demo-label" style="position:sticky;top:6px;left:8px;z-index:30;display:inline-block;margin:6px 8px 0">Default: YouTube picks per account (A/B test), often cards</div>` : "";
   const vcard = (i, opts = {}) => {
     const progress = C("hide_seekbar_thumbnail", `<div style="height:3px;background:rgba(255,255,255,.3)"><div style="height:3px;width:${opts.prog || 0}%;background:#ff0033"></div></div>`, { style: "position:absolute;left:0;right:0;bottom:0" });
     const tn = C("hide_video_thumbnail", `<div style="position:relative">${thumb(i, cards ? "border-radius:12px 12px 0 0" : "border-radius:0", `<span class="dur">${VIDEOS[i].d}</span>${opts.prog ? progress : ""}`)}</div>`, { blk: 1 });
@@ -438,9 +444,15 @@ SCENES.feed = () => {
     const acts = actions ? `<div style="display:flex;gap:6px;padding:0 12px 12px">${["like", "share", "save"].map(n => `<span class="chip" style="height:28px">${I(n)}</span>`).join("")}</div>` : "";
     return `<div style="${cards ? "margin:0 10px 12px;background:#1c1c1c;border-radius:12px;overflow:hidden" : "margin-bottom:6px"}">${tn}${meta}${acts}</div>`;
   };
+  const logo = `<div style="width:28px;height:20px;border-radius:6px;background:#ff0033;display:grid;place-items:center">${I("play", "ico", 'style="width:14px;height:14px"')}</div><b style="font-size:17px;letter-spacing:-.4px">YouTube</b>`;
+  const doodle = `<div class="doodle"><span style="background:#4285f4">Y</span><span style="background:#ea4335">o</span><span style="background:#fbbc05">u</span><span style="background:#34a853">T</span><span style="background:#ff0033">ube</span></div>`;
   return `<div style="background:#0f0f0f;height:350px;overflow-y:auto;scrollbar-width:thin" class="inner-scroll">
-    ${C("hide_youtube_doodles", `<div style="margin:8px 12px 0;padding:8px 12px;border-radius:10px;background:linear-gradient(90deg,#2a2a72,#009ffd);font-size:12px;font-weight:500">Today's Doodle: World Science Day</div>`, { blk: 1 })}
-    ${C("hide_filter_bar_in_feed", `<div style="display:flex;gap:8px;padding:10px 12px;overflow:hidden">${["All", "Music", "Live", "Gaming", "Podcasts", "Trains"].map((t, i) => `<span class="chip" style="${i === 0 ? "background:#f1f1f1;color:#0f0f0f" : ""}">${t}</span>`).join("")}</div>`, { blk: 1 })}
+    ${abNote}
+    <div style="display:flex;align-items:center;padding:8px 6px 4px 12px;gap:4px">
+      ${C("hide_youtube_doodles", doodle, { style: "display:flex;align-items:center" })}<div class="plainlogo" style="display:flex;align-items:center;gap:4px">${logo}</div>
+      <div style="flex:1"></div>${I("cast", "ico", 'style="margin:0 8px"')}${I("bell", "ico", 'style="margin:0 8px"')}${I("search", "ico", 'style="margin:0 8px"')}
+    </div>
+    ${C("hide_filter_bar_in_feed", `<div style="display:flex;gap:8px;padding:10px 12px;overflow-x:auto;scrollbar-width:none">${["All", "Music", "Live", "Gaming", "Podcasts", "Trains"].map((t, i) => `<span class="chip" style="${i === 0 ? "background:#f1f1f1;color:#0f0f0f" : ""}">${t}</span>`).join("")}</div>`, { blk: 1 })}
     ${vcard(0, { prog: 64 })}
     ${C("hide_shorts_home", `<div style="padding:4px 12px 14px"><div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">${I("shorts", "ico", 'style="fill:#ff0033"')}<b style="font-size:16px">Shorts</b></div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">${[5, 6, 7].map(i => `<div style="aspect-ratio:9/16;border-radius:8px;background:${ART[i]};position:relative"><div style="position:absolute;left:6px;bottom:6px;right:6px;font-size:11px;font-weight:500">${["Snow in 3 seconds", "Cat vs cucumber", "Tiny pancakes"][i - 5]}</div></div>`).join("")}</div></div>`, { blk: 1 })}
@@ -495,17 +507,17 @@ function navBar(plain) {
   const narrow = !!V("morphe_narrow_navigation_buttons");
   const style = V("morphe_navigation_bar_style");
   const bg = plain ? "rgba(15,15,15,.96)" : style === "TRANSLUCENT" ? "rgba(15,15,15,.7)" : style === "TRANSPARENT" ? "transparent" : style === "OPAQUE" ? "#000" : "#0f0f0f";
-  const lab = t => C("hide_navigation_button_labels", `<span style="font-size:10px">${t}</span>`, { tag: "span" });
-  const tab = (k, icon, t, extra = "") => C(k, `<div style="display:grid;justify-items:center;gap:2px;padding:0 6px;position:relative">${icon}${lab(t)}${extra}</div>`);
-  const dot = C("hide_navigation_new_content_dot", `<span style="position:absolute;right:10px;top:-1px;width:7px;height:7px;border-radius:50%;background:#ff0033;display:block"></span>`, { tag: "span", style: "position:absolute;inset:0;pointer-events:auto" });
+  const lab = t => C("hide_navigation_button_labels", `<span style="font-size:10px;display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t}</span>`, { tag: "span", style: "max-width:100%" });
+  const tab = (k, icon, t, extra = "") => C(k, `<div style="display:grid;justify-items:center;gap:2px;position:relative;min-width:0">${icon}${lab(t)}${extra}</div>`, { cls: "ntab" });
+  const dot = C("hide_navigation_new_content_dot", `<span style="position:absolute;left:calc(50% + 7px);top:-1px;width:7px;height:7px;border-radius:50%;background:#ff0033;display:block"></span>`, { tag: "span", style: "position:absolute;inset:0;pointer-events:auto" });
   const center = swap
     ? tab("hide_notifications_button", I("bell"), "Notifications")
-    : C("hide_create_button", `<div style="width:40px;height:40px;border-radius:50%;border:1.5px solid #fff;display:grid;place-items:center">${I("plus")}</div>`);
-  return `<div style="display:flex;justify-content:${narrow ? "center" : "space-around"};gap:${narrow ? 8 : 0}px;align-items:center;height:52px;background:${bg};border-top:1px solid #222">
+    : C("hide_create_button", `<div style="width:40px;height:40px;border-radius:50%;border:1.5px solid #fff;display:grid;place-items:center;margin:0 auto">${I("plus")}</div>`, { cls: "ntab" });
+  return `<div class="navbar${narrow ? " narrow" : ""}" style="display:flex;justify-content:center;align-items:center;height:52px;padding:0 4px;background:${bg};border-top:1px solid #222">
     ${tab("hide_home_button", I("home"), "Home")}${tab("hide_shorts_button", I("shorts"), "Shorts")}${center}
     ${tab("hide_subscriptions_button", I("subs"), "Subscriptions", dot)}
     ${tab("show_search_button", I("search"), "Search")}${tab("show_watch_later_button", I("clock"), "Watch later")}${tab("show_settings_button", I("gear"), "Settings")}
-    <div style="display:grid;justify-items:center;gap:2px;padding:0 6px">${av(6, 24)}${lab("You")}</div>
+    <div class="ntab" style="display:grid;justify-items:center;gap:2px">${av(6, 24)}${lab("You")}</div>
   </div>`;
 }
 
@@ -561,7 +573,7 @@ SCENES.flyout = () => {
   const row = (k, icon, t, val = "") => C(k, `<div style="display:flex;align-items:center;gap:16px;padding:11px 18px">${I(icon)}<span style="flex:1;font-size:14px">${t}</span><span class="t2">${val}</span></div>`, { blk: 1 });
   return `<div style="background:#0f0f0f;height:350px;position:relative;overflow:hidden">
     <div style="height:100px;position:relative">${videoFrame(4)}<div class="scrim" style="opacity:.6"></div></div>
-    <div style="position:absolute;left:0;right:0;top:56px;bottom:0;background:#212121;border-radius:14px 14px 0 0;overflow-y:auto;scrollbar-width:thin;padding-bottom:8px">
+    <div class="inner-scroll" style="position:absolute;left:0;right:0;top:56px;bottom:0;background:#212121;border-radius:14px 14px 0 0;overflow-y:auto;scrollbar-width:thin;padding-bottom:8px">
       <div style="width:36px;height:4px;border-radius:2px;background:#555;margin:8px auto 4px"></div>
       ${row("hide_player_flyout_quality", "tune", "Quality", "Auto (1080p)")}${row("hide_player_flyout_captions", "cc", "Captions", "Off")}
       ${row("hide_player_flyout_speed", "speed", "Playback speed", "Normal")}${row("hide_player_flyout_sleep_timer", "timer", "Sleep timer", "Off")}
@@ -581,7 +593,7 @@ SCENES.captions = () => {
   const fs = (14 * scale).toFixed(1);
   return `<div class="video">${videoFrame(7)}<div class="scrim" style="opacity:.15"></div>
     ${C("caption_scale", `<div style="display:grid;justify-items:center;gap:2px"><span id="capLine" style="background:rgba(8,8,8,.75);padding:2px 6px;font-size:${fs}px;line-height:1.3">the pancake needs to rest for one minute</span>
-      ${C("secondary_caption_language", `<span style="background:rgba(8,8,8,.75);padding:2px 6px;font-size:${(fs * .9).toFixed(1)}px;color:#ffe680">${sec && sec !== "off" ? "la panqueca necesita reposar un minuto" : "(no second language)"}</span>`, { tag: "span", cls: sec && sec !== "off" ? "" : "off" })}</div>`, { style: "position:absolute;left:12px;right:12px;bottom:14px;display:flex;justify-content:center" })}
+      ${C("secondary_caption_language", `<span style="background:rgba(8,8,8,.75);padding:2px 6px;font-size:${(fs * .9).toFixed(1)}px;color:#ffe680">${sec && sec !== "off" ? CAP_LINE[sec] || CAP_LINE.es : "(no second language)"}</span>`, { tag: "span", cls: sec && sec !== "off" ? "" : selected === "morphe_secondary_caption_language" ? "off ghost" : "off" })}</div>`, { style: "position:absolute;left:12px;right:12px;bottom:14px;display:flex;justify-content:center" })}
     ${C("captions_in_pip", `<div style="width:110px;position:relative;border-radius:6px;overflow:hidden;border:1px solid #444">${thumb(7, "border-radius:0")}<span style="position:absolute;left:4px;right:4px;bottom:3px;background:rgba(8,8,8,.8);font-size:7.5px;text-align:center">rest for one minute</span></div>`, { style: "position:absolute;right:8px;top:8px" })}
   </div>`;
 };
@@ -668,12 +680,52 @@ const DESC = [
   ["hide_quizzes_section", "Quiz", "Which joint holds the roof beam?"],
   ["hide_explore_podcast_section", "Podcast", "Fjord & Timber Talks"],
 ];
-SCENES.description = () => `<div class="inner-scroll" style="background:#212121;height:350px;overflow-y:auto;scrollbar-width:thin">
-  <div style="display:flex;align-items:center;gap:10px;padding:12px 14px 6px"><b style="font-size:17px;flex:1">Description</b>${I("close", "ico", 'style="width:20px;height:20px"')}</div>
-  <div style="display:flex;align-items:center;gap:10px;padding:4px 14px 10px">${av(0, 30)}<span class="t1" style="flex:1">${VIDEOS[0].c}</span>
-    ${C("hide_subscribe_button", `<span class="chip" style="background:#f1f1f1;color:#0f0f0f;height:30px">Subscribe</span>`)}</div>
-  ${DESC.map(([k, t, b]) => C(k, `<div style="margin:0 12px 8px;padding:9px 12px;border-radius:10px;background:#2c2c2c"><div class="t1" style="font-size:13px">${esc(t)}</div><div class="t2" style="margin-top:2px">${esc(b)}</div></div>`, { blk: 1 })).join("")}
-</div>`;
+// The description sheet as YouTube draws it: player on top, sheet with title, stats, text, then each
+// section in its own shape (chapter strip, music row, chips, link rows, channel row at the end).
+SCENES.description = () => {
+  const H = (t, extra = "") => `<div style="display:flex;align-items:center;gap:6px;padding:14px 14px 8px"><b style="font-size:15px;flex:1">${t}</b>${extra}</div>`;
+  const strip = items => `<div style="display:flex;gap:8px;padding:0 14px;overflow-x:auto;scrollbar-width:none">${items}</div>`;
+  const linkRow = (icon, t, sub) => `<div style="display:flex;gap:12px;align-items:center;padding:6px 14px">${I(icon, "ico", 'style="fill:#aaa;flex:none"')}<div style="min-width:0"><div style="font-size:13px">${t}</div><div class="t2" style="color:#3ea6ff">${sub}</div></div></div>`;
+  const btn = t => `<div style="margin:6px 14px 2px"><span class="chip" style="height:32px;background:transparent;border:1px solid #555;width:100%;justify-content:center">${t}</span></div>`;
+  const SEC = {
+    hide_video_details_section: () => `<div style="padding:4px 14px 6px"><div style="font-size:16px;font-weight:600;line-height:1.3">${esc(VIDEOS[0].t)}</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);text-align:center;margin:12px 0 10px">${[["48K", "Likes"], ["1.2M", "Views"], ["14 Nov", "2026"]].map(([a, b]) => `<div><b style="font-size:16px">${a}</b><div class="t2">${b}</div></div>`).join("")}</div>
+      <div style="font-size:13px;line-height:1.45">Two weeks, one 12 m² cabin and a lot of reclaimed pine. <span style="color:#3ea6ff">#cabin #norway</span></div></div>`,
+    hide_ai_generated_video_summary_section: () => `<div style="margin:10px 14px 0;padding:10px 12px;border-radius:12px;background:linear-gradient(135deg,rgba(62,166,255,.14),rgba(180,120,255,.12))"><div style="display:flex;gap:6px;align-items:center;font-size:12px;font-weight:600">${I("spark", "ico", 'style="width:16px;height:16px"')}Summary</div><div style="font-size:12.5px;margin-top:4px;line-height:1.4">A two-week build of a 12 m² cabin using reclaimed pine, with a wood stove.</div></div>`,
+    hide_ask_section: () => `<div style="padding:10px 14px 0"><span class="chip" style="height:32px;background:rgba(255,255,255,.1)">${I("spark")} Ask about this video</span></div>`,
+    hide_hype_points: () => `<div style="display:flex;gap:10px;align-items:center;margin:10px 14px 0;padding:8px 12px;border-radius:12px;background:#2c2c2c">${I("fire", "ico", 'style="fill:#ff8a3d"')}<div><b style="font-size:13px">2,410 hype points</b><div class="t2">#4 in Woodworking this week</div></div></div>`,
+    hide_key_concepts_section: () => H("Key concepts") + `<div style="display:flex;flex-wrap:wrap;gap:6px;padding:0 14px">${["Timber framing", "Wood stove", "Insulation", "Off-grid"].map(t => `<span class="chip" style="height:28px">${t}</span>`).join("")}</div>`,
+    hide_chapters_section: () => H("Chapters", `<span class="t2">View all</span>`) + strip([["0:00", "Intro", 0], ["2:14", "Foundation", 3], ["7:40", "Walls", 4], ["12:04", "Stove", 6]].map(([t, n, i]) => `<div style="width:118px;flex:none">${thumb(i, "border-radius:8px")}<div style="font-size:12px;margin-top:4px">${n}</div><div class="t2" style="color:#3ea6ff">${t}</div></div>`).join("")),
+    hide_search_inside_this_video_section: () => `<div style="margin:12px 14px 0;display:flex;align-items:center;gap:8px;height:36px;border-radius:18px;background:#2c2c2c;padding:0 12px;color:#aaa;font-size:13px">${I("search", "ico", 'style="width:18px;height:18px;fill:#aaa"')}Search inside this video</div>`,
+    hide_transcript_section: () => H("Transcript") + `<div class="t2" style="padding:0 14px">Follow along using the transcript.</div>` + btn("Show transcript"),
+    hide_how_this_was_made_section: () => H("How this was made") + `<div style="display:flex;gap:10px;padding:0 14px;align-items:flex-start">${I("info", "ico", 'style="fill:#aaa;flex:none"')}<div style="font-size:12.5px">Altered or synthetic content<div class="t2">Sound or visuals were not significantly edited or digitally generated.</div></div></div>`,
+    hide_corrections_section: () => H("Corrections") + `<div style="padding:0 14px;font-size:12.5px"><span style="color:#3ea6ff">1:20</span> The wall is 2.4 m, not 2.6 m</div>`,
+    hide_attributes_section: () => H("Music") + `<div style="display:flex;gap:10px;align-items:center;padding:0 14px"><div style="width:44px;height:44px;border-radius:6px;background:${ART[7]};flex:none"></div><div><div style="font-size:13px">Northern Lights</div><div class="t2">Midnight Tapes · Fjord Sessions</div></div></div>` + btn(`${I("music")} Music`),
+    hide_featured_links_section: () => H("Featured links") + linkRow("link", "Tool list", "fjordtimber.no/tools") + linkRow("link", "Plans", "fjordtimber.no/plans"),
+    hide_featured_videos_section: () => H("Featured videos") + strip([1, 2, 5].map(i => `<div style="width:140px;flex:none">${thumb(i, "border-radius:8px")}<div style="font-size:12px;margin-top:4px">${esc(VIDEOS[i].t.slice(0, 32))}…</div></div>`).join("")),
+    hide_featured_playlists_section: () => H("Featured playlists") + `<div style="display:flex;gap:10px;padding:0 14px;align-items:center"><div style="width:120px;position:relative;flex:none">${thumb(4, "border-radius:8px")}<span class="dur">${I("plist", "ico", 'style="width:12px;height:12px;vertical-align:-2px"')} 14</span></div><div><div style="font-size:13px">Cabin build</div><div class="t2">Fjord & Timber · Playlist</div></div></div>`,
+    hide_featured_channels_section: () => H("Featured channels") + strip([[1, "Slow Rails"], [3, "Darkroom Diaries"], [5, "Pocket Science"]].map(([i, n]) => `<div style="display:grid;justify-items:center;gap:4px;width:84px;flex:none">${av(i, 52)}<div style="font-size:11.5px;text-align:center">${n}</div></div>`).join("")),
+    hide_channel_links_section: () => H("Channel links") + linkRow("link", "Instagram", "instagram.com/fjordtimber") + linkRow("heart", "Patreon", "patreon.com/fjordtimber"),
+    hide_hashtag_section: () => `<div style="padding:10px 14px 0;font-size:13px;color:#3ea6ff">#cabin #norway #woodworking #offgrid</div>`,
+    hide_info_cards_section: () => H("Info cards") + `<div style="display:flex;gap:10px;padding:0 14px;align-items:center">${thumb(2, "width:96px;border-radius:6px;flex:none")}<div style="font-size:12.5px">Part 1 of the build<div class="t2">Video</div></div></div>`,
+    hide_explore_section: () => H("Explore more") + `<div style="margin:0 14px;padding:10px 12px;border-radius:12px;background:#2c2c2c;display:flex;gap:10px;align-items:center">${I("tv")}<div style="font-size:13px">Woodworking<div class="t2">Topic</div></div></div>`,
+    hide_explore_course_section: () => H("Course") + `<div style="margin:0 14px;padding:10px 12px;border-radius:12px;background:#2c2c2c;display:flex;gap:10px;align-items:center">${thumb(3, "width:72px;border-radius:6px;flex:none")}<div style="font-size:13px">Timber framing basics<div class="t2">8 lessons · Free</div></div></div>`,
+    hide_course_progress_section: () => `<div style="margin:10px 14px 0"><div style="font-size:12.5px">Lesson 3 of 8 completed</div><div style="height:4px;border-radius:2px;background:#3a3a3a;margin-top:6px"><div style="width:37%;height:4px;border-radius:2px;background:#3ea6ff"></div></div></div>`,
+    hide_quizzes_section: () => H("Quiz") + `<div style="margin:0 14px;padding:10px 12px;border-radius:12px;border:1px solid #444;font-size:13px">Which joint holds the roof beam?<div style="display:flex;gap:6px;margin-top:8px">${["Mortise", "Dovetail", "Lap"].map(t => `<span class="chip" style="height:28px">${t}</span>`).join("")}</div></div>`,
+    hide_explore_podcast_section: () => H("Podcast") + `<div style="display:flex;gap:10px;padding:0 14px;align-items:center"><div style="width:52px;height:52px;border-radius:8px;background:${ART[6]};flex:none"></div><div style="font-size:13px">Fjord & Timber Talks<div class="t2">Podcast · 32 episodes</div></div></div>`,
+  };
+  const sec = ([k, t, b]) => C(k, SEC[k] ? SEC[k]() : H(esc(t)) + `<div class="t2" style="padding:0 14px">${esc(b)}</div>`, { blk: 1 });
+  return `<div style="background:#0f0f0f;height:350px;position:relative;overflow:hidden">
+    <div style="height:84px;position:relative">${videoFrame(0)}</div>
+    <div class="inner-scroll" style="position:absolute;left:0;right:0;top:70px;bottom:0;background:#212121;border-radius:14px 14px 0 0;overflow-y:auto;scrollbar-width:thin;padding-bottom:14px">
+      <div style="width:36px;height:4px;border-radius:2px;background:#555;margin:8px auto 0"></div>
+      <div style="display:flex;align-items:center;padding:6px 14px 2px;border-bottom:1px solid #333"><b style="font-size:17px;flex:1;padding:6px 0">Description</b>${I("close", "ico", 'style="width:20px;height:20px"')}</div>
+      ${DESC.map(sec).join("")}
+      <div style="display:flex;align-items:center;gap:10px;padding:16px 14px 6px;margin-top:10px;border-top:1px solid #333">${av(0, 36)}<div style="flex:1;min-width:0"><div class="t1">${VIDEOS[0].c}</div><div class="t2">412K subscribers</div></div>
+        ${C("hide_subscribe_button", `<span class="chip" style="background:#f1f1f1;color:#0f0f0f;height:30px">Subscribe</span>`)}</div>
+      <div style="display:flex;gap:8px;padding:6px 14px">${["Videos", "About"].map(t => `<span class="chip" style="height:32px;flex:1;justify-content:center;background:transparent;border:1px solid #555">${t}</span>`).join("")}</div>
+    </div></div>`;
+};
 
 SCENES.ambient = () => {
   const off = !!V("morphe_disable_ambient_mode");
@@ -974,7 +1026,23 @@ function evalRule(expr, getter) {
 }
 const inVersion = k => { const p = PREF[k]; return !p || evalRule(p.when, () => null); };
 const availOk = k => { const p = PREF[k]; return !p || !p.availability || evalRule(p.availability, x => (x in PREF ? V(x) : null)); };
+// Lists Morphe builds at runtime (caption languages from YouTube's translation list, the user's own
+// custom speeds). The preview uses a representative copy.
+const LANGS = [["en", "English"], ["es", "Spanish"], ["fr", "French"], ["de", "German"], ["it", "Italian"], ["pt", "Portuguese"], ["ja", "Japanese"], ["ko", "Korean"], ["zh-Hans", "Chinese (Simplified)"], ["ru", "Russian"], ["ar", "Arabic"], ["hi", "Hindi"]];
+const CAP_LINE = { en: "the pancake needs to rest for one minute", es: "el panqueque necesita reposar un minuto", fr: "la crêpe doit reposer une minute", de: "der Pfannkuchen muss eine Minute ruhen", it: "il pancake deve riposare un minuto", pt: "a panqueca precisa descansar um minuto", ja: "パンケーキは1分休ませます", ko: "팬케이크는 1분 동안 두세요", "zh-Hans": "煎饼需要静置一分钟", ru: "блину нужно отдохнуть минуту", ar: "تحتاج الفطيرة إلى الراحة لمدة دقيقة", hi: "पैनकेक को एक मिनट आराम चाहिए" };
+const speedList = () => String(V("morphe_custom_playback_speeds") || "0.25 0.5 0.75 1.0 1.25 1.5 1.75 2.0").split(/[\s,]+/).filter(Boolean).map(Number).filter(n => n > 0);
+const RUNTIME_ENTRIES = {
+  morphe_preferred_caption_language: () => [{ label: "Off", value: "off" }, { label: "App language", value: "default" }, ...LANGS.map(([v, l]) => ({ label: l, value: v }))],
+  morphe_secondary_caption_language: () => [{ label: "Off", value: "off" }, ...LANGS.map(([v, l]) => ({ label: l, value: v }))],
+  morphe_playback_speed_default: () => [{ label: "Auto", value: "-2.0" }, ...speedList().map(n => ({ label: n + "x", value: String(n) }))],
+  morphe_shorts_playback_speed_default: () => [{ label: "Auto", value: "-2.0" }, ...speedList().map(n => ({ label: n + "x", value: String(n) }))],
+  morphe_playback_audio_pitch_default: () => [{ label: "Auto", value: "-2.0" }, ...[0.5, 0.75, 0.9, 1.1, 1.25, 1.5].map(n => ({ label: n + "x", value: String(n) }))],
+};
+// "Off or a choice" lists show as a switch; the choice appears under it once switched on.
+const OFF_LIST = new Set(["morphe_secondary_caption_language"]);
+const offListPick = {};
 function entriesFor(k) {
+  if (RUNTIME_ENTRIES[k]) return RUNTIME_ENTRIES[k]();
   const p = PREF[k];
   const v = (p.entryVariants || []).find(x => evalRule(x.when, () => null));
   return v ? v.entries : (p.entries || []);
@@ -1007,7 +1075,8 @@ SCENES.watch = () => {
   const likeChip = C("hide_like_dislike_button", `<div class="chip likechip" style="padding:0;gap:0"><span style="display:flex;gap:6px;align-items:center;padding:0 10px 0 12px;border-right:1px solid #444">${I("like")}${minimal ? "" : `<span class="rollnum" data-n="48">48K</span>`}</span><span style="padding:0 12px;display:flex;gap:6px;align-items:center">${I("dislike")}${C("ryd_enabled", minimal || !dislike ? "" : `<span>${dislike}</span>`, { tag: "span", also: "ryd_dislike_percentage" })}</span></div>`);
   // 21.36+ default layout: the channel lives at the start of the action bar ("compact_channel_bar").
   const channelChip = C("hide_channel_profile_button", `<div class="chip" style="padding:0 4px 0 4px;gap:6px">${C("hide_channel_bar", av(0, 26), { tag: "span" })}${minimal ? "" : `<span style="font-size:12.5px">Fjord & Timber</span>`}${C("hide_channel_profile_subscribe_button", `<span class="chip" style="height:26px;background:#f1f1f1;color:#0f0f0f;font-size:12px;padding:0 10px">Subscribe</span>`, { tag: "span" })}</div>`);
-  const actions = [modern || minimal ? channelChip : "", likeChip, act("hide_comments_button", "comment", "1.2K"), act("hide_share_button", "share", "Share"), act("hide_remix_button", "remix", "Remix"), act("hide_thanks_button", "dollar", "Thanks"),
+  const joinChip = C("hide_join_membership_button", `<div class="chip" style="background:transparent;border:1px solid #555">${minimal ? I("heart") : "Join"}</div>`);
+  const actions = [modern || minimal ? channelChip + joinChip : "", likeChip, act("hide_comments_button", "comment", "1.2K"), act("hide_share_button", "share", "Share"), act("hide_remix_button", "remix", "Remix"), act("hide_thanks_button", "dollar", "Thanks"),
     act("hide_download_button", "dl", "Download"), act("hide_clip_button", "clip", "Clip"), act("hide_save_button", "save", "Save"), act("hide_ask_button", "spark", "Ask"),
     act("hide_hype_button", "fire", "Hype"), act("hide_shop_button", "shop", "Shop"), act("hide_connect_button", "link", "Connect"), act("hide_promote_button", "speed", "Promote"), act("hide_stop_ads_button", "close", "Stop ads"),
     act("hide_report_button", "flag", "Report"), act("hide_more_button", "moreh", "")].join("");
@@ -1022,7 +1091,7 @@ SCENES.watch = () => {
       <div class="t2" style="margin-top:4px"><span class="rollnum" data-n="1.2">1.2M</span> views · ${VIDEOS[0].a} <b style="color:#fff">...more</b></div>
     </div>
     ${modern || minimal ? "" : classicBar}
-    ${C("hide_action_bar", `<div style="${rowStyle};padding:0 12px 10px">${actions}</div>`, { blk: 1 })}
+    ${C("hide_action_bar", `<div style="${rowStyle};padding:12px 12px 10px;margin-top:-12px">${actions}</div>`, { blk: 1 })}
     ${C("hide_comments_section", `<div style="margin:0 12px 10px;background:#272727;border-radius:12px;padding:10px 12px">
         <div class="t1">Comments <span class="t2">1.2K</span></div>
         ${C("hide_comments_preview_comment", `<div style="display:flex;gap:8px;margin-top:8px;align-items:center">${av(4, 24)}<div class="t2" style="color:#ddd;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">The wood stove at 12:04 is pure cosiness</div></div>`)}
@@ -1080,7 +1149,7 @@ SCENES.miniplayer = () => {
       ${type === "MODERN_1" || type === "MODERN_4" ? C("miniplayer_hide_title", `<div style="position:absolute;left:0;right:0;bottom:2px;padding:10px 6px 4px;background:linear-gradient(transparent,rgba(0,0,0,.8));font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(VIDEOS[0].t)}</div>`, { style: "position:absolute;left:0;right:0;bottom:0" }) : ""}
     </div>`;
   }
-  const resume = C("miniplayer_disable_resuming", `<div style="position:absolute;left:10px;right:10px;top:60px;${surface};border-radius:14px;padding:8px;display:flex;gap:8px;align-items:center;z-index:2"><div style="width:72px;flex:none;border-radius:8px;overflow:hidden">${thumb(1, "border-radius:0")}</div><div style="min-width:0;flex:1"><div class="t2" style="font-size:10.5px">Continue watching</div><div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(VIDEOS[1].t)}</div></div>${ic("close", 18)}</div>`, { also: "miniplayer_disable_resuming" });
+  const resume = C("miniplayer_disable_resuming", `<div style="${surface};border-radius:14px;padding:8px;display:flex;gap:8px;align-items:center"><div style="width:72px;flex:none;border-radius:8px;overflow:hidden">${thumb(1, "border-radius:0")}</div><div style="min-width:0;flex:1"><div class="t2" style="font-size:10.5px">Continue watching</div><div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(VIDEOS[1].t)}</div></div>${ic("close", 18)}</div>`, { also: "miniplayer_disable_resuming", style: "position:absolute;left:10px;right:10px;top:60px;z-index:2" });
   const notAvail = "";
   return `<div style="background:#0f0f0f;height:350px;position:relative;overflow:hidden" id="miniStage">
     <div style="margin:8px 10px;background:#2b2b2b;border-radius:16px;padding:10px 12px;display:flex;gap:10px;align-items:center">
@@ -1102,13 +1171,18 @@ def("miniplayer", "style", "miniplayer_glass miniplayer_docked");
 // ------------------------------------------------------------------ SponsorBlock
 SECTIONS.splice(SECTIONS.findIndex(s => s.id === "captions") + 1, 0, { id: "sponsorblock", icon: "skip", title: "SponsorBlock", scopes: [["SPONSORBLOCK", null]] });
 P.skip = "M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z";
+// Segment categories: Morphe builds these rows in code (not in the patch's preference list), so the
+// catalogue misses them. Keys, defaults and colours follow Settings.java.
+const SB_BEHAVIOUR = [{ label: "Skip automatically", value: "skip" }, { label: "Skip automatically once", value: "skip-once" }, { label: "Show a skip button", value: "manual-skip" }, { label: "Show in seekbar", value: "seekbar-only" }, { label: "Disable", value: "ignore" }];
+const SB_CATS = [["sponsor", "Sponsor", "skip-once", "#00d400"], ["selfpromo", "Unpaid/Self promotion", "manual-skip", "#ffff00"], ["interaction", "Interaction reminder", "manual-skip", "#cc00ff"], ["highlight", "Highlight", "manual-skip", "#ff1684"], ["hook", "Hook/Greetings", "ignore", "#395699"], ["intro", "Intermission/Intro animation", "manual-skip", "#00ffff"], ["outro", "Endcards/Credits", "manual-skip", "#0202ed"], ["preview", "Preview/Recap", "ignore", "#008fd6"], ["filler", "Filler tangent/Jokes", "ignore", "#7300ff"], ["music_offtopic", "Music: Non-music section", "manual-skip", "#ff9900"]];
+const SB_SEGS = { sponsor: [8, 9], selfpromo: [46, 5], interaction: [30, 3], intro: [0, 3], outro: [88, 12], highlight: [60, 1], filler: [70, 6], music_offtopic: [20, 4], preview: [3, 2], hook: [36, 2] };
 SCENES.sponsorblock = () => {
   const on = !!V("morphe_sb_enabled");
   const sq = !!V("morphe_sb_square_layout");
   const compact = !!V("morphe_sb_compact_skip_button");
   const r = sq ? 2 : 18;
   const noseg = !!V("morphe_sb_video_length_without_segments");
-  const segs = on ? `<i style="position:absolute;left:8%;width:9%;top:0;bottom:0;background:#00d400"></i><i style="position:absolute;left:46%;width:5%;top:0;bottom:0;background:#ffff00"></i><i style="position:absolute;left:88%;width:12%;top:0;bottom:0;background:#0202ed"></i>` : "";
+  const segs = on ? SB_CATS.filter(([k]) => SB_SEGS[k] && V("morphe_sb_" + k) !== "ignore").map(([k, , , col]) => `<i data-seg="${k}" style="position:absolute;left:${SB_SEGS[k][0]}%;width:${SB_SEGS[k][1]}%;top:0;bottom:0;background:${String(V("morphe_sb_" + k + "_color") || col).replace(/^#..(......)$/, "#$1")}"></i>`).join("") : "";
   return `<div class="video">${videoFrame(2)}<div class="scrim" style="opacity:.35"></div>
     <div style="position:absolute;right:8px;top:6px;display:flex;gap:4px">
       ${on ? C("sb_create_new_segment", `<div class="pbtn" style="width:34px;height:34px;border-radius:${sq ? 4 : 17}px;background:rgba(0,0,0,.35)">${I("plus")}</div>`) : ""}
@@ -1123,6 +1197,8 @@ SCENES.sponsorblock = () => {
 };
 def("sponsorblock", "style", "sb_enabled sb_square_layout sb_compact_skip_button sb_video_length_without_segments");
 def("sponsorblock", "vis", "sb_create_new_segment sb_voting_button");
+def("sponsorblock", "style", SB_CATS.map(c => "sb_" + c[0]).join(" "));
+def("sponsorblock", "style", "sb_create_new_segment_step");
 scen("sponsorblock", "sb_toast_on_skip", (box, on) => {
   situation("A sponsor segment starts");
   box.innerHTML = device("land", `${miniVideo(2)}<div class="msk" style="position:absolute;left:8%;right:8%;bottom:16%;height:3px;background:rgba(255,255,255,.3)"><i style="position:absolute;left:30%;width:25%;top:0;bottom:0;background:#00d400"></i><div class="mp" style="position:absolute;left:0;top:0;bottom:0;width:20%;background:#ff0033;transition:width .9s linear"></div></div>`);
@@ -1151,9 +1227,16 @@ const gestureScen = (key, orient, from, to, label, result) => scen("fullscreen",
   });
   return disabled ? `${label}: ignored` : `${label}: ${result.text}`;
 });
-const r1 = dev => rotate(dev, "port"); r1.text = "leaves fullscreen";
+// swap what the device shows (fullscreen video vs portrait watch page) as it turns
+function devContent(dev, html) {
+  [...dev.children].forEach(c => { if (!c.classList.contains("waves") && !c.classList.contains("finger")) { c.style.transition = "opacity .2s"; c.style.opacity = "0"; setTimeout(() => c.remove(), 200); } });
+  const tmp = document.createElement("div"); tmp.innerHTML = html;
+  const f = dev.querySelector(".finger");
+  [...tmp.children].forEach(c => { c.style.opacity = "0"; c.style.transition = "opacity .3s .15s"; dev.insertBefore(c, f); requestAnimationFrame(() => requestAnimationFrame(() => { c.style.opacity = ""; })); });
+}
+const r1 = dev => { rotate(dev, "port"); devContent(dev, playerArea(6)); }; r1.text = "leaves fullscreen";
 gestureScen("disable_fullscreen_dragged_down_gesture", "land", [.5, .25], [.5, .85], "Swipe down in fullscreen", r1);
-const r2 = dev => rotate(dev, "land"); r2.text = "enters fullscreen";
+const r2 = dev => { rotate(dev, "land"); devContent(dev, miniVideo(6)); }; r2.text = "enters fullscreen";
 gestureScen("disable_fullscreen_pulled_up_gesture", "port", [.5, .3], [.5, .08], "Swipe up on the player", r2);
 const r3 = dev => { const v = dev.querySelector(".dv-video"); if (v) { v.style.transition = "transform .4s"; v.style.transform = "translateY(70%) scale(.5)"; } }; r3.text = "shrinks to the miniplayer";
 gestureScen("disable_fullscreen_sliding_down_gesture", "port", [.5, .1], [.5, .45], "Swipe down on the player", r3);
@@ -1166,9 +1249,26 @@ scen("fullscreen", "disable_fullscreen_zoom_gesture", (box, disabled) => {
   return disabled ? "Pinch: the video stays fitted" : "Pinch: the video zooms to fill the screen";
 });
 
+scen("fullscreen", "restore_pinch_to_zoom", (box, on) => {
+  situation("Fullscreen, two fingers spread");
+  box.innerHTML = device("land", `<div class="zv" style="position:absolute;left:10%;right:10%;top:0;bottom:0;background:${ART[6]};transform-origin:50% 50%;transition:transform .12s linear"></div>`);
+  const dev = box.querySelector(".dev"), f1 = box.querySelector("#scFinger"), zv = box.querySelector(".zv"); const W = dev.clientWidth, H = dev.clientHeight;
+  const f2 = f1.cloneNode(true); f2.id = ""; dev.appendChild(f2);
+  at(150, () => { fingerTo(f1, W * .44, H * .55); fingerTo(f2, W * .56, H * .45); });
+  // stock YouTube snaps between fitted and filled; Morphe's restore follows the fingers up to its max scale
+  [1.15, 1.3, 1.45, 1.6].forEach((sc, i) => at(420 + i * 160, () => {
+    fingerTo(f1, W * (.44 - .08 * (i + 1)), H * (.55 + .07 * (i + 1)), 160); fingerTo(f2, W * (.56 + .08 * (i + 1)), H * (.45 - .07 * (i + 1)), 160);
+    if (on) zv.style.transform = `scale(${sc})`;
+    else if (i === 1) { zv.style.transition = "all .3s var(--ease)"; zv.style.left = "0"; zv.style.right = "0"; zv.style.transform = "scale(1.08)"; }
+  }));
+  at(1250, () => { f1.classList.remove("show"); f2.classList.remove("show"); });
+  return on ? "Pinch: zoom follows your fingers, step by step" : "Pinch: the video only snaps from fitted to filled";
+});
+
 // ------------------------------------------------------------------ swipe controls: overlay style settings feed the swipe demo
 def("fullscreen", "style", "swipe_overlay_background_opacity swipe_overlay_progress_volume_color swipe_overlay_progress_brightness_color swipe_overlay_progress_speed_color swipe_text_overlay_size swipe_zone_width");
 def("fullscreen", "gesture", "swipe_top_zone");
+def("fullscreen", "style", "swipe_zone_preview swipe_speed_zone_height");
 scen("fullscreen", "swipe_change_video", (box, on) => {
   situation("Fullscreen, swipe sideways");
   box.innerHTML = device("land", `<div class="sv" style="position:absolute;inset:0;display:flex;width:200%;transition:transform .45s var(--ease)"><div style="flex:1;background:${ART[6]}"></div><div style="flex:1;background:${ART[2]}"></div></div>`);
@@ -1205,6 +1305,22 @@ SCENES.shorts = (base => () => {
   const hint = C("hide_shorts_gesture_hints", `<div class="toastin" style="position:static;transform:none">Swipe up for more</div>`, { style: "position:absolute;left:50%;top:52%;transform:translateX(-50%)" });
   return html.replace('<div id="heart"', paused + top + hint + '<div id="heart"');
 })(SCENES.shorts);
+// Shorts "more" menu: picking one of its settings opens the sheet, as on the phone
+const SHORTS_SHEET = new Set(["morphe_hide_shorts_flyout_audio_track", "morphe_hide_shorts_flyout_captions", "morphe_shorts_playback_speed_flyout_button"]);
+SCENES.shorts = (base => () => {
+  let html = base().replace('id="shortsStage"', `id="shortsStage" data-icons="${esc(V("morphe_shorts_icon_style") || "AUTO")}"`);
+  if (!SHORTS_SHEET.has(selected)) return html;
+  const row = (k, icon, t) => { const r = `<div style="display:flex;align-items:center;gap:16px;padding:11px 18px">${I(icon)}<span style="font-size:14px">${t}</span></div>`; return k ? C(k, r, { blk: 1 }) : r; };
+  const sheet = `<div style="position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:25"></div>
+    <div style="position:absolute;left:0;right:0;bottom:0;z-index:26;background:#212121;border-radius:14px 14px 0 0;padding:6px 0 10px;animation:sheetup .28s var(--ease)">
+      <div style="width:36px;height:4px;border-radius:2px;background:#555;margin:2px auto 6px"></div>
+      ${row(null, "tune", "Quality")}${row("hide_shorts_flyout_captions", "cc", "Captions")}${row("shorts_playback_speed_flyout_button", "speed", "Playback speed")}
+      ${row("hide_shorts_flyout_audio_track", "music", "Audio track")}${row(null, "info", "Description")}${row(null, "flag", "Report")}${row(null, "help", "Send feedback")}
+    </div>`;
+  return html.replace('<div class="finger" id="finger"></div>', sheet + '<div class="finger" id="finger"></div>');
+})(SCENES.shorts);
+def("shorts", "vis", "hide_shorts_flyout_audio_track hide_shorts_flyout_captions shorts_playback_speed_flyout_button");
+def("shorts", "style", "shorts_icon_style");
 def("shorts", "vis", "hide_shorts_paused_overlay_buttons hide_shorts_save_sound_button hide_shorts_new_posts_button hide_shorts_upcoming_button hide_shorts_auto_dubbed_label hide_shorts_gesture_hints");
 
 // ------------------------------------------------------------------ navigation: glass bar
@@ -1297,7 +1413,7 @@ SECTIONS.find(s => s.id === "feed").scopes.push(["FEED", "morphe_post_buttons_sc
 
 SCENES.ads = () => {
   const card = (k, inner, o = {}) => C(k, inner, { blk: 1, ...o });
-  return `<div class="inner-scroll" style="background:#0f0f0f;height:350px;overflow-y:auto">
+  return `<div class="inner-scroll" style="background:#0f0f0f;max-height:350px;overflow-y:auto">
     <div style="position:relative;height:118px;background:${ART[1]}">
       ${C("hide_video_ads", `<div style="position:absolute;inset:0;background:${ART[5]};display:flex;align-items:flex-end;justify-content:space-between;padding:8px"><span style="font-size:11px;background:#ffcc00;color:#000;font-weight:700;padding:1px 5px;border-radius:3px">Ad · 0:05</span><span class="chip" style="height:26px;font-size:11.5px;background:rgba(0,0,0,.7)">Skip ▸|</span></div>`, { style: "position:absolute;inset:0" })}
       ${C("hide_paid_promotion_labels", `<span style="font-size:11px;background:rgba(0,0,0,.7);padding:2px 6px;border-radius:3px">Includes paid promotion</span>`, { style: "position:absolute;left:8px;top:8px" })}
@@ -1315,6 +1431,15 @@ SCENES.ads = () => {
 };
 def("ads", "vis", "hide_video_ads hide_paid_promotion_labels hide_player_popup_ads hide_merchandise_banners hide_creator_store_shelf hide_shopping_links hide_youtube_premium_promotions hide_self_sponsor_ads hide_general_ads");
 
+// A full Android status bar: clock and notification icons left, system icons right
+function statusBar() {
+  const sv = (d, w = 13) => `<svg viewBox="0 0 24 24" style="width:${w}px;height:${w}px;fill:#e8e8e8;flex:none"><path d="${d}"/></svg>`;
+  const left = [P.play, "M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z", P.chat, P.dl].map(d => sv(d, 11)).join("");
+  const wifi = "M12 21l3.6-4.8A6 6 0 0 0 12 15a6 6 0 0 0-3.6 1.2L12 21zm0-18C7.95 3 4.21 4.34 1.2 6.6L3 9c2.5-1.88 5.62-3 9-3s6.5 1.12 9 3l1.8-2.4C19.79 4.34 16.05 3 12 3zm0 6c-2.7 0-5.19.89-7.2 2.4L6.6 13.8A8.97 8.97 0 0 1 12 12c2.02 0 3.88.67 5.4 1.8l1.8-2.4C17.19 9.89 14.7 9 12 9z";
+  const sig = "M2 22h20V2L2 22z", alarm = "M22 5.72l-4.6-3.86-1.29 1.53 4.6 3.86L22 5.72zM7.88 3.39 6.6 1.86 2 5.71l1.29 1.53 4.59-3.85zM12 4c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9zm1 9.41V8h-2v6.41l4.29 4.3 1.41-1.42L13 13.41z";
+  const bat = `<span style="display:inline-flex;align-items:center;gap:2px;font-size:10px">78%<span style="width:18px;height:9px;border:1.3px solid #e8e8e8;border-radius:2.5px;padding:1px;display:inline-block;position:relative"><i style="display:block;height:100%;width:78%;background:#e8e8e8;border-radius:1px"></i></span></span>`;
+  return `<div style="height:22px;display:flex;align-items:center;gap:5px;padding:0 12px;font-size:11.5px;color:#e8e8e8"><b style="font-weight:500;margin-right:3px">9:41</b>${left}<span style="flex:1"></span>${sv(alarm, 11)}${sv(wifi)}${sv(sig, 11)}<span style="font-size:9.5px;font-weight:600">5G</span>${bat}</div>`;
+}
 const THEME_DARK = { APP_DEFAULT: "#0f0f0f", PURE_BLACK: "#000000", MATERIAL_YOU_PURE_BLACK: "#000000", MATERIAL_YOU_NEUTRAL: "#1b1b1f", MATERIAL_YOU_PRIMARY: "#1a2433", MATERIAL_YOU_SECONDARY: "#22262e", MATERIAL_YOU_TERTIARY: "#2a2230", CATPPUCCIN_MOCHA: "#1e1e2e" };
 SCENES.look = () => {
   const t = V("morphe_theme_color_dark");
@@ -1323,7 +1448,7 @@ SCENES.look = () => {
   const wide = V("morphe_searchbar_type") === "EXTRA_WIDE";
   const grad = !!V("morphe_gradient_loading_screen");
   return `<div style="background:${bg};height:330px;position:relative;overflow:hidden;font-family:${font};transition:background .3s">
-    ${C("hide_status_bar", `<div style="height:20px;display:flex;justify-content:space-between;align-items:center;padding:0 12px;font-size:11px;color:#ddd"><span>9:41</span><span>5G ▮</span></div>`, { blk: 1 })}
+    ${C("hide_status_bar", statusBar(), { blk: 1 })}
     <div style="display:flex;align-items:center;gap:8px;padding:6px 10px 6px 12px">
       ${wide ? "" : `<div style="width:24px;height:17px;border-radius:5px;background:#ff0033"></div><b style="font-size:16px;letter-spacing:-.4px">YouTube</b><div style="flex:1"></div>`}
       ${C("searchbar_type", wide ? `<div style="flex:1;display:flex;align-items:center;gap:8px;height:34px;border-radius:17px;background:rgba(255,255,255,.1);padding:0 12px;color:#aaa;font-size:13px;min-width:250px">${I("search", "ico", 'style="width:18px;height:18px;fill:#aaa"')}Search YouTube</div>` : `<div class="pbtn">${I("search")}</div>`, { style: wide ? "flex:1" : "" })}
@@ -1370,7 +1495,7 @@ function playScenario(k, prevValue) {
   const wasHidden = stick.hidden;
   if (wasHidden) { stick.hidden = false; $("stage").innerHTML = `<div style="height:200px"></div>`; }
   const on = !!V(k);
-  const valueTxt = PREF[k].type === "boolean" ? (on ? "On" : "Off") : String(V(k));
+  const valueTxt = PREF[k].type === "boolean" ? (on ? "On" : "Off") : (entriesFor(k).find(e => sameVal(e.value, V(k)))?.label || String(V(k)));
   canvas.innerHTML = `<div class="cap"><b>${esc(title(k))}</b><span class="st ${on ? "on" : ""}">${esc(valueTxt)}</span></div><div class="sit"></div><div class="scbox" style="display:grid;place-items:center"></div><div class="foot"></div><div class="prog"></div>`;
   canvas.classList.add("show");
   const prev = prevValue !== undefined ? prevValue : PREF[k].type === "boolean" ? !V(k) : V(k);
@@ -1389,7 +1514,7 @@ function stopScenario() { scenarioToken.alive = false; $("canvas").classList.rem
 // ------------------------------------------------------------------ demos (gesture / behaviour), faster loop
 const LOOP_MS = 1500;
 let demoTimer = null, demoStep = 0;
-function stopDemo() { clearInterval(demoTimer); demoTimer = null; }
+function stopDemo() { clearInterval(demoTimer); demoTimer = null; document.querySelectorAll("#stage .demo-label.dyn").forEach(n => { n.style.opacity = "0"; setTimeout(() => n.remove(), 250); }); }
 function label(text, bad, ms) {
   const st = $("stage");
   st.querySelectorAll(".demo-label.dyn").forEach(n => n.remove());
@@ -1444,7 +1569,7 @@ const DEMOS = {
   morphe_swipe_overlay_progress_volume_color() { swipeDemo("right", "VOLUME"); },
   morphe_swipe_overlay_progress_brightness_color() { swipeDemo("left", "BRIGHTNESS"); },
   morphe_swipe_overlay_progress_speed_color() { swipeDemo("right", "SPEED"); },
-  morphe_swipe_zone_width() { swipeDemo(demoStep % 2 ? "left" : "right", demoStep % 2 ? (V("morphe_swipe_left_zone") || "BRIGHTNESS") : (V("morphe_swipe_right_zone") || "VOLUME")); },
+  morphe_swipe_zone_width() { swipeZones(1400, true); label(`Left and right zones: ${V("morphe_swipe_zone_width")}% of the width each`, false, 1400); },
   morphe_swipe_seek(on) {
     const f = finger(); if (!f) return; const W = $("stage").clientWidth;
     place(f, W * .35, 80); setTimeout(() => place(f, W * .7, 80, 650), 150);
@@ -1465,7 +1590,7 @@ const DEMOS = {
   },
   morphe_disable_like_subscribe_glow(disabled) {
     const chip = document.querySelector("#stage .likechip");
-    if (chip && !disabled) { chip.animate([{ boxShadow: "0 0 0 0 rgba(62,166,255,0)" }, { boxShadow: "0 0 14px 4px rgba(62,166,255,.8)" }, { boxShadow: "0 0 0 0 rgba(62,166,255,0)" }], { duration: 1100 }); label("Creator says \"hit like\": button glows (stock)"); }
+    if (chip && !disabled) { chip.animate([{ boxShadow: "0 0 0 0 rgba(62,166,255,0)" }, { boxShadow: "0 0 10px 3px rgba(62,166,255,.8)" }, { boxShadow: "0 0 0 0 rgba(62,166,255,0)" }], { duration: 1100 }); label("Creator says \"hit like\": button glows (stock)"); }
     else label("Creator says \"hit like\": no glow", true);
   },
   morphe_stable_caption_blocks(on) {
@@ -1477,14 +1602,19 @@ const DEMOS = {
   morphe_niconico_comments(on) { label(on ? "Comments fly across the video" : "Flying comments are off", !on); },
 };
 const argb = (v, fallback) => { const m = /^#([0-9a-f]{2})?([0-9a-f]{6})$/i.exec(String(v || "")); if (!m) return fallback; const a = m[1] ? parseInt(m[1], 16) / 255 : 1; const n = parseInt(m[2], 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a.toFixed(2)})`; };
-function swipeZones() {
+function swipeZones(ms = 900, labels = false) {
   const st = $("stage").firstElementChild; if (!st) return;
   st.querySelectorAll(".zones").forEach(z => z.remove());
   const zw = Math.max(5, Math.min(50, Number(V("morphe_swipe_zone_width")) || 37));
-  const top = V("morphe_swipe_top_zone") && V("morphe_swipe_top_zone") !== "OFF";
-  const z = document.createElement("div"); z.className = "zones";
-  z.innerHTML = `<i style="left:0;width:${zw}%"></i><i style="right:0;width:${zw}%"></i>${top ? `<i style="left:${zw}%;right:${zw}%;top:0;height:22%"></i>` : ""}`;
-  st.appendChild(z); setTimeout(() => z.classList.add("out"), 900); setTimeout(() => z.remove(), 1300);
+  const th = Math.max(10, Math.min(60, Number(V("morphe_swipe_speed_zone_height")) || 30));
+  const act = side => V("morphe_swipe_" + side + "_zone");
+  const name = side => { const v = act(side); return !v || v === "OFF" ? "Off" : entryLabel("morphe_swipe_" + side + "_zone", v); };
+  const top = act("top") && act("top") !== "OFF";
+  const lab = side => labels ? `<b>${side[0].toUpperCase() + side.slice(1)}<small>${esc(name(side))}</small></b>` : "";
+  const z = document.createElement("div"); z.className = "zones" + (labels ? " lab" : "");
+  z.innerHTML = `<i class="${act("left") === "OFF" ? "zoff" : ""}" style="left:0;width:${zw}%">${lab("left")}</i><i class="${act("right") === "OFF" ? "zoff" : ""}" style="right:0;width:${zw}%">${lab("right")}</i>${top || labels ? `<i class="${top ? "" : "zoff"}" style="left:${zw}%;right:${zw}%;top:0;bottom:auto;height:${th}%">${lab("top")}</i>` : ""}`;
+  st.appendChild(z);
+  if (ms) { setTimeout(() => z.classList.add("out"), ms); setTimeout(() => z.remove(), ms + 400); }
 }
 function swipeDemo(side, action) {
   const st = $("stage"), f = finger(), hud = $("hud"); if (!f || !hud) return;
@@ -1534,12 +1664,28 @@ Object.assign(DEMOS, {
   morphe_seekbar_thumbnail_preview(on) {
     const seek = $("seek"), f = finger(), bub = $("thumbBubble"); if (!seek || !f) return;
     const st = $("stage").getBoundingClientRect(), r = seek.getBoundingClientRect();
-    const y = r.top - st.top + r.height / 2, x0 = r.left - st.left + r.width * .17, x1 = r.left - st.left + r.width * .7;
-    place(f, x0, y); f.classList.add("hold");
-    if (bub) { bub.style.transition = "none"; bub.style.left = (x0) + "px"; bub.style.opacity = on ? "1" : "0"; }
-    setTimeout(() => { place(f, x1, y, 900); setSeek(70); if (bub && on) { bub.style.transition = "left .9s var(--ease)"; bub.style.left = x1 + "px"; } }, 150);
+    const pr = bub && bub.offsetParent ? bub.offsetParent.getBoundingClientRect() : st;
+    const y = r.top - st.top + r.height / 2, p0 = 17, p1 = 70, total = 18 * 60 + 42;
+    const xAt = pct => r.left + r.width * pct / 100;
+    const played = $("played"), knob = $("knob"), tl = bub && bub.querySelector(".time");
+    [played, knob].forEach(e => e && (e.style.transition = "none"));
+    if (bub) { bub.classList.add("dragging"); bub.style.opacity = on ? "1" : "0"; }
+    const frame = pct => {
+      setSeek(pct); place(f, xAt(pct) - st.left, y);
+      if (bub) { const half = 50, x = Math.min(Math.max(xAt(pct) - pr.left, half + 4), pr.width - half - 4); bub.style.left = x + "px"; }
+      if (tl) tl.textContent = fmt(total, pct);
+    };
+    frame(p0); f.classList.add("hold");
+    const t0 = performance.now() + 180, dur = 1000, tok = demoTimer;
+    const step = now => {
+      if (demoTimer !== tok || !document.body.contains(seek)) return;
+      const t = Math.min(1, Math.max(0, (now - t0) / dur)), e = t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      frame(p0 + (p1 - p0) * e);
+      if (t < 1) requestAnimationFrame(step);
+      else setTimeout(() => { if (demoTimer !== tok) return; f.classList.remove("show", "hold"); if (bub) { bub.classList.remove("dragging"); bub.style.left = ""; bub.style.opacity = ""; } if (tl) tl.textContent = "7:51"; [played, knob].forEach(e => e && (e.style.transition = "")); setSeek(p0); }, 450);
+    };
+    requestAnimationFrame(step);
     label(on ? "Drag the seekbar: a thumbnail follows your finger" : "Drag the seekbar: no thumbnail, only the time", !on);
-    hideF(f, 1300); setTimeout(() => { if (bub) { bub.style.transition = ""; bub.style.left = ""; bub.style.opacity = ""; } setSeek(17); }, 1500);
   },
   morphe_hide_player_gesture_hints(hidden) {
     const f = finger(); if (!f) return; const st = $("stage");
@@ -1569,6 +1715,192 @@ scen("seekbar", "expand_live_stream_dvr_duration", (box, on) => {
 });
 // ------------------------------------------------------------------ section membership
 let MEMBERS = {};
+// ------------------------------------------------------------------ round 7 additions
+Object.assign(DEMOS, {
+  // the + button opens the segment editor: mark start and end, nudge by the time step, pick a category
+  morphe_sb_create_new_segment(on) {
+    const st = $("stage").firstElementChild; if (!st || !on) { label("The 'Create new segment' button is hidden", true, 1300); return; }
+    st.querySelectorAll(".sbedit").forEach(n => n.remove());
+    const step = Number(V("morphe_sb_create_new_segment_step")) || 150;
+    const ed = document.createElement("div"); ed.className = "sbedit";
+    ed.innerHTML = `<span class="chip">${I("prev", "ico", 'style="width:14px;height:14px"')} −${step} ms</span><span class="chip" style="background:#3ea6ff;color:#000">Start 1:30</span><span class="chip">End …</span><span class="chip">+${step} ms ${I("next", "ico", 'style="width:14px;height:14px"')}</span><span class="chip">${I("arrow", "ico", 'style="width:14px;height:14px"')} Publish</span>`;
+    st.appendChild(ed); label("Create a segment: mark start and end, adjust, publish", false, 1300);
+    setTimeout(() => ed.remove(), 1450);
+  },
+  morphe_sb_create_new_segment_step() { DEMOS.morphe_sb_create_new_segment(true); },
+  morphe_sb_voting_button(on) {
+    const st = $("stage").firstElementChild; if (!st || !on) { label("The voting button is hidden", true, 1300); return; }
+    st.querySelectorAll(".sbedit").forEach(n => n.remove());
+    const ed = document.createElement("div"); ed.className = "sbedit";
+    ed.innerHTML = `<span class="chip">${I("like", "ico", 'style="width:14px;height:14px"')} Upvote</span><span class="chip">${I("dislike", "ico", 'style="width:14px;height:14px"')} Downvote</span><span class="chip">Change category</span>`;
+    st.appendChild(ed); label("Vote on the segments of this video", false, 1300); setTimeout(() => ed.remove(), 1450);
+  },
+});
+// Shared pieces for small "phone" scenarios: a page made of rows, a toast, a sheet.
+const pageRows = (rows) => `<div class="pg7" style="position:absolute;inset:0;background:#0f0f0f;padding:6px;display:grid;gap:5px;align-content:start;font-size:7px;color:#ddd">${rows}</div>`;
+const bar7 = (w = 100, c = "#2a2a2a", h = 6) => `<i style="display:block;height:${h}px;width:${w}%;border-radius:3px;background:${c}"></i>`;
+const cmt7 = (i, txt) => `<div class="cm7" style="display:flex;gap:4px;align-items:flex-start;padding:3px;border-radius:4px;transition:background .2s"><span style="width:12px;height:12px;border-radius:50%;background:${AV[i % AV.length]};flex:none"></span><span style="line-height:1.3">${txt}</span></div>`;
+function toast7(dev, text, top = "78%") { dev.querySelectorAll(".t7").forEach(n => n.remove()); dev.insertAdjacentHTML("beforeend", `<div class="toastin t7" style="top:${top};font-size:8px;padding:3px 8px">${text}</div>`); }
+function sheet7(dev, rows) { dev.insertAdjacentHTML("beforeend", `<div class="sh7" style="position:absolute;left:0;right:0;bottom:0;background:#212121;border-radius:8px 8px 0 0;padding:6px;display:grid;gap:4px;font-size:7.5px;animation:sheetup .25s var(--ease);z-index:5">${rows}</div>`); }
+function holdAt(f, x, y) { fingerTo(f, x, y); f.classList.add("hold"); }
+
+scen("comments", "copy_comments", (box, on) => {
+  situation("Holding a comment");
+  box.innerHTML = device("port", pageRows(`<b style="font-size:8px">Comments</b>${cmt7(2, "The wood stove at 12:04 is pure cosiness")}${cmt7(5, "Kom igjen! Taket trenger en egen video.")}${cmt7(3, "Subscribed for part 2")}`));
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
+  const c = dev.querySelectorAll(".cm7")[0];
+  at(200, () => holdAt(f, W * .55, H * .13)); at(700, () => { c.style.background = "rgba(255,255,255,.12)"; });
+  at(1100, () => { f.classList.remove("hold", "show"); if (on) toast7(dev, "Comment copied"); else sheet7(dev, ["Report", "Block user"].map(t => `<div>${t}</div>`).join("")); });
+  return on ? "Hold a comment: its text is copied" : "Hold a comment: only the report menu (stock)";
+});
+scen("comments", "search_comments", (box, on) => {
+  situation("Comments panel");
+  const list = ["The wood stove at 12:04 is pure cosiness", "Which stove model is that?", "Subscribed for part 2", "Stove + rain = perfect"];
+  box.innerHTML = device("port", pageRows(`<div style="display:flex;align-items:center;gap:4px"><b style="font-size:8px;flex:1">Comments</b>${on ? `<span class="srch7" style="width:10px;height:10px;display:grid;place-items:center">${I("search", "ico", 'style="width:10px;height:10px"')}</span>` : ""}</div><div class="q7" style="height:0;overflow:hidden;transition:height .25s"><div style="height:12px;border-radius:6px;background:#2c2c2c;padding:0 5px;line-height:12px;color:#aaa"></div></div>${list.map((t, i) => cmt7(i + 1, t)).join("")}`));
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
+  if (!on) { at(300, () => toast7(dev, "No search in comments", "60%")); return "No way to search the loaded comments (stock)"; }
+  at(200, () => fingerTo(f, W * .88, H * .055)); at(550, () => tapF(f));
+  at(750, () => { f.classList.remove("show"); dev.querySelector(".q7").style.height = "14px"; });
+  const q = dev.querySelector(".q7 div"); "stove".split("").forEach((ch, i) => at(950 + i * 110, () => { q.textContent += ch; }));
+  at(1600, () => dev.querySelectorAll(".cm7").forEach((c, i) => { if (!/stove/i.test(list[i])) { c.style.transition = "opacity .25s, height .3s"; c.style.opacity = "0"; setTimeout(() => { c.style.display = "none"; }, 260); } }));
+  return "Search button: shows only the loaded comments with your words";
+});
+scen("channel", "channel_search", (box, on) => {
+  situation("A channel page");
+  box.innerHTML = device("port", pageRows(`<div style="display:flex;justify-content:flex-end;gap:5px">${on ? `<span style="position:relative">${I("search", "ico", 'style="width:10px;height:10px;fill:#3ea6ff"')}</span>` : ""}${I("search", "ico", 'style="width:10px;height:10px"')}</div><div style="height:22px;border-radius:4px;background:${ART[3]}"></div><div style="display:flex;gap:4px;align-items:center"><span style="width:16px;height:16px;border-radius:50%;background:${AV[0]}"></span><b style="font-size:8px">Fjord & Timber</b></div>${bar7(80)}${bar7(60)}<div class="res7" style="display:grid;gap:4px"></div>`));
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
+  at(200, () => fingerTo(f, W * (on ? .78 : .9), H * .05)); at(550, () => tapF(f));
+  at(800, () => { f.classList.remove("show"); dev.insertAdjacentHTML("beforeend", `<div style="position:absolute;left:4px;right:4px;top:4px;height:13px;border-radius:7px;background:#2c2c2c;font-size:7px;line-height:13px;padding:0 6px;color:#ddd;animation:sheetup .2s reverse">${on ? "Search Fjord & Timber" : "Search YouTube"}</div>`); });
+  at(1200, () => { const r = dev.querySelector(".res7"); r.innerHTML = [0, 1].map(i => `<div style="display:flex;gap:4px;align-items:center"><div style="width:26px;height:15px;border-radius:2px;background:${ART[on ? i : i + 4]}"></div><span style="font-size:6.5px">${on ? "Fjord & Timber · " : "Other channel · "}stove</span></div>`).join(""); });
+  return on ? "Second search button: results only from this channel" : "Search button: searches all of YouTube (stock)";
+});
+scen("description", "copy_select_text", (box, on) => {
+  situation("Holding the description text");
+  box.innerHTML = device("port", pageRows(`<b style="font-size:8px">Description</b><span class="d7" style="line-height:1.35">Two weeks, one 12 m² cabin and a lot of <span class="w7">reclaimed pine</span>.</span>${bar7(90)}${bar7(70)}`));
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
+  at(200, () => holdAt(f, W * .45, H * .13));
+  at(900, () => { f.classList.remove("hold", "show"); if (!on) { toast7(dev, "Nothing happens", "60%"); return; } const w = dev.querySelector(".w7"); w.style.background = "rgba(62,166,255,.45)"; w.style.borderRadius = "2px"; dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:6%;font-size:7.5px;padding:3px 8px;background:#333">Copy · Select all · Share</div>`); });
+  return on ? "Hold the description: select any part and copy it" : "Hold the description: nothing to select (stock)";
+});
+scen("watch", "copy_video_title", (box, on) => {
+  situation("Holding the video title");
+  box.innerHTML = device("port", playerArea(0) + `<div style="position:absolute;left:6px;right:6px;top:38%;font-size:8px;font-weight:600;line-height:1.3" class="tt7">Building a tiny cabin in the Norwegian forest</div>`);
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
+  at(200, () => holdAt(f, W * .5, H * .41));
+  at(900, () => { f.classList.remove("hold", "show"); if (on) { dev.querySelector(".tt7").style.background = "rgba(255,255,255,.12)"; toast7(dev, "Title copied"); } else toast7(dev, "Description opens", "80%"); });
+  return on ? "Hold the title: it is copied" : "Hold the title: same as a tap, the description opens (stock)";
+});
+scen("watch", "open_system_share_sheet", (box, on) => {
+  situation("Tapping Share");
+  box.innerHTML = device("port", playerArea(0) + `<div style="position:absolute;left:6px;top:40%;display:flex;gap:4px">${["like", "share", "save"].map(n => `<span style="background:#272727;border-radius:7px;padding:2px 5px;display:grid;place-items:center">${I(n, "ico", 'style="width:9px;height:9px"')}</span>`).join("")}</div>`);
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
+  at(200, () => fingerTo(f, W * .3, H * .43)); at(550, () => tapF(f));
+  at(800, () => { f.classList.remove("show"); sheet7(dev, on ? `<div style="font-weight:600">Share with</div><div style="display:flex;gap:6px">${[1, 2, 3, 4].map(i => `<span style="width:14px;height:14px;border-radius:50%;background:${AV[i]}"></span>`).join("")}</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px">${[0, 1, 2, 3].map(i => `<span style="height:12px;border-radius:3px;background:#3a3a3a"></span>`).join("")}</div>` : `<div style="font-weight:600">Share</div><div style="display:flex;gap:4px">${["#ff0033", "#25d366", "#1877f2", "#aaa"].map(c => `<span style="width:13px;height:13px;border-radius:50%;background:${c}"></span>`).join("")}</div><div>Copy link</div>`); });
+  return on ? "Share: Android's own share sheet opens" : "Share: YouTube's in-app share panel opens (stock)";
+});
+scen("watch", "remove_viewer_discretion_dialog", (box, on) => {
+  situation("Opening an age-sensitive video");
+  box.innerHTML = device("port", playerArea(2));
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
+  dev.insertAdjacentHTML("beforeend", `<div class="dlg7" style="position:absolute;left:8%;right:8%;top:30%;background:#282828;border-radius:6px;padding:6px;font-size:7px;display:grid;gap:4px;transition:opacity .25s"><b>Viewer discretion advised</b><span style="color:#aaa">This video may be inappropriate for some users.</span><span style="justify-self:end;color:#3ea6ff">I understand</span></div>`);
+  const d = dev.querySelector(".dlg7");
+  if (on) { d.style.opacity = "0"; at(500, () => d.style.opacity = "1"); at(800, () => d.style.opacity = "0"); at(1000, () => toast7(dev, "Accepted for you", "70%")); return "The dialog is accepted automatically (age limits still apply)"; }
+  at(300, () => fingerTo(f, W * .75, H * .47)); at(800, () => tapF(f)); at(1000, () => { d.style.opacity = "0"; f.classList.remove("show"); });
+  return "You have to confirm the dialog each time (stock)";
+});
+
+def("player", "style", "player_icon_style");
+// DeArrow: the same video card in each place DeArrow can rewrite, original vs crowd-sourced title
+SCENES.dearrow = () => {
+  const places = [["dearrow_titles_home", "Home"], ["dearrow_titles_subscription", "Subscriptions"], ["dearrow_titles_search", "Search"], ["dearrow_titles_player", "Up next"], ["dearrow_titles_library", "You"]];
+  const icon = !!V("morphe_dearrow_titles_icon"), casual = !!V("morphe_dearrow_casual_mode");
+  const card = ([k, where], i) => {
+    const on = !!V("morphe_" + k);
+    const t = on ? (casual && i % 2 ? "I built a tiny cabin in Norway (original title kept)" : "Building a 12 m² cabin from reclaimed pine in two weeks") : "I BUILT a TINY CABIN in the FOREST?! 😱 (insane)";
+    return C(k, `<div style="display:flex;gap:10px;padding:8px 12px;align-items:flex-start"><div style="width:132px;flex:none;position:relative">${thumb(on ? 3 : 0, "border-radius:8px")}${on ? `<span class="dur" style="left:4px;right:auto">still · ${entryLabel("morphe_dearrow_thumbnail_stills_time", V("morphe_dearrow_thumbnail_stills_time"))}</span>` : ""}</div>
+      <div style="min-width:0"><div class="t2" style="font-size:10.5px;margin-bottom:2px">${where}</div><div class="t1" style="font-size:13px;line-height:1.3">${on && icon ? C("dearrow_titles_icon", `<span style="display:inline-grid;place-items:center;width:15px;height:15px;border-radius:4px;background:#1e88e5;margin-right:4px;vertical-align:-2px;font-size:9px">DA</span>`, { tag: "span" }) : ""}${esc(t)}</div><div class="t2">Fjord & Timber · 1.2M views</div></div></div>`, { blk: 1 });
+  };
+  return `<div class="inner-scroll" style="background:#0f0f0f;max-height:350px;overflow-y:auto;padding:4px 0">
+    ${places.map(card).join("")}
+    ${C("dearrow_vote_button", `<div style="margin:6px 12px 10px"><span class="chip" style="height:30px">${I("like")} DeArrow: vote for a title</span></div>`, { blk: 1 })}
+  </div>`;
+};
+def("dearrow", "vis", "dearrow_titles_icon dearrow_vote_button");
+def("dearrow", "style", "dearrow_titles_home dearrow_titles_subscription dearrow_titles_search dearrow_titles_player dearrow_titles_library dearrow_casual_mode dearrow_thumbnail_stills_time");
+// Playback: the player shows what its defaults lead to (speed, quality, HDR, codec), with the
+// speed list of the custom speed menu under it.
+SCENES.playback = () => {
+  const spd = Number(V("morphe_playback_speed_default")), q = String(V("morphe_video_quality_default_wifi")), qm = String(V("morphe_video_quality_default_mobile"));
+  const hdr = !V("morphe_disable_hdr_video") || !!V("morphe_force_hdr_video");
+  const codec = V("morphe_video_codec"), pitch = Number(V("morphe_playback_audio_pitch_default"));
+  const badge = (k, t, extra = "") => C(k, `<span class="chip" style="height:22px;font-size:11px;padding:0 7px;background:rgba(0,0,0,.6)${extra}">${t}</span>`, { tag: "span" });
+  const speeds = speedList();
+  return `<div class="inner-scroll" style="background:#0f0f0f;max-height:350px;overflow-y:auto">
+    <div class="video" style="position:relative">${videoFrame(5)}<div class="scrim" style="opacity:.25"></div>
+      <div style="position:absolute;left:8px;top:8px;display:flex;gap:5px;flex-wrap:wrap">
+        ${badge("playback_speed_default", spd > 0 ? spd + "x" : "Auto speed")}
+        ${badge("video_quality_default_wifi", `${I("wifi", "ico", 'style="width:12px;height:12px"')}${q === "-2" ? "Auto" : q + "p"}`)}
+        ${badge("video_quality_default_mobile", `${I("phone", "ico", 'style="width:12px;height:12px"')}${qm === "-2" ? "Auto" : qm + "p"}`)}
+        ${C("disable_hdr_video", `<span class="chip" style="height:22px;font-size:11px;padding:0 7px;background:${hdr ? "#d4a000;color:#000" : "rgba(0,0,0,.6)"}">${hdr ? "HDR" : "SDR"}</span>`, { tag: "span", also: "force_hdr_video" })}
+        ${badge("video_codec", codec === "VP9" ? "VP9" : codec === "AVC" ? "H.264" : "Codec: auto")}
+        ${pitch > 0 ? badge("playback_audio_pitch_default", `Pitch ${pitch}x`) : ""}
+      </div>
+      <div class="pbtn bigbtn" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.3)">${I("pause")}</div>
+      <div class="time" id="pbTime" style="position:absolute;left:12px;bottom:14px">3:12 / 18:42</div>
+      <div class="seek" style="bottom:6px"><div class="played" style="width:17%"></div></div>
+    </div>
+    ${C("custom_playback_speeds", `<div style="padding:10px 12px 4px"><div class="t2" style="margin-bottom:6px">Playback speed</div><div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none">${speeds.map(n => `<span class="chip" style="height:28px;flex:none;${n === (spd > 0 ? spd : 1) ? "background:#f1f1f1;color:#0f0f0f" : ""}">${n}x</span>`).join("")}</div></div>`, { blk: 1, also: "custom_speed_menu" })}
+    <div style="padding:10px 12px 14px"><div class="t1">${esc(VIDEOS[5].t)}</div><div class="t2">${VIDEOS[5].c} · ${VIDEOS[5].v}</div></div>
+  </div>`;
+};
+def("playback", "style", "playback_speed_default video_quality_default_wifi video_quality_default_mobile disable_hdr_video force_hdr_video video_codec playback_audio_pitch_default custom_playback_speeds custom_speed_menu");
+Object.assign(DEMOS, {
+  morphe_remember_playback_speed_last_selected_toast(on) { if (on) showPill("Changed default speed to: 1.5x", 1300); label(on ? "A toast confirms the new default speed" : "No toast when the default speed changes", !on, 1300); },
+  morphe_remember_video_quality_last_selected_toast(on) { if (on) showPill("Changed default Wi-Fi quality to: 1080p", 1300); label(on ? "A toast confirms the new default quality" : "No toast when the default quality changes", !on, 1300); },
+  morphe_skip_silence(on) {
+    const t = $("pbTime"); if (!t) return;
+    t.textContent = "3:12 / 18:42"; label(on ? "A quiet pause: skipped" : "A quiet pause: plays through (stock)", !on, 1300);
+    if (on) setTimeout(() => { t.style.transition = "color .2s"; t.style.color = "#3ea6ff"; t.textContent = "3:14 / 18:42"; showPill("Skipped 2 s of silence", 900); setTimeout(() => { t.style.color = ""; }, 600); }, 500);
+  },
+});
+def("playback", "behaviour", "remember_playback_speed_last_selected_toast remember_video_quality_last_selected_toast skip_silence");
+// Comments: context lines (pinned, creator heart), gift cards, and a scrollable panel
+{ const base = SCENES.comments; SCENES.comments = () => base()
+    .replace('<div style="position:absolute;left:0;right:0;top:44px;bottom:0;background:#212121;border-radius:14px 14px 0 0;overflow-y:auto;scrollbar-width:thin">', '<div class="inner-scroll" style="position:absolute;left:0;right:0;top:44px;bottom:0;background:#212121;border-radius:14px 14px 0 0;overflow-y:auto;scrollbar-width:thin;padding-bottom:10px">')
+    .replace(/(<div style="display:flex;gap:10px;padding:10px 12px">)/, `${C("hide_comments_contexts", `<div class="t2" style="padding:6px 12px 0 50px;display:flex;gap:6px;align-items:center;font-size:11.5px">${I("lock", "ico", 'style="width:12px;height:12px;fill:#aaa"')}Pinned by @fjordtimber</div>`, { blk: 1 })}$1`)
+    .replace(/(<\/div>\s*<\/div>\s*)$/, `${C("hide_comments_gift_animation_and_cards", `<div style="margin:6px 12px;padding:10px 12px;border-radius:12px;background:linear-gradient(90deg,#3b2a12,#2a2a2a);display:flex;gap:10px;align-items:center">${I("gift", "ico", 'style="fill:#ffb74d"')}<div><b style="font-size:12.5px">@carpenter_jo sent 5 gifts</b><div class="t2">Gifted memberships to the community</div></div></div>`, { blk: 1 })}
+      <div style="display:flex;gap:10px;padding:10px 12px">${av(7, 28)}<div style="flex:1"><div class="t2">@slowrails · 5h ${I("heart", "ico", 'style="width:12px;height:12px;fill:#ff4e45;vertical-align:-2px"')}</div><div style="font-size:13.5px;margin-top:2px">Which stove model is that?</div></div></div>$1`); }
+def("comments", "vis", "hide_comments_contexts hide_comments_gift_animation_and_cards");
+{ const base = SCENES.player; SCENES.player = () => base().replace(/^\s*<div/, `<div data-icons="${esc(V("morphe_player_icon_style") || "AUTO")}"`); }
+scen("shorts", "shorts_player_type", (box, v) => {
+  situation("Tapping a Short in the Home feed");
+  const shelf = `<div class="dv-feed" style="position:absolute;inset:0;background:#0f0f0f;padding:6px;display:grid;grid-template-columns:1fr 1fr;gap:4px;align-content:start;transition:opacity .25s">
+    <div style="grid-column:1/-1;height:8px;width:40%;border-radius:3px;background:#ff0033;opacity:.8"></div>
+    ${[5, 6].map(i => `<div style="aspect-ratio:9/16;border-radius:5px;background:${ART[i]}"></div>`).join("")}<i style="grid-column:1/-1;height:8px;border-radius:3px;background:#2a2a2a"></i><i style="grid-column:1/-1;height:8px;width:70%;border-radius:3px;background:#2a2a2a"></i></div>`;
+  box.innerHTML = device("port", shelf);
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
+  at(150, () => fingerTo(f, W * .28, H * .3)); at(650, () => tapF(f));
+  at(900, () => {
+    f.classList.remove("show");
+    if (v === "REGULAR_PLAYER") devContent(dev, `<div class="dv-video" style="background:#000"><div style="position:absolute;left:36%;right:36%;top:0;bottom:0;background:${ART[5]}"></div></div><div class="dv-below"><i></i><i></i><i></i></div>`);
+    else if (v === "REGULAR_PLAYER_FULLSCREEN") devContent(dev, `<div style="position:absolute;inset:0;background:#000"><div style="position:absolute;left:0;right:0;top:8%;bottom:8%;background:${ART[5]}"></div><div style="position:absolute;left:8%;right:8%;bottom:4%;height:2px;background:rgba(255,255,255,.4)"><div style="width:30%;height:2px;background:#ff0033"></div></div></div>`);
+    else devContent(dev, `<div style="position:absolute;inset:0;background:${ART[5]}"><div style="position:absolute;right:5px;bottom:18%;display:grid;gap:5px">${[0, 1, 2, 3].map(() => `<i style="display:block;width:12px;height:12px;border-radius:50%;background:rgba(255,255,255,.3)"></i>`).join("")}</div><div style="position:absolute;left:6px;bottom:8%;width:50%;height:6px;border-radius:3px;background:rgba(255,255,255,.5)"></div></div>`);
+  });
+  return v === "REGULAR_PLAYER" ? "Opens in the regular player, with comments and related videos below"
+    : v === "REGULAR_PLAYER_FULLSCREEN" ? "Opens in the regular player, straight to fullscreen" : "Opens in the Shorts player (stock)";
+});
+
+Object.assign(DEMOS, {
+  morphe_swipe_zone_preview() { swipeZones(1400, true); label("Swipe zones: left, right and top, with their gesture", false, 1400); },
+  morphe_swipe_speed_zone_height() { swipeZones(1400, true); label(`Top zone: ${V("morphe_swipe_speed_zone_height")}% of the player height`, false, 1400); },
+  morphe_narrow_navigation_buttons(on) {
+    const nb = document.querySelector("#stage .navbar"); if (!nb) return;
+    nb.classList.toggle("narrow", !on);
+    setTimeout(() => { if (document.body.contains(nb)) nb.classList.toggle("narrow", on); }, 650);
+    label(on ? "Narrow buttons: grouped in the middle, easier to reach" : "Default: buttons spread over the whole width", !on, 1300);
+  },
+});
+
 function inScope(p, scopes) { return scopes.some(([s, sub]) => p.screen === s && (p.subScreen || null) === sub); }
 function buildMembers() {
   MEMBERS = {};
@@ -1585,21 +1917,39 @@ function buildMembers() {
 // Sub-options: a setting that depends on another setting of the same screen sits under it,
 // offset, and only shows while that dependency is met. MANUAL_PARENT adds groupings that
 // Morphe does not express as a dependency.
-const MANUAL_PARENT = { morphe_player_overlay_opacity: "morphe_hide_player_control_buttons_background" };
+const MANUAL_PARENT = {
+  morphe_player_overlay_opacity: { key: "morphe_hide_player_control_buttons_background", always: true },
+  // with the swap on, Create lives in the top bar (its own toggle there); this one only acts on the bottom bar
+  morphe_hide_create_button: { key: "morphe_swap_create_with_notifications_button", mode: "not" },
+  morphe_hide_toolbar_notification_button: { key: "morphe_swap_create_with_notifications_button", mode: "not" },
+  // with the glass bar on, the style only decides Default vs Translucent, which glass already overrides
+  morphe_navigation_bar_style: { key: "morphe_navigation_bar_glass", mode: "not" },
+};
+const NOT_PARENT = { morphe_navigation_bar_glass: "morphe_navigation_bar_style" }; // avoid a loop with the line above
+let DIRECT_PARENT = {};
 let PARENT_OF = {}, KIDS = {};
 function buildKids() {
   PARENT_OF = {}; KIDS = {};
   for (const s of SECTIONS) {
     const keys = [...MEMBERS[s.id].live, ...MEMBERS[s.id].misc], set = new Set(keys);
     for (const k of keys) {
-      const par = MANUAL_PARENT[k] && set.has(MANUAL_PARENT[k]) ? MANUAL_PARENT[k] : [...(PREF[k].parents || []).map(x => x.key), ...(PREF[k].availabilityParents || []), ...[...String(PREF[k].availability || "").matchAll(/S\("([^"]+)"\)/g)].map(m => m[1])].find(x => x !== k && set.has(x));
+      const par = MANUAL_PARENT[k] && set.has(MANUAL_PARENT[k].key) ? MANUAL_PARENT[k].key : [...(PREF[k].parents || []).map(x => x.key), ...(PREF[k].availabilityParents || []), ...[...String(PREF[k].availability || "").matchAll(/S\("([^"]+)"\)/g)].map(m => m[1])].find(x => x !== k && x !== NOT_PARENT[k] && set.has(x));
       if (par) PARENT_OF[k] = par;
     }
   }
+  DIRECT_PARENT = { ...PARENT_OF };
   for (const k in PARENT_OF) { let r = PARENT_OF[k], g = 0; while (PARENT_OF[r] && g++ < 6) r = PARENT_OF[r]; PARENT_OF[k] = r; }
   for (const k in PARENT_OF) (KIDS[PARENT_OF[k]] = KIDS[PARENT_OF[k]] || []).push(k);
 }
-const kidVisible = k => !!MANUAL_PARENT[k] || (classicParentsOk(k) && availOk(k));
+function kidVisible(k, depth = 0) {
+  const m = MANUAL_PARENT[k];
+  if (m && m.always) return true;
+  if (m && (m.mode === "not" ? !!state[m.key] : !state[m.key])) return false;
+  if (!(classicParentsOk(k) && availOk(k))) return false;
+  // a sub-sub-option also hides with its own parent
+  const d = DIRECT_PARENT[k];
+  return !d || !PARENT_OF[d] || depth > 6 || kidVisible(d, depth + 1);
+}
 const sectionKeys = () => MEMBERS[section] ? [...MEMBERS[section].live, ...MEMBERS[section].misc] : [];
 const sectionOf = k => SECTIONS.find(s => MEMBERS[s.id].live.includes(k) || MEMBERS[s.id].misc.includes(k))?.id || "misc";
 
@@ -1617,9 +1967,76 @@ function renderBar() {
     return `<button class="pick" role="menuitem" data-sec="${x.id}" aria-current="${x.id === section}" style="transition-delay:${Math.min(i, 12) * 12}ms"><span class="pi">${I(x.icon)}</span><span><div class="pt">${esc(x.title)}</div><div class="ps">${sub}</div></span></button>`;
   };
   const vis = SECTIONS.filter(x => SCENES[x.id]), plain = SECTIONS.filter(x => !SCENES[x.id]);
-  $("pickGrid").innerHTML = vis.map(pick).join("") + `<div class="plaincard"><div class="ph">${I("list")}No preview · standard settings</div><div class="pg">${plain.map(pick).join("")}</div></div>` + `<div class="themerow" data-theme-toggle role="menuitemcheckbox" aria-checked="${theme === "m3"}"><span class="pi">${I("palette")}</span><div class="tt">Morphe design<small>Experimental. Off: matches the YouTube app</small></div><span class="sw" role="presentation" aria-checked="${theme === "m3"}"></span></div>`;
+  $("pickGrid").innerHTML = `<div class="pg pvis">${vis.map(pick).join("")}</div>` + `<div class="plaincard"><div class="ph">${I("list")}No preview · standard settings</div><div class="pg">${plain.map(pick).join("")}</div></div>`
+    + `<div class="themerow"><div class="themetog" data-theme-toggle role="menuitemcheckbox" aria-checked="${theme === "m3"}"><span class="pi">${I("palette")}</span><div class="tt">Morphe design</div><span class="sw" role="presentation" aria-checked="${theme === "m3"}"></span></div>`
+    + `<button class="ordreset" data-order-reset ${customOrder ? "" : "disabled"} title="Hold a screen to move it. This restores Morphe's order.">${I("reset")}Reset order</button></div>`;
   $("btnReset").disabled = mode !== "mod" || ![...sectionKeys(), ...(borrowed[section] || [])].some(k => JSON.stringify(state[k]) !== JSON.stringify(defaults[k]));
 }
+// Screen menu order: Morphe's own order by default (its settings screens, then their sub-screens);
+// hold a card to drag it somewhere else. The custom order is saved; Reset order restores Morphe's.
+let customOrder = null, morpheOrder = [];
+function computeMorpheOrder() {
+  const titleOf = scr => (CAT.screens && CAT.screens[scr]) || scr || "~";
+  const rank = id => {
+    const m = MEMBERS[id]; const keys = m ? [...m.live, ...m.misc] : [];
+    if (!keys.length) return "~~";
+    const count = {}; keys.forEach(k => { const p = PREF[k]; const t = titleOf(p.screen) + "|" + (p.subScreenTitle || ""); count[t] = (count[t] || 0) + 1; });
+    return Object.entries(count).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0];
+  };
+  morpheOrder = [...SECTIONS].map(s => [s.id, s.id === "misc" ? "~~~" : rank(s.id)]).sort((a, b) => a[1].localeCompare(b[1])).map(x => x[0]);
+}
+function applyOrder() {
+  if (!morpheOrder.length) computeMorpheOrder();
+  const ids = customOrder ? [...customOrder.filter(id => SECTIONS.some(s => s.id === id)), ...morpheOrder.filter(id => !customOrder.includes(id))] : morpheOrder;
+  const all = [...SECTIONS]; SECTIONS.length = 0;
+  ids.forEach(id => { const s = all.find(x => x.id === id); if (s && !SECTIONS.includes(s)) SECTIONS.push(s); });
+  all.forEach(s => { if (!SECTIONS.includes(s)) SECTIONS.push(s); });
+}
+let pickDrag = null, pickSuppress = false;
+$("pickGrid").addEventListener("pointerdown", e => {
+  const card = e.target.closest(".pick"); if (!card || e.button > 0) return;
+  pickDrag = { card, x: e.clientX, y: e.clientY, on: false, t: setTimeout(() => {
+    if (!pickDrag) return; pickDrag.on = true; card.classList.add("lifted"); card.parentElement.classList.add("arranging");
+    try { card.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+    if (navigator.vibrate) try { navigator.vibrate(12); } catch { /* ignore */ }
+  }, LONG) };
+});
+$("pickGrid").addEventListener("pointermove", e => {
+  if (!pickDrag) return;
+  if (!pickDrag.on) { if (Math.hypot(e.clientX - pickDrag.x, e.clientY - pickDrag.y) > 10) { clearTimeout(pickDrag.t); pickDrag = null; } return; }
+  e.preventDefault();
+  const { card } = pickDrag, grid = card.parentElement;
+  card.style.transform = `translate(${e.clientX - pickDrag.x}px, ${e.clientY - pickDrag.y}px) scale(1.04)`;
+  // hit-test on layout boxes (not transformed ones, which are mid-slide)
+  const g = grid.getBoundingClientRect(), px = e.clientX - g.left, py = e.clientY - g.top;
+  const over = [...grid.children].find(c => c !== card && px >= c.offsetLeft && px <= c.offsetLeft + c.offsetWidth && py >= c.offsetTop && py <= c.offsetTop + c.offsetHeight);
+  if (over) {
+    const before = { left: card.offsetLeft, top: card.offsetTop };
+    const list = [...grid.children]; const after = list.indexOf(over) > list.indexOf(card);
+    // FLIP the siblings so they slide into place
+    const first = new Map(list.map(c => [c, [c.offsetLeft, c.offsetTop]]));
+    grid.insertBefore(card, after ? over.nextSibling : over);
+    list.forEach(c => { if (c === card) return; const [l, t] = first.get(c); if (l !== c.offsetLeft || t !== c.offsetTop) c.animate([{ transform: `translate(${l - c.offsetLeft}px, ${t - c.offsetTop}px)` }, { transform: "none" }], { duration: 180, easing: "cubic-bezier(.2,0,0,1)" }); });
+    pickDrag.x += card.offsetLeft - before.left; pickDrag.y += card.offsetTop - before.top;
+    card.style.transform = `translate(${e.clientX - pickDrag.x}px, ${e.clientY - pickDrag.y}px) scale(1.04)`;
+  }
+}, { passive: false });
+function endPickDrag() {
+  if (!pickDrag) return;
+  clearTimeout(pickDrag.t);
+  if (pickDrag.on) {
+    const { card } = pickDrag; card.classList.remove("lifted"); card.parentElement.classList.remove("arranging");
+    card.animate([{ transform: card.style.transform }, { transform: "none" }], { duration: 160, easing: "cubic-bezier(.2,0,0,1)" }); card.style.transform = "";
+    customOrder = [...$("pickGrid").querySelectorAll(".pick")].map(c => c.dataset.sec);
+    if (JSON.stringify(customOrder) === JSON.stringify(morpheOrder.filter(id => customOrder.includes(id)))) customOrder = null;
+    applyOrder(); store.save(); pickSuppress = true; setTimeout(() => { pickSuppress = false; }, 50);
+    const rb = document.querySelector("[data-order-reset]"); if (rb) rb.disabled = !customOrder;
+  }
+  pickDrag = null;
+}
+$("pickGrid").addEventListener("pointerup", endPickDrag);
+$("pickGrid").addEventListener("pointercancel", endPickDrag);
+$("pickGrid").addEventListener("contextmenu", e => { if (e.target.closest(".pick")) e.preventDefault(); });
 function setPicker(open) {
   pickerOpen = open;
   $("picker").classList.toggle("open", open); $("pickScrim").classList.toggle("open", open);
@@ -1633,8 +2050,9 @@ function renderStage() {
   const scene = SCENES[section];
   $("stick").hidden = !scene;
   if (!scene) { st.innerHTML = ""; return; }
-  const scrollers = [...st.querySelectorAll(".inner-scroll")].map(e => e.scrollTop);
-  const hscroll = [...st.querySelectorAll("[data-hs]")].map(e => e.scrollLeft);
+  const same = st.dataset.sec === section; st.dataset.sec = section;
+  const scrollers = same ? [...st.querySelectorAll(".inner-scroll")].map(e => e.scrollTop) : [];
+  const hscroll = same ? [...st.querySelectorAll("[data-hs]")].map(e => e.scrollLeft) : [];
   st.className = "stage" + (mode === "orig" ? " original" : "");
   st.innerHTML = scene().replace(/background:#0f0f0f/g, "background:var(--app-bg,#0f0f0f)");
   st.querySelectorAll(".finger").forEach(f => { if (!f.firstChild) f.innerHTML = I("gesture"); });
@@ -1652,11 +2070,13 @@ function stateChip(k) {
 }
 function summaryFor(k) { const p = PREF[k]; const v = V(k); if (p.type === "boolean") return (v ? p.summaryOn : p.summaryOff) || p.summary || ""; return p.summary || ""; }
 const RANGES = { font_size: [8, 48], travel_duration: [2, 15], width_dip: [100, 400], caption_scale: [50, 300], corner_radius: [0, 24], blur: [0, 100], smoothing: [0, 100], dim_duration: [0, 10] };
+const sameVal = (a, b) => String(a) === String(b) || (a !== "" && b !== "" && a != null && b != null && !isNaN(a) && !isNaN(b) && Number(a) === Number(b));
 function controlFor(k) {
   const p = PREF[k]; const v = V(k); const dis = !parentsOk(k) ? "disabled" : "";
-  const ents = entriesFor(k);
-  if (ents.length && ents.length <= 8) return `<div class="ctl">${ents.map(e => `<button class="opt" data-set="${k}" data-val="${esc(e.value)}" aria-pressed="${String(e.value) === String(v)}" ${dis}>${esc(e.label)}</button>`).join("")}</div>`;
-  if (ents.length) return `<div class="ctl"><select data-set="${k}" ${dis} aria-label="${esc(title(k))}">${ents.map(e => `<option value="${esc(e.value)}" ${String(e.value) === String(v) ? "selected" : ""}>${esc(e.label)}</option>`).join("")}</select></div>`;
+  const ents = entriesFor(k).filter(e => !(OFF_LIST.has(k) && e.value === "off"));
+  if (OFF_LIST.has(k) && String(v) === "off") return "";
+  if (ents.length && ents.length <= 8) return `<div class="ctl">${ents.map(e => `<button class="opt" data-set="${k}" data-val="${esc(e.value)}" aria-pressed="${sameVal(e.value, v)}" ${dis}>${esc(e.label)}</button>`).join("")}</div>`;
+  if (ents.length) return `<div class="ctl"><select data-set="${k}" ${dis} aria-label="${esc(title(k))}">${ents.map(e => `<option value="${esc(e.value)}" ${sameVal(e.value, v) ? "selected" : ""}>${esc(e.label)}</option>`).join("")}</select></div>`;
   if (p.type === "integer" || p.type === "float" || p.type === "long") {
     const r = Object.entries(RANGES).find(([n]) => k.includes(n));
     if (r || /opacity|scale|strength|display_area/.test(k)) {
@@ -1693,7 +2113,8 @@ function rowHTML(k, live) {
   const isBool = p.type === "boolean";
   const info = !p.type || p.type === "screen" || p.widget === "NonInteractivePreference" || p.widget === "IntentPreference";
   let right = "", ctl = "";
-  if (live && a.kind !== "scenario") { right = stateChip(k); if (!isBool) ctl = controlFor(k); }
+  if (OFF_LIST.has(k)) { right = `<button class="sw" role="switch" data-sw="${k}" aria-checked="${String(V(k)) !== "off"}" aria-label="${esc(title(k))}"></button>`; ctl = controlFor(k); }
+  else if (live && a.kind !== "scenario") { right = stateChip(k); if (!isBool) ctl = controlFor(k); }
   else if (isBool) right = `<button class="sw" role="switch" data-sw="${k}" aria-checked="${!!V(k)}" aria-label="${esc(title(k))}"></button>`;
   else if (!info) ctl = controlFor(k);
   const cls = ["row", live ? "live" : "fallback"];
@@ -1926,10 +2347,50 @@ function snack(msg, undo) {
 $("canvas").addEventListener("click", () => stopScenario());
 $("snackUndo").onclick = () => { if (undoFn) undoFn(); undoFn = null; $("snack").classList.remove("show"); };
 
-function highlight(k, flash = true) {
-  document.querySelectorAll(".sel").forEach(e => e.classList.remove("sel"));
+function highlight(k, flash = true, reveal = false) {
+  document.querySelectorAll(".sel").forEach(e => e.classList.remove("sel", "selin"));
   document.querySelectorAll(`[data-k="${k}"], [data-row="${k}"], [data-also="${k}"]`).forEach(e => e.classList.add("sel"));
-  if (flash) document.querySelectorAll(`#stage [data-k="${k}"], #stage [data-also="${k}"]`).forEach(e => { e.classList.remove("flash"); void e.offsetWidth; e.classList.add("flash"); setTimeout(() => e.classList.remove("flash"), 520); });
+  const els = [...document.querySelectorAll(`#stage [data-k="${k}"], #stage [data-also="${k}"]`)];
+  const finish = () => els.forEach(e => {
+    fitOutline(e);
+    if (flash) { e.classList.remove("flash"); void e.offsetWidth; e.classList.add("flash"); setTimeout(() => e.classList.remove("flash"), 520); }
+  });
+  if (!reveal) return finish();
+  // wait a frame so a ghost-revealed (collapsed) element has a size before scrolling to it
+  setTimeout(() => { if (selected !== k) return; const live = [...document.querySelectorAll(`#stage [data-k="${k}"], #stage [data-also="${k}"]`)]; els.splice(0, els.length, ...live); setTimeout(finish, revealInStage(live) ? 340 : 0); }, 60);
+}
+// Scrollable boxes inside the preview (feeds, action bars, chip rows) scroll so the selected
+// element is centred before it flashes. Works for overflow:hidden strips too.
+function scrollBoxes(el) {
+  const out = [], stage = $("stage");
+  for (let p = el.parentElement; p && p !== stage; p = p.parentElement) {
+    const cs = getComputedStyle(p);
+    const sx = !p.classList.contains("inner-scroll") && p.scrollWidth > p.clientWidth + 1 && p.scrollHeight <= p.clientHeight + 1 && /auto|scroll|hidden/.test(cs.overflowX);
+    const sy = p.scrollHeight > p.clientHeight + 1 && /auto|scroll|hidden/.test(cs.overflowY);
+    if (sx || sy) out.push([p, sx, sy]);
+  }
+  return out;
+}
+function revealInStage(els) {
+  let moved = false;
+  els.filter(e => e.offsetParent || e.getClientRects().length).slice(0, 1).forEach(el => {
+    scrollBoxes(el).forEach(([box, sx, sy]) => {
+      const r = el.getBoundingClientRect(), b = box.getBoundingClientRect();
+      let dx = 0, dy = 0;
+      if (sx && (r.left < b.left + 4 || r.right > b.right - 4)) dx = (r.left + r.width / 2) - (b.left + b.width / 2);
+      if (sy && (r.top < b.top + 4 || r.bottom > b.bottom - 4)) dy = (r.top + Math.min(r.height, b.height) / 2) - (b.top + b.height / 2);
+      if (dx || dy) { box.scrollBy({ left: dx, top: dy, behavior: "smooth" }); moved = true; }
+    });
+  });
+  return moved;
+}
+// The selection outline sits outside the element; when that would be clipped by the preview edge,
+// draw it inside instead.
+function fitOutline(el) {
+  let clip = $("stage");
+  for (let p = el.parentElement; p && p !== $("stage"); p = p.parentElement) { const cs = getComputedStyle(p); if (cs.overflowX !== "visible" || cs.overflowY !== "visible") { clip = p; break; } }
+  const r = el.getBoundingClientRect(), b = clip.getBoundingClientRect();
+  el.classList.toggle("selin", r.left < b.left + 4 || r.right > b.right - 4 || r.top < b.top + 4);
 }
 function scrollRowIntoView(k, center) {
   const row = document.querySelector(`[data-row="${k}"]`); if (!row) return;
@@ -1948,14 +2409,12 @@ function select(k, from) {
     if (CUSTOM_KEYS.has(k) || CUSTOM_KEYS.has(prevSel)) renderStage();
   }
   if (section === "endscreen" && (ENDSCREEN_SEL.has(k) || ENDSCREEN_SEL.has(prevSel))) renderStage();
-  highlight(k);
+  if (section === "shorts" && (SHORTS_SHEET.has(k) || SHORTS_SHEET.has(prevSel))) renderStage();
+  if (section === "feed" && (k === "morphe_feed_card_layout" || prevSel === "morphe_feed_card_layout")) renderStage();
+  if (section === "captions" && (k === "morphe_secondary_caption_language" || prevSel === "morphe_secondary_caption_language")) renderStage();
+  highlight(k, true, from !== "stage");
   renderInspector();
   if (from === "stage") scrollRowIntoView(k);
-  if (from === "list") {
-    const el = document.querySelector(`#stage [data-k="${k}"]`);
-    const box = el && el.closest(".inner-scroll");
-    if (el && box) { const r = el.getBoundingClientRect(), b = box.getBoundingClientRect(); if (r.top < b.top || r.bottom > b.bottom) box.scrollBy({ top: r.top - b.top - 40, behavior: "smooth" }); }
-  }
   if (from === "list" && mode === "mod" && A[k] && (A[k].kind === "vis" || A[k].kind === "overlay") && !shown(k) && document.querySelector(`#stage [data-k="${k}"]`)) ghost(k);
   if (DEMOS[k]) startDemo(k); else stopDemo();
   if (SCN[k] && from) playScenario(k); else if (from && k !== prevSel) stopScenario();
@@ -1991,14 +2450,25 @@ function ghost(k) {
   ghostTimers.set(k, [t1]);
 }
 
+// Settings with a value (number, colour, text) can't flip on a hold: jump to their control instead.
+function focusControl(k) {
+  if (selected !== k) select(k);
+  scrollRowIntoView(k);
+  const row = document.querySelector(`[data-row="${k}"]`); if (!row) return;
+  const ctl = row.querySelector("input,select,textarea,button.opt");
+  row.classList.remove("nudge"); void row.offsetWidth; row.classList.add("nudge");
+  if (ctl) setTimeout(() => ctl.focus({ preventScroll: true }), 250);
+}
 function toggle(k) {
   const p = PREF[k];
   if (mode === "orig") setMode("mod");
   if (!parentsOk(k)) { pointToParents(k); snack(needText(k)); return; }
   const before = state[k];
-  if (p.type === "boolean") state[k] = !state[k];
+  if (OFF_LIST.has(k)) { if (String(state[k]) === "off") state[k] = offListPick[k] || entriesFor(k).find(e => e.value !== "off" && e.value !== "en").value; else { offListPick[k] = state[k]; state[k] = "off"; } }
+  else if (p.type === "boolean") state[k] = !state[k];
+  else if (entriesFor(k).length && !p.entries) { const vals = entriesFor(k).map(e => e.value); const i = vals.findIndex(x => String(x) === String(state[k]) || Number(x) === Number(state[k])); state[k] = coerce(k, vals[(i + 1) % vals.length]); }
   else if (p.entries && p.entries.length) { const vals = entriesFor(k).map(e => e.value); const i = vals.indexOf(String(state[k])); state[k] = coerce(k, vals[(i + 1) % vals.length]); }
-  else { snack("Use the control in the list to change this one"); return; }
+  else { focusControl(k); return; }
   const visual = A[k] && (A[k].kind === "vis" || A[k].kind === "overlay");
   const wasShown = visual ? (isHideKey(k) ? !before : !!before) : null;
   const wasGhost = ghosts.has(k) || fading.has(k);
@@ -2091,21 +2561,44 @@ function goToSetting(k, after) {
 // press handling (tap vs hold), shared by stage and list
 let press = null, lastTap = null;
 const LONG = 480;
+// Mouse drag scrolls the preview's feeds and strips, like a finger would on the phone.
+let drag = null;
+function scrollTargets(t) {
+  const out = []; const stage = $("stage");
+  for (let p = t; p && p !== stage && p.nodeType === 1; p = p.parentElement) {
+    const cs = getComputedStyle(p);
+    if (!p.classList.contains("inner-scroll") && p.scrollWidth > p.clientWidth + 1 && /auto|scroll/.test(cs.overflowX)) out.push([p, "x"]);
+    if (p.scrollHeight > p.clientHeight + 1 && /auto|scroll/.test(cs.overflowY)) out.push([p, "y"]);
+  }
+  return out;
+}
 function down(e) {
   if (e.button > 0) return;
+  if (e.pointerType === "mouse" && e.target.closest("#stage")) drag = { x: e.clientX, y: e.clientY, t: e.target, on: false };
   if (e.target.closest("input,select,textarea,button.opt,.sw,.goto,.kidbtn,.replay,[data-tray]")) return;
   const el = e.target.closest("[data-k]"); if (!el) return;
   const k = el.dataset.k; const from = el.closest("#stage") ? "stage" : "list";
   el.classList.add("pressing");
   if (from === "stage" && el.classList.contains("off")) { (ghostTimers.get(k) || []).forEach(clearTimeout); ghostTimers.delete(k); el.classList.remove("ghost-out"); el.classList.add("charging"); }
   press = { el, k, from, x: e.clientX, y: e.clientY, long: false };
-  press.t = setTimeout(() => { if (!press) return; press.long = true; el.classList.remove("pressing"); toggle(k); }, LONG);
+  // holding a preview element brings its setting into view while the hold is still charging
+  if (from === "stage") press.peek = setTimeout(() => { if (!press || press.k !== k) return; document.querySelectorAll(".row.sel").forEach(r => r.classList.remove("sel")); document.querySelector(`[data-row="${k}"]`)?.classList.add("sel"); scrollRowIntoView(k); }, 160);
+  press.t = setTimeout(() => { if (!press) return; press.long = true; el.classList.remove("pressing"); if (from === "stage" && selected !== k) { selected = k; highlight(k, false); renderInspector(); } toggle(k); if (from === "stage") setTimeout(() => scrollRowIntoView(k), 30); }, LONG);
 }
-function cancelPress() { if (press) { clearTimeout(press.t); press.el.classList.remove("pressing", "charging"); press = null; } }
-function move(e) { if (press && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 10) cancelPress(); }
+function cancelPress() { if (press) { clearTimeout(press.t); clearTimeout(press.peek); press.el.classList.remove("pressing", "charging"); press = null; } }
+function move(e) {
+  if (press && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 10) cancelPress();
+  if (!drag || !(e.buttons & 1)) { drag = null; return; }
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  if (!drag.on && Math.hypot(dx, dy) < 8) return;
+  if (!drag.on) { drag.on = true; const ts = scrollTargets(drag.t); drag.box = (ts.find(([, ax]) => ax === (Math.abs(dx) > Math.abs(dy) ? "x" : "y")) || ts[0] || [null])[0]; $("stage").classList.add("dragging"); }
+  if (drag.box) { drag.box.scrollLeft -= dx; drag.box.scrollTop -= dy; }
+  drag.x = e.clientX; drag.y = e.clientY;
+}
+document.addEventListener("pointerup", () => { if (drag) { drag = null; $("stage").classList.remove("dragging"); } });
 function up() {
   if (!press) return;
-  clearTimeout(press.t); press.el.classList.remove("pressing", "charging");
+  clearTimeout(press.t); clearTimeout(press.peek); press.el.classList.remove("pressing", "charging");
   const { k, from, long } = press; press = null;
   if (long) return;
   const now = performance.now();
@@ -2130,8 +2623,12 @@ $("stage").addEventListener("click", e => {
 });
 // mouse wheel scrolls horizontal strips (action bars, chips)
 $("app").addEventListener("wheel", e => {
-  const h = e.target.closest('[style*="overflow-x:auto"], .picker');
-  if (h && !h.classList.contains("picker") && Math.abs(e.deltaY) > Math.abs(e.deltaX) && h.scrollWidth > h.clientWidth) { h.scrollLeft += e.deltaY; e.preventDefault(); }
+  if (!e.target.closest("#stage") || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+  const ts = scrollTargets(e.target);
+  const y = ts.find(([b, ax]) => ax === "y" && (e.deltaY > 0 ? b.scrollTop + b.clientHeight < b.scrollHeight - 1 : b.scrollTop > 0));
+  if (y) return; // native vertical scroll
+  const x = ts.find(([, ax]) => ax === "x");
+  if (x) { x[0].scrollLeft += e.deltaY; e.preventDefault(); }
 }, { passive: false });
 $("list").addEventListener("keydown", e => {
   const row = e.target.closest("[data-row]"); if (!row || e.target !== row) return;
@@ -2184,7 +2681,14 @@ $("list").addEventListener("change", e => {
 $("secPill").onclick = () => setPicker(!pickerOpen);
 $("pickScrim").onclick = () => setPicker(false);
 $("pickGrid").addEventListener("click", e => {
+  if (pickSuppress) return;
   if (e.target.closest("[data-theme-toggle]")) { theme = theme === "m3" ? "yt" : "m3"; applyTheme(); renderBar(); store.save(); return; }
+  if (e.target.closest("[data-order-reset]")) {
+    openDialog(`<div class="di">${I("reset")}</div><h2 id="dlgTitle">Reset screen order?</h2><p>The screens go back to Morphe's own order. Your settings are not changed.</p><div class="acts"><button class="dbtn primary" data-dlg-ok>Reset</button><button class="dbtn tonal" data-dlg-cancel>Cancel</button></div>`);
+    $("dlgBox").querySelector("[data-dlg-cancel]").onclick = closeDialog;
+    $("dlgBox").querySelector("[data-dlg-ok]").onclick = () => { customOrder = null; applyOrder(); renderBar(); store.save(); closeDialog(); snack("Screens are back in Morphe's order"); };
+    return;
+  }
   const b = e.target.closest("[data-sec]"); if (!b) return; setPicker(false); returnTo = null; switchSection(b.dataset.sec); });
 document.addEventListener("keydown", e => { if (e.key === "Escape") { setPicker(false); closeDialog(); if (searching) { query = ""; setSearch(false); } } });
 function setMode(m) {
@@ -2353,6 +2857,7 @@ function tick() { const d = new Date(); $("clock").textContent = `${d.getHours()
 async function boot() {
   try { const r = await fetch("catalogue.json"); CAT = await r.json(); }
   catch (err) { $("list").innerHTML = `<div class="secnote" style="padding:20px 16px">Could not load catalogue.json. Serve this folder over HTTP (for example <code>python3 -m http.server</code>) and reload.</div>`; return; }
+  CAT.preferences.push(...SB_CATS.map(([k, t, d]) => ({ key: "morphe_sb_" + k, title: t, summary: "What SponsorBlock does with this kind of segment", widget: "ListPreference", type: "string", default: d, rebootApp: false, parents: [{ key: "morphe_sb_enabled", mode: "all" }], customAvailability: [], screen: "SPONSORBLOCK", subScreen: null, synthetic: true, entries: SB_BEHAVIOUR })).filter(p => !CAT.preferences.some(x => x.key === p.key)));
   for (const p of CAT.preferences) { PREF[p.key] = p; defaults[p.key] = initialValue(p); }
   Object.assign(state, defaults);
   const saved = store.load();
@@ -2373,12 +2878,14 @@ async function boot() {
   $("ytVer").innerHTML = YT_VERSIONS.map(v => `<option value="${v}" ${v === ytVersion ? "selected" : ""}>${v}${YT_EXPERIMENTAL.has(v) ? " (experimental)" : ""}</option>`).join("");
   $("ytVer").onchange = e => { ytVersion = e.target.value; applyVersion(); trayOpen = false; buildMembers(); commit(); };
   buildMembers();
+  if (Array.isArray(saved.order)) customOrder = saved.order;
+  applyOrder();
   renderAll();
   if (window.innerWidth > 860) applyDevice(); else $("devBtns").innerHTML = "";
   tick(); setInterval(tick, 30000);
   let seen = false; try { seen = localStorage.getItem(LS + "-tutorial") === "1"; } catch { /* storage unavailable */ }
   if (!seen) runTutorial();
 }
-store.save = function () { try { localStorage.setItem(LS, JSON.stringify({ state: changedOnly(), section, device: device_, yt: ytVersion, theme })); localStorage.setItem(LS + "-baseline", JSON.stringify(baseline)); } catch { /* storage unavailable */ } };
+store.save = function () { try { localStorage.setItem(LS, JSON.stringify({ state: changedOnly(), section, device: device_, yt: ytVersion, theme, order: customOrder })); localStorage.setItem(LS + "-baseline", JSON.stringify(baseline)); } catch { /* storage unavailable */ } };
 boot();
 })();

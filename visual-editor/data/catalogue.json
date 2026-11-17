@@ -4567,7 +4567,37 @@
    "patch": "Custom branding",
    "patchDescription": "Adds options to change the app icon and app name. For mounted (root) installations the branding is applied while patching, because it cannot be changed from the app settings.",
    "sourceFile": "patches/src/main/kotlin/app/morphe/patches/shared/layout/branding/BaseCustomBrandingPatch.kt",
-   "locationConfidence": "factory"
+   "locationConfidence": "factory",
+   "entries": [
+    {
+     "label": "Original",
+     "value": "ORIGINAL"
+    },
+    {
+     "label": "Morphe black",
+     "value": "BLACK"
+    },
+    {
+     "label": "Morphe dark",
+     "value": "DARK"
+    },
+    {
+     "label": "Morphe light",
+     "value": "LIGHT"
+    },
+    {
+     "label": "Morphe play light",
+     "value": "PLAY"
+    },
+    {
+     "label": "Morphe play black",
+     "value": "PLAY_BLACK"
+    },
+    {
+     "label": "Custom",
+     "value": "CUSTOM"
+    }
+   ]
   },
   {
    "key": "morphe_custom_branding_name",
@@ -5557,7 +5587,29 @@
    "patch": null,
    "patchDescription": null,
    "sourceFile": "patches/src/main/kotlin/app/morphe/patches/youtube/layout/theme/SplashAnimationPatch.kt",
-   "locationConfidence": "variable"
+   "locationConfidence": "variable",
+   "entries": [
+    {
+     "label": "Disabled",
+     "value": "DISABLED"
+    },
+    {
+     "label": "Color",
+     "value": "FPS_60_ONE_SECOND"
+    },
+    {
+     "label": "Monochrome",
+     "value": "FPS_60_BLACK_AND_WHITE"
+    },
+    {
+     "label": "Morphe Color",
+     "value": "MORPHE_COLOR"
+    },
+    {
+     "label": "Morphe Monochrome",
+     "value": "MORPHE_MONOCHROME"
+    }
+   ]
   },
   {
    "key": "morphe_spoof_app_version",

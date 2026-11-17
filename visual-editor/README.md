@@ -98,3 +98,14 @@ place instead of opening the 13-button tray. The YouTube look follows Morphe's o
 (AMOLED black, Catppuccin and so on). Screens without a preview sit in a separate "No preview" group in
 the screen menu. Seekbar & gestures gains custom thumb, thumbnail preview, gesture hint and live DVR
 animations.
+
+Round 7 is a pass over every screen. Picking a setting scrolls its element into view inside the
+preview (feeds, sheets and button strips) before it flashes, and the outline is drawn inside when the
+element touches the preview edge. The preview scrolls with mouse drag and wheel. Holding a preview
+element brings its setting into view while the hold charges. Sub-options nest: a sub-sub-option hides
+with its own parent, and `MANUAL_PARENT` adds the few dependencies Morphe does not declare (Create
+button vs the swap, navigation bar style vs the glass bar). The screen menu follows Morphe's order, can
+be rearranged by holding a card, and has Reset order. Lists Morphe builds at runtime (caption
+languages, custom speeds, SponsorBlock segment categories) get representative entries. Playback,
+DeArrow and the Description sheet have real previews, and new scenarios cover copying and searching
+comments, channel search, text selection, the share sheet, Open Shorts with and pinch to zoom.
