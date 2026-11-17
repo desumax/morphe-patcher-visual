@@ -140,28 +140,22 @@ button { font: inherit; color: inherit; }
 .c.sel { outline: 2px solid var(--yt-blue); outline-offset: 2px; border-radius: 6px; z-index: 20; }
 .c.shade.sel { outline-offset: -3px; border-radius: 0; z-index: 0; }
 .c.off { opacity: 0; }
-.slots .c.off { opacity: 1; outline: 1.5px dashed rgba(255,255,255,.35); outline-offset: 1px; border-radius: 6px; }
-.slots .c.off > * { visibility: hidden; }
-.slots .c.off.blk { height: 18px !important; min-height: 0 !important; overflow: hidden; padding: 0 !important; margin-block: 2px; }
-.slots .c.off.blk::before { content: attr(data-label) " · hidden"; visibility: visible; position: absolute; inset: 0; font-size: 10.5px; color: rgba(255,255,255,.55); display: flex; align-items: center; padding-left: 8px; }
-.noslots .c.off { display: none; }
+/* Hidden components collapse, like Morphe's filters remove them from the real layout. */
+.c.off:not(.ghost):not(.charging):not(.intray):not(.leaving) { display: none; }
+.c.sizing { overflow: hidden; }
 .c.ghost { opacity: .6 !important; outline: 1.5px dashed var(--yt-red) !important; display: revert; animation: ghostin var(--dur) var(--ease); }
 .c.ghost > * { visibility: visible !important; }
 .c.ghost-out { opacity: 0 !important; transition: opacity 450ms var(--ease) !important; animation: none; }
 @keyframes ghostin { from { opacity: 0; } }
-.slots .c.off.blk.ghost { height: auto !important; padding: revert !important; }
-.slots .c.off.blk.ghost::before { content: none; }
 .c.intray { opacity: .55; outline: 1.5px dashed rgba(255,255,255,.5); outline-offset: 1px; border-radius: 8px; }
 .c.intray > * { visibility: visible !important; }
 .c.intray.ghost { opacity: 1 !important; }
 .c.off.charging > * { visibility: visible !important; animation: chargein .48s linear forwards; }
 .c.ghost.charging > * { animation: none; }
 .c.ghost.charging { animation: none; }
-.noslots .c.off.charging { display: revert; }
 @keyframes chargein { from { opacity: 0; } to { opacity: .6; } }
 .c.reveal { animation: revealk .34s var(--ease); }
 @keyframes revealk { from { opacity: .6; } to { opacity: 1; } }
-.slots .c.off.conceal > * { animation: concealk .32s var(--ease) forwards; }
 @keyframes concealk { from { opacity: 1; visibility: visible; } to { opacity: 0; visibility: visible; } }
 .c.pressing::after { content: ""; position: absolute; inset: -4px; border-radius: 10px; border: 2px solid var(--yt-red); animation: press .48s linear forwards; pointer-events: none; }
 @keyframes press { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
@@ -334,14 +328,12 @@ button { font: inherit; color: inherit; }
 .tut h2 { margin: 0; font-size: 22px; font-weight: 500; text-align: center; color: var(--m-on); }
 .tut .tsub { margin: -10px 0 0; font-size: 13px; color: var(--m-on-var); text-align: center; }
 .tut .tstage { position: relative; width: 300px; max-width: 100%; aspect-ratio: 16/9; border-radius: var(--r-l); overflow: hidden; background: linear-gradient(180deg,#2b4c7e 0%,#5a7fb5 55%,#2f5233 56%,#1d3320 100%); box-shadow: 0 0 0 1px #333; }
-.tut .tbtns { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; }
-.tut .tb { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: rgba(0,0,0,.35); transition: opacity 300ms var(--ease), outline-color 200ms; outline: 2px solid transparent; outline-offset: 2px; }
+.tut .tbtns { position: absolute; top: 10px; right: 10px; display: flex; }
+.tut .tb { width: 40px; height: 40px; margin-left: 6px; border-radius: 50%; display: grid; place-items: center; background: rgba(0,0,0,.35); transition: opacity 280ms var(--ease), width 280ms var(--ease), margin 280ms var(--ease), outline-color 200ms; outline: 2px solid transparent; outline-offset: 2px; position: relative; }
 .tut .tb svg { width: 24px; height: 24px; fill: #fff; }
 .tut .tb.sel { outline-color: var(--yt-blue); }
-.tut .tb.off { opacity: 0; }
-.tut .tb.slot { opacity: 1; background: transparent; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.5); border-radius: 10px; }
-.tut .tb.slot svg { opacity: 0; }
-.tut .tb.peek svg { opacity: .6; transition: opacity 300ms; }
+.tut .tb.off { opacity: 0; width: 0; margin-left: 0; outline-color: transparent; }
+.tut .tb.ghost { opacity: .6; outline: 1.5px dashed var(--yt-red); }
 .tut .tring { position: absolute; inset: -5px; border-radius: 50%; border: 2px solid var(--yt-red); clip-path: inset(0 100% 0 0); }
 .tut .tring.go { animation: press .48s linear forwards; }
 .tut .steps { display: flex; gap: 2px; }
@@ -420,7 +412,7 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
             <div class="content" id="content">
               <div class="stick" id="stick">
                 <div class="stagebox"><div class="stage" id="stage"></div><div class="canvas" id="canvas"></div></div>
-                <div class="ptools"><span class="hint" id="hint">Tap to select · hold to switch</span><label><input type="checkbox" id="slots" checked> Show hidden slots</label></div>
+                <div class="ptools"><span class="hint" id="hint">Tap to select · hold to switch</span></div>
               </div>
               <div class="list" id="list"></div>
             </div>
@@ -445,7 +437,7 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
       <div class="howto">
         <div><b>Tap</b> a component to select it. Animated settings play their demo.</div>
         <div><b>Hold</b> it to switch the setting. Hold again to switch it back.</div>
-        <div><b>Tap a hidden component</b> to see it for a moment without changing the setting.</div>
+        <div><b>Hidden components</b> collapse, as they do in the real app. Tap a hidden setting's row to see it for a moment without changing it.</div>
         <div><b>Original</b> shows stock YouTube. <b>Morphe</b> shows your settings.</div>
       </div>
       <div class="btnrow"><button class="btn" id="replayTut">Replay first-run tutorial</button></div>

@@ -254,7 +254,8 @@ function stockOf(k) {
 }
 const V = k => (mode === "orig" ? stockOf(k) : state[k]);
 function shown(k) { const v = V(k); return isHideKey(k) ? !v : !!v; }
-function parentsOk(k) {
+function parentsOk(k) { return classicParentsOk(k) && availOk(k); }
+function classicParentsOk(k) {
   const p = PREF[k]; if (!p || !p.parents || !p.parents.length) return true;
   const any = p.parents.filter(x => x.mode === "any");
   const rest = p.parents.filter(x => x.mode !== "any");
@@ -280,7 +281,7 @@ function C(k, inner, o = {}) {
   if (o.cls) cls.push(o.cls);
   if (a && (a.kind === "vis" || a.kind === "overlay") && !shown(full)) cls.push("off");
   if (ghosts.has(full)) cls.push("ghost");
-  if (fading.has(full)) cls.push("ghost", "ghost-out");
+  if (fading.has(full)) cls.push("ghost", "leaving");
   if (selected === full || (o.also && selected === "morphe_" + o.also)) cls.push("sel");
   return `<${o.tag || "div"} class="${cls.join(" ")}" data-k="${full}" ${o.also ? `data-also="morphe_${o.also}"` : ""} data-label="${esc(title(full))}" style="${o.style || ""}">${inner}</${o.tag || "div"}>`;
 }
@@ -915,29 +916,44 @@ const YT_EXPERIMENTAL = new Set(["21.45.82", "21.44.528", "21.43.523"]);
 let ytVersion = YT_VERSIONS[0];
 const vNum = v => v.split(".").slice(0, 2).map(Number);
 const ytAtLeast = (maj, min) => { const [a, b] = vNum(ytVersion); return a > maj || (a === maj && b >= min); };
-const VERSIONED = {
-  morphe_miniplayer_type: {
-    def: () => ytAtLeast(21, 29) ? "MODERN_4" : "DEFAULT",
-    allowed: () => ytAtLeast(21, 29) ? ["DISABLED", "MODERN_4", "MINIMAL", "MINIMAL_BAR_2"] : null,
-  },
-  morphe_video_action_bar_layout: { def: () => ytAtLeast(21, 36) ? "DEFAULT" : "CLASSIC", allowed: () => ytAtLeast(21, 36) ? null : ["CLASSIC", "CLASSIC_TWO_ROWS", "MINIMAL"] },
-};
+// Everything below is driven by the catalogue, so new version checks in Morphe show up here
+// after regenerating it: "when" (preference only registered on some versions), "entryVariants"
+// (list entries that differ by version), "versionDefault" (default that differs by version) and
+// "availability" (Setting.Availability rules, which can also depend on the version).
+const ytV = (maj, min) => ytAtLeast(maj, min);
+const unknownAssume = name => !/spoof/i.test(name); // device checks pass; "is spoofing" checks do not
+const compiled = new Map();
+function evalRule(expr, getter) {
+  if (!expr) return true;
+  let fn = compiled.get(expr);
+  if (fn === undefined) { try { fn = new Function("S", "V", "U", `return (${expr});`); } catch { fn = null; } compiled.set(expr, fn); }
+  if (!fn) return true;
+  try { return !!fn(getter, ytV, unknownAssume); } catch { return true; }
+}
+const inVersion = k => { const p = PREF[k]; return !p || evalRule(p.when, () => null); };
+const availOk = k => { const p = PREF[k]; return !p || !p.availability || evalRule(p.availability, x => (x in PREF ? V(x) : null)); };
 function entriesFor(k) {
-  const p = PREF[k]; const list = p.entries || [];
-  const r = VERSIONED[k]; const allow = r && r.allowed && r.allowed();
-  return allow ? list.filter(e => allow.includes(e.value)) : list;
+  const p = PREF[k];
+  const v = (p.entryVariants || []).find(x => evalRule(x.when, () => null));
+  return v ? v.entries : (p.entries || []);
 }
+function versionDefault(k) { const d = PREF[k].versionDefault; return d ? (evalRule(d.when, () => null) ? d.then : d.else) : undefined; }
 function applyVersion() {
-  for (const k in VERSIONED) {
-    if (!PREF[k]) continue;
-    const nd = VERSIONED[k].def();
-    const allow = VERSIONED[k].allowed && VERSIONED[k].allowed();
-    if (state[k] === defaults[k] || (allow && !allow.includes(state[k]))) state[k] = nd;
-    if (baseline[k] === defaults[k] || (allow && !allow.includes(baseline[k]))) baseline[k] = nd;
-    defaults[k] = nd;
-    STOCK[k] = nd;
+  for (const k in PREF) {
+    const p = PREF[k];
+    const nd = versionDefault(k);
+    const vals = entriesFor(k).map(e => e.value);
+    const target = nd !== undefined ? nd : defaults[k];
+    const fix = v => (v === defaults[k] ? target : (vals.length && !vals.includes(String(v)) ? (vals.includes(String(target)) ? target : vals[0]) : v));
+    if (nd !== undefined || (p.entryVariants && vals.length)) {
+      state[k] = coerceVal(k, fix(state[k])); baseline[k] = coerceVal(k, fix(baseline[k]));
+      defaults[k] = coerceVal(k, vals.length && !vals.includes(String(target)) ? vals[0] : target);
+      if (nd !== undefined) STOCK[k] = defaults[k];
+    }
   }
+  if (selected && !inVersion(selected)) selected = null;
 }
+function coerceVal(k, v) { const t = PREF[k].type; return (t === "integer" || t === "long" || t === "float") && v !== "" && v != null ? Number(v) : v; }
 
 // ------------------------------------------------------------------ watch page, per action bar layout
 SCENES.watch = () => {
@@ -992,7 +1008,7 @@ SCENES.miniplayer = () => {
   const pos = docked ? "right:0;bottom:52px" : "right:10px;bottom:62px";
   let mini = "";
   if (type === "DISABLED") mini = `<div class="demo-label" style="top:auto;bottom:66px;left:12px">Miniplayer disabled: closing the player stops the video</div>`;
-  else if (type === "DEFAULT" || type === "MINIMAL" || type === "MINIMAL_BAR_2") {
+  else if (type === "DEFAULT" || type === "MINIMAL" || type === "MINIMAL_BAR" || type === "MINIMAL_BAR_2") {
     // Bar miniplayers: a strip above the navigation bar.
     const minimal = type !== "DEFAULT";
     const bar2 = type === "MINIMAL_BAR_2";
@@ -1008,7 +1024,7 @@ SCENES.miniplayer = () => {
       MODERN_2: `<div style="position:absolute;inset:0;background:linear-gradient(rgba(0,0,0,.55),transparent 40%,transparent 60%,rgba(0,0,0,.55));padding:4px"><div style="display:flex;justify-content:space-between">${ic("full", 18)}${ic("close", 18)}</div><div style="position:absolute;left:0;right:0;bottom:6px;display:flex;justify-content:center;gap:18px">${ic("reload", 18)}${ic("pause", 22)}${ic("reload", 18).replace("<svg", '<svg style="transform:scaleX(-1)"')}</div></div>`,
       MODERN_3: `<div style="position:absolute;right:4px;top:4px;display:flex;gap:6px;background:rgba(0,0,0,.45);border-radius:12px;padding:2px 6px">${ic("pause", 18)}${ic("close", 18)}</div>`,
       MODERN_4: `<div style="position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.25)"><div style="width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,.55);display:grid;place-items:center">${ic("pause", 24)}</div><div style="position:absolute;right:4px;top:4px">${ic("close", 18)}</div><div style="position:absolute;left:4px;top:4px">${ic("full", 18)}</div></div>`,
-    }[type] || "";
+    }[type === "TABLET" ? "MODERN_1" : type] || "";
     const below = type === "MODERN_3" ? `<div style="display:flex;align-items:center;gap:6px;padding:6px 8px">${ttl()}</div>` : type === "MODERN_2" ? `<div style="padding:4px 8px 6px">${ttl()}</div>` : "";
     mini = `<div class="mini" style="position:absolute;${pos};width:${w}px;opacity:${op};${type === "MODERN_2" || type === "MODERN_3" ? surface + ";" : ""}border-radius:${docked ? `${radius}px 0 0 0` : radius + "px"};overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.6)">
       <div style="position:relative">${thumb(0, "border-radius:0")}${C("miniplayer_hide_overlay_buttons", ov, { style: "position:absolute;inset:0" })}${prog}</div>
@@ -1398,9 +1414,9 @@ function buildMembers() {
   MEMBERS = {};
   SECTIONS.forEach(s => (MEMBERS[s.id] = { live: [], misc: [] }));
   const assigned = new Set();
-  for (const k in A) if (PREF[k] && MEMBERS[A[k].section]) { MEMBERS[A[k].section].live.push(k); assigned.add(k); }
+  for (const k in A) if (PREF[k] && MEMBERS[A[k].section] && inVersion(k)) { MEMBERS[A[k].section].live.push(k); assigned.add(k); }
   for (const p of CAT.preferences) {
-    if (assigned.has(p.key)) continue;
+    if (assigned.has(p.key) || !inVersion(p.key)) continue;
     const s = SECTIONS.find(s => s.scopes && inScope(p, s.scopes));
     (s ? MEMBERS[s.id].misc : MEMBERS.misc.misc).push(p.key);
   }
@@ -1430,14 +1446,16 @@ function setPicker(open) {
   $("secPill").setAttribute("aria-expanded", String(open));
 }
 
+let stageHold = 0;
 function renderStage() {
+  if (stageHold) return;
   const st = $("stage");
   const scene = SCENES[section];
   $("stick").hidden = !scene;
   if (!scene) { st.innerHTML = ""; return; }
   const scrollers = [...st.querySelectorAll(".inner-scroll")].map(e => e.scrollTop);
   const hscroll = [...st.querySelectorAll("[data-hs]")].map(e => e.scrollLeft);
-  st.className = "stage " + (showSlots ? "slots" : "noslots") + (mode === "orig" ? " original" : "");
+  st.className = "stage" + (mode === "orig" ? " original" : "");
   st.innerHTML = scene();
   st.querySelectorAll(".finger").forEach(f => { if (!f.firstChild) f.innerHTML = I("gesture"); });
   st.querySelectorAll(".inner-scroll").forEach((e, i) => { if (scrollers[i]) e.scrollTop = scrollers[i]; });
@@ -1474,7 +1492,18 @@ function controlFor(k) {
   }
   return "";
 }
-function needText(k) { return PREF[k].parents.map(x => `“${esc(title(x.key))}” ${x.mode === "not" ? "off" : "on"}`).join(", "); }
+function needText(k) {
+  if (!classicParentsOk(k)) return "Needs " + PREF[k].parents.map(x => `“${esc(title(x.key))}” ${x.mode === "not" ? "off" : "on"}`).join(", ");
+  const ap = (PREF[k].availabilityParents || []).filter(x => PREF[x]);
+  return ap.length ? `Not available with the current ${ap.map(x => `“${esc(title(x))}”`).join(", ")}` : "Not available here";
+}
+// The setting to visit so that k becomes available.
+function blockerOf(k) {
+  const p = PREF[k];
+  if (!classicParentsOk(k)) return (p.parents.find(x => x.mode === "not" ? !!state[x.key] : !state[x.key]) || p.parents[0]).key;
+  return (p.availabilityParents || []).find(x => PREF[x] && inVersion(x)) || null;
+}
+const dependsOn = (k, parent) => PREF[k].parents.some(x => x.key === parent) || (PREF[k].availabilityParents || []).includes(parent);
 
 function rowHTML(k, live) {
   const p = PREF[k]; const a = A[k]; const kind = live ? (a.kind === "scenario" ? "behaviour" : a.kind) : "fallback";
@@ -1491,7 +1520,7 @@ function rowHTML(k, live) {
   if (dis) cls.push("dis");
   if (live && (a.kind === "vis" || a.kind === "overlay") && !shown(k)) cls.push("offstate");
   const sum = info ? (p.summary || (p.type === "screen" ? "Opens a sub-screen in Morphe settings" : "Information")) : summaryFor(k);
-  const need = dis ? `<div class="sum need">${I("lock", "ico", 'style="width:14px;height:14px;fill:currentColor"')}Needs ${needText(k)}<button class="goto" data-goto="${k}">Take me there ${I("arrow")}</button></div>` : "";
+  const need = dis ? `<div class="sum need">${I("lock", "ico", 'style="width:14px;height:14px;fill:currentColor"')}${needText(k)}${blockerOf(k) ? `<button class="goto" data-goto="${k}">Take me there ${I("arrow")}</button>` : ""}</div>` : "";
   const tags = isAnimated(k) ? `<span class="tag">${I("play")}Animated</span>` : "";
   return `<div class="${cls.join(" ")}" data-row="${k}" data-k="${k}" tabindex="0">
     <div class="txt"><div class="ttl">${esc(title(k))}${chg ? '<span class="changed-dot" title="Changed from default"></span>' : ""}${tags}</div>
@@ -1629,6 +1658,7 @@ function select(k, from) {
     const box = el && el.closest(".inner-scroll");
     if (el && box) { const r = el.getBoundingClientRect(), b = box.getBoundingClientRect(); if (r.top < b.top || r.bottom > b.bottom) box.scrollBy({ top: r.top - b.top - 40, behavior: "smooth" }); }
   }
+  if (from === "list" && mode === "mod" && A[k] && (A[k].kind === "vis" || A[k].kind === "overlay") && !shown(k) && document.querySelector(`#stage [data-k="${k}"]`)) ghost(k);
   if (DEMOS[k]) startDemo(k); else stopDemo();
   if (SCN[k] && from) playScenario(k);
   const a = A[k];
@@ -1642,41 +1672,74 @@ function select(k, from) {
   if (!parentsOk(k)) pointToParents(k);
 }
 function pointToParents(k) {
-  for (const x of PREF[k].parents) {
-    document.querySelectorAll(`[data-row="${x.key}"], #stage [data-k="${x.key}"]`).forEach(el => { el.classList.remove("attn"); void el.offsetWidth; el.classList.add("attn"); });
+  for (const key of [...PREF[k].parents.map(x => x.key), ...(PREF[k].availabilityParents || [])]) {
+    document.querySelectorAll(`[data-row="${key}"], #stage [data-k="${key}"]`).forEach(el => { el.classList.remove("attn"); void el.offsetWidth; el.classList.add("attn"); });
   }
 }
 const ghostTimers = new Map();
 const stageEls = k => document.querySelectorAll(`#stage [data-k="${k}"]`);
-function clearGhost(k) { (ghostTimers.get(k) || []).forEach(clearTimeout); ghostTimers.delete(k); ghosts.delete(k); fading.delete(k); }
+function clearGhost(k) { (ghostTimers.get(k) || []).forEach(clearTimeout); ghostTimers.delete(k); ghosts.delete(k); fading.delete(k); stageEls(k).forEach(e => { e.classList.remove("leaving", "ghost-out"); e.getAnimations().forEach(a => a.cancel()); }); }
 function ghost(k) {
+  const already = ghosts.has(k) || fading.has(k);
   clearGhost(k);
   ghosts.add(k);
-  stageEls(k).forEach(e => { e.classList.remove("ghost-out"); e.classList.add("ghost"); });
+  stageEls(k).forEach(e => { e.getAnimations().forEach(a => a.cancel()); e.classList.remove("ghost-out", "leaving"); e.classList.add("ghost"); if (!already && !e.classList.contains("intray")) sizeAnim(e, true); });
   const t1 = setTimeout(() => {
     ghosts.delete(k); fading.add(k);
-    stageEls(k).forEach(e => e.classList.add("ghost-out"));
-    const t2 = setTimeout(() => { fading.delete(k); ghostTimers.delete(k); stageEls(k).forEach(e => e.classList.remove("ghost", "ghost-out")); }, 460);
+    stageEls(k).forEach(e => { if (e.classList.contains("intray")) e.classList.add("ghost-out"); else { e.classList.add("leaving"); sizeAnim(e, false, 420); } });
+    const t2 = setTimeout(() => { fading.delete(k); ghostTimers.delete(k); stageEls(k).forEach(e => { e.classList.remove("ghost", "ghost-out", "leaving"); e.getAnimations().forEach(a => a.cancel()); }); }, 440);
     ghostTimers.set(k, [t2]);
-  }, 1500);
+  }, 1600);
   ghostTimers.set(k, [t1]);
 }
 
 function toggle(k) {
   const p = PREF[k];
   if (mode === "orig") setMode("mod");
-  if (!parentsOk(k)) { pointToParents(k); snack(`Needs ${needText(k)}`); return; }
+  if (!parentsOk(k)) { pointToParents(k); snack(needText(k)); return; }
   const before = state[k];
   if (p.type === "boolean") state[k] = !state[k];
   else if (p.entries && p.entries.length) { const vals = entriesFor(k).map(e => e.value); const i = vals.indexOf(String(state[k])); state[k] = coerce(k, vals[(i + 1) % vals.length]); }
   else { snack("Use the control in the list to change this one"); return; }
-  const wasShown = A[k] && (A[k].kind === "vis" || A[k].kind === "overlay") ? !isHideKey(k) ? !!before : !before : null;
+  const visual = A[k] && (A[k].kind === "vis" || A[k].kind === "overlay");
+  const wasShown = visual ? (isHideKey(k) ? !before : !!before) : null;
+  const wasGhost = ghosts.has(k) || fading.has(k);
   clearGhost(k);
-  afterChange(k, before);
-  if (wasShown !== null) {
-    const nowShown = shown(k);
-    if (nowShown !== wasShown) stageEls(k).forEach(e => { e.classList.remove("reveal", "conceal"); void e.offsetWidth; e.classList.add(nowShown ? "reveal" : "conceal"); });
+  const nowShown = visual ? shown(k) : null;
+  if (visual && wasShown && !nowShown) {
+    // collapse the visible component first, then draw the new layout
+    const els = [...stageEls(k)].filter(e => !e.classList.contains("intray") && e.offsetParent);
+    if (els.length) {
+      stageHold++;
+      const done = () => { if (!stageHold) return; stageHold = 0; renderStage(); if (selected) highlight(selected); };
+      els.forEach(e => { e.classList.remove("pressing", "charging"); sizeAnim(e, false); });
+      setTimeout(done, SIZE_MS + 20);
+    }
   }
+  afterChange(k, before);
+  if (visual && !wasShown && nowShown) stageEls(k).forEach(e => { if (wasGhost || e.closest(".tray")) { e.classList.remove("reveal"); void e.offsetWidth; e.classList.add("reveal"); } else sizeAnim(e, true); });
+}
+// Collapse or expand a component along the axis it takes space in.
+const SIZE_MS = 280;
+function axisOf(el) {
+  const cs = getComputedStyle(el);
+  if (cs.position === "absolute" || cs.position === "fixed") return "none";
+  const ps = el.parentElement ? getComputedStyle(el.parentElement) : null;
+  if (ps && ps.display.includes("flex") && !ps.flexDirection.startsWith("column")) return "w";
+  if (ps && !ps.display.includes("flex") && !ps.display.includes("grid") && cs.display.startsWith("inline")) return "w";
+  return "h";
+}
+function sizeAnim(el, show, ms = SIZE_MS) {
+  const ax = axisOf(el), r = el.getBoundingClientRect(), cs = getComputedStyle(el);
+  let full, zero;
+  if (ax === "w") { full = { width: r.width + "px", marginLeft: cs.marginLeft, marginRight: cs.marginRight, opacity: 1 }; zero = { width: "0px", marginLeft: "0px", marginRight: "0px", opacity: 0 }; }
+  else if (ax === "h") { full = { height: r.height + "px", marginTop: cs.marginTop, marginBottom: cs.marginBottom, opacity: 1 }; zero = { height: "0px", marginTop: "0px", marginBottom: "0px", opacity: 0 }; }
+  else { full = { opacity: 1, transform: cs.transform === "none" ? "scale(1)" : cs.transform }; zero = { opacity: 0, transform: (cs.transform === "none" ? "" : cs.transform + " ") + "scale(.8)" }; }
+  if (!r.width && !r.height && ax !== "none") return null;
+  el.classList.add("sizing");
+  const a = el.animate(show ? [zero, full] : [full, zero], { duration: ms, easing: "cubic-bezier(.4,0,.2,1)", fill: show ? "none" : "forwards" });
+  a.onfinish = () => { el.classList.remove("sizing"); };
+  return a;
 }
 function afterChange(k, before) {
   const p = PREF[k];
@@ -1684,7 +1747,7 @@ function afterChange(k, before) {
   try { navigator.vibrate && navigator.vibrate(20); } catch { /* ignore */ }
   if (SCN[k]) playScenario(k, before);
   // teleport back to the setting that was waiting on this one
-  if (returnTo && parentsOk(returnTo.key) && PREF[returnTo.key].parents.some(x => x.key === k)) {
+  if (returnTo && parentsOk(returnTo.key) && dependsOn(returnTo.key, k)) {
     const back = returnTo; returnTo = null;
     setTimeout(() => goToSetting(back.key, () => {
       const row = document.querySelector(`[data-row="${back.key}"]`);
@@ -1768,7 +1831,12 @@ $("list").addEventListener("keydown", e => {
 });
 $("list").addEventListener("click", e => {
   const go = e.target.closest("[data-goto]");
-  if (go) { const k = go.dataset.goto; const parent = PREF[k].parents.find(x => (x.mode === "not") === !!state[x.key]) || PREF[k].parents[0]; returnTo = { key: k }; goToSetting(parent.key); snack(`Turn on <b>${esc(title(parent.key))}</b> by holding it, and you'll be brought back`); return; }
+  if (go) {
+    const k = go.dataset.goto; const target = blockerOf(k); if (!target) return;
+    returnTo = { key: k }; goToSetting(target);
+    snack(PREF[target].type === "boolean" ? `Switch <b>${esc(title(target))}</b> by holding it, and you'll be brought back` : `Change <b>${esc(title(target))}</b>, and you'll be brought back`);
+    return;
+  }
   const rp = e.target.closest("[data-replay]");
   const sw = e.target.closest("[data-sw]");
   if (sw) { const k = sw.dataset.sw; select(k); toggle(k); return; }
@@ -1804,7 +1872,6 @@ function setMode(m) {
 }
 $("btnOrig").onclick = () => setMode("orig");
 $("btnMod").onclick = () => setMode("mod");
-$("slots").onchange = e => { showSlots = e.target.checked; renderStage(); store.save(); };
 
 // ------------------------------------------------------------------ devices and UI scale
 const DEVICES = [
@@ -1834,10 +1901,10 @@ window.addEventListener("resize", () => { if (window.innerWidth > 860) applyDevi
 // Tapping a page jumps there and stops the automatic advance (the page's animation still plays).
 const TUT_STEPS = [
   { cap: "Tap a button to select it", sub: "Its setting is highlighted in the list below" },
-  { cap: "Hold it to switch it off", sub: "The setting changes right away" },
-  { cap: "Tap an empty slot to peek", sub: "You see it for a moment, the setting stays off" },
-  { cap: "Hold the slot to bring it back", sub: "Hold again any time to undo" },
-  { cap: "Or use the list", sub: "Every setting is also a row: hold the row or flip its switch" },
+  { cap: "Hold it to switch it off", sub: "It disappears, just like in the real app" },
+  { cap: "Tap its row to peek", sub: "You see it for a moment, the setting stays off" },
+  { cap: "Hold it while it shows to bring it back", sub: "Hold again any time to undo" },
+  { cap: "Or use the switch", sub: "Every setting is also a row in the list" },
 ];
 const TUT_STEP_MS = 2600;
 let tutTimer = null, tutAnims = [];
@@ -1868,7 +1935,7 @@ function runTutorial() {
     f.classList.remove("tap", "hold"); ring.classList.remove("go"); bar.classList.remove("go"); row.classList.remove("sel");
     if (step === 0) {
       cast.className = "tb"; setHidden(false);
-      move(cast, 0, 0, 120); f.style.opacity = "";
+      move(cast, 0, 0, 120);
       at2(60, () => move(cast, 700));
       at2(900, () => { tap(); cast.classList.add("sel"); row.classList.add("sel"); });
       at2(2100, () => f.classList.remove("show"));
@@ -1876,29 +1943,31 @@ function runTutorial() {
     if (step === 1) {
       cast.className = "tb sel"; row.classList.add("sel"); setHidden(false); move(cast, 0);
       at2(400, () => hold(ring));
-      at2(400 + 480, () => { cast.className = "tb off"; f.classList.remove("hold"); setHidden(true); });
-      at2(1400, () => { cast.className = "tb slot"; });
-      at2(2200, () => f.classList.remove("show"));
+      at2(400 + 480, () => { f.classList.remove("hold"); setHidden(true); ring.classList.remove("go"); });
+      at2(1000, () => { cast.className = "tb off"; });
+      at2(1700, () => f.classList.remove("show"));
     }
     if (step === 2) {
-      cast.className = "tb slot"; setHidden(true); move(cast, 0);
-      at2(500, () => { tap(); cast.className = "tb slot peek"; });
-      at2(1700, () => { cast.className = "tb slot"; });
+      cast.className = "tb off"; setHidden(true); move(row, 0, -40, 30);
+      at2(60, () => move(row, 500, -40));
+      at2(700, () => { tap(); row.classList.add("sel"); cast.className = "tb ghost"; });
+      at2(2000, () => { cast.className = "tb off"; });
       at2(2200, () => f.classList.remove("show"));
     }
     if (step === 3) {
-      cast.className = "tb slot"; setHidden(true); move(cast, 0);
-      at2(400, () => { hold(ring); cast.className = "tb slot charging"; });
-      at2(400 + 480, () => { cast.className = "tb sel reveal"; f.classList.remove("hold"); setHidden(false); row.classList.add("sel"); });
-      at2(2100, () => f.classList.remove("show"));
+      cast.className = "tb off"; setHidden(true); row.classList.add("sel"); move(row, 0, -40);
+      at2(100, () => { cast.className = "tb ghost"; });
+      at2(450, () => move(cast, 450));
+      at2(1000, () => hold(ring));
+      at2(1000 + 480, () => { cast.className = "tb sel reveal"; f.classList.remove("hold"); setHidden(false); });
+      at2(2300, () => f.classList.remove("show"));
     }
     if (step === 4) {
-      cast.className = "tb"; setHidden(false); move(row, 0, -40, 40);
-      at2(60, () => move(row, 600, -40));
-      at2(800, () => { f.classList.add("hold"); bar.classList.add("go"); row.classList.add("sel"); });
-      at2(800 + 480, () => { f.classList.remove("hold"); setHidden(true); cast.className = "tb slot"; });
-      at2(1700, () => move(sw, 400));
-      at2(2150, () => { tap(); setHidden(false); cast.className = "tb reveal"; });
+      cast.className = "tb"; setHidden(false); move(sw, 0, 0, 40);
+      at2(60, () => move(sw, 500));
+      at2(700, () => { tap(); setHidden(true); row.classList.add("sel"); cast.className = "tb off"; });
+      at2(1700, () => { tap(); setHidden(false); cast.className = "tb reveal"; });
+      at2(2300, () => f.classList.remove("show"));
     }
   };
   const okCheck = () => { if (loops >= 2 || seen.size === TUT_STEPS.length && manual) { $("tutOk").classList.add("show"); $("tutWait").textContent = ""; } };
@@ -1931,12 +2000,16 @@ async function boot() {
   baseline = { ...state };
   try { const b = JSON.parse(localStorage.getItem(LS + "-baseline") || "null"); if (b) for (const k in b) if (k in PREF) baseline[k] = b[k]; } catch { /* storage unavailable */ }
   if (saved.section && SECTIONS.some(s => s.id === saved.section)) section = saved.section;
-  if (typeof saved.slots === "boolean") { showSlots = saved.slots; $("slots").checked = showSlots; }
   if (saved.device && DEVICES.some(d => d.id === saved.device)) device_ = saved.device;
+  if (CAT.youtubeVersions && CAT.youtubeVersions.length) {
+    YT_VERSIONS.length = 0; YT_EXPERIMENTAL.clear();
+    CAT.youtubeVersions.forEach(v => { YT_VERSIONS.push(v.version); if (v.experimental) YT_EXPERIMENTAL.add(v.version); });
+    ytVersion = YT_VERSIONS[0];
+  }
   if (saved.yt && YT_VERSIONS.includes(saved.yt)) ytVersion = saved.yt;
   applyVersion();
   $("ytVer").innerHTML = YT_VERSIONS.map(v => `<option value="${v}" ${v === ytVersion ? "selected" : ""}>${v}${YT_EXPERIMENTAL.has(v) ? " (experimental)" : ""}</option>`).join("");
-  $("ytVer").onchange = e => { ytVersion = e.target.value; applyVersion(); trayOpen = false; commit(); };
+  $("ytVer").onchange = e => { ytVersion = e.target.value; applyVersion(); trayOpen = false; buildMembers(); commit(); };
   buildMembers();
   renderAll();
   if (window.innerWidth > 860) applyDevice(); else $("devBtns").innerHTML = "";

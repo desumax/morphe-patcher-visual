@@ -107,6 +107,8 @@ def load_settings():
             decl_t, field, cls, key, rest = m.groups()
             args = split_top(rest)
             default = norm_default(cls, args[0]) if args else None
+            vd = re.match(r'VersionCheckPatch\.IS_(\d+)_(\d+)_OR_GREATER\s*\?\s*(.+?)\s*:\s*(.+)$', args[0].strip()) if args else None
+            version_default = {"when": "V(%d,%d)" % (int(vd.group(1)), int(vd.group(2))), "then": norm_default(cls, vd.group(3)), "else": norm_default(cls, vd.group(4))} if vd else None
             flags = [a for a in args[1:] if a in ("true", "false", "TRUE", "FALSE")]
             dialog = next((a.strip('"') for a in args[1:] if a.startswith('"')), None)
             avail = next((a for a in args[1:] if "parent" in a or "Availability" in a), None)
@@ -121,6 +123,7 @@ def load_settings():
                 "includeWithImport": (flags[1].lower() == "true") if len(flags) > 1 else True,
                 "dialog": res("@string/" + dialog) if dialog else None,
                 "availability": avail,
+                "versionDefault": version_default,
                 "sourceSection": sec,
                 "sourceFile": f.split("/")[-1],
             }
@@ -135,10 +138,149 @@ def load_settings():
                 if tok in field_to_key:
                     deps.append({"key": field_to_key[tok], "mode": "not" if kind == "parentNot" else ("any" if kind == "parentsAny" else "all")})
         s["parents"] = deps
-        s["customAvailability"] = re.findall(r'new (\w+Availability)', a)
-    return settings
+        s["customAvailability"] = re.findall(r'new (?:\w+\.)*(\w+Availability)', a)
+        s["availabilityArgs"] = {m.group(1): m.group(2).split(".")[-1] for m in re.finditer(r'new (?:\w+\.)*(\w+Availability)\(\s*([\w.]+)\s*\)', a)}
+    return settings, field_to_key
 
-SETTINGS = load_settings()
+SETTINGS, FIELD_TO_KEY = load_settings()
+
+# --------------------------------------------------------------- availability rules
+# Setting.Availability classes decide when Morphe greys a preference out. Their isAvailable()
+# bodies are translated into small JS expressions over S("key") (current value) and V(maj, min)
+# (YouTube version check), so the editor follows the same rules. Anything that depends on the
+# device or on code the translator does not understand becomes "true" and is listed in "unknown".
+def _block(text, open_idx):
+    d, i = 0, open_idx
+    while i < len(text):
+        if text[i] == "{": d += 1
+        elif text[i] == "}":
+            d -= 1
+            if d == 0: return text[open_idx + 1:i]
+        i += 1
+    return text[open_idx + 1:]
+
+def _java_expr_to_js(expr, locals_, helpers, unknown):
+    e = re.sub(r'\s+', ' ', expr).strip()
+    for name, val in locals_.items():
+        e = re.sub(r'\b%s\b(?!\s*\()' % re.escape(name), "(" + val + ")", e)
+    # String.equals("X") -> === "X"
+    e = re.sub(r'\.equals\(([^()]*)\)', r' == \1', e)
+    def setting(m):
+        k = FIELD_TO_KEY.get(m.group(1))
+        if k: return 'S("%s")' % k
+        unknown.append(m.group(1)); return "null"
+    e = re.sub(r'\b(?:Settings|SharedYouTubeSettings|SharedSettings|BaseSettings)\.([A-Z0-9_]+)\.get\(\)', setting, e)
+    # enum helper methods on a setting value, e.g. type.isModern()
+    e = re.sub(r'(S\("[^"]+"\)|\(S\("[^"]+"\)\))\.(\w+)\(\)', lambda m: ENUM_METHODS[m.group(2)].replace("X", m.group(1)) if m.group(2) in ENUM_METHODS else (unknown.append(m.group(0)) or 'U("%s")' % m.group(2)), e)
+    def helper(m):
+        nm = m.group(1)
+        if nm in ("S", "V", "U"): return m.group(0)
+        if nm in helpers and not m.group(2).strip(): return "(" + helpers[nm] + ")"
+        unknown.append(nm + "()"); return 'U("%s")' % nm
+    e = re.sub(r'\b(?:[A-Za-z]\w*\.)*(\w+)\(((?:[^()]|"[^"]*")*)\)', helper, e)
+    e = re.sub(r'\bVersionCheckPatch\.IS_(\d+)_(\d+)_OR_GREATER\b', r'V(\1,\2)', e)
+    e = re.sub(r'\b(?:[A-Z]\w*\.)+([A-Z][A-Z0-9_]+)\b', r'"\1"', e)  # Enum.VALUE
+    e = re.sub(r'(?<![\w"])([A-Z][A-Z0-9_]{2,})(?![\w"(])', r'"\1"', e)  # bare enum constant
+    e = e.replace("==", "===").replace("!===", "!==")
+    e = re.sub(r'(S\("[^"]+"\))\.\w+', lambda m: (unknown.append(m.group(0)) or "true"), e)  # field access on a value
+    if re.search(r'\b[a-z_]\w*\.[a-z]', re.sub(r'"[^"]*"', '""', e)):
+        unknown.append(e); return "true"
+    return e
+
+ENUM_METHODS = {
+    # MiniplayerPatch.MiniplayerType.isModern(): types with a modernPlayerType
+    "isModern": '["MODERN_1","MODERN_2","MODERN_3","MODERN_4","MODERN_5","MINIMAL_BAR","MINIMAL_BAR_2"].includes(X)',
+}
+
+def load_availability():
+    rules = {}
+    for f in (ROOT / "extensions").rglob("*.java"):
+        text = f.read_text()
+        if "Setting.Availability" not in text: continue
+        helpers = {}
+        for m in re.finditer(r'(?:private|public)?\s*static boolean (\w+)\(\)\s*\{', text):
+            body = _block(text, m.end() - 1)
+            loc = {lm.group(1): lm.group(2) for lm in re.finditer(r'\w+ (\w+) = ([^;]+);', body)}
+            r = re.search(r'return ([^;]+);', body)
+            if r and body.count("return") == 1:
+                helpers[m.group(1)] = _java_expr_to_js(r.group(1), loc, {}, [])
+        for m in re.finditer(r'class (\w+Availability)\s+implements Setting\.Availability\s*\{', text):
+            body = _block(text, m.end() - 1)
+            im = re.search(r'boolean isAvailable\(\)\s*\{', body)
+            if not im: continue
+            ib = _block(body, im.end() - 1)
+            loc = {lm.group(1): lm.group(2) for lm in re.finditer(r'\w+ (\w+) = ([^;]+);', ib)}
+            r = re.search(r'return ([^;]+);', ib)
+            unknown = []
+            js = _java_expr_to_js(r.group(1), loc, helpers, unknown) if r and ib.count("return") == 1 else "true"
+            pm = re.search(r'getParentSettings\(\)\s*\{([^}]*)\}', body)
+            parents = [FIELD_TO_KEY[t] for t in re.findall(r'\.([A-Z0-9_]+)\b', pm.group(1)) if t in FIELD_TO_KEY] if pm else []
+            cm = re.search(r'%s\(\s*\w+ (\w+)\s*\)' % m.group(1), body)
+            fm = re.search(r'this\.(\w+)\s*=\s*%s' % cm.group(1), body) if cm else None
+            rules[m.group(1)] = {"js": js, "parents": parents, "unknown": unknown, "param": (fm.group(1) if fm else (cm.group(1) if cm else None))}
+    return rules
+
+AVAILABILITY = load_availability()
+
+# --------------------------------------------------------------- version guards in patches
+# A preference registered inside `if (is_21_29_or_greater) { ... }` (or its else branch) only
+# exists on those YouTube versions. guard_at() returns that condition as a JS expression over V().
+def brace_map(text):
+    pairs, stack, i, n = {}, [], 0, len(text)
+    while i < n:
+        c = text[i]
+        if text.startswith("//", i):
+            i = text.find("\n", i); i = n if i < 0 else i; continue
+        if text.startswith("/*", i):
+            i = text.find("*/", i); i = n if i < 0 else i + 2; continue
+        if c == '"':
+            j = i + 1
+            while j < n and text[j] != '"': j += 2 if text[j] == "\\" else 1
+            i = j + 1; continue
+        if c == "{": stack.append(i)
+        elif c == "}" and stack: pairs[stack.pop()] = i
+        i += 1
+    return pairs
+
+def _cond_js(cond):
+    c = re.sub(r'\bis_(\d+)_(\d+)_or_greater\b', r'V(\1,\2)', cond)
+    rest = re.sub(r'V\(\d+,\d+\)|&&|\|\||!|\(|\)|\s', '', c)
+    return c.strip() if not rest and "V(" in c else None
+
+def _header_conds(text, open_idx, close_of):
+    start = max(0, open_idx - 300)
+    head = text[start:open_idx].rstrip()
+    m = re.search(r'(else\s+)?if\s*\(((?:[^()]|\([^()]*\))*)\)$', head)
+    conds = []
+    if m:
+        js = _cond_js(m.group(2))
+        if js: conds.append("(" + js + ")")
+        if m.group(1):
+            conds += _else_conds(text, start + m.start(), close_of)
+        return conds
+    if re.search(r'\belse$', head):
+        return _else_conds(text, start + head.rfind("else"), close_of)
+    return conds
+
+def _else_conds(text, else_idx, close_of):
+    before = text[:else_idx].rstrip()
+    if not before.endswith("}"): return []
+    close = len(before) - 1
+    opener = next((o for o, cl in close_of.items() if cl == close), None)
+    if opener is None: return []
+    prev = _header_conds(text, opener, close_of)
+    if not prev: return []
+    # prev[0] is the if's own condition; the rest are conditions of earlier branches in the chain
+    return ["!" + prev[0]] + prev[1:]
+
+def guard_at(text, pos, close_of):
+    conds = []
+    for o, cl in close_of.items():
+        if o < pos < cl: conds += _header_conds(text, o, close_of)
+    line = text[text.rfind("\n", 0, pos) + 1:pos]
+    m = re.search(r'if\s*\(((?:[^()]|\([^()]*\))*)\)\s*(?:preferences|\w+)?\s*(?:\+=|\.add)?', line)
+    if m and _cond_js(m.group(1)): conds.append("(" + _cond_js(m.group(1)) + ")")
+    return " && ".join(conds) or None
 
 # --------------------------------------------------------------- kotlin prefs
 PREF_TYPES = {"SwitchPreference", "ListPreference", "TextPreference", "NonInteractivePreference",
@@ -246,6 +388,7 @@ def load_prefs():
         text = texts[f]
         rel = str(f.relative_to(ROOT))
         calls = calls_cache.setdefault(f, scan_calls(text))
+        close_of = brace_map(text)
         patch_names = [(m.start(), m.group(2), re.sub(r'"\s*\+\s*"', "", (m.group(3) or "")).strip().strip('"')) for m in PATCH_NAME_RE.finditer(text)]
         file_screens = sorted(set(SCREEN_REF.findall(text)) - {"SHORTS_PLAYER"})
         file_helpers = [h for h in SCREEN_HELPERS if re.search(r'\b%s\(' % h, text)]
@@ -308,6 +451,7 @@ def load_prefs():
                 "tag": named_arg(body, "tag"),
                 "titleKey": named_arg(body, "titleKey"),
                 "summaryKey": named_arg(body, "summaryKey"),
+                "when": guard_at(text, o, close_of),
             })
     return prefs
 
@@ -347,6 +491,7 @@ for key, p in PREFS.items():
         "dialog": s.get("dialog"),
         "parents": s.get("parents", []),
         "customAvailability": s.get("customAvailability", []),
+        **({"versionDefault": s["versionDefault"]} if s.get("versionDefault") else {}),
         "screen": o["screen"],
         "screenTitle": SCREEN_TITLES.get(o["screen"]),
         "subScreen": o["subScreen"],
@@ -356,17 +501,42 @@ for key, p in PREFS.items():
         "patchDescription": o["patchDescription"],
         "sourceFile": o["file"],
         "locationConfidence": o["confidence"],
-        "versionVariants": len(p["occurrences"]),
     }
     if entries:
         item["entries"] = [{"label": l, "value": v} for l, v in zip(entries, values or entries)]
+    # version guards: the preference exists when any of its registrations' guards holds
+    whens = [x["when"] for x in p["occurrences"]]
+    if any(whens):
+        item["when"] = None if not all(whens) else " || ".join("(" + w + ")" for w in dict.fromkeys(whens))
+        variants = []
+        for x in p["occurrences"]:
+            if not x["when"]: continue
+            vl = ARRAYS.get(x["entryValuesKey"] or (key + "_entry_values"), [])
+            el = [res(e) for e in ARRAYS.get(x["entriesKey"] or (key + "_entries"), [])]
+            if el: variants.append({"when": x["when"], "entries": [{"label": l, "value": v} for l, v in zip(el, vl or el)]})
+        if variants: item["entryVariants"] = variants
+    rules = [(a, AVAILABILITY[a]) for a in s.get("customAvailability", []) if a in AVAILABILITY]
+    def bind(a, r):
+        js, arg = r["js"], s.get("availabilityArgs", {}).get(a)
+        if r.get("param") and arg: js = re.sub(r'\b%s\b' % r["param"], '"%s"' % arg, js)
+        return js
+    if rules:
+        item["availability"] = " && ".join("(" + bind(a, r) + ")" for a, r in rules)
+        rules = [r for _, r in rules]
+        item["availabilityParents"] = sorted({k for r in rules for k in r["parents"]})
+        unk = [u for r in rules for u in r["unknown"]]
+        if unk: item["availabilityUnknown"] = unk
     catalogue.append(item)
 
 catalogue.sort(key=lambda x: (x["screen"] or "~", x["subScreen"] or "", x["key"]))
 rev = subprocess.run(["git", "-C", str(ROOT), "log", "-1", "--format=%h %cs"], capture_output=True, text=True).stdout.strip()
 internal = sorted(k for k in SETTINGS if k not in PREFS)
+consts = (ROOT / "patches/src/main/kotlin/app/morphe/patches/youtube/shared/Constants.kt").read_text()
+yt_versions = [{"version": m.group(1), "experimental": "isExperimental = true" in m.group(0)}
+               for m in re.finditer(r'AppTarget\(\s*version\s*=\s*"([^"]+)"[^)]*\)', consts)]
 out = {
     "source": "MorpheApp/morphe-patches@" + rev,
+    "youtubeVersions": yt_versions,
     "generatedBy": "visual-editor/tools/extract_catalogue.py",
     "counts": {
         "preferences": len(catalogue),

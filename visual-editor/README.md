@@ -64,6 +64,16 @@ the same version checks as Settings.java (action bar layout on 21.36+, miniplaye
 glass navigation bar adapters. Scenario animations use a rotating device (`rotate()`) and show
 the change from the previous value to the new one.
 
+Round 4 makes version awareness generic. The extractor now reads, from morphe-patches:
+the `is_X_Y_or_greater` guards around each preference registration (`when`), version-specific
+option arrays (`entryVariants`), version-dependent defaults in Settings.java (`versionDefault`),
+each setting's `Setting.Availability` rule translated to a small JS expression (`availability`,
+`availabilityParents`), and the supported YouTube versions from `Constants.kt`
+(`youtubeVersions`). The editor hides settings the chosen version does not have, offers only
+its options, and greys out settings exactly when the app would. In the native port the app
+knows its own version, so the picker goes away. Hidden components now always collapse (as Litho
+filters do in the real app), with a size animation when they are switched off or on.
+
 Interaction model: tap selects (and plays a demo for gestures and behaviours),
 long-press switches the setting, tapping a hidden component shows it for a moment
 without changing the setting, and Original / Modified compares stock YouTube with
