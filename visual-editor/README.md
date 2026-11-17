@@ -58,6 +58,12 @@ enabled), Animated / Static grouping, standard black-canvas scenario animations 
 with no on-screen effect (haptics vibrate the device in sync), a looping first-run tutorial,
 device presets and UI scale, and Morphe Manager's colours, shapes and motion timings.
 
+Round 3 adds a YouTube version picker. Layouts and defaults follow the patched build, using
+the same version checks as Settings.java (action bar layout on 21.36+, miniplayer types on
+21.29+). It also adds SponsorBlock, fullscreen gesture, swipe overlay, miniplayer gesture and
+glass navigation bar adapters. Scenario animations use a rotating device (`rotate()`) and show
+the change from the previous value to the new one.
+
 Interaction model: tap selects (and plays a demo for gestures and behaviours),
 long-press switches the setting, tapping a hidden component shows it for a moment
 without changing the setting, and Original / Modified compares stock YouTube with
