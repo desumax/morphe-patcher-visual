@@ -1095,6 +1095,9 @@ SCENES.miniplayer = () => {
   </div>`;
 };
 def("miniplayer", "vis", "miniplayer_disable_resuming");
+// Parents moved next to the settings that depend on them, so no row is locked by another screen.
+def("endscreen", "style", "autoplay_control autoplay_mix_stop_after");
+def("player", "style", "do_not_remember_loop_video");
 def("miniplayer", "style", "miniplayer_glass miniplayer_docked");
 
 // ------------------------------------------------------------------ SponsorBlock
@@ -1548,14 +1551,14 @@ function buildKids() {
   for (const s of SECTIONS) {
     const keys = [...MEMBERS[s.id].live, ...MEMBERS[s.id].misc], set = new Set(keys);
     for (const k of keys) {
-      const par = MANUAL_PARENT[k] && set.has(MANUAL_PARENT[k]) ? MANUAL_PARENT[k] : (PREF[k].parents || []).map(x => x.key).find(x => x !== k && set.has(x));
+      const par = MANUAL_PARENT[k] && set.has(MANUAL_PARENT[k]) ? MANUAL_PARENT[k] : [...(PREF[k].parents || []).map(x => x.key), ...(PREF[k].availabilityParents || []), ...[...String(PREF[k].availability || "").matchAll(/S\("([^"]+)"\)/g)].map(m => m[1])].find(x => x !== k && set.has(x));
       if (par) PARENT_OF[k] = par;
     }
   }
   for (const k in PARENT_OF) { let r = PARENT_OF[k], g = 0; while (PARENT_OF[r] && g++ < 6) r = PARENT_OF[r]; PARENT_OF[k] = r; }
   for (const k in PARENT_OF) (KIDS[PARENT_OF[k]] = KIDS[PARENT_OF[k]] || []).push(k);
 }
-const kidVisible = k => !!MANUAL_PARENT[k] || classicParentsOk(k);
+const kidVisible = k => !!MANUAL_PARENT[k] || (classicParentsOk(k) && availOk(k));
 const sectionKeys = () => MEMBERS[section] ? [...MEMBERS[section].live, ...MEMBERS[section].misc] : [];
 const sectionOf = k => SECTIONS.find(s => MEMBERS[s.id].live.includes(k) || MEMBERS[s.id].misc.includes(k))?.id || "misc";
 
@@ -1652,13 +1655,13 @@ function rowHTML(k, live) {
   const cls = ["row", live ? "live" : "fallback"];
   if (selected === k) cls.push("sel");
   if (dis) cls.push("dis");
-  if (PARENT_OF[k] && section !== "misc") { if (k === peekKid) cls.push("peek"); else if (!kidVisible(k)) cls.push("hide"); }
+  if (PARENT_OF[k]) { if (k === peekKid) cls.push("peek"); else if (!kidVisible(k)) cls.push("hide"); }
   if (live && (a.kind === "vis" || a.kind === "overlay") && !shown(k)) cls.push("offstate");
   const sum = info ? (p.summary || (p.type === "screen" ? "Opens a sub-screen in Morphe settings" : "Information")) : summaryFor(k);
   const goto = dis && blockerOf(k) ? `<button class="goto" data-goto="${k}">Take me there ${I("arrow")}</button>` : "";
   const need = dis ? `<div class="need2">${needText(k)}</div>` : "";
   const tags = isAnimated(k) ? `<span class="tag">${I("play")}Animated</span>` : "";
-  const kids = section !== "misc" && KIDS[k] ? KIDS[k].filter(x => kidVisible(x) || x === peekKid).length : 0;
+  const kids = KIDS[k] ? KIDS[k].filter(x => kidVisible(x) || x === peekKid).length : 0;
   const kidbtn = kids ? `<button class="kidbtn" data-kidtoggle="${k}" aria-expanded="${!collapsed.has(k)}" aria-label="${kids} sub-options">${kids}${I("expand")}</button>` : "";
   const over = /^(hide|show) in /i.test(title(k)) && p.subScreenTitle ? `<div class="over">${esc(p.subScreenTitle)}</div>` : "";
   return `<div class="${cls.join(" ")}" data-row="${k}" data-k="${k}" tabindex="0">
@@ -1678,7 +1681,7 @@ function renderList() {
   const withKids = k => {
     let out = rowHTML(k, isLive(k));
     const ks = KIDS[k];
-    if (ks && section !== "misc") {
+    if (ks) {
       const any = ks.some(x => kidVisible(x) || x === peekKid);
       if (any && (!collapsed.has(k) || ks.includes(peekKid))) wantOpen.add(k);
       out += `<div class="kids ${lastOpen.has(k) ? "open" : ""}" data-kids-of="${k}"><div class="kin">${ks.map(x => rowHTML(x, isLive(x))).join("")}</div></div>`;
@@ -1695,11 +1698,12 @@ function renderList() {
     html += `<div class="secnote" style="padding-top:12px">Settings that no screen above shows yet, grouped by their Morphe settings screen. They work exactly as in Morphe.</div>`;
     const groups = {};
     for (const k of m.misc) {
+      if (PARENT_OF[k]) continue;
       const p = PREF[k];
       const g = (p.screenTitle || "Unplaced") + (p.subScreenTitle ? " › " + p.subScreenTitle : "");
       (groups[g] = groups[g] || []).push(k);
     }
-    for (const g of Object.keys(groups).sort()) html += `<div class="gtitle">${esc(g)} · ${groups[g].length}</div><div class="group">${groups[g].map(k => rowHTML(k, false)).join("")}</div>`;
+    for (const g of Object.keys(groups).sort()) html += `<div class="gtitle">${esc(g)} · ${groups[g].length}</div><div class="group">${groups[g].map(withKids).join("")}</div>`;
   }
   const list = $("list");
   list.innerHTML = html;
