@@ -259,6 +259,12 @@ button { font: inherit; color: inherit; }
 .dl7 { display: grid; gap: 3px; justify-items: center; align-content: start; }
 .dl7 > span { font-size: 8px; font-weight: 600; color: #fff; background: #3a3a3a; border-radius: 6px; padding: 0 6px; line-height: 11px; }
 .dl7 > span.on { background: #2e7d32; }
+.duo7.gen { width: max-content; height: auto; align-items: flex-start; justify-content: center; }
+.duo7.gen .dl7 { width: min-content; }
+.duo7.gen .dl7 > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.duo7.gen .side { position: relative; }
+.duo7.gen .side > .dev { position: relative; }
+.sf7 { font-size: 7px; line-height: 9px; color: #ccc; text-align: center; min-height: 18px; max-height: 27px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; width: 100%; min-width: 92px; }
 .dev.buzz { animation: buzz .16s linear 2; }
 @keyframes buzz { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-3px) rotate(-1deg); } 75% { transform: translateX(3px) rotate(1deg); } }
 .waves { position: absolute; top: 50%; width: 14px; height: 40px; transform: translateY(-50%); opacity: 0; }
@@ -386,6 +392,7 @@ button { font: inherit; color: inherit; }
 .tut .tb.reveal { animation: revealk .34s var(--ease); }
 .tfinger { z-index: 95; }
 .tut .tcap { min-height: 44px; text-align: center; font-size: 16px; color: var(--m-on); max-width: 300px; line-height: 1.4; }
+.tut .tcap b { display: inline-grid; place-items: center; width: 22px; height: 22px; margin-right: 8px; border-radius: 50%; background: var(--m-primary); color: var(--m-on-primary, #00315c); font-size: 13px; vertical-align: 2px; }
 .tut .tcap small { display: block; font-size: 12.5px; color: var(--m-on-var); margin-top: 2px; }
 .tut .ok { height: 48px; min-width: 160px; padding: 0 28px; border-radius: 999px; border: 0; font-size: 15px; font-weight: 600; color: #fff; background: linear-gradient(90deg, var(--m-brand-1), var(--m-brand-2)); cursor: pointer; opacity: 0; transform: translateY(8px); transition: opacity 300ms var(--ease), transform 300ms var(--ease); pointer-events: none; }
 .tut .ok.show { opacity: 1; transform: none; pointer-events: auto; }

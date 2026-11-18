@@ -905,15 +905,33 @@ function fitScale(w, h) {
   return Math.max(.35, Math.min(3, availW / (w + 6), availH / (h + 6)));
 }
 function fitDev(orient) {
-  const canvas = $("canvas"), box = canvas.querySelector(".scbox"), duo = box && box.querySelector(".duo7"), dev = duo || (box && box.querySelector(".dev")); if (!dev) return;
+  const canvas = $("canvas"), box = canvas.querySelector(".scbox"), gen = box && box.querySelector(".duo7.gen");
+  if (gen) { // the two phones sit side by side or stacked, whichever lets them be drawn larger
+    const first = !gen.dataset.fit; gen.dataset.fit = "1";
+    if (first) gen.style.transition = "none"; // a new pair appears at its size; only later changes animate
+    // sizes come from the phones' target sizes (a turning phone is still mid-transition when measured)
+    const cells = [...gen.querySelectorAll(".dl7")].map(c => { const d = c.querySelector(".dev"), f = c.querySelector(".sf7"); return [Math.max(parseFloat(d && d.style.width) || 92, 92), (parseFloat(d && d.style.height) || 172) + 14 + (f ? f.offsetHeight + 3 : 0)]; });
+    const G = 10, rowWH = [cells.reduce((a, c) => a + c[0], 0) + G, Math.max(...cells.map(c => c[1]))], colWH = [Math.max(...cells.map(c => c[0])), cells.reduce((a, c) => a + c[1], 0) + G];
+    const row = fitScale(rowWH[0], rowWH[1]), col = fitScale(colWH[0], colWH[1]);
+    const [w, h] = row >= col ? rowWH : colWH, sc = Math.max(row, col);
+    gen.style.flexDirection = row >= col ? "row" : "column";
+    gen.style.scale = sc.toFixed(3);
+    box.style.width = Math.round(w * sc) + "px"; box.style.height = Math.round(h * sc) + "px";
+    if (first) { box.style.transition = "none"; void gen.offsetWidth; gen.style.transition = ""; box.style.transition = ""; }
+    return;
+  }
+  const duo = box && box.querySelector(".duo7"), dev = duo || (box && box.querySelector(".dev")); if (!dev) return;
   const o = duo ? "duo" : orient || (dev.classList.contains("land") ? "land" : "port"), [w, h] = DEV_SIZE[o];
   const sc = fitScale(w, h);
   dev.style.scale = sc.toFixed(3);
   box.style.width = Math.round((w + 6) * sc) + "px"; box.style.height = Math.round((h + 6) * sc) + "px";
 }
 const devScale = dev => (dev.getBoundingClientRect().width / (dev.offsetWidth || 1)) || 1;
-function situation(text) { const el = document.querySelector("#canvas .sit"); if (!el) return; el.style.opacity = 0; setTimeout(() => { el.textContent = text; el.style.opacity = 1; }, 160); }
-function setFoot(text) { const el = document.querySelector("#canvas .foot"); if (el) el.textContent = text; }
+// Scenarios are drawn twice, Off and On side by side. scSide is the side being drawn (null for a
+// scenario that draws its own comparison); scStretch slows the whole story down to the 11 s budget.
+let scSide = null, scStretch = 1, scRun = 0;
+function situation(text) { if (scSide && scSide.i) return; const el = document.querySelector("#canvas .sit"); if (!el) return; el.style.opacity = 0; setTimeout(() => { el.textContent = text; el.style.opacity = 1; }, 160); }
+function setFoot(text) { if (scSide) { scSide.foot.textContent = text; return; } const el = document.querySelector("#canvas .foot"); if (el) el.textContent = text; }
 function buzz(dev, on) {
   if (!on) return;
   dev.classList.remove("buzz"); void dev.offsetWidth; dev.classList.add("buzz");
@@ -921,7 +939,7 @@ function buzz(dev, on) {
   try { navigator.vibrate && navigator.vibrate(40); } catch { /* not supported */ }
 }
 // steps belong to the scenario that scheduled them; a replaced scenario never runs its leftover steps
-const at = (ms, f) => { const tk = scenarioToken; return setTimeout(() => { if (tk.alive && tk === scenarioToken) f(); }, ms); };
+const at = (ms, f) => { const tk = scenarioToken, side = scSide, run = scRun; return setTimeout(() => { if (!tk.alive || tk !== scenarioToken || run !== scRun) return; const p = scSide; scSide = side; try { f(); } finally { scSide = p; } }, ms * scStretch); };
 function fingerTo(f, x, y, ms = 0) { f.style.transition = ms ? `left ${ms}ms var(--ease), top ${ms}ms var(--ease), opacity 120ms` : "opacity 120ms"; f.style.left = x + "px"; f.style.top = y + "px"; f.classList.add("show"); }
 function tapF(f) { f.classList.remove("tap"); void f.offsetWidth; f.classList.add("tap"); }
 const miniSeek = (pct = 30, marks = []) => `<div class="msk" style="position:absolute;left:8%;right:8%;bottom:16%;height:3px;background:rgba(255,255,255,.3)"><div class="mp" style="position:absolute;left:0;top:0;bottom:0;width:${pct}%;background:#ff0033;transition:width .9s linear"></div>${marks.map(m => `<i style="position:absolute;left:${m}%;top:-1px;width:2px;height:5px;background:#000"></i>`).join("")}</div>`;
@@ -1024,12 +1042,11 @@ scen("seekbar", "disable_chapter_skip_double_tap", (box, disabled) => {
   at(700, () => { dev.querySelector(".mp").style.width = disabled ? "35%" : "45%"; dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px;font-size:9px">${disabled ? "+10 seconds" : "Next chapter ▸"}</div>`); });
   return disabled ? "Double-tap skips 10 seconds" : "Double-tap can jump to the next chapter (stock)";
 });
-scen("seekbar", "speed_tap_and_hold", (box) => {
-  const v = state.morphe_speed_tap_and_hold;
+scen("seekbar", "speed_tap_and_hold", (box, v) => {
   box.innerHTML = device("land", `${miniVideo(4)}${miniSeek(30)}`);
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
   at(150, () => { fingerTo(f, W * .5, H * .45); f.classList.add("hold"); });
-  at(600, () => { dev.querySelector(".mp").style.transition = "width 1.2s linear"; dev.querySelector(".mp").style.width = "75%"; dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px;font-size:9px">${v}x ▸▸</div>`); });
+  at(600, () => { dev.querySelector(".mp").style.transition = `width ${(2.4 / v).toFixed(2)}s linear`; dev.querySelector(".mp").style.width = "75%"; dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px;font-size:9px">${v}x ▸▸</div>`); });
   at(2000, () => f.classList.remove("hold"));
   return `Hold the video: plays at ${v}x`;
 });
@@ -1277,8 +1294,9 @@ function turn(dev, orient, then) {
   const [w, h] = DEV_SIZE[cur];
   dev.querySelectorAll(".finger").forEach(f => f.classList.remove("show"));
   dev.style.transition = "transform .5s var(--ease), scale .5s var(--ease)"; dev.style.transform = `rotate(${orient === "land" ? -90 : 90}deg)`;
-  dev.style.scale = Math.min(parseFloat(dev.style.scale) || 1, fitScale(h, w)).toFixed(3);
-  setTimeout(() => { dev.style.transition = "none"; dev.style.transform = ""; rotate(dev, orient); if (then) then(); }, 520);
+  const inPair = !!dev.closest(".duo7.gen"); // in a pair the turning phone shrinks to stay inside its own slot
+  dev.style.scale = (inPair ? Math.min(w, h) / Math.max(w, h) : Math.min(parseFloat(dev.style.scale) || 1, fitScale(h, w))).toFixed(3);
+  setTimeout(() => { dev.style.transition = "none"; dev.style.transform = ""; if (inPair) dev.style.scale = ""; rotate(dev, orient); if (then) then(); }, 520);
 }
 const r1 = dev => turn(dev, "port", () => devContent(dev, playerArea(6))); r1.text = "leaves fullscreen";
 gestureScen("disable_fullscreen_dragged_down_gesture", "land", [.5, .25], [.5, .85], "Swipe down in fullscreen", r1);
@@ -1438,8 +1456,7 @@ scen("watch", "disable_rolling_number_animations", (box, disabled) => {
   at(550, () => { if (disabled) { rni.style.transition = "none"; } rni.style.transform = "translateY(-13px)"; });
   return disabled ? "The count changes instantly" : "The count rolls to the new number";
 });
-scen("player", "exit_fullscreen", (box) => {
-  const v = state.morphe_exit_fullscreen;
+scen("player", "exit_fullscreen", (box, v) => {
   const startLand = v === "LANDSCAPE" || v === "PORTRAIT_LANDSCAPE" || v === "DISABLED";
   situation("The video ends in fullscreen");
   box.innerHTML = device("land", `${playerArea(4, `<div class="msk" style="position:absolute;left:8%;right:8%;bottom:12%;height:3px;background:rgba(255,255,255,.3)"><div class="mp" style="position:absolute;left:0;top:0;bottom:0;width:80%;background:#ff0033;transition:width .9s linear"></div></div>`)}`);
@@ -1536,6 +1553,20 @@ def("snackbar", "style", "custom_snackbar_theme custom_snackbar_color_dark custo
 }
 
 let scenarioToken = { alive: false };
+// Every scenario plays for SC_TOTAL as an Off / On comparison, whatever the setting is set to now.
+// A short story is slowed down (up to 1.6x) and played again if there is time; a list setting
+// compares its default with the chosen value (or the first other value when it is on the default).
+const SC_TOTAL = 11000;
+const SCN_SELF_DUO = new Set(["morphe_disable_player_popup_panels"]);
+function duoValues(k, prev) {
+  const p = PREF[k];
+  if (p.type === "boolean") return [[false, "Off"], [true, "On"]];
+  const ents = entriesFor(k), lab = v => ents.find(e => sameVal(e.value, v))?.label || String(v) + (/speed/.test(k) ? "×" : "");
+  const d = defaults[k], cur = V(k);
+  const other = ents.length ? ents.find(e => !sameVal(e.value, d))?.value : typeof d === "number" ? Math.round(d * 150) / 100 : undefined;
+  const r = !sameVal(cur, d) ? cur : prev !== undefined && !sameVal(prev, d) ? prev : (other ?? cur);
+  return [[d, lab(d)], [r, lab(r)]];
+}
 function playScenario(k, prevValue) {
   const fn = SCN[k]; if (!fn) return;
   scenarioToken.alive = false;
@@ -1543,24 +1574,39 @@ function playScenario(k, prevValue) {
   const canvas = $("canvas"); const stick = $("stick");
   const wasHidden = stick.hidden || stick.classList.contains("noscene");
   if (wasHidden) { stick.hidden = false; stick.classList.remove("noscene"); $("stage").innerHTML = `<div style="height:320px"></div>`; }
-  const on = !!V(k);
-  const valueTxt = PREF[k].type === "boolean" ? (on ? "On" : "Off") : (entriesFor(k).find(e => sameVal(e.value, V(k)))?.label || String(V(k)));
-  canvas.innerHTML = `<div class="cap"><b>${esc(title(k))}</b><span class="st ${on ? "on" : ""}">${esc(valueTxt)}</span></div><div class="sit"></div><div class="scbox" style="display:grid;place-items:center"></div><div class="foot"></div><div class="prog"></div>`;
+  $("stage").style.minHeight = "300px"; // two phones need room, even over a short preview
+  canvas.innerHTML = `<div class="cap"><b>${esc(title(k))}</b></div><div class="sit"></div><div class="scbox" style="display:grid;place-items:center"></div><div class="foot"></div><div class="prog"></div>`;
   canvas.classList.add("show");
-  const prev = prevValue !== undefined ? prevValue : PREF[k].type === "boolean" ? !V(k) : V(k);
-  const foot = fn(canvas.querySelector(".scbox"), V(k), prev);
-  fitDev();
-  if (foot && !canvas.querySelector(".foot").textContent) canvas.querySelector(".foot").textContent = foot;
-  const prog = canvas.querySelector(".prog");
-  const hold = SCN_HOLD[k] || SC_HOLD;
-  prog.animate([{ width: "0%" }, { width: "100%" }], { duration: hold, delay: SC_FADE, fill: "forwards" });
+  const box = canvas.querySelector(".scbox"), self = SCN_SELF_DUO.has(k);
+  const L = SCN_HOLD[k] || SC_HOLD, runs = self ? 1 : Math.max(1, Math.floor(SC_TOTAL / (L * 1.45)));
+  const slot = SC_TOTAL / runs, stretch = Math.max(1, Math.min(1.6, (slot - 400) / L));
+  const vals = duoValues(k, prevValue);
+  const draw = () => {
+    scRun++; scStretch = stretch;
+    if (self) {
+      const foot = fn(box, V(k), prevValue);
+      if (foot) canvas.querySelector(".foot").textContent = foot;
+    } else {
+      box.innerHTML = `<div class="duo7 gen">${vals.map(([, l], i) => `<div class="dl7"><span class="${i ? "on" : ""}">${esc(l)}</span><div class="side"></div><div class="sf7"></div></div>`).join("")}</div>`;
+      box.querySelectorAll(".dl7").forEach((cell, i) => {
+        const side = { i, foot: cell.querySelector(".sf7") };
+        scSide = side;
+        try { const ft = fn(cell.querySelector(".side"), vals[i][0], vals[1 - i][0]); if (ft && !side.foot.textContent) side.foot.textContent = ft; }
+        finally { scSide = null; }
+      });
+    }
+    fitDev();
+  };
+  draw();
+  for (let r = 1; r < runs; r++) setTimeout(() => { if (token.alive && token === scenarioToken) draw(); }, SC_FADE + r * slot);
+  canvas.querySelector(".prog").animate([{ width: "0%" }, { width: "100%" }], { duration: SC_TOTAL, delay: SC_FADE, fill: "forwards" });
   setTimeout(() => {
     if (!token.alive) return;
     canvas.classList.remove("show");
-    setTimeout(() => { if (!token.alive) return; token.alive = false; canvas.innerHTML = ""; if (wasHidden && !SCENES[section]) { stick.hidden = !grouped; stick.classList.add("noscene"); $("stage").innerHTML = ""; } }, SC_FADE);
-  }, SC_FADE + hold);
+    setTimeout(() => { if (!token.alive) return; token.alive = false; canvas.innerHTML = ""; $("stage").style.minHeight = ""; if (wasHidden && !SCENES[section]) { stick.hidden = !grouped; stick.classList.add("noscene"); $("stage").innerHTML = ""; } }, SC_FADE);
+  }, SC_FADE + SC_TOTAL);
 }
-function stopScenario() { scenarioToken.alive = false; $("canvas").classList.remove("show"); }
+function stopScenario() { scenarioToken.alive = false; $("canvas").classList.remove("show"); $("stage").style.minHeight = ""; }
 
 // ------------------------------------------------------------------ demos (gesture / behaviour), faster loop
 const LOOP_MS = 1500;
@@ -2977,7 +3023,7 @@ function setSearch(on) {
 function renderSearch() {
   const q = query.trim().toLowerCase();
   const all = CAT.preferences.filter(p => inVersion(p.key));
-  if (!q) { $("list").innerHTML = `<div class="shint">Type to search all ${all.length} settings. Matches update as you type.</div>`; return; }
+  if (!q) { $("list").innerHTML = `<div class="shint">Type to search all ${all.length} settings.</div>`; return; }
   const words = q.split(/\s+/).filter(Boolean);
   const hits = [];
   for (const p of all) {
@@ -3600,27 +3646,25 @@ $("uiScale").addEventListener("input", e => { uiScale = Number(e.target.value); 
 window.addEventListener("resize", () => { if (window.innerWidth > 860) applyDevice(); else { $("phone").style.transform = ""; $("devwrap").style.width = ""; $("devwrap").style.height = ""; $("phone").style.width = ""; $("phone").style.height = ""; } });
 
 // ------------------------------------------------------------------ first-run tutorial
-// Loops on its own; OK appears after two full loops, or once every page has been opened by hand.
-// Tapping a page jumps there and stops the automatic advance (the page's animation still plays).
+// Three short pages that loop on their own; OK appears after two full loops, or once every page
+// has been opened by hand. Tapping a page jumps there and stops the automatic advance.
 const TUT_STEPS = [
-  { cap: "Tap a button to select it", sub: "Its setting is highlighted in the list below" },
-  { cap: "Hold it to switch it off", sub: "It disappears, just like in the real app" },
-  { cap: "Tap its row to peek", sub: "You see it for a moment, the setting stays off" },
-  { cap: "Hold it while it shows to bring it back", sub: "Hold again any time to undo" },
-  { cap: "Double-tap works too", sub: "Double-tap a button or its row to switch it" },
-  { cap: "Or use the switch", sub: "Every setting is also a row in the list" },
+  { cap: "Tap something in the preview", sub: "Its setting lights up in the list" },
+  { cap: "Hold it to change the setting", sub: "Double-tap it, or tap the switch, works too" },
+  { cap: "Tap a hidden setting to find it", sub: "An outline shows where it was. Hold it to bring it back" },
 ];
-const TUT_STEP_MS = 2600;
+const TUT_STEP_MS = 3600;
 let tutTimer = null, tutAnims = [];
 function runTutorial() {
   const t = $("tut");
   t.innerHTML = `<h2>Visual settings</h2><p class="tsub">See what each Morphe setting changes</p>
+    <div class="tcap" id="tcap"></div>
     <div class="tstage"><div class="tbtns"><div class="tb" id="tbCC">${I("cc")}</div><div class="tb" id="tbCast">${I("cast")}<div class="tring" id="tring"></div></div><div class="tb">${I("gear")}</div></div>
       <div style="position:absolute;left:12px;right:12px;bottom:12px;height:3px;background:rgba(255,255,255,.3)"><div style="width:30%;height:3px;background:#ff0033"></div></div></div>
     <div class="tlist" id="tlist"><div class="tl-t">Hide Cast button<small id="tlSum">Shown</small></div><span class="sw" id="tlSw" role="presentation" aria-checked="false"></span><div class="tl-bar" id="tlBar"></div></div>
     <div class="finger tfinger" id="tFinger">${I("gesture")}</div>
     <div class="steps" role="tablist" aria-label="Tutorial pages">${TUT_STEPS.map((_, n) => `<button role="tab" data-step="${n}" aria-label="Page ${n + 1}"><i></i></button>`).join("")}</div>
-    <div class="tcap" id="tcap"></div><button class="ok" id="tutOk">OK</button><div class="wait" id="tutWait">Watch twice, or open every page, to continue</div>`;
+    <button class="ok" id="tutOk">OK</button>`;
   t.classList.add("on");
   let step = 0, loops = 0, manual = false; const seen = new Set();
   const cast = $("tbCast"), f = $("tFinger"), ring = $("tring"), row = $("tlist"), sw = $("tlSw"), sum = $("tlSum"), bar = $("tlBar");
@@ -3629,60 +3673,41 @@ function runTutorial() {
   const centerOf = el => { const r = el.getBoundingClientRect(), b = box(); return [r.left - b.left + r.width / 2, r.top - b.top + r.height / 2]; };
   const move = (el, ms, dx = 0, dy = 0) => { const [x, y] = centerOf(el); f.style.transition = ms ? `left ${ms}ms var(--ease), top ${ms}ms var(--ease), opacity 160ms` : "opacity 160ms"; f.style.left = (x + dx) + "px"; f.style.top = (y + dy) + "px"; f.classList.add("show"); };
   const tap = () => { f.classList.remove("tap"); void f.offsetWidth; f.classList.add("tap"); };
-  const hold = (r, el) => { f.classList.add("hold"); r.classList.remove("go"); void r.offsetWidth; r.classList.add("go"); };
+  const hold = r => { f.classList.add("hold"); r.classList.remove("go"); void r.offsetWidth; r.classList.add("go"); };
   const setHidden = h => { sw.setAttribute("aria-checked", String(h)); sum.textContent = h ? "Hidden" : "Shown"; };
   const show = () => {
     tutAnims.forEach(clearTimeout); tutAnims = [];
     seen.add(step);
     t.querySelectorAll(".steps button").forEach((b, n) => { b.classList.toggle("on", n === step); b.setAttribute("aria-selected", String(n === step)); b.classList.toggle("done", seen.has(n)); });
-    $("tcap").innerHTML = `${TUT_STEPS[step].cap}<small>${TUT_STEPS[step].sub}</small>`;
+    $("tcap").innerHTML = `<b>${step + 1}</b>${TUT_STEPS[step].cap}<small>${TUT_STEPS[step].sub}</small>`;
     f.classList.remove("tap", "hold"); ring.classList.remove("go"); bar.classList.remove("go"); row.classList.remove("sel");
-    if (step === 0) {
+    if (step === 0) { // tap the button: it and its row light up together
       cast.className = "tb"; setHidden(false);
       move(cast, 0, 0, 120);
       at2(60, () => move(cast, 700));
       at2(900, () => { tap(); cast.classList.add("sel"); row.classList.add("sel"); });
-      at2(2100, () => f.classList.remove("show"));
+      at2(2600, () => f.classList.remove("show"));
     }
-    if (step === 1) {
-      cast.className = "tb sel"; row.classList.add("sel"); setHidden(false); move(cast, 0);
-      at2(400, () => hold(ring));
-      at2(400 + 480, () => { f.classList.remove("hold"); setHidden(true); ring.classList.remove("go"); });
-      at2(1000, () => { cast.className = "tb off"; });
-      at2(1700, () => f.classList.remove("show"));
+    if (step === 1) { // hold the button: it goes away; then the switch brings it back
+      cast.className = "tb sel"; row.classList.add("sel"); setHidden(false); move(cast, 0, 0, 80);
+      at2(60, () => move(cast, 500));
+      at2(700, () => hold(ring));
+      at2(700 + 480, () => { f.classList.remove("hold"); setHidden(true); ring.classList.remove("go"); cast.className = "tb off"; });
+      at2(1900, () => move(sw, 500));
+      at2(2500, () => { tap(); setHidden(false); cast.className = "tb sel reveal"; });
+      at2(3200, () => f.classList.remove("show"));
     }
-    if (step === 2) {
-      cast.className = "tb off"; setHidden(true); move(row, 0, -40, 30);
+    if (step === 2) { // hidden: tapping the row shows an outline where it was; holding it brings it back
+      cast.className = "tb off"; setHidden(true); move(row, 0, -40, 40);
       at2(60, () => move(row, 500, -40));
       at2(700, () => { tap(); row.classList.add("sel"); cast.className = "tb ghost"; });
-      at2(2000, () => { cast.className = "tb off"; });
-      at2(2200, () => f.classList.remove("show"));
-    }
-    if (step === 3) {
-      cast.className = "tb off"; setHidden(true); row.classList.add("sel"); move(row, 0, -40);
-      at2(100, () => { cast.className = "tb ghost"; });
-      at2(450, () => move(cast, 450));
-      at2(1000, () => hold(ring));
-      at2(1000 + 480, () => { cast.className = "tb sel reveal"; f.classList.remove("hold"); setHidden(false); });
-      at2(2300, () => f.classList.remove("show"));
-    }
-    if (step === 4) {
-      cast.className = "tb sel"; row.classList.add("sel"); setHidden(false); move(cast, 0, 0, 60);
-      at2(60, () => move(cast, 500));
-      at2(700, tap); at2(860, () => { tap(); setHidden(true); cast.className = "tb off"; });
-      at2(1500, () => move(row, 450, -40));
-      at2(2000, tap); at2(2160, () => { tap(); setHidden(false); cast.className = "tb sel reveal"; });
-      at2(2500, () => f.classList.remove("show"));
-    }
-    if (step === 5) {
-      cast.className = "tb"; setHidden(false); move(sw, 0, 0, 40);
-      at2(60, () => move(sw, 500));
-      at2(700, () => { tap(); setHidden(true); row.classList.add("sel"); cast.className = "tb off"; });
-      at2(1700, () => { tap(); setHidden(false); cast.className = "tb reveal"; });
-      at2(2300, () => f.classList.remove("show"));
+      at2(1300, () => move(cast, 500));
+      at2(1900, () => hold(ring));
+      at2(1900 + 480, () => { cast.className = "tb sel reveal"; f.classList.remove("hold"); ring.classList.remove("go"); setHidden(false); });
+      at2(3200, () => f.classList.remove("show"));
     }
   };
-  const okCheck = () => { if (loops >= 2 || seen.size === TUT_STEPS.length && manual) { $("tutOk").classList.add("show"); $("tutWait").textContent = ""; } };
+  const okCheck = () => { if (loops >= 2 || seen.size === TUT_STEPS.length && manual) { $("tutOk").classList.add("show"); } };
   show();
   clearInterval(tutTimer);
   tutTimer = setInterval(() => {
