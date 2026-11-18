@@ -51,7 +51,7 @@ function measurePair(gen) {
 // centre stays put while its corner moves
 function inPair(gen, el) {
   const G = gen.getBoundingClientRect(), r = el.getBoundingClientRect(), k = G.width / (gen.offsetWidth || 1) || 1, cs = getComputedStyle(el);
-  return { x: (r.left - (G.left + G.width / 2)) / k, y: (r.top - (G.top + G.height / 2)) / k, w: el.offsetWidth, fs: cs.fontSize, lh: cs.lineHeight };
+  return { x: (r.left - (G.left + G.width / 2)) / k, y: (r.top - G.top) / k, w: el.offsetWidth, fs: cs.fontSize, lh: cs.lineHeight };
 }
 // The one motion curve of a comparison: phones turning, the pair resizing and captions moving all
 // use .5 s on --ease (cubic-bezier(.4, 0, .2, 1)), started on the same frame, so they move as one.
@@ -64,7 +64,7 @@ const moveEase = (() => { // cubic-bezier(.4, 0, .2, 1), the CSS --ease
 function finalCapPlaces(gen) {
   const probe = gen.cloneNode(true); probe.removeAttribute("data-fit"); probe.classList.add("probe7");
   probe.querySelectorAll("[id]").forEach(e => e.removeAttribute("id")); probe.querySelectorAll(".glide7").forEach(e => e.remove());
-  if (gen.dataset.lay === "side") { probe.classList.remove("capgo"); probe.classList.add("capside"); }
+  probe.classList.remove("capgo"); probe.classList.toggle("capside", gen.dataset.lay === "side");
   gen.parentElement.appendChild(probe);
   const out = [...probe.querySelectorAll(".dl7 > .sf7")].map(c => inPair(probe, c));
   probe.remove(); return out;
@@ -76,7 +76,7 @@ function glideCap(gen, cap, from, to) {
   if (cap._gliding) { cap._gliding.remove(); }
   const g = cap.cloneNode(true); g.className = "sf7 glide7"; cap._gliding = g; g._to = to;
   const px = v => parseFloat(v) || 0, t0 = performance.now();
-  g.style.cssText = `position:absolute;margin:0;min-width:0;pointer-events:none;z-index:0;text-align:center;left:${from.x + gen.offsetWidth / 2}px;top:${from.y + gen.offsetHeight / 2}px;width:${from.w}px;font-size:${from.fs};line-height:${from.lh}`;
+  g.style.cssText = `position:absolute;margin:0;min-width:0;pointer-events:none;z-index:0;text-align:center;left:calc(50% + ${from.x}px);top:${from.y}px;width:${from.w}px;font-size:${from.fs};line-height:${from.lh}`;
   gen.appendChild(g); cap.style.opacity = "0";
   const lerp = (a, b, e) => a + (b - a) * e;
   const step = now => {
@@ -84,7 +84,7 @@ function glideCap(gen, cap, from, to) {
     const t = Math.min(1, (now - t0) / MOVE_MS), e = moveEase(t), to = g._to;
     g.textContent = cap.textContent;
     // measured from the pair's centre, which the pair's own resize keeps in place
-    g.style.left = lerp(from.x, to.x, e) + gen.offsetWidth / 2 + "px"; g.style.top = lerp(from.y, to.y, e) + gen.offsetHeight / 2 + "px";
+    g.style.left = `calc(50% + ${lerp(from.x, to.x, e)}px)`; g.style.top = lerp(from.y, to.y, e) + "px";
     g.style.width = lerp(from.w, to.w, e) + "px";
     g.style.fontSize = lerp(px(from.fs), px(to.fs), e) + "px"; g.style.lineHeight = lerp(px(from.lh), px(to.lh), e) + "px";
     if (t < 1) requestAnimationFrame(step);
@@ -120,16 +120,15 @@ function fitDev(orient) {
     // where each caption was last drawn (a phone may already have turned before this call)
     const before = moved ? caps.map(c => c._pos || snap(c)) : null;
     gen.dataset.lay = pick;
-    const pending = gen.classList.contains("capgo");
-    if (pending && pick === "side") { /* already on its way into the side layout: let it finish */ }
-    else if (moved && pick === "side") {
-      // turning back to portrait: the phones are still landscape-wide for a moment, too wide for the
-      // captions beside them. Until they finish, the captions leave the flow (the gliding copies show
-      // them) and the phones sit as they will in the side layout; then the side layout takes over.
-      gen.classList.remove("capside"); gen.classList.add("capgo"); gen.style.flexDirection = "row";
-      clearTimeout(gen._sideT);
-      gen._sideT = setTimeout(() => { gen.classList.remove("capgo"); if (gen.dataset.lay === "side") gen.classList.add("capside"); }, MOVE_MS - 30);
-    } else { clearTimeout(gen._sideT); gen.classList.remove("capgo"); gen.classList.toggle("capside", pick === "side"); gen.style.flexDirection = pick === "column" ? "column" : "row"; }
+    // A layout move (a phone turning): while the phones turn, the captions leave the flow (their gliding
+    // copies show them) so nothing pushes the phones around: no landscape-wide phones squeezed beside
+    // the captions, no phones pushed apart by a caption under them. The final layout lands at the end.
+    const finish = () => { gen.classList.remove("capgo"); gen.classList.toggle("capside", gen.dataset.lay === "side"); gen.style.flexDirection = gen.dataset.lay === "column" ? "column" : "row"; };
+    if (gen.classList.contains("capgo")) { gen.style.flexDirection = pick === "column" ? "column" : "row"; } // already moving: it lands when the move ends
+    else if (moved) {
+      gen.classList.remove("capside"); gen.classList.add("capgo"); gen.style.flexDirection = pick === "column" ? "column" : "row";
+      clearTimeout(gen._sideT); gen._sideT = setTimeout(finish, MOVE_MS - 30);
+    } else { clearTimeout(gen._sideT); finish(); }
     gen.style.scale = sc.toFixed(3);
     if (before) { const ends = finalCapPlaces(gen); caps.forEach((c, i) => glideCap(gen, c, before[i], ends[i])); }
     // the other phone turning a moment later changes where the captions end: retarget them
