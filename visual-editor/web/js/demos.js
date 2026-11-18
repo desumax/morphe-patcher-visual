@@ -124,8 +124,8 @@ const DEMOS = {
     swipeDemo(side, v && v !== "OFF" ? v : side === "left" ? "BRIGHTNESS" : side === "right" ? "VOLUME" : "SPEED", "Shared by every zone · ");
   },
   morphe_swipe_top_zone(v) { swipeDemo("top", v); },
-  morphe_swipe_overlay_background_opacity() { DEMOS.morphe_swipe_overlay_style(); },
-  morphe_swipe_text_overlay_size() { DEMOS.morphe_swipe_overlay_style(); },
+  morphe_swipe_overlay_background_opacity() { stillHud(); },
+  morphe_swipe_text_overlay_size() { stillHud(); },
   morphe_swipe_overlay_progress_volume_color() { swipeDemo("right", "VOLUME"); },
   morphe_swipe_overlay_progress_brightness_color() { swipeDemo("left", "BRIGHTNESS"); },
   morphe_swipe_overlay_progress_speed_color() { swipeDemo("right", "SPEED"); },
@@ -176,13 +176,17 @@ function swipeZones(ms = 900, labels = false) {
   st.appendChild(z);
   if (ms) { dT(() => z.classList.add("out"), ms); dT(() => z.remove(), ms + 400); }
 }
-function swipeDemo(side, action, prefix = "") {
+// still: the overlay stays up, half full and without a finger, so a slider for its look (opacity,
+// text size) can be dragged while watching it change
+function swipeDemo(side, action, prefix = "", still = false) {
   const st = $("stage"), f = finger(), hud = $("hud"); if (!f || !hud) return;
   const zw = Math.max(5, Math.min(50, Number(V("morphe_swipe_zone_width")) || 37)) / 100;
   const W = st.clientWidth, H = st.firstElementChild.clientHeight, x = side === "top" ? W * .5 : side === "left" ? W * zw / 2 : W * (1 - zw / 2);
-  swipeZones();
-  if (side === "top") { place(f, W * .35, H * .12); dT(() => place(f, W * .65, H * .12, 800), 120); }
-  else { place(f, x, H * .75); dT(() => place(f, x, H * .25, 800), 120); }
+  if (!still) {
+    swipeZones();
+    if (side === "top") { place(f, W * .35, H * .12); dT(() => place(f, W * .65, H * .12, 800), 120); }
+    else { place(f, x, H * .75); dT(() => place(f, x, H * .25, 800), 120); }
+  }
   const sideName = side === "top" ? "Top" : side === "left" ? "Left" : "Right";
   if (!action || action === "OFF") { label(`${sideName} swipe: does nothing (off)`, true); hud.style.display = "none"; }
   else {
@@ -192,22 +196,48 @@ function swipeDemo(side, action, prefix = "") {
     const bgA = (Number(V("morphe_swipe_overlay_background_opacity")) || 0) / 100;
     const col = argb(V(action === "VOLUME" ? "morphe_swipe_overlay_progress_volume_color" : action === "BRIGHTNESS" ? "morphe_swipe_overlay_progress_brightness_color" : "morphe_swipe_overlay_progress_speed_color"), "#fff");
     const ts = Math.max(8, Math.min(30, Number(V("morphe_swipe_text_overlay_size")) || 14)) * .8;
-    const txt = `<span style="font-size:${ts}px;font-weight:600;color:#fff">${action === "SPEED" ? "1.5x" : "60"}</span>`;
+    const txt = `<span class="hv" style="font-size:${ts}px;font-weight:600;color:#fff;font-variant-numeric:tabular-nums">${action === "SPEED" ? "1.0x" : "20"}</span>`;
     let inner;
-    if (circ) inner = `<div style="width:64px;height:64px;border-radius:50%;background:conic-gradient(${col} var(--p,0%),rgba(255,255,255,.25) 0);display:grid;place-items:center"><div style="width:52px;height:52px;border-radius:50%;background:rgba(0,0,0,${Math.max(bgA, .3)});display:grid;place-items:center">${I(ic)}${txt}</div></div>`;
+    if (circ) inner = `<div style="width:64px;height:64px;border-radius:50%;background:conic-gradient(${col} var(--p,0%),rgba(255,255,255,.25) 0);display:grid;place-items:center"><div style="width:52px;height:52px;border-radius:50%;background:rgba(0,0,0,${bgA});display:grid;place-items:center">${I(ic)}${txt}</div></div>`;
     else if (vert) inner = `<div style="display:grid;justify-items:center;gap:6px;background:${min ? "transparent" : `rgba(0,0,0,${bgA})`};padding:8px;border-radius:14px">${I(ic)}<div style="width:6px;height:80px;background:rgba(255,255,255,.25);border-radius:3px;position:relative"><div style="position:absolute;bottom:0;left:0;right:0;height:var(--p,0%);background:${col};border-radius:3px"></div></div>${txt}</div>`;
     else inner = `<div style="display:flex;align-items:center;gap:8px;background:${min ? "transparent" : `rgba(0,0,0,${bgA})`};padding:8px 12px;border-radius:18px">${I(ic)}<div style="width:110px;height:5px;background:rgba(255,255,255,.25);border-radius:3px;position:relative"><div style="position:absolute;left:0;top:0;bottom:0;width:var(--p,0%);background:${col};border-radius:3px"></div></div>${txt}</div>`;
     hud.innerHTML = inner; hud.style.display = "block";
     if (style === "HORIZONTAL_MINIMAL_TOP") { hud.style.left = "50%"; hud.style.right = "auto"; hud.style.top = "12px"; hud.style.transform = "translateX(-50%)"; }
     else if (vert) { hud.style.left = side === "left" ? "auto" : "14px"; hud.style.right = side === "left" ? "14px" : "auto"; hud.style.top = "50%"; hud.style.transform = "translateY(-50%)"; }
     else { hud.style.left = "50%"; hud.style.right = "auto"; hud.style.top = "50%"; hud.style.transform = "translate(-50%,-50%)"; }
-    let p = 20; hud.style.setProperty("--p", p + "%");
-    const t = dEvery(() => { p += 10; hud.style.setProperty("--p", Math.min(p, 90) + "%"); if (p > 90) clearInterval(t); }, 80);
+    // the bar follows the finger frame by frame: it reads where the finger actually is on its way,
+    // so the fill and the number move exactly with it instead of stepping on a timer of their own
+    const hv = hud.querySelector(".hv"), a0 = side === "top" ? W * .35 : H * .75, a1 = side === "top" ? W * .65 : H * .25;
+    const show = fr => {
+      const p = 20 + 70 * fr; hud.style.setProperty("--p", p.toFixed(2) + "%");
+      if (hv) hv.textContent = action === "SPEED" ? (1 + fr).toFixed(2).replace(/0$/, "") + "x" : String(Math.round(p));
+    };
+    if (still) { show(.6); hud.style.transition = "none"; hud.style.opacity = "1"; return; }
+    show(0);
+    hud.style.transition = "opacity 160ms var(--ease)"; hud.style.opacity = "0"; requestAnimationFrame(() => { hud.style.opacity = "1"; });
+    const t0 = performance.now();
+    const t = dEvery(() => {
+      const cur = parseFloat(getComputedStyle(f)[side === "top" ? "left" : "top"]);
+      show(Math.max(0, Math.min(1, (cur - a0) / (a1 - a0))));
+      if (performance.now() - t0 > 1000) clearInterval(t);
+    }, 16);
     label(`${prefix}${sideName} swipe: ${entryLabel("morphe_swipe_" + side + "_zone", action) || action.toLowerCase()}`);
-    dT(() => { hud.style.display = "none"; }, 1200);
+    dT(() => { hud.style.opacity = "0"; }, 1150);
+    dT(() => { hud.style.display = "none"; hud.style.opacity = ""; }, 1320);
   }
   hideF(f, 1050);
 }
+// the overlay's look, held still on the first zone that has a gesture; dragging its slider redraws it live
+function stillHud() {
+  const side = ["left", "right", "top"].find(x => { const v = V("morphe_swipe_" + x + "_zone"); return v && v !== "OFF"; }) || "left";
+  const v = V("morphe_swipe_" + side + "_zone");
+  swipeDemo(side, v && v !== "OFF" ? v : "BRIGHTNESS", "", true);
+}
+// redrawn on every step of a slider or keystroke in a number box, so the preview follows the value live
+const LIVE_HUD = {
+  morphe_swipe_overlay_background_opacity: stillHud, morphe_swipe_text_overlay_size: stillHud,
+  morphe_swipe_zone_width: () => swipeZones(0, true), morphe_swipe_speed_zone_height: () => swipeZones(0, true),
+};
 function startDemo(k) {
   stopDemo();
   const fn = DEMOS[k]; if (!fn) return;

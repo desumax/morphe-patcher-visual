@@ -28,7 +28,7 @@ function renderBar() {
 // Screens Max has signed off ("lock it"). Shown as a small check in the screen menu and on the tabs.
 // To remove before shipping: delete this block, the .devdone CSS rule, and the three devMark /
 // devMarkGroup calls (screen menu card, group card, tab).
-const DEV_DONE = new Set([]); // section ids, e.g. "player"
+const DEV_DONE = new Set(["player", "seekbar"]); // section ids, e.g. "player"
 const devMark = id => DEV_DONE.has(id) ? `<span class="devdone" title="Finished (development marker)">✓</span>` : "";
 const devMarkGroup = g => tabsOf(g).length && tabsOf(g).every(([id]) => DEV_DONE.has(id)) ? devMark(tabsOf(g)[0][0]) : "";
 // ---- end DEV ONLY ---------------------------------------------------------------------------------
@@ -248,7 +248,7 @@ function rowHTML(k, live) {
     : KIDS[k] ? `<span class="kidbtn kidoff" title="Sub-settings hidden while this is off" aria-label="${KIDS[k].length} sub-settings, hidden">${KIDS[k].length}${I("lock")}</span>` : ""; // same footprint as the open/close button, so the card never changes width
   const over = /^(hide|show) in /i.test(title(k)) && p.subScreenTitle ? `<div class="over">${esc(p.subScreenTitle)}</div>` : "";
   return `<div class="${cls.join(" ")}" data-row="${k}" data-k="${k}" tabindex="0">
-    <div class="txt">${over}<div class="ttl">${ttlHTML(shownTitle(k), (dis ? I("lock", "lk") : "") + (chg ? '<span class="changed-dot" title="Changed from default"></span>' : "") + tags + kidbtn)}</div>
+    <div class="txt">${over}<div class="ttl">${ttlHTML(shownTitle(k), (dis ? I("lock", "lk") : "") + (chg ? '<span class="changed-dot" title="Changed from default"></span>' : '<span class="changed-dot no"></span>') + tags + kidbtn)}</div>
       ${sum ? `<div class="sum">${esc(sum)}</div>` : ""}${need}${ctl}</div>${right || goto ? `<div class="side">${right}${goto}</div>` : ""}</div>`;
 }
 // The last word of a title and the badges after it never wrap apart, so a sub-options pill can't end up alone on a line.
@@ -309,7 +309,7 @@ function renderList() {
       const any = ks.some(x => kidVisible(x) || x === peekKid);
       if (any && (!collapsed.has(k) || ks.includes(peekKid))) wantOpen.add(k);
       // parent and its sub-options travel as one unit, so in two columns they stay in the same column
-      out = `<div class="unit">${out}<div class="kids ${lastOpen.has(k) ? "open" : ""}" data-kids-of="${k}"><div class="kin">${ks.map(x => rowHTML(x, isLive(x))).join("")}</div></div></div>`;
+      out = `<div class="unit">${out}<div class="kids ${lastOpen.has(k) ? "open" : ""}" data-kids-of="${k}"><div class="kin">${byPosition(ks).map(x => rowHTML(x, isLive(x))).join("")}</div></div></div>`;
     }
     return out;
   };

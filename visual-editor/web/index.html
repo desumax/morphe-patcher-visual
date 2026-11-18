@@ -379,6 +379,7 @@ button { font: inherit; color: inherit; }
 .replay { width: 32px; height: 32px; border-radius: 50%; border: 0; background: var(--m-c-highest); display: grid; place-items: center; cursor: pointer; flex: none; }
 .replay svg { width: 18px; height: 18px; fill: var(--m-primary); }
 .changed-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--m-primary); margin-left: 6px; vertical-align: middle; }
+.changed-dot.no { visibility: hidden; } /* keeps its room, so a changed setting's title never rewraps */
 .ctl { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 /* a number or colour box sits on the right of the card, where a toggle would be: no extra line */
 .row .txt:has(> .ctl.side) { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; align-items: center; }
