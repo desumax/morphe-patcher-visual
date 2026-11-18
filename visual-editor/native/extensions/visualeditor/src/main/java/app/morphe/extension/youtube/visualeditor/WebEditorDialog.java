@@ -92,6 +92,9 @@ final class WebEditorDialog extends Dialog {
             return insets;
         });
 
+        // Remote debugging only on the Android emulator (ro.kernel.qemu), never on a phone: the
+        // development loop drives and screenshots the editor through Chrome DevTools.
+        if (isEmulator()) WebView.setWebContentsDebuggingEnabled(true);
         web = new WebView(activity);
         web.setBackgroundColor(0xFF0F0F0F);
         web.setOverScrollMode(View.OVER_SCROLL_NEVER);
@@ -307,6 +310,16 @@ final class WebEditorDialog extends Dialog {
         } catch (Throwable ignored) {
         }
         // A restart left for later: Morphe's own settings ask for it when they are closed.
+    }
+
+    private static boolean isEmulator() {
+        try {
+            Class<?> sp = Class.forName("android.os.SystemProperties");
+            Object v = sp.getMethod("get", String.class).invoke(null, "ro.kernel.qemu");
+            return "1".equals(v);
+        } catch (Throwable ex) {
+            return false;
+        }
     }
 
     static boolean available() {

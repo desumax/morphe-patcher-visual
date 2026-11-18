@@ -77,7 +77,7 @@ public final class VisualEditorEntry {
             }
             if (top == Integer.MAX_VALUE) top = 0;
 
-            SwitchPreference toggle = new SwitchPreference(context);
+            SwitchPreference toggle = new EntrySwitch(context);
             toggle.setKey(KEY_SWITCH);
             toggle.setPersistent(false);
             toggle.setTitle("Visual settings editor");
@@ -96,6 +96,8 @@ public final class VisualEditorEntry {
 
             if (model != null) {
                 // Same row look as the entry it now sits above (icon layout or not).
+                // Same row as About: EntrySwitch adds the switch beside it when that row has no
+                // widget frame (test 3 showed no switch; borrowing a switch row misaligned it).
                 toggle.setLayoutResource(model.getLayoutResource());
                 open.setLayoutResource(model.getLayoutResource());
                 if (model.getIcon() != null) {
@@ -127,6 +129,47 @@ public final class VisualEditorEntry {
             }
         } catch (Throwable ex) {
             Logger.printException(() -> "Visual editor: could not add its entry", ex);
+        }
+    }
+
+    /**
+     * A switch row in any row layout. Morphe's icon rows have no widget frame, so when the row
+     * has none the switch is put at its end, with the id SwitchPreference binds to.
+     */
+    static final class EntrySwitch extends SwitchPreference {
+        EntrySwitch(Context context) {
+            super(context);
+        }
+
+        @Override
+        protected android.view.View onCreateView(android.view.ViewGroup parent) {
+            android.view.View row = super.onCreateView(parent);
+            try {
+                if (row.findViewById(android.R.id.widget_frame) != null) return row;
+                int id = android.content.res.Resources.getSystem().getIdentifier("switch_widget", "id", "android");
+                if (id == 0) return row;
+                Context c = getContext();
+                android.widget.LinearLayout box = new android.widget.LinearLayout(c);
+                box.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+                box.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                box.setLayoutParams(new android.widget.AbsListView.LayoutParams(
+                        android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT));
+                box.setMinimumHeight(row.getMinimumHeight());
+                box.addView(row, new android.widget.LinearLayout.LayoutParams(0,
+                        android.view.ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+                android.widget.Switch sw = new android.widget.Switch(c);
+                sw.setId(id);
+                sw.setFocusable(false);
+                sw.setClickable(false);
+                android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(
+                        android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+                lp.setMarginEnd((int) (16 * c.getResources().getDisplayMetrics().density));
+                box.addView(sw, lp);
+                return box;
+            } catch (Throwable ex) {
+                Logger.printException(() -> "Visual editor: could not add the entry switch", ex);
+                return row;
+            }
         }
     }
 
