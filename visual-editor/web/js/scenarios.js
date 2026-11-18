@@ -27,7 +27,7 @@ function fitScale(w, h) {
   // the preview keeps its size during a comparison, so use all of it: room for the title, the
   // situation line, and the bottom caption only when there is one
   const canvas = $("canvas"), sit = canvas.querySelector(".sit"), foot = canvas.querySelector(".foot");
-  const availW = canvas.clientWidth - 8, availH = canvas.clientHeight - 30 - (foot && foot.textContent.trim() ? 24 : 0) - (sit ? sit.offsetHeight + 6 : 0) - 6;
+  const availW = canvas.clientWidth - 8, availH = canvas.clientHeight - (canvas.querySelector(".cap") ? 30 : 8) - (foot && foot.textContent.trim() ? 24 : 0) - (sit ? sit.offsetHeight + 6 : 0) - 6;
   return Math.max(.35, Math.min(3, availW / (w + 6), availH / (h + 6)));
 }
 // The pair is measured, not estimated: an invisible copy with every transition switched off shows
@@ -649,15 +649,6 @@ scen("watch", "disable_rolling_number_animations", (box, disabled) => {
   at(550, () => { if (disabled) { rni.style.transition = "none"; } rni.style.transform = "translateY(-13px)"; });
   return disabled ? "The count changes instantly" : "The count rolls to the new number";
 });
-scen("player", "exit_fullscreen", (box, v) => {
-  const startLand = v === "LANDSCAPE" || v === "PORTRAIT_LANDSCAPE" || v === "DISABLED";
-  situation("The video ends in fullscreen");
-  box.innerHTML = device("land", `${playerArea(4, `<div class="msk" style="position:absolute;left:8%;right:8%;bottom:12%;height:3px;background:rgba(255,255,255,.3)"><div class="mp" style="position:absolute;left:0;top:0;bottom:0;width:80%;background:#ff0033;transition:width .9s linear"></div></div>`)}`);
-  const dev = box.querySelector(".dev"); const mp = dev.querySelector(".mp");
-  at(100, () => { mp.style.width = "100%"; });
-  at(1100, () => { if (v === "DISABLED") dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:40%;font-size:9px">Stays in fullscreen</div>`); else rotate(dev, "port"); });
-  return v === "DISABLED" ? "The player stays in fullscreen" : `Leaves fullscreen when the video ends (${entryLabel("morphe_exit_fullscreen", v).toLowerCase()})`;
-});
 
 // ------------------------------------------------------------------ Ads, App look, Snackbar, Playback, DeArrow
 SECTIONS.push(
@@ -774,6 +765,9 @@ function playScenario(k, prevValue) {
   canvas.innerHTML = `<div class="cap"><b>${esc(title(k))}</b></div><div class="sit"></div><div class="scbox" style="display:grid;place-items:center"></div><div class="foot"></div><div class="prog"></div>`;
   canvas.classList.add("show");
   const box = canvas.querySelector(".scbox"), self = SCN_SELF_DUO.has(k);
+  // two columns: no title line, the phones get that height (the selected card already names it)
+  if (!self) { canvas.querySelector(".cap").remove(); }
+  canvas.classList.toggle("nocap", !self);
   const L = SCN_HOLD[k] || SC_HOLD, runs = self ? 1 : Math.max(1, Math.floor(SC_TOTAL / (L * 1.45)));
   const slot = SC_TOTAL / runs, stretch = Math.max(1, Math.min(1.6, (slot - 400) / L));
   let vals = duoValues(k, prevValue);

@@ -12,7 +12,8 @@ SCENES.player = () => {
   const bgHidden = !!V("morphe_hide_player_control_buttons_background");
   const shade = bgHidden ? 0 : (Number(V("morphe_player_control_buttons_background_opacity")) / 100);
   const op = Number(V("morphe_player_overlay_opacity")) / 100;
-  const qual = `<span class="badge-txt">HD</span>`;
+  // "Show resolution on Quality button": 1080 instead of the FHD label
+  const qual = `<span class="badge-txt">${V("morphe_video_quality_dialog_button_resolution") ? "1080" : "FHD"}</span>`;
   const list = [
     ["copy_video_link_button", I("link")], ["playback_speed_dialog_button", I("speed")], ["video_quality_dialog_button", qual],
     ["loop_video_button", I("loop")], ["mute_video_button", I("vol")], ["pip_button_overlay", I("pip")], ["reload_video_button", I("reload")],
@@ -20,7 +21,7 @@ SCENES.player = () => {
     ["fullscreen_video_scale_button", I("crop")], ["video_delay_button_overlay", `<span class="badge-txt">ms</span>`], ["external_downloader_overlay_button", I("dl")],
   ];
   const btn = ([k, ic], extra = "") => C(k, `<div class="pbtn" style="width:32px;height:32px">${ic}</div>`, { cls: extra });
-  const on = list.filter(([k]) => shown("morphe_" + k) || (mode === "mod" && selected === "morphe_" + k && !trayOpen));
+  const on = list.filter(([k]) => shown("morphe_" + k) || (mode === "mod" && (selected === "morphe_" + k || PARENT_OF[selected] === "morphe_" + k) && !trayOpen));
   const off = list.filter(([k]) => !shown("morphe_" + k));
   const pill = off.length && mode === "mod"
     ? `<button class="traypill" data-tray aria-expanded="${trayOpen}" title="Buttons that are off">${I(trayOpen ? "close" : "plus")}<span>${off.length}</span></button>` : "";

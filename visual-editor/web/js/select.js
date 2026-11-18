@@ -41,7 +41,9 @@ function select(k, from, arrive = false) {
   if (section === "player" && mode === "mod") {
     // the tray of 13 buttons only opens from its own pill; selecting a hidden one previews it in place
     if (trayOpen && from !== "stage") trayOpen = false;
-    if (CUSTOM_KEYS.has(k) || CUSTOM_KEYS.has(prevSel)) renderStage();
+    // a sub-option of an off button (Swap Save and Queue, Show resolution) previews that button too
+    const cust = x => !!x && [x, PARENT_OF[x]].some(y => y && CUSTOM_KEYS.has(y));
+    if (cust(k) || cust(prevSel)) renderStage();
   }
   if (section === "endscreen" && (ENDSCREEN_SEL.has(k) || ENDSCREEN_SEL.has(prevSel))) renderStage();
   if (section === "shorts" && (SHORTS_SHEET.has(k) || SHORTS_SHEET.has(prevSel))) renderStage();

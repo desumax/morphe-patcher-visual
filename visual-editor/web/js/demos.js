@@ -216,6 +216,18 @@ Object.assign(DEMOS, {
     requestAnimationFrame(step);
     label(on ? "Drag the seekbar: a thumbnail follows your finger" : "Drag the seekbar: no thumbnail, only the time", !on);
   },
+  // Watch later button: a tap, then a tap and hold; which one saves and which opens the queue options swaps
+  morphe_swap_save_and_queue_actions(swapped) {
+    const btn = [...document.querySelectorAll('#stage [data-k="morphe_save_to_watch_later_button"]')].find(e => e.getClientRects().length); if (!btn) return;
+    // the player scene has no finger of its own: add one
+    if (!finger()) { const v = $("stage").firstElementChild; if (!v) return; v.insertAdjacentHTML("beforeend", `<div class="finger">${I("gesture")}</div>`); }
+    const f = finger();
+    const st = $("stage").getBoundingClientRect(), r = btn.getBoundingClientRect(), x = r.left - st.left + r.width / 2, y = r.top - st.top + r.height / 2;
+    const hold = demoStep % 2 === 1, queue = hold !== swapped;
+    if (hold) { place(f, x, y); f.classList.add("hold"); dT(() => f.classList.remove("hold"), 650); hideF(f, 900); } else tapAt(x, y);
+    dT(() => showPill(queue ? "Queue: Play next · Add to queue" : "Saved to Watch later", 900), hold ? 600 : 150);
+    label(`${hold ? "Tap and hold" : "Tap"}: ${queue ? "queue options" : "saves to Watch later"}`, false);
+  },
   morphe_hide_player_gesture_hints(hidden) {
     const f = finger(); if (!f) return; const st = $("stage");
     const hint = document.querySelector('#stage [data-k="morphe_hide_player_gesture_hints"]');

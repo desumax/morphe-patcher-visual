@@ -263,6 +263,8 @@ const ghosts = new Set();
 // still has something to act on: a hidden seekbar still shows for tap to seek, thumbnails, colours.
 const SEEKBAR_USERS = "tap_to_seek slide_to_seek seekbar_thumbnail_preview hide_player_gesture_hints disable_precise_seeking_gesture seekbar_custom_color seekbar_custom_color_primary seekbar_custom_color_accent custom_seekbar_thumb custom_seekbar_thumb_scale_type custom_seekbar_thumb_file";
 const NEEDS = Object.fromEntries(SEEKBAR_USERS.split(" ").map(k => ["morphe_" + k, ["morphe_hide_seekbar"]]));
+NEEDS.morphe_swap_save_and_queue_actions = ["morphe_save_to_watch_later_button"];
+NEEDS.morphe_video_quality_dialog_button_resolution = ["morphe_video_quality_dialog_button"];
 const lentTo = (k, x) => !!k && (NEEDS[k] || []).includes(x) && !shown(x);
 const LS = "morphe-visual-editor-v1";
 const store = {
