@@ -22,6 +22,16 @@ if (INAPP) {
     if (sent) sent[k] = json;
     commit();
   };
+  // Availability as Morphe's own list has it. Available natively: unlocked whatever the catalogue's
+  // parents say. Not available: the catalogue's parents explain it if they can, otherwise the
+  // availability rule (which reads the native value, see applyLive) locks it.
+  const catalogueParentsOk = classicParentsOk;
+  classicParentsOk = k => (__liveAvail[k] === true ? true : catalogueParentsOk(k));
+  window.morpheAvailability = map => {
+    let changed = false;
+    for (const k in map) if (k in __liveAvail && __liveAvail[k] !== map[k]) { __liveAvail[k] = map[k]; changed = true; }
+    if (changed) commit();
+  };
   const previewRestart = restartDialog;
   restartDialog = function () {
     previewRestart();

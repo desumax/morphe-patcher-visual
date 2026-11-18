@@ -52,7 +52,9 @@ import app.morphe.extension.shared.settings.Setting;
  * The editor as designed: the web preview itself (cards, pickers, sliders, tabs, search, live
  * animations), hosted in a WebView and connected to the real Morphe settings through a small
  * bridge, window.MorpheApp:
- *   state()        the live values of every Morphe setting, and the YouTube version
+ *   state()        the live values of every Morphe setting, the YouTube version, and per setting
+ *                  its live type, default, availability, title, summaries and list entries (meta)
+ *   available()    the current availability of every setting (also pushed after each set)
  *   set(key, json) save one value through the Setting API (with Morphe's own confirmations)
  *   close()        leave the editor
  *   restart()      restart YouTube to apply settings that need it
@@ -68,6 +70,8 @@ final class WebEditorDialog extends Dialog {
     private final Activity activity;
     private final SettingsBridge bridge = new SettingsBridge();
     private final WebView web;
+    /** Live titles, entries, defaults and availability, read on the main thread before the page loads. */
+    private String meta = "{}";
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     WebEditorDialog(Activity activity) {
@@ -136,6 +140,11 @@ final class WebEditorDialog extends Dialog {
                 }
             }
         }
+        try {
+            meta = LiveSettings.meta().toString();
+        } catch (Throwable ex) {
+            Logger.printException(() -> "Visual editor: live settings unavailable", ex);
+        }
         web.loadUrl(ORIGIN + "index.html");
     }
 
@@ -201,6 +210,7 @@ final class WebEditorDialog extends Dialog {
                 JSONObject out = new JSONObject();
                 out.put("values", values);
                 out.put("version", appVersion(activity));
+                out.put("meta", new JSONObject(meta));
                 return out.toString();
             } catch (Exception ex) {
                 Logger.printException(() -> "Visual editor: state failed", ex);
@@ -220,8 +230,14 @@ final class WebEditorDialog extends Dialog {
                 }
                 bridge.save(activity, key, value, () -> {
                     if (!value.equals(String.valueOf(asJsonValue(s)))) sendBack(s);
+                    pushAvailability();
                 });
             });
+        }
+
+        @JavascriptInterface
+        public String available() {
+            return LiveSettings.available().toString();
         }
 
         @JavascriptInterface
@@ -268,6 +284,15 @@ final class WebEditorDialog extends Dialog {
     private static Object asJsonValue(Setting<?> s) {
         Object v = s.get();
         return v instanceof Enum<?> e ? e.name() : v;
+    }
+
+    /** Sends Morphe's availability of every setting to the page after a change. */
+    private void pushAvailability() {
+        try {
+            web.evaluateJavascript("window.morpheAvailability && morpheAvailability(" + LiveSettings.available() + ")", null);
+        } catch (Exception ex) {
+            Logger.printException(() -> "Visual editor: availability push failed", ex);
+        }
     }
 
     /** Tells the page which value Morphe kept (a confirmation was declined or a value refused). */
