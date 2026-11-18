@@ -138,6 +138,21 @@ const SECTIONS = [
   { id: "misc", icon: "list", title: "Misc", scopes: null },
 ];
 
+// Experimental grouped layout: six screens, each split into tabs that sit right under the live preview.
+// A tab is one of the screens above, so switching tabs switches the preview (and its animations) too.
+const GROUPS = [
+  { id: "g_player", icon: "play", title: "Player", tabs: [["player", "Controls"], ["seekbar", "Seekbar & gestures"], ["fullscreen", "Fullscreen"], ["flyout", "Player menu"]] },
+  { id: "g_playback", icon: "speed", title: "Playback", tabs: [["playback", "Playback"], ["endscreen", "End screen"], ["captions", "Captions"], ["miniplayer", "Miniplayer"], ["sponsorblock", "SponsorBlock"]] },
+  { id: "g_watch", icon: "like", title: "Watch page", tabs: [["watch", "Actions"], ["description", "Description"], ["comments", "Comments"], ["danmaku", "Flying comments"], ["ambient", "Ambient mode"]] },
+  { id: "g_feed", icon: "home", title: "Feed", tabs: [["feed", "Home"], ["shorts", "Shorts"], ["ads", "Ads"], ["dearrow", "DeArrow"]] },
+  { id: "g_browse", icon: "layout", title: "Browsing", tabs: [["channel", "Channel page"], ["explore", "Explore menu"], ["nav", "Navigation"]] },
+  { id: "g_app", icon: "palette", title: "App", tabs: [["look", "App look"], ["snackbar", "Snackbar"], ["misc", "Other"]] },
+];
+let grouped = false;
+const lastTab = {};
+const groupOf = id => GROUPS.find(g => g.tabs.some(([t]) => t === id)) || GROUPS[GROUPS.length - 1];
+const tabsOf = g => g.tabs.filter(([t]) => SECTIONS.some(s => s.id === t));
+
 // ------------------------------------------------------------------ adapters
 // Kinds mirror the proposed native adapters:
 //   vis       VisibilityPreview  (hide/show a component)
@@ -278,6 +293,8 @@ function entryLabel(k, v) { const e = (PREF[k]?.entries || []).find(x => String(
 // C(key, inner, {blk, cls, style, tag}) wraps a component so it can be selected, ghosted or hidden.
 function C(k, inner, o = {}) {
   const full = "morphe_" + k;
+  // a setting this YouTube version doesn't have: the stock element stays, but it isn't tied to a setting
+  if (PREF[full] && !inVersion(full)) return `<${o.tag || "div"} class="${o.blk ? "blk" : ""}" style="position:relative;${o.style || ""}">${inner}</${o.tag || "div"}>`;
   const a = ad(full);
   const cls = ["c"];
   if (o.blk) cls.push("blk");
@@ -872,7 +889,9 @@ const scen = (section, keys, fn) => keys.split(/\s+/).forEach(k => { A["morphe_"
 // Device illustration. Content that depends on orientation goes in .dv-video (the player area)
 // and .dv-below (the page under the player); CSS lays both out for .port and .land, so a
 // scenario can rotate the phone with rotate() and nothing ends up covering anything else.
-const DEV_SIZE = { port: [92, 172], land: [190, 108] };
+const DEV_SIZE = { port: [92, 172], land: [190, 108], duo: [206, 186] };
+// Two phones side by side (stock on the left, the setting on the right), scaled together as one.
+const duo7 = (left, right) => `<div class="duo7"><div class="dl7"><span>Off</span>${device("port", left)}</div><div class="dl7"><span class="on">On</span>${device("port", right)}</div></div>`;
 function device(orient, inner, extra = "") {
   const [w, h] = DEV_SIZE[orient];
   return `<div class="dev ${orient}" style="width:${w}px;height:${h}px;${extra}"><div class="waves l"></div><div class="waves r"></div>${inner}<div class="finger" id="scFinger">${I("gesture")}</div></div>`;
@@ -881,11 +900,14 @@ const playerArea = (i, overlay = "") => `<div class="dv-video" style="background
 function rotate(dev, orient) { const [w, h] = DEV_SIZE[orient]; dev.classList.remove("port", "land"); dev.classList.add(orient); dev.style.width = w + "px"; dev.style.height = h + "px"; fitDev(orient); }
 // The phone in a scenario is drawn at a fixed small size (so all coordinates stay simple) and then
 // scaled up to fill the space the canvas has, between the caption line and the footer.
+function fitScale(w, h) {
+  const canvas = $("canvas"), sit = canvas.querySelector(".sit"), availW = canvas.clientWidth - 28, availH = canvas.clientHeight - 64 - (sit ? sit.offsetHeight + 8 : 0) - 10;
+  return Math.max(.35, Math.min(3, availW / (w + 6), availH / (h + 6)));
+}
 function fitDev(orient) {
-  const canvas = $("canvas"), box = canvas.querySelector(".scbox"), dev = box && box.querySelector(".dev"); if (!dev) return;
-  const o = orient || (dev.classList.contains("land") ? "land" : "port"), [w, h] = DEV_SIZE[o];
-  const sit = canvas.querySelector(".sit"), availW = canvas.clientWidth - 28, availH = canvas.clientHeight - 64 - (sit ? sit.offsetHeight + 8 : 0) - 10;
-  const sc = Math.max(.35, Math.min(3, availW / (w + 6), availH / (h + 6)));
+  const canvas = $("canvas"), box = canvas.querySelector(".scbox"), duo = box && box.querySelector(".duo7"), dev = duo || (box && box.querySelector(".dev")); if (!dev) return;
+  const o = duo ? "duo" : orient || (dev.classList.contains("land") ? "land" : "port"), [w, h] = DEV_SIZE[o];
+  const sc = fitScale(w, h);
   dev.style.scale = sc.toFixed(3);
   box.style.width = Math.round((w + 6) * sc) + "px"; box.style.height = Math.round((h + 6) * sc) + "px";
 }
@@ -1251,7 +1273,11 @@ function devContent(dev, html) {
 function turn(dev, orient, then) {
   const cur = dev.classList.contains("land") ? "land" : "port";
   if (cur === orient) { if (then) then(); return; }
-  dev.style.transition = "transform .5s var(--ease)"; dev.style.transform = `rotate(${orient === "land" ? -90 : 90}deg)`;
+  // while it turns, the phone is scaled so its rotated outline still fits the preview
+  const [w, h] = DEV_SIZE[cur];
+  dev.querySelectorAll(".finger").forEach(f => f.classList.remove("show"));
+  dev.style.transition = "transform .5s var(--ease), scale .5s var(--ease)"; dev.style.transform = `rotate(${orient === "land" ? -90 : 90}deg)`;
+  dev.style.scale = Math.min(parseFloat(dev.style.scale) || 1, fitScale(h, w)).toFixed(3);
   setTimeout(() => { dev.style.transition = "none"; dev.style.transform = ""; rotate(dev, orient); if (then) then(); }, 520);
 }
 const r1 = dev => turn(dev, "port", () => devContent(dev, playerArea(6))); r1.text = "leaves fullscreen";
@@ -1515,8 +1541,8 @@ function playScenario(k, prevValue) {
   scenarioToken.alive = false;
   const token = scenarioToken = { alive: true };
   const canvas = $("canvas"); const stick = $("stick");
-  const wasHidden = stick.hidden;
-  if (wasHidden) { stick.hidden = false; $("stage").innerHTML = `<div style="height:200px"></div>`; }
+  const wasHidden = stick.hidden || stick.classList.contains("noscene");
+  if (wasHidden) { stick.hidden = false; stick.classList.remove("noscene"); $("stage").innerHTML = `<div style="height:320px"></div>`; }
   const on = !!V(k);
   const valueTxt = PREF[k].type === "boolean" ? (on ? "On" : "Off") : (entriesFor(k).find(e => sameVal(e.value, V(k)))?.label || String(V(k)));
   canvas.innerHTML = `<div class="cap"><b>${esc(title(k))}</b><span class="st ${on ? "on" : ""}">${esc(valueTxt)}</span></div><div class="sit"></div><div class="scbox" style="display:grid;place-items:center"></div><div class="foot"></div><div class="prog"></div>`;
@@ -1531,7 +1557,7 @@ function playScenario(k, prevValue) {
   setTimeout(() => {
     if (!token.alive) return;
     canvas.classList.remove("show");
-    setTimeout(() => { if (!token.alive) return; token.alive = false; canvas.innerHTML = ""; if (wasHidden && section === "misc") { stick.hidden = true; } }, SC_FADE);
+    setTimeout(() => { if (!token.alive) return; token.alive = false; canvas.innerHTML = ""; if (wasHidden && !SCENES[section]) { stick.hidden = !grouped; stick.classList.add("noscene"); $("stage").innerHTML = ""; } }, SC_FADE);
   }, SC_FADE + hold);
 }
 function stopScenario() { scenarioToken.alive = false; $("canvas").classList.remove("show"); }
@@ -1767,7 +1793,7 @@ Object.assign(DEMOS, {
   },
 });
 // Shared pieces for small "phone" scenarios: a page made of rows, a toast, a sheet.
-const pageRows = (rows) => `<div class="pg7" style="position:absolute;inset:0;background:#0f0f0f;padding:6px;display:grid;grid-template-columns:minmax(0,1fr);gap:5px;align-content:start;font-size:7px;color:#ddd">${rows}</div>`;
+const pageRows = (rows) => `<div class="pg7" style="position:absolute;inset:0;background:#0f0f0f;padding:6px;display:grid;grid-template-columns:minmax(0,1fr);grid-auto-rows:max-content;gap:5px;align-content:start;font-size:7px;color:#ddd">${rows}</div>`;
 const bar7 = (w = 100, c = "#2a2a2a", h = 6) => `<i style="display:block;height:${h}px;width:${w}%;border-radius:3px;background:${c}"></i>`;
 const cmt7 = (i, txt) => `<div class="cm7" style="display:flex;gap:4px;align-items:flex-start;padding:3px;border-radius:4px;transition:background .2s"><span style="width:12px;height:12px;border-radius:50%;background:${AV[i % AV.length]};flex:none"></span><span style="line-height:1.3">${txt}</span></div>`;
 function toast7(dev, text, top = "78%") { dev.querySelectorAll(".t7").forEach(n => n.remove()); dev.insertAdjacentHTML("beforeend", `<div class="toastin t7" style="top:${top};font-size:8px;padding:3px 8px">${text}</div>`); }
@@ -1849,7 +1875,9 @@ scen("watch", "remove_viewer_discretion_dialog", (box, on) => {
   dev.insertAdjacentHTML("beforeend", `<div class="dlg7" style="position:absolute;left:8%;right:8%;top:30%;background:#282828;border-radius:6px;padding:6px;font-size:7px;display:grid;gap:4px;transition:opacity .25s"><b>Viewer discretion advised</b><span style="color:#aaa">This video may be inappropriate for some users.</span><span style="justify-self:end;color:#3ea6ff">I understand</span></div>`);
   const d = dev.querySelector(".dlg7");
   if (on) { d.style.opacity = "0"; at(500, () => d.style.opacity = "1"); at(800, () => d.style.opacity = "0"); at(1000, () => toast7(dev, "Accepted for you", "70%")); return "The dialog is accepted automatically (age limits still apply)"; }
-  at(300, () => fingerTo(f, W * .75, H * .47)); at(800, () => tapF(f)); at(1000, () => { d.style.opacity = "0"; f.classList.remove("show"); });
+  at(700, () => toast7(dev, "Playback waits for you", "82%"));
+  at(1300, () => fingerTo(f, W * .75, H * .47)); at(1900, () => tapF(f)); at(2100, () => { d.style.opacity = "0"; f.classList.remove("show"); dev.querySelectorAll(".t7").forEach(e => e.remove()); });
+  at(2300, () => toast7(dev, "Every time you open one", "82%"));
   return "You have to confirm the dialog each time (stock)";
 });
 
@@ -1949,7 +1977,7 @@ Object.assign(DEMOS, {
 // Small phone pages for settings that have no place in the live preview. Most are "remove this
 // element" pages (hidePage), the rest are short stories with a finger, toasts and sheets.
 const ico7 = (n, s = 8, c = "") => I(n, "ico", `style="width:${s}px;height:${s}px;flex:none;${c ? "fill:" + c : ""}"`);
-const top7 = (title = "YouTube", icons = ["cast", "bell", "search"]) => `<div style="display:flex;align-items:center;gap:5px;height:12px"><b style="font-size:7.5px;flex:1;white-space:nowrap">${title}</b>${icons.map(n => ico7(n)).join("")}</div>`;
+const top7 = (title = "YouTube", icons = ["cast", "bell", "search"]) => `<div style="display:flex;align-items:center;gap:5px;height:12px"><b style="font-size:7.5px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${title}</b>${icons.map(n => ico7(n)).join("")}</div>`;
 const row7 = (i, t, extra = "", sub = "") => `<div style="display:flex;gap:4px;align-items:center"><div style="width:30px;height:17px;border-radius:2px;background:${ART[i % ART.length]};flex:none;position:relative">${extra}</div><div style="min-width:0;flex:1"><div style="font-size:6.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t}</div>${sub ? `<div style="font-size:5.5px;color:#aaa;white-space:nowrap;overflow:hidden">${sub}</div>` : bar7(60, "#2a2a2a", 3)}</div></div>`;
 const big7 = (i, t, extra = "") => `<div><div style="height:38px;border-radius:3px;background:${ART[i % ART.length]};position:relative">${extra}</div><div style="display:flex;gap:3px;margin-top:3px;align-items:center"><span style="width:9px;height:9px;border-radius:50%;background:${AV[i % AV.length]};flex:none"></span><span style="font-size:6.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t}</span></div></div>`;
 const item7 = (icon, t, cls = "") => `<div class="${cls}" style="display:flex;gap:5px;align-items:center;padding:2px 0;white-space:nowrap">${ico7(icon)}<span>${t}</span></div>`;
@@ -1983,22 +2011,39 @@ function hidePage(sec, key, sit, page, o = {}) {
   });
 }
 const feed7 = (inner, title = "YouTube") => top7(title) + chips7(["All", "Music", "Live", "Gaming"]) + inner;
-const search7 = (q, inner) => `<div style="display:flex;gap:4px;align-items:center">${ico7("back")}<div style="flex:1;height:11px;border-radius:6px;background:#272727;font-size:6.5px;line-height:11px;padding:0 5px">${q}</div>${ico7("mic")}</div>` + inner;
+const search7 = (q, inner) => `<div style="display:flex;gap:4px;align-items:center">${ico7("back")}<div style="flex:1;min-width:0;height:11px;border-radius:6px;background:#272727;font-size:6.5px;line-height:11px;padding:0 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${q}</div>${ico7("mic")}</div>` + inner;
 const you7 = (inner) => top7("You", ["cast", "search", "gear"]) + `<div style="display:flex;gap:5px;align-items:center"><span style="width:18px;height:18px;border-radius:50%;background:${AV[1]}"></span><div><b style="font-size:7.5px">Kari N.</b><div style="font-size:5.5px;color:#aaa">@kari · View channel</div></div></div>` + inner;
 const player7 = (i = 3, inner = "") => `<div style="height:52px;border-radius:2px;background:${ART[i]};position:relative;margin:-6px -6px 0">${inner}</div>`;
 const chat7 = (rows) => rows.map(([c, n, t]) => `<div style="display:flex;gap:3px;font-size:6px;line-height:1.3"><span style="width:7px;height:7px;border-radius:50%;background:${AV[c]};flex:none"></span><span><b style="color:#aaa">${n}</b> ${t}</span></div>`).join("");
 
 // ---------- Home feed
+// The feed goes stale while you are away. Stock: YouTube pulls a refresh by itself and your place is gone.
+// On: nothing happens until you pull down yourself.
+SCN_HOLD.morphe_disable_auto_feed_refresh = 4600;
 scen("feed", "disable_auto_feed_refresh", (box, on) => {
-  situation("Coming back to the app after a while");
-  box.innerHTML = device("port", pageRows(feed7(`<div class="fd7" style="display:grid;gap:5px;transition:opacity .25s">${big7(3, "Building a tiny cabin")}${row7(4, "Night train to Bodø")}${row7(5, "Why ice is slippery")}</div>`)));
-  const dev = box.querySelector(".dev"), fd = dev.querySelector(".fd7");
+  situation("You scrolled to a video, then left the app for a while");
+  const mark = `<span class="bm7" style="position:absolute;right:-3px;top:-3px;padding:0 3px;border-radius:3px;background:#3ea6ff;color:#000;font-size:5px;font-weight:700">YOUR SPOT</span>`;
+  box.innerHTML = device("port", pageRows(feed7(`<div class="fd7" style="display:grid;gap:5px;transition:opacity .25s">${big7(3, "Building a tiny cabin")}${row7(4, "Night train to Bodø")}<div style="position:relative;outline:1.5px solid #3ea6ff;outline-offset:1px;border-radius:2px">${row7(5, "Why ice is slippery")}${mark}</div>${row7(2, "Lo-fi beats")}</div>`)));
+  const dev = box.querySelector(".dev"), fd = dev.querySelector(".fd7"), f = dev.querySelector(".finger"), W = dev.clientWidth, H = dev.clientHeight;
+  const spinner = () => { dev.insertAdjacentHTML("beforeend", `<div class="spin7"><i></i></div>`); return dev.querySelector(".spin7"); };
   let c;
-  at(400, () => { c = clock7(dev, "30 min later"); });
-  at(1500, () => { c.remove(); dev.insertAdjacentHTML("beforeend", `<div class="ref7">${ico7("reload", 12)}</div>`); });
-  at(2100, () => { const r = dev.querySelector(".ref7"); if (on) { x7(dev, r); } else r.classList.add("spin"); });
-  at(2700, () => { dev.querySelector(".ref7")?.remove(); dev.querySelector(".x7")?.remove(); if (on) { check7(dev, "Same videos, same scroll spot"); } else { fd.style.opacity = 0; setTimeout(() => { fd.innerHTML = `${big7(6, "Stove install, part 2")}${row7(0, "Shorts you missed")}${row7(1, "Live: northern lights")}`; fd.style.opacity = 1; }, 260); toast7(dev, "New videos · you lost your place", "86%"); } });
-  return on ? "The feed is kept as you left it, no refresh" : "The feed reloads by itself and you lose your place (stock)";
+  at(300, () => { c = clock7(dev, "40 min later, the feed is old"); });
+  at(1400, () => { c.remove(); });
+  if (!on) {
+    at(1600, () => spinner());
+    at(2400, () => { fd.style.opacity = 0; setTimeout(() => { fd.innerHTML = `${big7(6, "Stove install, part 2")}${row7(0, "Shorts you missed")}${row7(1, "Live: northern lights")}${row7(7, "Top 10 axes")}`; fd.style.opacity = 1; dev.querySelector(".spin7")?.remove(); }, 260); });
+    at(2900, () => toast7(dev, "Refreshed itself, your spot is lost", "82%"));
+  } else {
+    at(1600, () => { const sp = spinner(); sp.classList.add("dead"); });
+    at(1850, () => x7(dev, dev.querySelector(".spin7")));
+    at(2400, () => { dev.querySelectorAll(".spin7,.x7").forEach(e => e.remove()); check7(dev, "Same videos, same spot"); dev.querySelector(".check7").style.top = "74%"; });
+    // you can still refresh whenever you want, by pulling down
+    at(3300, () => { dev.querySelector(".check7")?.remove(); fingerTo(f, W * .5, H * .25, 0); });
+    at(3400, () => fingerTo(f, W * .5, H * .45, 500));
+    at(3700, () => spinner());
+    at(4100, () => { f.classList.remove("show"); toast7(dev, "Pull down to refresh anytime", "82%"); });
+  }
+  return on ? "The feed stays as you left it; refresh by pulling down" : "The feed refreshes by itself and you lose your place (stock)";
 });
 scen("feed", "feed_long_press_menu", (box, on) => {
   situation("Holding a video in the feed");
@@ -2008,12 +2053,12 @@ scen("feed", "feed_long_press_menu", (box, on) => {
   at(1100, () => { f.classList.remove("hold", "show"); if (on) sheet7(dev, sheetRows([["clock", "Save to Watch later"], ["plist", "Save to playlist"], ["dl", "Download"], ["share", "Share"], ["close", "Not interested"]])); else { dev.querySelector(".pg7").style.filter = "brightness(.6)"; toast7(dev, "Inline preview plays", "40%"); } });
   return on ? "Hold a video: its menu opens" : "Hold a video: it starts an inline preview (stock)";
 });
-hidePage("feed", "feed_view_count", "Video rows in the feed", feed7(`<div style="display:flex;gap:4px;align-items:center"><div style="width:30px;height:17px;border-radius:2px;background:${ART[4]};flex:none"></div><div style="font-size:6.5px;flex:1;min-width:0">Night train to Bodø<div style="display:flex;gap:2px;font-size:5.5px;color:#aaa;white-space:nowrap">Fjord & Timber ${tgt7("· 1.2M views", 1)} · 3 days</div></div></div>`), { invert: true, shown: "View counts are shown where YouTube left them out", hidden: "Some rows have no view count (stock)" });
+hidePage("feed", "feed_view_count", "Video rows in the feed", feed7(`<div><div style="height:38px;border-radius:3px;background:${ART[4]}"></div><div style="display:flex;gap:3px;margin-top:3px"><span style="width:9px;height:9px;border-radius:50%;background:${AV[1]};flex:none"></span><div style="min-width:0;flex:1"><div style="font-size:6.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Night train to Bodø</div><div style="display:flex;gap:2px;padding:2px 0;font-size:5.5px;color:#aaa;white-space:nowrap">Fjord ${tgt7("· 1.2M views", 1)} · 3d</div></div></div></div><div><div style="height:38px;border-radius:3px;background:${ART[2]}"></div><div style="display:flex;gap:3px;margin-top:3px"><span style="width:9px;height:9px;border-radius:50%;background:${AV[2]};flex:none"></span><div style="min-width:0;flex:1"><div style="font-size:6.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Cabin build, part 2</div><div style="display:flex;gap:2px;padding:2px 0;font-size:5.5px;color:#aaa;white-space:nowrap">Fjord ${tgt7("· 84K views", 1)} · 1w</div></div></div></div><div><div style="height:38px;border-radius:3px;background:${ART[5]}"></div><div style="display:flex;gap:3px;margin-top:3px"><span style="width:9px;height:9px;border-radius:50%;background:${AV[3]};flex:none"></span><div style="min-width:0;flex:1"><div style="font-size:6.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Why ice is slippery</div><div style="display:flex;gap:2px;padding:2px 0;font-size:5.5px;color:#aaa;white-space:nowrap">Pocket ${tgt7("· 410K views", 1)} · 2d</div></div></div></div>`), { invert: true, shown: "View counts are shown where YouTube left them out", hidden: "Some rows have no view count (stock)" });
 hidePage("feed", "hide_account_menu", "The account menu", you7(`<div style="display:grid;gap:1px">${item7("clock", "History")}${item7("plist", "Playlists")}${tgt7(item7("spark", "Get YouTube Premium"))}${item7("dl", "Downloads")}${tgt7(item7("dollar", "Purchases and memberships"))}</div>`), { hidden: "Menu items you filtered are removed" });
 hidePage("feed", "hide_album_cards", "Searching for an artist", search7("midnight tapes", tgt7(`<div style="display:flex;gap:4px;align-items:center;padding:3px;border-radius:3px;background:#1b1b1b"><div style="width:22px;height:22px;background:${ART[6]};border-radius:2px"></div><div style="font-size:6.5px">Neon Fjord<div style="font-size:5.5px;color:#aaa">Album · 2025</div></div></div>`) + row7(2, "Midnight Tapes live") + row7(3, "Lo-fi to study to")));
 hidePage("feed", "hide_artist_cards", "Searching for an artist", search7("midnight tapes", tgt7(`<div style="display:flex;gap:5px;align-items:center;padding:3px;border-radius:3px;background:#1b1b1b"><span style="width:22px;height:22px;border-radius:50%;background:${AV[4]}"></span><div style="font-size:6.5px">Midnight Tapes<div style="font-size:5.5px;color:#aaa">Artist · 1.1M subscribers</div></div></div>`) + row7(2, "Midnight Tapes live") + row7(3, "Lo-fi to study to")));
-hidePage("feed", "hide_channel_buttons", "A channel row in search", search7("fjord timber", `<div style="display:flex;gap:5px;align-items:center"><span style="width:20px;height:20px;border-radius:50%;background:${AV[0]}"></span><div style="font-size:6.5px;flex:1">Fjord & Timber<div style="font-size:5.5px;color:#aaa">412K subscribers</div></div>${tgt7(`<span style="display:inline-block;padding:2px 5px;border-radius:6px;background:#f1f1f1;color:#000;font-size:6px">Subscribe</span>`, 1)}</div>` + row7(3, "Building a tiny cabin")));
-hidePage("feed", "hide_compact_banner", "Home feed", feed7(tgt7(`<div style="display:flex;gap:4px;align-items:center;padding:3px;border-radius:3px;background:#1f2a3a;font-size:6px">${ico7("info", 7)}Try YouTube Premium free for 1 month</div>`) + big7(3, "Building a tiny cabin")));
+hidePage("feed", "hide_channel_buttons", "A channel row in search", search7("fjord timber", `<div style="display:flex;gap:5px;align-items:center"><span style="width:20px;height:20px;border-radius:50%;background:${AV[0]}"></span><div style="font-size:6.5px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Fjord & Timber<div style="font-size:5.5px;color:#aaa">412K subscribers</div></div>${tgt7(`<span style="display:inline-block;padding:2px 5px;border-radius:6px;background:#f1f1f1;color:#000;font-size:6px">Subscribe</span>`, 1)}</div>` + row7(3, "Building a tiny cabin")));
+hidePage("feed", "hide_compact_banner", "Home feed: a small banner and the empty dividers", feed7(tgt7(`<div style="display:flex;gap:4px;align-items:center;padding:3px 4px;border-radius:4px;background:#1f2a3a;font-size:6px">${ico7("info", 8)}<span style="flex:1">Your feed is paused. <span style="color:#3ea6ff">Turn on history</span></span>${ico7("close", 7)}</div>`) + big7(3, "Building a tiny cabin") + tgt7(`<div style="height:7px;border-top:1px solid #2a2a2a;border-bottom:1px solid #2a2a2a;background:repeating-linear-gradient(45deg,#161616 0 3px,#0f0f0f 3px 6px)"></div>`) + row7(4, "Night train to Bodø") + tgt7(`<div style="height:7px;border-top:1px solid #2a2a2a;border-bottom:1px solid #2a2a2a;background:repeating-linear-gradient(45deg,#161616 0 3px,#0f0f0f 3px 6px)"></div>`) + row7(5, "Why ice is slippery")), { hidden: "Compact banners (small notices like this) and the empty divider strips are removed" });
 hidePage("feed", "hide_feed_flyout_menu", "The ⋮ menu of a video", feed7(big7(3, "Building a tiny cabin")) + `<div style="background:#212121;border-radius:6px 6px 0 0;padding:4px;display:grid;gap:1px;margin:0 -6px -6px">${item7("clock", "Save to Watch later")}${tgt7(item7("spark", "Ask about this video"))}${item7("share", "Share")}${tgt7(item7("flag", "Report"))}</div>`, { hidden: "Menu items you filtered are removed" });
 hidePage("feed", "hide_floating_microphone_button", "The search screen", search7("", `<div style="display:grid;gap:3px">${item7("clock", "cabin build")}${item7("clock", "lo-fi beats")}${item7("clock", "night train")}</div><div style="height:30px"></div>` + tgt7(`<div style="display:flex;justify-content:center"><span style="width:20px;height:20px;border-radius:50%;background:#ff0033;display:grid;place-items:center">${ico7("mic", 10)}</span></div>`)));
 hidePage("feed", "hide_get_premium_button", "The You tab", you7(tgt7(`<div style="padding:3px 5px;border-radius:4px;background:#ff0033;font-size:6.5px;text-align:center">Get YouTube Premium</div>`) + `<div style="display:grid;gap:1px">${item7("clock", "History")}${item7("plist", "Playlists")}</div>`));
@@ -2022,14 +2067,14 @@ hidePage("feed", "hide_help_feedback_menu", "Settings in the account menu", you7
 hidePage("feed", "hide_history_shelf", "The You tab", you7(tgt7(`<div><b style="font-size:7px">History</b><div style="display:flex;gap:3px;margin-top:2px">${[2, 4, 6].map(i => `<div style="width:26px;height:15px;border-radius:2px;background:${ART[i]}"></div>`).join("")}</div></div>`) + `<div style="display:grid;gap:1px">${item7("plist", "Playlists")}${item7("dl", "Downloads")}</div>`));
 hidePage("feed", "hide_image_shelf", "Search results", search7("aurora", tgt7(`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px">${[0, 5, 7].map(i => `<div style="height:18px;border-radius:2px;background:${ART[i]}"></div>`).join("")}</div>`) + row7(2, "Aurora timelapse 4K")));
 hidePage("feed", "hide_invite_to_message_card", "Home feed", feed7(tgt7(`<div style="padding:4px;border-radius:4px;background:#1b1b1b;font-size:6px">${ico7("chat", 7)} Invite friends to message on YouTube</div>`) + big7(3, "Building a tiny cabin")));
-hidePage("feed", "hide_latest_videos_button", "Subscriptions", top7("Subscriptions") + `<div style="display:flex;gap:4px">${[0, 1, 2, 3].map(i => `<span style="width:13px;height:13px;border-radius:50%;background:${AV[i]}"></span>`).join("")}</div>` + tgt7(`<div style="padding:2px 6px;border-radius:6px;background:#272727;font-size:6px;display:inline-block">Latest videos ›</div>`) + row7(3, "Building a tiny cabin"));
+hidePage("feed", "hide_latest_videos_button", "Subscriptions", top7("Subscriptions", ["search"]) + `<div style="display:flex;gap:4px">${[0, 1, 2, 3].map(i => `<span style="width:13px;height:13px;border-radius:50%;background:${AV[i]}"></span>`).join("")}</div>` + tgt7(`<div style="padding:2px 6px;border-radius:6px;background:#272727;font-size:6px;display:inline-block">Latest videos ›</div>`) + row7(3, "Building a tiny cabin"));
 hidePage("feed", "hide_movies_section", "Home feed", feed7(big7(3, "Building a tiny cabin") + tgt7(`<div><b style="font-size:7px">Movies for you</b><div style="display:flex;gap:3px;margin-top:2px">${[1, 6, 7].map(i => `<div style="width:20px;height:28px;border-radius:2px;background:${ART[i]}"></div>`).join("")}</div></div>`)));
-hidePage("feed", "hide_notifications_menu_header", "The notifications screen", top7("Notifications", ["cast", "search", "gear"]) + tgt7(`<div style="display:flex;gap:3px">${chip7("All", 1)}${chip7("Mentions")}</div>`) + row7(2, "Fjord & Timber uploaded") + row7(4, "Pocket Science is live"));
-hidePage("feed", "hide_notify_me_button", "An upcoming premiere", feed7(big7(6, "Premieres Friday 18:00", tgt7(`<span style="position:absolute;right:3px;bottom:3px;padding:1px 4px;border-radius:5px;background:#f1f1f1;color:#000;font-size:5.5px;display:flex;gap:2px;align-items:center">${ico7("bell", 6, "#000")}Notify me</span>`))));
+hidePage("feed", "hide_notifications_menu_header", "Tapping the bell: the Notifications screen", top7("Notifications", ["search", "gear"]) + tgt7(`<div style="display:flex;gap:4px;align-items:center;padding:4px;border-radius:4px;background:#1b1b1b;font-size:6px;line-height:1.3">${ico7("bell", 9)}<span style="flex:1">Get notified about the channels you like. <span style="color:#3ea6ff">Learn more</span></span></div>`) + row7(2, "Fjord & Timber uploaded", "", "2 hours ago") + row7(4, "Pocket Science is live", "", "5 hours ago") + row7(6, "Midnight Tapes premieres Friday", "", "1 day ago"), { hidden: "The header with the help link is gone; notifications start at the top" });
+hidePage("feed", "hide_notify_me_button", "An upcoming premiere in the feed", feed7(big7(6, "Premieres Friday 18:00", `<span style="position:absolute;left:3px;bottom:3px;padding:0 3px;border-radius:2px;background:rgba(0,0,0,.7);font-size:5px">UPCOMING</span>`) + `<div style="display:flex;justify-content:flex-end;margin-top:-2px">${tgt7(`<span style="padding:2px 6px;border-radius:7px;background:#f1f1f1;color:#000;font-size:6px;display:inline-flex;gap:2px;align-items:center">${ico7("bell", 7, "#000")}Notify me</span>`, 1)}</div>` + row7(3, "Building a tiny cabin")), { hidden: "No reminder button on upcoming streams and premieres" });
 hidePage("feed", "hide_search_term_thumbnails", "Search suggestions", search7("cab", `<div style="display:grid;gap:3px">${["cabin build", "cabin tour", "cabin in the woods"].map((t, i) => `<div style="display:flex;gap:4px;align-items:center;font-size:6.5px">${ico7("search", 7)}<span style="flex:1">${t}</span>${tgt7(`<div style="width:20px;height:11px;border-radius:2px;background:${ART[i + 2]}"></div>`, 1)}</div>`).join("")}</div>`));
 hidePage("feed", "hide_show_more_button", "Search results", search7("cabin", row7(2, "Cabin build in 30 days") + row7(3, "Cabin tour") + tgt7(`<div style="text-align:center;font-size:6px;padding:2px;border:1px solid #333;border-radius:8px">Show more</div>`) + row7(4, "Off-grid cabin")));
-hidePage("feed", "hide_subscribed_channels_bar", "Subscriptions", top7("Subscriptions") + tgt7(`<div style="display:flex;gap:4px">${[0, 1, 2, 3, 4].map(i => `<span style="width:13px;height:13px;border-radius:50%;background:${AV[i]}"></span>`).join("")}</div>`) + row7(3, "Building a tiny cabin") + row7(5, "Why ice is slippery"));
-hidePage("feed", "hide_subscribed_channels_bar_names", "Subscriptions", top7("Subscriptions") + `<div style="display:flex;gap:5px">${["Fjord", "Pocket", "Tapes", "Nico"].map((n, i) => `<div style="display:grid;justify-items:center;gap:1px"><span style="width:13px;height:13px;border-radius:50%;background:${AV[i]}"></span>${tgt7(`<span style="font-size:5px">${n}</span>`)}</div>`).join("")}</div>` + row7(3, "Building a tiny cabin"));
+hidePage("feed", "hide_subscribed_channels_bar", "Subscriptions", top7("Subscriptions", ["search"]) + tgt7(`<div style="display:flex;gap:4px">${[0, 1, 2, 3, 4].map(i => `<span style="width:13px;height:13px;border-radius:50%;background:${AV[i]}"></span>`).join("")}</div>`) + row7(3, "Building a tiny cabin") + row7(5, "Why ice is slippery"));
+hidePage("feed", "hide_subscribed_channels_bar_names", "Subscriptions", top7("Subscriptions", ["search"]) + `<div style="display:flex;gap:5px">${["Fjord", "Pocket", "Tapes", "Nico"].map((n, i) => `<div style="display:grid;justify-items:center;gap:1px"><span style="width:13px;height:13px;border-radius:50%;background:${AV[i]}"></span>${tgt7(`<span style="font-size:5px">${n}</span>`)}</div>`).join("")}</div>` + row7(3, "Building a tiny cabin"));
 hidePage("feed", "hide_unavailable_videos_hidden_banner", "A playlist with removed videos", top7("Road trip mix", ["search", "more"]) + tgt7(`<div style="padding:3px;border-radius:3px;background:#1b1b1b;font-size:6px;color:#aaa">2 unavailable videos are hidden</div>`) + row7(1, "Night train to Bodø") + row7(2, "Lo-fi beats"));
 hidePage("feed", "hide_web_search_results", "Search results", search7("how to split wood", row7(2, "Splitting wood the easy way") + tgt7(`<div style="padding:3px;border-radius:3px;background:#1b1b1b;font-size:6px">${ico7("search", 7)} Results from the web · wikihow.com</div>`) + row7(3, "Axe vs maul")));
 hidePage("feed", "hide_you_may_like_section", "Search results", search7("cabin", row7(2, "Cabin build in 30 days") + tgt7(`<div><b style="font-size:6.5px">You may also like</b>${row7(6, "Tiny house tour")}</div>`) + row7(3, "Cabin tour")));
@@ -2096,7 +2141,7 @@ scen("feed", "restore_original_titles", (box, on) => {
   at(1200, () => toast7(dev, on ? "The creator's original title" : "Auto-translated title (stock)", "84%"));
   return on ? "Titles show as the creator wrote them" : "Titles are auto-translated to your language (stock)";
 });
-hidePage("feed", "playlist_hide_removal_snackbar", "Removing a video from a playlist", top7("Road trip mix", ["search", "more"]) + row7(1, "Night train to Bodø") + row7(2, "Lo-fi beats") + `<div style="height:40px"></div>` + tgt7(`<div style="display:flex;justify-content:space-between;padding:3px 5px;border-radius:3px;background:#f1f1f1;color:#000;font-size:6px">Removed from Road trip mix<b style="color:#065fd4">UNDO</b></div>`), { hidden: "No “Removed” snackbar after each removal" });
+hidePage("feed", "playlist_hide_removal_snackbar", "Removing a video from a playlist", top7("Road trip mix", ["search", "more"]) + row7(1, "Night train to Bodø") + row7(2, "Lo-fi beats") + `<div style="height:40px"></div>` + tgt7(`<div style="display:flex;justify-content:space-between;align-items:center;gap:4px;padding:3px 5px;border-radius:3px;background:#f1f1f1;color:#000;font-size:6px"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Removed from Road trip mix</span><b style="color:#065fd4;flex:none">UNDO</b></div>`), { hidden: "No “Removed” snackbar after each removal" });
 for (const [k, where, text] of [["hide_aislist_blocklist_home", "Home feed", "AI-generated channel"], ["hide_aislist_blocklist_search", "Search results", "AI-generated channel"]])
   hidePage("feed", k, where, (/Search/.test(where) ? search7("history facts", "") : feed7("")) + row7(2, "Real video") + tgt7(row7(7, "10 CRAZY facts (AI voice)", "", text)) + row7(3, "Another real video"), { hidden: "Videos from channels on the AI slop list are removed" });
 for (const [k, where] of [["hide_aislist_warnlist_home", "Home feed"], ["hide_aislist_warnlist_search", "Search results"]])
@@ -2106,7 +2151,7 @@ for (const [k, where, page] of [["hide_filter_bar_in_comments", "Comments", top7
 hidePage("feed", "hide_keyword_content_comments", "Comments with filtered words", top7("Comments", ["sort", "close"]) + cmt7(2, "Lovely build!") + tgt7(cmt7(4, "FREE GIFT CARDS click my profile")) + cmt7(3, "Subscribed for part 2"), { hidden: "Comments with your keywords are removed" });
 
 // ---------- other screens
-hidePage("ads", "hide_fullscreen_ads", "Opening a video", player7(3) + row7(2, "Up next") + row7(4, "Up next") + `<div class="tgt7" style="position:absolute;inset:0;background:#fff;color:#000;display:grid;place-items:center;font-size:7px;z-index:4"><div style="text-align:center"><b>Ad · 0:05</b><div style="font-size:6px">Install Pocket Planner</div></div></div>`, { hidden: "No full-screen ad before the video" });
+hidePage("ads", "hide_fullscreen_ads", "Opening a video", player7(3) + row7(2, "Up next") + row7(4, "Up next") + `<div class="tgt7" style="position:absolute;inset:0;max-height:200px;background:#fff;color:#000;display:grid;place-items:center;font-size:7px;z-index:4"><div style="text-align:center"><b>Ad · 0:05</b><div style="font-size:6px">Install Pocket Planner</div></div></div>`, { hidden: "No full-screen ad before the video" });
 hidePage("channel", "hide_channel_tab", "A channel page", top7("Fjord & Timber", ["search", "more"]) + `<div style="height:18px;border-radius:2px;background:${ART[3]}"></div><div style="display:flex;gap:6px;font-size:6px;border-bottom:1px solid #333;padding-bottom:2px"><span>Home</span><span>Videos</span>${tgt7("<span>Shorts</span>", 1)}${tgt7("<span>Store</span>", 1)}<span>Posts</span></div>` + row7(2, "Building a tiny cabin"), { hidden: "Channel tabs you filtered are removed" });
 scen("look", "disable_layout_updates", (box, on) => {
   situation("YouTube tests a new layout on you");
@@ -2146,14 +2191,16 @@ scen("look", "spoof_app_version", (box, on) => {
   at(700, () => { if (!on) return; v.style.opacity = 0; setTimeout(() => { v.textContent = V("morphe_spoof_app_version_target") || "19.01.34"; v.style.opacity = 1; toast7(dev, "Old layout comes back", "82%"); }, 260); });
   return on ? "YouTube serves the layout of the chosen version" : "YouTube sees the real version (stock)";
 });
+// Morphe: "Use the theme color for text and icons". Stock keeps text and icons white; on, they take the theme colour.
 scen("look", "theme_color_change_foreground", (box, on) => {
-  situation("A custom theme colour");
-  box.innerHTML = device("port", pageRows(top7("Settings", ["search"]) + [0, 1, 2].map(i => `<div style="display:flex;justify-content:space-between;font-size:6.5px"><span class="fg7">Setting ${i + 1}</span><span style="width:12px;height:7px;border-radius:4px;background:#3ea6ff"></span></div>`).join("")).replace("background:#0f0f0f", "background:#e8f0fe"));
+  situation("Your custom theme colour is teal");
+  const items = [["clock", "History"], ["plist", "Playlists"], ["dl", "Downloads"], ["gear", "Settings"]];
+  box.innerHTML = device("port", pageRows(top7("You", ["cast", "search", "gear"]) + `<div style="display:grid;gap:3px">${items.map(([i, t]) => `<div class="fg7" style="display:flex;gap:5px;align-items:center;font-size:7px;color:#f1f1f1;fill:#f1f1f1;transition:color .4s,fill .4s">${I(i, "ico", 'style="width:9px;height:9px;fill:inherit;transition:fill .4s"')}<span>${t}</span></div>`).join("")}</div><div style="height:10px;border-radius:5px;background:#26a69a;width:60%"></div>`));
   const dev = box.querySelector(".dev");
-  dev.querySelectorAll(".fg7").forEach(e => { e.style.color = "#f1f1f1"; e.style.transition = "color .3s"; });
-  at(700, () => dev.querySelectorAll(".fg7").forEach(e => { e.style.color = on ? "#111" : "#f1f1f1"; }));
-  at(1100, () => toast7(dev, on ? "Text turns dark on a light colour" : "White text on a light colour is hard to read", "74%"));
-  return on ? "Text colour adapts to your theme colour" : "Text stays white (stock)";
+  dev.querySelectorAll(".pg7 > div:first-child svg").forEach(e => { e.style.transition = "fill .4s"; });
+  at(800, () => { if (!on) return; dev.querySelectorAll(".fg7").forEach(e => { e.style.color = "#4db6ac"; e.style.fill = "#4db6ac"; }); dev.querySelectorAll(".pg7 > div:first-child svg").forEach(e => { e.style.fill = "#4db6ac"; }); });
+  at(1300, () => toast7(dev, on ? "Text and icons take the theme colour" : "Text and icons stay white", "78%"));
+  return on ? "Text and icons use your theme colour" : "Text and icons stay white (stock)";
 });
 scen("look", "custom_filter", (box, on) => {
   situation("Your own custom filter");
@@ -2211,7 +2258,7 @@ scen("comments", "minimal_comments_button", (box, on) => {
 });
 scen("comments", "sanitize_comments_highlighted_search_links", (box, on) => {
   situation("A comment with a highlighted word");
-  box.innerHTML = device("port", pageRows(top7("Comments", ["sort", "close"]) + cmt7(2, `Which <span class="hl7" style="color:#3ea6ff">${ico7("search", 6, "#3ea6ff")}wood stove</span> is that?`) + cmt7(3, "Subscribed for part 2")));
+  box.innerHTML = device("port", pageRows(top7("Comments", ["sort", "close"]) + cmt7(2, `Which <span class="hl7" style="color:#3ea6ff;white-space:nowrap">${I("search", "ico", 'style="width:6px;height:6px;fill:#3ea6ff;display:inline-block;vertical-align:-1px;margin-right:1px"')}wood stove</span> is that?`) + cmt7(3, "Subscribed for part 2")));
   const dev = box.querySelector(".dev");
   at(700, () => { if (!on) return; const h = dev.querySelector(".hl7"); h.innerHTML = "wood stove"; h.style.color = "inherit"; });
   return on ? "Words in comments are plain text, not search links" : "YouTube turns some words into search links (stock)";
@@ -2228,7 +2275,7 @@ for (const [k, where, page] of [
   ["hide_shorts_history", "History", top7("History", ["search", "more"])],
   ["hide_shorts_notifications", "Notifications", top7("Notifications", ["gear"])],
   ["hide_shorts_search", "Search results", search7("cabin", "")],
-  ["hide_shorts_subscriptions", "Subscriptions", top7("Subscriptions")]])
+  ["hide_shorts_subscriptions", "Subscriptions", top7("Subscriptions", ["search"])]])
   hidePage("shorts", k, where, page + row7(2, "Building a tiny cabin") + tgt7(`<div><div style="display:flex;gap:3px;align-items:center;font-size:6.5px">${ico7("shorts", 8, "#ff0033")}<b>Shorts</b></div><div style="display:flex;gap:3px;margin-top:2px">${[5, 6, 7].map(i => `<div style="width:18px;height:30px;border-radius:2px;background:${ART[i]}"></div>`).join("")}</div></div>`) + row7(4, "Night train to Bodø"));
 hidePage("shorts", "hide_shorts_video_description", "A Short", `<div style="position:absolute;inset:0;background:${ART[5]}"></div><div style="position:absolute;left:5px;bottom:8px;right:20px;font-size:6px;display:grid;gap:2px"><b>@fjordtimber</b>${tgt7("<div>Roof day! Part 4 of the cabin build #diy #cabin</div>")}</div>`, { raw: true });
 hidePage("shorts", "hide_shorts_live_preview", "Shorts feed", `<div style="position:absolute;inset:0;background:${ART[5]}"></div>` + `<div class="tgt7" style="position:absolute;left:5px;top:10px;padding:2px 4px;border-radius:3px;background:#cc0000;font-size:6px">LIVE · Northern lights</div>`, { raw: true });
@@ -2297,48 +2344,52 @@ scen("playback", "autoplay_control", (box, on) => {
 });
 scen("playback", "disable_playlist_autoplay", (box, on) => {
   situation("End of a video in a playlist");
-  box.innerHTML = device("port", pageRows(player7(3, `<span class="cd7" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:7px;background:rgba(0,0,0,.6);padding:1px 5px;border-radius:5px">Next in 5</span>`) + `<b style="font-size:6.5px">Road trip mix · 2 / 12</b>` + row7(2, "Night train") + row7(4, "Lo-fi beats")));
+  box.innerHTML = device("port", pageRows(player7(3, `<span class="cd7" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:7px;background:rgba(0,0,0,.6);padding:1px 5px;border-radius:5px;white-space:nowrap;display:flex;gap:2px;align-items:center">Next in 5</span>`) + `<b style="font-size:6.5px">Road trip mix · 2 / 12</b>` + row7(2, "Night train") + row7(4, "Lo-fi beats")));
   const dev = box.querySelector(".dev"), cd = dev.querySelector(".cd7");
   [4, 3, 2].forEach((n, i) => at(400 + i * 300, () => { cd.textContent = "Next in " + n; }));
   at(1400, () => { cd.innerHTML = on ? `${ico7("pause", 7)} Stopped` : `${ico7("play", 7)} Playing 3 / 12`; });
   return on ? "Playlists stop after each video" : "Playlists play on (stock)";
 });
-// Two acts (playlist, then live stream). Stock: the panel jumps up on its own and buries the page.
-// On: the panel waits as a small bar and only opens when the finger taps it.
-SCN_HOLD.morphe_disable_player_popup_panels = 5600;
-scen("playback", "disable_player_popup_panels", (box, on) => {
+// Two acts (playlist, then live stream), stock and patched side by side whatever the switch is set to.
+// Stock: the panel jumps up on its own and buries the page. On: it waits as a small bar until tapped.
+SCN_HOLD.morphe_disable_player_popup_panels = 8400;
+scen("playback", "disable_player_popup_panels", (box) => {
   situation("1 · You open a video from a playlist");
   const desc = `<div class="ds7" style="display:grid;gap:3px"><b style="font-size:7px" class="tt7">Night train to Bodø</b><div style="display:flex;gap:3px">${chip7("Like")}${chip7("Share")}${chip7("Save")}</div><div style="font-size:6px;color:#aaa">Comments 312</div>${chat7([[1, "ola", "this view!"], [2, "mia", "take me there"], [3, "ken", "pure calm"]])}</div>`;
   const feed = `<div class="fd7" style="display:grid;gap:5px">${top7()}${row7(2, "Road trip mix", "", "Playlist · 12 videos")}${row7(4, "Lo-fi beats")}${row7(1, "Northern lights LIVE", `<span style="position:absolute;left:1px;bottom:1px;font-size:4.5px;background:#f03;padding:0 2px;border-radius:2px">LIVE</span>`, "1.2K watching")}${row7(5, "Cabin build")}</div>`;
-  box.innerHTML = device("port", pageRows(feed));
-  const dev = box.querySelector(".dev"), pg = dev.querySelector(".pg7"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
+  box.innerHTML = duo7(pageRows(feed), pageRows(feed));
   const bar = (label) => `<div class="pb7" style="position:absolute;left:4px;right:4px;bottom:4px;height:15px;border-radius:4px;background:#272727;display:flex;align-items:center;gap:3px;padding:0 5px;font-size:6px;z-index:3;animation:sheetup .3s var(--ease)">${ico7(label[0], 7)}<span style="flex:1;white-space:nowrap;overflow:hidden">${label[1]}</span>${ico7("expand", 7)}</div>`;
   const panel = (title, rows) => `<div class="pp7" style="position:absolute;left:0;right:0;top:52px;bottom:0;background:#1b1b1b;border-radius:5px 5px 0 0;padding:5px;display:grid;gap:3px;align-content:start;font-size:6px;animation:sheetup .35s var(--ease);z-index:4"><div style="width:16px;height:2px;border-radius:1px;background:#555;justify-self:center"></div><b style="font-size:6.5px">${title}</b>${rows}</div>`;
-  const openWatch = (art, live) => { pg.innerHTML = player7(art, live ? `<span style="position:absolute;left:3px;top:3px;font-size:5px;background:#f03;padding:0 3px;border-radius:2px">LIVE</span>` : "") + desc; if (live) pg.querySelector(".tt7").textContent = "Northern lights · live"; };
-  // Stock: a burst of "pop" lines and a red frame on the buried page. On: a lock on the bar, then a tap opens it.
-  const popAct = (t0, label, title, rows) => {
-    at(t0, () => dev.insertAdjacentHTML("beforeend", bar(label)));
-    if (!on) {
-      at(t0 + 450, () => { const b = dev.querySelector(".pb7"); b.insertAdjacentHTML("beforeend", `<span class="bz7" style="position:absolute;left:50%;top:-9px;transform:translateX(-50%);display:flex;gap:2px;font-size:7px;color:#ffcc00;animation:pop .2s">${ico7("spark", 9, "#ffcc00")}</span>`); b.style.animation = "buzz .25s 2"; });
-      at(t0 + 800, () => { dev.querySelectorAll(".pb7").forEach(e => e.remove()); dev.insertAdjacentHTML("beforeend", panel(title, rows)); });
-      at(t0 + 1150, () => { dev.insertAdjacentHTML("beforeend", `<div class="cv7" style="position:absolute;left:3px;right:3px;top:54px;bottom:3px;border:1.5px dashed #ff0033;border-radius:5px;z-index:5;animation:ghostin .2s"></div>`); toast7(dev, `${ico7("spark", 7, "#ffcc00")} Opened by itself`, "13%"); });
-    } else {
-      at(t0 + 450, () => { const b = dev.querySelector(".pb7"); b.style.boxShadow = "0 0 0 1.5px #4caf50"; b.insertAdjacentHTML("beforeend", `<span style="position:absolute;right:-3px;top:-6px;width:11px;height:11px;border-radius:50%;background:#4caf50;display:grid;place-items:center;animation:pop .2s">${ico7("lock", 7, "#000")}</span>`); toast7(dev, "Waits as a bar", "13%"); });
-      at(t0 + 1000, () => { dev.querySelectorAll(".t7").forEach(e => e.remove()); fingerTo(f, W * .5, H - 12, 0); f.style.opacity = 0; requestAnimationFrame(() => { f.style.opacity = ""; fingerTo(f, W * .5, H - 12); }); });
-      at(t0 + 1300, () => tapF(f));
-      at(t0 + 1450, () => { f.classList.remove("show"); dev.querySelectorAll(".pb7").forEach(e => e.remove()); dev.insertAdjacentHTML("beforeend", panel(title, rows)); toast7(dev, `${ico7("toggle", 7, "#4caf50")} Opens on your tap`, "13%"); });
-    }
+  const story = (dev, on) => {
+    const pg = dev.querySelector(".pg7"), f = dev.querySelector(".finger"), W = dev.clientWidth, H = dev.clientHeight;
+    const openWatch = (art, live) => { pg.innerHTML = player7(art, live ? `<span style="position:absolute;left:3px;top:3px;font-size:5px;background:#f03;padding:0 3px;border-radius:2px">LIVE</span>` : "") + desc; if (live) pg.querySelector(".tt7").textContent = "Northern lights · live"; };
+    const popAct = (t0, label, title, rows) => {
+      at(t0, () => dev.insertAdjacentHTML("beforeend", bar(label)));
+      if (!on) {
+        // the bar buzzes with a spark, jumps open by itself, and a red frame marks the page it now covers
+        at(t0 + 700, () => { const b = dev.querySelector(".pb7"); b.insertAdjacentHTML("beforeend", `<span style="position:absolute;left:50%;top:-10px;transform:translateX(-50%);animation:pop .2s">${ico7("spark", 9, "#ffcc00")}</span>`); b.style.animation = "buzz .25s 3"; });
+        at(t0 + 1250, () => { dev.querySelectorAll(".pb7").forEach(e => e.remove()); dev.insertAdjacentHTML("beforeend", panel(title, rows)); });
+        at(t0 + 1750, () => { dev.insertAdjacentHTML("beforeend", `<div class="cv7" style="position:absolute;left:3px;right:3px;top:54px;bottom:3px;border:1.5px dashed #ff0033;border-radius:5px;z-index:5;animation:ghostin .2s"></div>`); toast7(dev, `${ico7("spark", 7, "#ffcc00")} Opened by itself`, "13%"); });
+      } else {
+        // the bar stays put with a lock; only the finger's tap opens it
+        at(t0 + 700, () => { const b = dev.querySelector(".pb7"); b.style.boxShadow = "0 0 0 1.5px #4caf50"; b.insertAdjacentHTML("beforeend", `<span style="position:absolute;right:-3px;top:-6px;width:11px;height:11px;border-radius:50%;background:#4caf50;display:grid;place-items:center;animation:pop .2s">${ico7("lock", 7, "#000")}</span>`); toast7(dev, "Stays a small bar", "13%"); });
+        at(t0 + 1500, () => { dev.querySelectorAll(".t7").forEach(e => e.remove()); fingerTo(f, W * .5, H - 12, 0); f.style.opacity = 0; requestAnimationFrame(() => { f.style.opacity = ""; fingerTo(f, W * .5, H - 12); }); });
+        at(t0 + 1900, () => tapF(f));
+        at(t0 + 2100, () => { f.classList.remove("show"); dev.querySelectorAll(".pb7").forEach(e => e.remove()); dev.insertAdjacentHTML("beforeend", panel(title, rows)); toast7(dev, `${ico7("toggle", 7, "#4caf50")} Opens on your tap`, "13%"); });
+      }
+    };
+    at(350, () => fingerTo(f, W * .35, 36)); at(800, () => tapF(f));
+    at(1050, () => { f.classList.remove("show"); openWatch(2, false); });
+    popAct(1250, ["plist", "Playlist · 2 / 12"], "Road trip mix · 2 / 12", [1, 2, 4, 5].map(i => row7(i, "Video " + i)).join(""));
+    at(4400, () => { dev.querySelectorAll(".pp7,.pb7,.cv7,.t7").forEach(e => e.remove()); pg.innerHTML = feed; });
+    at(4600, () => fingerTo(f, W * .35, 78)); at(5000, () => tapF(f));
+    at(5250, () => { f.classList.remove("show"); openWatch(1, true); });
+    popAct(5450, ["chat", "Live chat"], "Live chat", chat7([[1, "ola", "so pretty"], [2, "mia", "green!!"], [3, "ken", "😍"], [4, "liv", "where is this?"], [5, "bo", "hi from Oslo"]]));
   };
-  // act 1: tap the playlist in the feed
-  at(250, () => fingerTo(f, W * .35, 36)); at(550, () => tapF(f));
-  at(750, () => { f.classList.remove("show"); openWatch(2, false); });
-  popAct(900, ["plist", "Playlist · 2 / 12"], "Road trip mix · 2 / 12", [1, 2, 4, 5].map(i => row7(i, "Video " + i)).join(""));
-  // act 2: back to the feed, open the live stream
-  at(3000, () => { situation("2 · Then you open a live stream"); dev.querySelectorAll(".pp7,.pb7,.cv7,.t7").forEach(e => e.remove()); pg.innerHTML = feed; });
-  at(3150, () => fingerTo(f, W * .35, 78)); at(3400, () => tapF(f));
-  at(3600, () => { f.classList.remove("show"); openWatch(1, true); });
-  popAct(3750, ["chat", "Live chat"], "Live chat", chat7([[1, "ola", "so pretty"], [2, "mia", "green!!"], [3, "ken", "😍"], [4, "liv", "where is this?"], [5, "bo", "hi from Oslo"]]));
-  return on ? "Playlist and live chat panels wait as a bar and open only when you tap them" : "Playlist and live chat panels jump open by themselves and cover the page (stock)";
+  const [left, right] = box.querySelectorAll(".dev");
+  story(left, false); story(right, true);
+  at(4400, () => situation("2 · Then you open a live stream"));
+  return "Stock panels jump open; with the setting on they wait for your tap";
 });
 // A long session with nobody touching the phone, shown as a run of videos with a clock.
 SCN_HOLD.morphe_continue_watching_prompt = 5200;
@@ -2394,7 +2445,7 @@ scen("playback", "force_fullscreen_landscape", (box, on) => {
 });
 hidePage("playback", "fullscreen_playlist_panel", "A playlist in fullscreen", `<div style="position:absolute;inset:0;background:${ART[3]}"></div><div class="tgt7" style="position:absolute;right:0;top:0;bottom:0;width:38%;background:rgba(15,15,15,.92);padding:4px;display:grid;gap:3px;align-content:start;font-size:5.5px"><b>Road trip mix</b>${[1, 2, 4].map(i => `<div style="display:flex;gap:2px"><span style="width:14px;height:8px;background:${ART[i]}"></span>Video ${i}</div>`).join("")}</div>`, { dev: "land", raw: true, invert: true, shown: "The playlist sits beside the video in fullscreen", hidden: "Leave fullscreen to see the playlist (stock)" });
 for (const [k, label, icon] of [["hide_ask_gemini_button", "Ask", "spark"], ["hide_chapters_timeline_button", "Chapters", "list"], ["hide_live_chat_replay_button", "Live chat replay", "chat"], ["hide_sync_button", "Sync", "reload"]])
-  hidePage("playback", k, "Under the video", player7(3) + `<b style="font-size:7px">Building a tiny cabin</b><div style="display:flex;gap:3px;flex-wrap:wrap">${chip7("Like")}${tgt7(`<span style="display:inline-flex;gap:2px;align-items:center;padding:1px 5px;border-radius:5px;background:#272727;font-size:6px">${ico7(icon, 6)}${label}</span>`, 1)}${chip7("Share")}</div>` + row7(2, "Up next"));
+  hidePage("playback", k, "Under the video", player7(3) + `<b style="font-size:7px">Building a tiny cabin</b><div style="display:flex;gap:3px;align-items:center;overflow:hidden;padding:2px">${chip7("Like")}${tgt7(`<span style="display:inline-flex;gap:2px;align-items:center;padding:1px 5px;border-radius:5px;background:#272727;font-size:6px;white-space:nowrap">${ico7(icon, 6)}${label}</span>`, 1)}${chip7("Share")}</div>` + row7(2, "Up next"));
 hidePage("playback", "hide_subscribers_community_guidelines", "Before posting in a channel's community", top7("Fjord & Timber", ["more"]) + tgt7(`<div style="padding:3px;border-radius:3px;background:#1b1b1b;font-size:6px">Please follow the community guidelines · Got it</div>`) + cmt7(2, "Love the roof!"));
 hidePage("playback", "hide_tap_and_hold_gradient", "Holding the video for 2× speed", `<div style="position:absolute;inset:0;background:${ART[3]}"></div><div class="tgt7" style="position:absolute;left:0;right:0;top:0;height:40%;background:linear-gradient(rgba(0,0,0,.75),transparent)"></div><div style="position:absolute;left:50%;top:6px;transform:translateX(-50%);font-size:6px">2× ▶▶</div>`, { dev: "land", raw: true });
 hidePage("playback", "hide_timed_reactions", "Comments under a live replay", player7(3, `<div class="tgt7" style="position:absolute;right:4px;bottom:4px;display:grid;gap:1px;font-size:8px"><span>❤️</span><span>😂</span><span>🔥</span></div>`) + row7(2, "Up next"));
@@ -2553,20 +2604,32 @@ const $ = id => document.getElementById(id);
 const secInfo = () => SECTIONS.find(s => s.id === section);
 
 function renderBar() {
-  const s = secInfo();
-  $("secLabel").textContent = s.title;
-  $("secIcon").innerHTML = `<path d="${P[s.icon] || P.list}"/>`;
+  const s = secInfo(), g = groupOf(section);
+  $("secLabel").textContent = grouped ? g.title : s.title;
+  $("secIcon").innerHTML = `<path d="${P[grouped ? g.icon : s.icon] || P.list}"/>`;
+  renderTabs();
   const pick = (x, i) => {
     const m = MEMBERS[x.id];
     const sub = `${m.live.length + m.misc.length} settings`;
     return `<button class="pick" role="menuitem" data-sec="${x.id}" aria-current="${x.id === section}" style="transition-delay:${Math.min(i, 12) * 12}ms"><span class="pi">${I(x.icon)}</span><span><div class="pt">${esc(x.title)}</div><div class="ps">${sub}</div></span></button>`;
   };
   const vis = SECTIONS.filter(x => SCENES[x.id]), plain = SECTIONS.filter(x => !SCENES[x.id]);
-  $("pickGrid").innerHTML = `<div class="pg pvis">${vis.map(pick).join("")}</div>` + `<div class="plaincard"><div class="ph">${I("list")}No preview · standard settings</div><div class="pg">${plain.map(pick).join("")}</div></div>`
+  const gpick = (x, i) => { const n = tabsOf(x).reduce((a, [t]) => a + MEMBERS[t].live.length + MEMBERS[t].misc.length, 0); return `<button class="pick" role="menuitem" data-group="${x.id}" aria-current="${x === g}" style="transition-delay:${i * 12}ms"><span class="pi">${I(x.icon)}</span><span><div class="pt">${esc(x.title)}</div><div class="ps">${tabsOf(x).map(([, t]) => esc(t)).join(" · ")}</div><div class="ps">${n} settings</div></span></button>`; };
+  $("pickGrid").innerHTML = (grouped ? `<div class="pg pvis pgroups">${GROUPS.map(gpick).join("")}</div>` : `<div class="pg pvis">${vis.map(pick).join("")}</div>` + `<div class="plaincard"><div class="ph">${I("list")}No preview · standard settings</div><div class="pg">${plain.map(pick).join("")}</div></div>`)
     + `<div class="themerow"><div class="themetog" data-theme-toggle role="menuitemcheckbox" aria-checked="${theme === "m3"}"><span class="pi">${I("palette")}</span><div class="tt">Morphe design</div><span class="sw" role="presentation" aria-checked="${theme === "m3"}"></span></div>`
     + `<button class="ordreset" data-order-reset ${customOrder ? "" : "disabled"} title="Hold a screen to move it. This restores Morphe's order.">${I("reset")}Reset order</button></div>`
-    + `<div class="themerow simrow"><div class="themetog" data-simple-toggle role="menuitemcheckbox" aria-checked="${simple}"><span class="pi">${I("visibility_off")}</span><div class="tt">Hide shown UI element settings<small>Remove UI elements by double-tapping or holding them in the preview. The list only shows hidden elements.</small></div><span class="sw" role="presentation" aria-checked="${simple}"></span></div></div>`;
+    + `<div class="themerow simrow"><div class="themetog" data-simple-toggle role="menuitemcheckbox" aria-checked="${simple}"><span class="pi">${I("visibility_off")}</span><div class="tt">Hide shown UI element settings<small>Remove UI elements by double-tapping or holding them in the preview. The list only shows hidden elements.</small></div><span class="sw" role="presentation" aria-checked="${simple}"></span></div></div>`
+    + `<div class="themerow simrow"><div class="themetog" data-group-toggle role="menuitemcheckbox" aria-checked="${grouped}"><span class="pi">${I("layers")}</span><div class="tt">Group screens into tabs<small>Six screens instead of ${SECTIONS.length}. Each one has tabs right under the live preview, and every tab brings its own preview.</small></div><span class="sw" role="presentation" aria-checked="${grouped}"></span></div></div>`;
   $("btnReset").disabled = mode !== "mod" || !Object.keys(PREF).some(k => JSON.stringify(state[k]) !== JSON.stringify(defaults[k]));
+}
+function renderTabs() {
+  const box = $("tabs"); if (!box) return;
+  $("stick").classList.toggle("grouped", grouped);
+  if (!grouped) { box.innerHTML = ""; return; }
+  const g = groupOf(section);
+  box.innerHTML = tabsOf(g).map(([id, t]) => `<button class="tab7" role="tab" data-tab="${id}" aria-selected="${id === section}">${esc(t)}</button>`).join("");
+  const cur = box.querySelector('[aria-selected="true"]');
+  if (cur) box.scrollTo({ left: cur.offsetLeft - (box.clientWidth - cur.offsetWidth) / 2, behavior: "smooth" });
 }
 // Screen menu order: Morphe's own order by default (its settings screens, then their sub-screens);
 // hold a card to drag it somewhere else. The custom order is saved; Reset order restores Morphe's.
@@ -2645,7 +2708,8 @@ function renderStage() {
   if (stageHold) return;
   const st = $("stage");
   const scene = SCENES[section];
-  $("stick").hidden = !scene;
+  $("stick").hidden = !scene && !grouped;
+  $("stick").classList.toggle("noscene", !scene);
   if (!scene) { st.innerHTML = ""; return; }
   const same = st.dataset.sec === section; st.dataset.sec = section; renderCount++;
   if (!same) { ghosts.clear(); fading.clear(); }
@@ -2759,15 +2823,17 @@ function rowHTML(k, live) {
   const goto = blk ? `<button class="goto" data-goto="${k}">${sectionOf(blk) !== section ? "Change it here" : "Take me there"} ${I("arrow")}</button>`
     : bp ? `<button class="goto more" data-more="${k}" data-target="${bp}" title="${esc(title(bp))}">More ${I("arrow")}</button>` : "";
   const need = dis ? `<div class="need2">${needText(k)}</div>` : "";
-  const tags = isAnimated(k) ? `<span class="tag">${I("play")}Animated</span>` : "";
+  const tags = "";
   const kids = KIDS[k] ? KIDS[k].filter(x => kidVisible(x) || x === peekKid).length : 0;
   const kidbtn = kids ? `<button class="kidbtn" data-kidtoggle="${k}" aria-expanded="${!collapsed.has(k)}" aria-label="${kids} sub-options">${kids}${I("expand")}</button>`
     : KIDS[k] ? `<span class="kidhid">Sub-settings hidden</span>` : "";
   const over = /^(hide|show) in /i.test(title(k)) && p.subScreenTitle ? `<div class="over">${esc(p.subScreenTitle)}</div>` : "";
   return `<div class="${cls.join(" ")}" data-row="${k}" data-k="${k}" tabindex="0">
-    <div class="txt">${over}<div class="ttl">${esc(title(k))}${dis ? I("lock", "lk") : ""}${chg ? '<span class="changed-dot" title="Changed from default"></span>' : ""}${tags}${kidbtn}</div>
+    <div class="txt">${over}<div class="ttl">${ttlHTML(title(k), (dis ? I("lock", "lk") : "") + (chg ? '<span class="changed-dot" title="Changed from default"></span>' : "") + tags + kidbtn)}</div>
       ${sum ? `<div class="sum">${esc(sum)}</div>` : ""}${need}${ctl}</div>${right || goto ? `<div class="side">${right}${goto}</div>` : ""}</div>`;
 }
+// The last word of a title and the badges after it never wrap apart, so a sub-options pill can't end up alone on a line.
+function ttlHTML(t, after) { if (!after) return esc(t); const i = t.lastIndexOf(" "); return `${esc(t.slice(0, i + 1))}<span class="nw">${esc(t.slice(i + 1))}${after}</span>`; }
 const groupHTML = (name, icon, keys, live) => keys.length ? `<div class="gtitle">${I(icon)}${name} · ${keys.length}</div><div class="group">${keys.map(k => rowHTML(k, live)).join("")}</div>` : "";
 
 // Rows follow the order their components appear in the preview, top to bottom, left to right
@@ -2818,9 +2884,11 @@ function renderList() {
   const wantOpen = new Set();
   // Experimental "hide shown UI element settings": a component you can see is removed in the preview
   // itself, so its row leaves the list. Its adjustments (sliders, styles) stay, as plain rows.
-  const simpleHide = k => simple && isLive(k) && A[k] && (A[k].kind === "vis" || A[k].kind === "overlay") && shown(k) && parentsOk(k) && !!document.querySelector(`#stage [data-k="${k}"]`);
+  const simpleHide0 = k => simple && isLive(k) && A[k] && (A[k].kind === "vis" || A[k].kind === "overlay") && shown(k) && parentsOk(k) && !!document.querySelector(`#stage [data-k="${k}"]`);
+  const pin = simplePin && simpleHide0(simplePin) ? simplePin : null;
+  const simpleHide = k => k !== pin && simpleHide0(k);
   const withKids = k => {
-    if (simpleHide(k)) return (KIDS[k] || []).filter(x => kidVisible(x) && !simpleHide(x)).map(x => rowHTML(x, isLive(x))).join("");
+    if (simpleHide(k)) return (KIDS[k] || []).filter(x => kidVisible(x) && !simpleHide(x) && x !== pin).map(x => rowHTML(x, isLive(x))).join("");
     let out = rowHTML(k, isLive(k));
     const ks = KIDS[k];
     if (ks) {
@@ -2831,7 +2899,8 @@ function renderList() {
     return out;
   };
   if (section !== "misc") {
-    const top = m.live.filter(k => !PARENT_OF[k]);
+    if (pin) html += `<div class="group pin7"><div class="subhead">Tapped in the preview</div>${PARENT_OF[pin] ? rowHTML(pin, true) : withKids(pin)}</div>`;
+    const top = m.live.filter(k => !PARENT_OF[k] && k !== pin);
     const ordered = byPosition(top);
     const rest = m.misc.filter(k => !PARENT_OF[k]);
     let live = "";
@@ -2847,7 +2916,7 @@ function renderList() {
       const left = ordered.filter(x => !used.has(x)).map(withKids).join("");
       if (left) live = left + live;
     } else live = ordered.map(withKids).join("");
-    if (simple && !live) html += `<div class="secnote" style="padding:16px 20px">Nothing on this screen is hidden. Double-tap or hold an element in the preview to hide it.</div>`;
+    if (simple && !live && !pin) html += `<div class="secnote" style="padding:16px 20px">Nothing on this screen is hidden. Double-tap or hold an element in the preview to hide it.</div>`;
     if (live) html += `<div class="group">${live}</div>`;
     if (rest.length) html += `${ordered.length ? `<div class="sechead">More settings<span class="nolive">No live preview or animation</span></div>` : ""}<div class="group">${rest.map(withKids).join("")}</div>`;
   } else {
@@ -3104,11 +3173,18 @@ function scrollBoxes(el) {
   }
   return out;
 }
+function frameFor(el, box) {
+  const lim = box.clientHeight * .9; let best = el;
+  for (let q = el.parentElement; q && q !== box; q = q.parentElement) { const h = q.getBoundingClientRect().height; if (h > lim) break; if (h > best.getBoundingClientRect().height + 2) best = q; }
+  return best;
+}
 function revealInStage(els) {
   let moved = false;
   els.filter(e => e.offsetParent || e.getClientRects().length).slice(0, 1).forEach(el => {
     scrollBoxes(el).forEach(([box, sx, sy]) => {
-      const r = el.getBoundingClientRect(), b = box.getBoundingClientRect();
+      // a small element inside a bigger card (a label on a thumbnail) centres the whole card,
+      // so you see what it belongs to
+      const r = (sy ? frameFor(el, box) : el).getBoundingClientRect(), b = box.getBoundingClientRect();
       let dx = 0, dy = 0;
       if (sx && (r.left < b.left + 4 || r.right > b.right - 4)) dx = (r.left + r.width / 2) - (b.left + b.width / 2);
       if (sy && (r.top < b.top + 4 || r.bottom > b.bottom - 4)) dy = (r.top + Math.min(r.height, b.height) / 2) - (b.top + b.height / 2);
@@ -3132,6 +3208,21 @@ function scrollRowIntoView(k, center) {
   const target = center ? top - stickH - (sc.clientHeight - stickH) / 2 + row.offsetHeight / 2 : top - stickH - 8;
   if (center || top < sc.scrollTop + stickH || top + row.offsetHeight > sc.scrollTop + sc.clientHeight) { progScrollUntil = performance.now() + 900; sc.scrollTo({ top: target, behavior: "smooth" }); }
 }
+// Tapping something in the preview brings the setting card that controls it to the middle of the list.
+// A sub-option inside a collapsed parent opens it first; in "hide shown UI element settings" mode the
+// card (which that mode leaves out) is pinned at the very top of the list.
+let simplePin = null;
+function rowForStage(k) {
+  if (simple) {
+    const was = simplePin; simplePin = k;
+    if (!document.querySelector(`#list [data-row="${k}"]`) || was !== k) renderList();
+    if (simplePin === k && document.querySelector(`#list .pin7 [data-row="${k}"]`)) { progScrollUntil = performance.now() + 900; $("scroller").scrollTo({ top: 0, behavior: "smooth" }); return; }
+  }
+  const par = PARENT_OF[k];
+  if (par && !kidVisible(k)) { peekKid = k; collapsed.delete(par); renderList(); setTimeout(() => scrollRowIntoView(k, true), 300); setTimeout(() => pointToParents(k), 700); return; }
+  if (par && collapsed.has(par)) { collapsed.delete(par); lastOpen.add(par); const box = document.querySelector(`[data-kids-of="${par}"]`); if (box) box.classList.add("open"); document.querySelector(`[data-kidtoggle="${par}"]`)?.setAttribute("aria-expanded", "true"); setTimeout(() => scrollRowIntoView(k, true), 300); return; }
+  scrollRowIntoView(k, true);
+}
 function select(k, from) {
   const prevSel = selected;
   selected = k;
@@ -3150,7 +3241,7 @@ function select(k, from) {
   if (dropGhost) { if (renders === renderCount) unghost(dropGhost); else { clearGhost(dropGhost); renderStage(); } }
   highlight(k, true, from !== "stage");
   renderInspector();
-  if (from === "stage") scrollRowIntoView(k);
+  if (from === "stage") rowForStage(k);
   if (from === "list" && mode === "mod" && A[k] && (A[k].kind === "vis" || A[k].kind === "overlay") && !shown(k) && document.querySelector(`#stage [data-k="${k}"]`)) ghost(k);
   if (DEMOS[k]) startDemo(k); else stopDemo();
   if (SCN[k] && from) playScenario(k); else if (from && k !== prevSel) stopScenario();
@@ -3283,7 +3374,7 @@ function switchSection(id, after) {
   content.classList.remove("swap-in"); content.classList.add("swap-out");
   stopDemo(); stopScenario();
   setTimeout(() => {
-    section = id; selected = null; peekKid = null; trayOpen = false;
+    section = id; selected = null; peekKid = null; trayOpen = false; simplePin = null; lastTab[groupOf(id).id] = id;
     $("scroller").scrollTop = 0; renderAll();
     content.classList.remove("swap-out"); void content.offsetWidth; content.classList.add("swap-in");
     after && setTimeout(after, 120);
@@ -3322,8 +3413,8 @@ function scrollTargets(t) {
 function down(e) {
   if (e.button > 0) return;
   if (e.pointerType === "mouse" && e.target.closest("#stage")) drag = { x: e.clientX, y: e.clientY, t: e.target, on: false };
-  // a switch on a row with a preview behaves like the row: tap selects, hold or double-tap switches
-  const swb = e.target.closest(".sw"); if (swb && !(swb.dataset.sw && A[swb.dataset.sw] && swb.closest("#list"))) return;
+  // tapping a switch flips it straight away (the row itself keeps tap = select, hold = switch)
+  if (e.target.closest(".sw")) return;
   if (e.target.closest("input,select,textarea,button.opt,.goto,.kidbtn,.replay,[data-tray]")) return;
   const el = e.target.closest("[data-k]"); if (!el) return;
   const k = el.dataset.k; const from = el.closest("#stage") ? "stage" : "list";
@@ -3331,8 +3422,8 @@ function down(e) {
   if (from === "stage" && el.classList.contains("off")) { (ghostTimers.get(k) || []).forEach(clearTimeout); ghostTimers.delete(k); el.classList.remove("ghost-out"); el.classList.add("charging"); }
   press = { el, k, from, x: e.clientX, y: e.clientY, long: false };
   // holding a preview element brings its setting into view while the hold is still charging
-  if (from === "stage") press.peek = setTimeout(() => { if (!press || press.k !== k) return; document.querySelectorAll(".row.sel").forEach(r => r.classList.remove("sel")); document.querySelector(`[data-row="${k}"]`)?.classList.add("sel"); scrollRowIntoView(k); }, 160);
-  press.t = setTimeout(() => { if (!press) return; press.long = true; el.classList.remove("pressing"); if (from === "stage" && selected !== k) { if (ghosts.has(selected)) unghost(selected); selected = k; highlight(k, false); renderInspector(); } toggle(k); if (from === "stage") setTimeout(() => scrollRowIntoView(k), 30); }, LONG);
+  if (from === "stage") press.peek = setTimeout(() => { if (!press || press.k !== k) return; document.querySelectorAll(".row.sel").forEach(r => r.classList.remove("sel")); document.querySelector(`[data-row="${k}"]`)?.classList.add("sel"); rowForStage(k); }, 160);
+  press.t = setTimeout(() => { if (!press) return; press.long = true; el.classList.remove("pressing"); if (from === "stage" && selected !== k) { if (ghosts.has(selected)) unghost(selected); selected = k; highlight(k, false); renderInspector(); } toggle(k); if (from === "stage") setTimeout(() => scrollRowIntoView(k, true), 30); }, LONG);
 }
 function cancelPress() { if (press) { clearTimeout(press.t); clearTimeout(press.peek); press.el.classList.remove("pressing", "charging"); press = null; } }
 function move(e) {
@@ -3409,7 +3500,7 @@ $("list").addEventListener("click", e => {
   }
   const rp = e.target.closest("[data-replay]");
   const sw = e.target.closest("[data-sw]");
-  if (sw) { const k = sw.dataset.sw; if (A[k]) return; select(k); toggle(k); return; }
+  if (sw) { const k = sw.dataset.sw; if (A[k]) toggle(k); else { select(k); toggle(k); } return; }
   const opt = e.target.closest("button.opt[data-set]");
   if (opt) { ensureMod(); const k = opt.dataset.set; const before = state[k]; state[k] = coerce(k, opt.dataset.val); afterChange(k, before); }
 });
@@ -3431,10 +3522,14 @@ $("list").addEventListener("change", e => {
 });
 
 $("secPill").onclick = () => setPicker(!pickerOpen);
+$("tabs").addEventListener("click", e => { const t = e.target.closest("[data-tab]"); if (!t || t.dataset.tab === section) return; returnTo = null; switchSection(t.dataset.tab); });
 $("pickScrim").onclick = () => setPicker(false);
 $("pickGrid").addEventListener("click", e => {
   if (pickSuppress) return;
   if (e.target.closest("[data-simple-toggle]")) { simple = !simple; renderBar(); renderList(); store.save(); snack(simple ? "List shows hidden elements only. Double-tap or hold an element in the preview to hide it" : "List shows every setting again"); return; }
+  if (e.target.closest("[data-group-toggle]")) { grouped = !grouped; renderBar(); renderStage(); store.save(); snack(grouped ? "Screens are grouped. Switch tabs right under the preview" : "Every screen is listed on its own again"); return; }
+  const gb = e.target.closest("[data-group]");
+  if (gb) { const g = GROUPS.find(x => x.id === gb.dataset.group), tabs = tabsOf(g); setPicker(false); returnTo = null; switchSection(lastTab[g.id] && tabs.some(([t]) => t === lastTab[g.id]) ? lastTab[g.id] : tabs[0][0]); return; }
   if (e.target.closest("[data-theme-toggle]")) { theme = theme === "m3" ? "yt" : "m3"; applyTheme(); renderBar(); store.save(); return; }
   if (e.target.closest("[data-order-reset]")) {
     openDialog(`<div class="di">${I("reset")}</div><h2 id="dlgTitle">Reset screen order?</h2><p>The screens go back to Morphe's own order. Your settings are not changed.</p><div class="acts"><button class="dbtn primary" data-dlg-ok>Reset</button><button class="dbtn tonal" data-dlg-cancel>Cancel</button></div>`);
@@ -3620,6 +3715,8 @@ async function boot() {
   if (saved.section && SECTIONS.some(s => s.id === saved.section)) section = saved.section;
   if (saved.theme === "m3") theme = "m3";
   if (saved.simple) simple = true;
+  if (saved.grouped) grouped = true;
+  if (saved.tabs) Object.assign(lastTab, saved.tabs);
   applyTheme();
   if (saved.device && DEVICES.some(d => d.id === saved.device)) device_ = saved.device;
   if (CAT.youtubeVersions && CAT.youtubeVersions.length) {
@@ -3641,6 +3738,6 @@ async function boot() {
   let seen = false; try { seen = localStorage.getItem(LS + "-tutorial") === "1"; } catch { /* storage unavailable */ }
   if (!seen) runTutorial();
 }
-store.save = function () { try { localStorage.setItem(LS, JSON.stringify({ state: changedOnly(), section, device: device_, yt: ytVersion, theme, simple, order: customOrder, borrowed: Object.fromEntries(Object.entries(borrowed).map(([s, v]) => [s, [...v]])) })); localStorage.setItem(LS + "-baseline", JSON.stringify(baseline)); } catch { /* storage unavailable */ } };
+store.save = function () { try { localStorage.setItem(LS, JSON.stringify({ state: changedOnly(), section, device: device_, yt: ytVersion, theme, simple, grouped, tabs: lastTab, order: customOrder, borrowed: Object.fromEntries(Object.entries(borrowed).map(([s, v]) => [s, [...v]])) })); localStorage.setItem(LS + "-baseline", JSON.stringify(baseline)); } catch { /* storage unavailable */ } };
 boot();
 })();

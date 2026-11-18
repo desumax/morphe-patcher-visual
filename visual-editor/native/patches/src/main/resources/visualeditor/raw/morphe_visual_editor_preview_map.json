@@ -1,0 +1,2363 @@
+{
+ "generatedBy": "visual-editor/web (scratch export)",
+ "screens": [
+  {
+   "id": "misc",
+   "title": "Misc",
+   "icon": "list"
+  },
+  {
+   "id": "ads",
+   "title": "Ads",
+   "icon": "dollar"
+  },
+  {
+   "id": "dearrow",
+   "title": "DeArrow",
+   "icon": "eye"
+  },
+  {
+   "id": "feed",
+   "title": "Home feed",
+   "icon": "home"
+  },
+  {
+   "id": "channel",
+   "title": "Channel page",
+   "icon": "you"
+  },
+  {
+   "id": "explore",
+   "title": "Explore menu",
+   "icon": "search"
+  },
+  {
+   "id": "look",
+   "title": "App look",
+   "icon": "palette"
+  },
+  {
+   "id": "nav",
+   "title": "Navigation",
+   "icon": "layout"
+  },
+  {
+   "id": "snackbar",
+   "title": "Snackbar",
+   "icon": "chat"
+  },
+  {
+   "id": "endscreen",
+   "title": "End screen",
+   "icon": "tv"
+  },
+  {
+   "id": "watch",
+   "title": "Watch page",
+   "icon": "like"
+  },
+  {
+   "id": "ambient",
+   "title": "Ambient mode",
+   "icon": "bright"
+  },
+  {
+   "id": "captions",
+   "title": "Captions",
+   "icon": "cc"
+  },
+  {
+   "id": "comments",
+   "title": "Comments",
+   "icon": "comment"
+  },
+  {
+   "id": "flyout",
+   "title": "Player menu",
+   "icon": "tune"
+  },
+  {
+   "id": "miniplayer",
+   "title": "Miniplayer",
+   "icon": "pip"
+  },
+  {
+   "id": "danmaku",
+   "title": "Flying comments",
+   "icon": "chat"
+  },
+  {
+   "id": "player",
+   "title": "Player controls",
+   "icon": "play"
+  },
+  {
+   "id": "description",
+   "title": "Description",
+   "icon": "list"
+  },
+  {
+   "id": "seekbar",
+   "title": "Seekbar & gestures",
+   "icon": "gesture"
+  },
+  {
+   "id": "shorts",
+   "title": "Shorts",
+   "icon": "shorts"
+  },
+  {
+   "id": "sponsorblock",
+   "title": "SponsorBlock",
+   "icon": "skip"
+  },
+  {
+   "id": "fullscreen",
+   "title": "Fullscreen",
+   "icon": "full"
+  },
+  {
+   "id": "playback",
+   "title": "Playback",
+   "icon": "speed"
+  }
+ ],
+ "entries": {
+  "morphe_hide_video_ads": {
+   "screen": "ads",
+   "kind": "vis"
+  },
+  "morphe_hide_paid_promotion_labels": {
+   "screen": "ads",
+   "kind": "vis"
+  },
+  "morphe_hide_player_popup_ads": {
+   "screen": "ads",
+   "kind": "vis"
+  },
+  "morphe_hide_merchandise_banners": {
+   "screen": "ads",
+   "kind": "vis"
+  },
+  "morphe_hide_creator_store_shelf": {
+   "screen": "ads",
+   "kind": "vis"
+  },
+  "morphe_hide_shopping_links": {
+   "screen": "ads",
+   "kind": "vis"
+  },
+  "morphe_hide_youtube_premium_promotions": {
+   "screen": "ads",
+   "kind": "vis"
+  },
+  "morphe_hide_self_sponsor_ads": {
+   "screen": "ads",
+   "kind": "vis"
+  },
+  "morphe_hide_general_ads": {
+   "screen": "ads",
+   "kind": "vis"
+  },
+  "morphe_hide_fullscreen_ads": {
+   "screen": "ads",
+   "kind": "scenario"
+  },
+  "morphe_dearrow_titles_home": {
+   "screen": "dearrow",
+   "kind": "style"
+  },
+  "morphe_dearrow_titles_subscription": {
+   "screen": "dearrow",
+   "kind": "style"
+  },
+  "morphe_dearrow_titles_search": {
+   "screen": "dearrow",
+   "kind": "style"
+  },
+  "morphe_dearrow_titles_player": {
+   "screen": "dearrow",
+   "kind": "style"
+  },
+  "morphe_dearrow_titles_library": {
+   "screen": "dearrow",
+   "kind": "style"
+  },
+  "morphe_dearrow_vote_button": {
+   "screen": "dearrow",
+   "kind": "vis"
+  },
+  "morphe_dearrow_titles_icon": {
+   "screen": "dearrow",
+   "kind": "vis"
+  },
+  "morphe_dearrow_casual_mode": {
+   "screen": "dearrow",
+   "kind": "style"
+  },
+  "morphe_dearrow_thumbnail_stills_time": {
+   "screen": "dearrow",
+   "kind": "style"
+  },
+  "morphe_dearrow_connection_toast": {
+   "screen": "dearrow",
+   "kind": "scenario"
+  },
+  "morphe_hide_youtube_doodles": {
+   "screen": "feed",
+   "kind": "vis"
+  },
+  "morphe_hide_filter_bar_in_feed": {
+   "screen": "feed",
+   "kind": "vis"
+  },
+  "morphe_hide_video_thumbnail": {
+   "screen": "feed",
+   "kind": "vis"
+  },
+  "morphe_feed_watch_later_button": {
+   "screen": "feed",
+   "kind": "vis"
+  },
+  "morphe_hide_seekbar_thumbnail": {
+   "screen": "feed",
+   "kind": "vis"
+  },
+  "morphe_hide_view_count": {
+   "screen": "feed",
+   "kind": "vis"
+  },
+  "morphe_hide_upload_time": {
+   "screen": "feed",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_home": {
+   "screen": "feed",
+   "kind": "vis"
+  },
+  "morphe_hide_community_posts": {
+   "screen": "feed",
+   "kind": "vis"
+  },
+  "morphe_hide_post_like_dislike_buttons": {
+   "screen": "feed",
+   "kind": "vis"
+  },
+  "morphe_hide_post_dislike_button": {
+   "screen": "feed",
+   "kind": "vis"
+  },
+  "morphe_hide_post_comment_button": {
+   "screen": "feed",
+   "kind": "vis"
+  },
+  "morphe_hide_post_share_button": {
+   "screen": "feed",
+   "kind": "vis"
+  },
+  "morphe_hide_post_comments_preview": {
+   "screen": "feed",
+   "kind": "vis"
+  },
+  "morphe_hide_horizontal_shelves": {
+   "screen": "feed",
+   "kind": "vis"
+  },
+  "morphe_hide_playables": {
+   "screen": "feed",
+   "kind": "vis"
+  },
+  "morphe_hide_surveys": {
+   "screen": "feed",
+   "kind": "vis"
+  },
+  "morphe_hide_ticket_shelf": {
+   "screen": "feed",
+   "kind": "vis"
+  },
+  "morphe_hide_mix_playlists": {
+   "screen": "feed",
+   "kind": "vis"
+  },
+  "morphe_hide_video_labels": {
+   "screen": "feed",
+   "kind": "vis"
+  },
+  "morphe_hide_live_streams": {
+   "screen": "feed",
+   "kind": "vis"
+  },
+  "morphe_feed_card_layout": {
+   "screen": "feed",
+   "kind": "layout"
+  },
+  "morphe_disable_auto_feed_refresh": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_feed_long_press_menu": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_feed_view_count": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_account_menu": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_album_cards": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_artist_cards": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_channel_buttons": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_compact_banner": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_feed_flyout_menu": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_floating_microphone_button": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_get_premium_button": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_handle": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_help_feedback_menu": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_history_shelf": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_image_shelf": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_invite_to_message_card": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_latest_videos_button": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_movies_section": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_notifications_menu_header": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_notify_me_button": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_search_term_thumbnails": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_show_more_button": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_subscribed_channels_bar": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_subscribed_channels_bar_names": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_unavailable_videos_hidden_banner": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_web_search_results": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_you_may_like_section": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_ads_channel_whitelist_flyout_menu": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_ask_summarize_flyout_menu": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_playback_speed_channel_whitelist_flyout_menu": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_aislist_submit_flyout_menu": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_open_channel_of_live_avatar": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_playlist_long_press_drag": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_playlist_wide_drag_handles": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_post_image_download": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_post_translate": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_restore_original_titles": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_playlist_hide_removal_snackbar": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_aislist_blocklist_home": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_aislist_blocklist_search": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_aislist_warnlist_home": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_aislist_warnlist_search": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_filter_bar_in_comments": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_filter_bar_in_history": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_filter_bar_in_related_videos": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_filter_bar_in_search": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_keyword_content_comments": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_native_queue_thumbnail_button": {
+   "screen": "feed",
+   "kind": "vis"
+  },
+  "morphe_native_queue_fetch_on_scroll": {
+   "screen": "feed",
+   "kind": "scenario"
+  },
+  "morphe_hide_links_preview": {
+   "screen": "channel",
+   "kind": "vis"
+  },
+  "morphe_hide_subscribe_button_in_channel_page": {
+   "screen": "channel",
+   "kind": "vis"
+  },
+  "morphe_hide_join_button": {
+   "screen": "channel",
+   "kind": "vis"
+  },
+  "morphe_hide_store_button": {
+   "screen": "channel",
+   "kind": "vis"
+  },
+  "morphe_hide_community_button": {
+   "screen": "channel",
+   "kind": "vis"
+  },
+  "morphe_hide_filter_bar_in_channel_page": {
+   "screen": "channel",
+   "kind": "vis"
+  },
+  "morphe_hide_members_shelf": {
+   "screen": "channel",
+   "kind": "vis"
+  },
+  "morphe_hide_members_only_chip": {
+   "screen": "channel",
+   "kind": "vis"
+  },
+  "morphe_hide_posts_shelf": {
+   "screen": "channel",
+   "kind": "vis"
+  },
+  "morphe_channel_search": {
+   "screen": "channel",
+   "kind": "scenario"
+  },
+  "morphe_hide_channel_tab": {
+   "screen": "channel",
+   "kind": "scenario"
+  },
+  "morphe_hide_explore_button": {
+   "screen": "explore",
+   "kind": "vis"
+  },
+  "morphe_hide_privacy_tos_footer": {
+   "screen": "explore",
+   "kind": "vis"
+  },
+  "morphe_hide_music_menu": {
+   "screen": "explore",
+   "kind": "vis"
+  },
+  "morphe_hide_movies_menu": {
+   "screen": "explore",
+   "kind": "vis"
+  },
+  "morphe_hide_live_menu": {
+   "screen": "explore",
+   "kind": "vis"
+  },
+  "morphe_hide_gaming_menu": {
+   "screen": "explore",
+   "kind": "vis"
+  },
+  "morphe_hide_news_menu": {
+   "screen": "explore",
+   "kind": "vis"
+  },
+  "morphe_hide_sports_menu": {
+   "screen": "explore",
+   "kind": "vis"
+  },
+  "morphe_hide_learning_menu": {
+   "screen": "explore",
+   "kind": "vis"
+  },
+  "morphe_hide_courses_menu": {
+   "screen": "explore",
+   "kind": "vis"
+  },
+  "morphe_hide_fashion_menu": {
+   "screen": "explore",
+   "kind": "vis"
+  },
+  "morphe_hide_podcasts_menu": {
+   "screen": "explore",
+   "kind": "vis"
+  },
+  "morphe_hide_playables_menu": {
+   "screen": "explore",
+   "kind": "vis"
+  },
+  "morphe_hide_shopping_menu": {
+   "screen": "explore",
+   "kind": "vis"
+  },
+  "morphe_hide_hype_menu": {
+   "screen": "explore",
+   "kind": "vis"
+  },
+  "morphe_hide_memberships_menu": {
+   "screen": "explore",
+   "kind": "vis"
+  },
+  "morphe_hide_youtube_premium_menu": {
+   "screen": "explore",
+   "kind": "vis"
+  },
+  "morphe_hide_youtube_studio_menu": {
+   "screen": "explore",
+   "kind": "vis"
+  },
+  "morphe_hide_youtube_music_menu": {
+   "screen": "explore",
+   "kind": "vis"
+  },
+  "morphe_hide_youtube_kids_menu": {
+   "screen": "explore",
+   "kind": "vis"
+  },
+  "morphe_hide_youtube_create_menu": {
+   "screen": "explore",
+   "kind": "vis"
+  },
+  "morphe_hide_youtube_works_menu": {
+   "screen": "explore",
+   "kind": "vis"
+  },
+  "morphe_hide_status_bar": {
+   "screen": "look",
+   "kind": "vis"
+  },
+  "morphe_searchbar_type": {
+   "screen": "look",
+   "kind": "style"
+  },
+  "morphe_gradient_loading_screen": {
+   "screen": "look",
+   "kind": "style"
+  },
+  "morphe_theme_color_dark": {
+   "screen": "look",
+   "kind": "style"
+  },
+  "morphe_theme_color_dark_custom": {
+   "screen": "look",
+   "kind": "style"
+  },
+  "morphe_custom_font_type": {
+   "screen": "look",
+   "kind": "style"
+  },
+  "morphe_disable_layout_updates": {
+   "screen": "look",
+   "kind": "scenario"
+  },
+  "morphe_fix_status_bar_layout": {
+   "screen": "look",
+   "kind": "scenario"
+  },
+  "morphe_native_snackbar": {
+   "screen": "look",
+   "kind": "scenario"
+  },
+  "morphe_override_youtube_music_buttons": {
+   "screen": "look",
+   "kind": "scenario"
+  },
+  "morphe_settings_search_history": {
+   "screen": "look",
+   "kind": "scenario"
+  },
+  "morphe_show_menu_icons": {
+   "screen": "look",
+   "kind": "scenario"
+  },
+  "morphe_spoof_app_version": {
+   "screen": "look",
+   "kind": "scenario"
+  },
+  "morphe_theme_color_change_foreground": {
+   "screen": "look",
+   "kind": "scenario"
+  },
+  "morphe_custom_filter": {
+   "screen": "look",
+   "kind": "scenario"
+  },
+  "morphe_series_tracker": {
+   "screen": "look",
+   "kind": "scenario"
+  },
+  "morphe_hide_toolbar_chat_button": {
+   "screen": "nav",
+   "kind": "vis"
+  },
+  "morphe_hide_toolbar_search_button": {
+   "screen": "nav",
+   "kind": "vis"
+  },
+  "morphe_show_toolbar_settings_button": {
+   "screen": "nav",
+   "kind": "vis"
+  },
+  "morphe_header_logo": {
+   "screen": "nav",
+   "kind": "layout"
+  },
+  "morphe_hide_navigation_bar": {
+   "screen": "nav",
+   "kind": "vis"
+  },
+  "morphe_hide_home_button": {
+   "screen": "nav",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_button": {
+   "screen": "nav",
+   "kind": "vis"
+  },
+  "morphe_hide_create_button": {
+   "screen": "nav",
+   "kind": "vis"
+  },
+  "morphe_hide_subscriptions_button": {
+   "screen": "nav",
+   "kind": "vis"
+  },
+  "morphe_hide_notifications_button": {
+   "screen": "nav",
+   "kind": "vis"
+  },
+  "morphe_hide_navigation_button_labels": {
+   "screen": "nav",
+   "kind": "vis"
+  },
+  "morphe_show_search_button": {
+   "screen": "nav",
+   "kind": "vis"
+  },
+  "morphe_show_settings_button": {
+   "screen": "nav",
+   "kind": "vis"
+  },
+  "morphe_show_watch_later_button": {
+   "screen": "nav",
+   "kind": "vis"
+  },
+  "morphe_hide_navigation_new_content_dot": {
+   "screen": "nav",
+   "kind": "vis"
+  },
+  "morphe_hide_toolbar_create_button": {
+   "screen": "nav",
+   "kind": "vis"
+  },
+  "morphe_hide_toolbar_notification_button": {
+   "screen": "nav",
+   "kind": "vis"
+  },
+  "morphe_swap_create_with_notifications_button": {
+   "screen": "nav",
+   "kind": "layout"
+  },
+  "morphe_narrow_navigation_buttons": {
+   "screen": "nav",
+   "kind": "style"
+  },
+  "morphe_navigation_bar_style": {
+   "screen": "nav",
+   "kind": "style"
+  },
+  "morphe_navigation_bar_glass": {
+   "screen": "nav",
+   "kind": "style"
+  },
+  "morphe_navigation_bar_glass_opacity": {
+   "screen": "nav",
+   "kind": "style"
+  },
+  "morphe_navigation_bar_glass_height": {
+   "screen": "nav",
+   "kind": "style"
+  },
+  "morphe_navigation_bar_glass_round": {
+   "screen": "nav",
+   "kind": "style"
+  },
+  "morphe_disable_auto_hide_navigation_bar": {
+   "screen": "nav",
+   "kind": "scenario"
+  },
+  "morphe_navigation_bar_animations": {
+   "screen": "nav",
+   "kind": "scenario"
+  },
+  "morphe_disable_toolbar_navigation_tabs": {
+   "screen": "nav",
+   "kind": "scenario"
+  },
+  "morphe_hide_toolbar_microphone_button": {
+   "screen": "nav",
+   "kind": "scenario"
+  },
+  "morphe_hide_snackbar": {
+   "screen": "snackbar",
+   "kind": "vis"
+  },
+  "morphe_custom_snackbar_theme": {
+   "screen": "snackbar",
+   "kind": "style"
+  },
+  "morphe_custom_snackbar_color_dark": {
+   "screen": "snackbar",
+   "kind": "style"
+  },
+  "morphe_custom_snackbar_corner_radius": {
+   "screen": "snackbar",
+   "kind": "style"
+  },
+  "morphe_custom_snackbar_stroke_color": {
+   "screen": "snackbar",
+   "kind": "style"
+  },
+  "morphe_hide_end_screen_store_banner": {
+   "screen": "endscreen",
+   "kind": "vis"
+  },
+  "morphe_hide_info_cards": {
+   "screen": "endscreen",
+   "kind": "vis"
+  },
+  "morphe_hide_autoplay_preview": {
+   "screen": "endscreen",
+   "kind": "overlay"
+  },
+  "morphe_hide_end_screen_cards": {
+   "screen": "endscreen",
+   "kind": "overlay"
+  },
+  "morphe_hide_channel_watermark": {
+   "screen": "endscreen",
+   "kind": "vis"
+  },
+  "morphe_hide_end_screen_suggested_video": {
+   "screen": "endscreen",
+   "kind": "overlay"
+  },
+  "morphe_autoplay_mode": {
+   "screen": "endscreen",
+   "kind": "behaviour"
+  },
+  "morphe_hide_action_bar": {
+   "screen": "watch",
+   "kind": "vis"
+  },
+  "morphe_hide_like_dislike_button": {
+   "screen": "watch",
+   "kind": "vis"
+  },
+  "morphe_hide_share_button": {
+   "screen": "watch",
+   "kind": "vis"
+  },
+  "morphe_hide_remix_button": {
+   "screen": "watch",
+   "kind": "vis"
+  },
+  "morphe_hide_thanks_button": {
+   "screen": "watch",
+   "kind": "vis"
+  },
+  "morphe_hide_download_button": {
+   "screen": "watch",
+   "kind": "vis"
+  },
+  "morphe_hide_clip_button": {
+   "screen": "watch",
+   "kind": "vis"
+  },
+  "morphe_hide_save_button": {
+   "screen": "watch",
+   "kind": "vis"
+  },
+  "morphe_hide_report_button": {
+   "screen": "watch",
+   "kind": "vis"
+  },
+  "morphe_hide_shop_button": {
+   "screen": "watch",
+   "kind": "vis"
+  },
+  "morphe_hide_ask_button": {
+   "screen": "watch",
+   "kind": "vis"
+  },
+  "morphe_hide_hype_button": {
+   "screen": "watch",
+   "kind": "vis"
+  },
+  "morphe_hide_promote_button": {
+   "screen": "watch",
+   "kind": "vis"
+  },
+  "morphe_hide_stop_ads_button": {
+   "screen": "watch",
+   "kind": "vis"
+  },
+  "morphe_hide_more_button": {
+   "screen": "watch",
+   "kind": "vis"
+  },
+  "morphe_hide_channel_profile_button": {
+   "screen": "watch",
+   "kind": "vis"
+  },
+  "morphe_hide_channel_profile_subscribe_button": {
+   "screen": "watch",
+   "kind": "vis"
+  },
+  "morphe_hide_comments_button": {
+   "screen": "watch",
+   "kind": "vis"
+  },
+  "morphe_hide_connect_button": {
+   "screen": "watch",
+   "kind": "vis"
+  },
+  "morphe_hide_channel_bar": {
+   "screen": "watch",
+   "kind": "vis"
+  },
+  "morphe_hide_join_membership_button": {
+   "screen": "watch",
+   "kind": "vis"
+  },
+  "morphe_ryd_enabled": {
+   "screen": "watch",
+   "kind": "style"
+  },
+  "morphe_ryd_dislike_percentage": {
+   "screen": "watch",
+   "kind": "style"
+  },
+  "morphe_hide_comments_section": {
+   "screen": "watch",
+   "kind": "vis"
+  },
+  "morphe_hide_comments_preview_comment": {
+   "screen": "watch",
+   "kind": "vis"
+  },
+  "morphe_hide_info_panels": {
+   "screen": "watch",
+   "kind": "vis"
+  },
+  "morphe_hide_emergency_box": {
+   "screen": "watch",
+   "kind": "vis"
+  },
+  "morphe_hide_medical_panels": {
+   "screen": "watch",
+   "kind": "vis"
+  },
+  "morphe_hide_crowdfunding_box": {
+   "screen": "watch",
+   "kind": "vis"
+  },
+  "morphe_hide_player_related_videos": {
+   "screen": "watch",
+   "kind": "overlay"
+  },
+  "morphe_video_action_bar_layout": {
+   "screen": "watch",
+   "kind": "layout"
+  },
+  "morphe_disable_like_subscribe_glow": {
+   "screen": "watch",
+   "kind": "behaviour"
+  },
+  "morphe_disable_rolling_number_animations": {
+   "screen": "watch",
+   "kind": "scenario"
+  },
+  "morphe_copy_video_title": {
+   "screen": "watch",
+   "kind": "scenario"
+  },
+  "morphe_open_system_share_sheet": {
+   "screen": "watch",
+   "kind": "scenario"
+  },
+  "morphe_remove_viewer_discretion_dialog": {
+   "screen": "watch",
+   "kind": "scenario"
+  },
+  "morphe_hide_quick_actions_live_chat_button": {
+   "screen": "watch",
+   "kind": "scenario"
+  },
+  "morphe_enhanced_ambient_mode": {
+   "screen": "ambient",
+   "kind": "style"
+  },
+  "morphe_disable_ambient_mode": {
+   "screen": "ambient",
+   "kind": "vis"
+  },
+  "morphe_enhanced_ambient_mode_strength": {
+   "screen": "ambient",
+   "kind": "style"
+  },
+  "morphe_enhanced_ambient_mode_blur": {
+   "screen": "ambient",
+   "kind": "style"
+  },
+  "morphe_disable_fullscreen_ambient_mode": {
+   "screen": "ambient",
+   "kind": "scenario"
+  },
+  "morphe_captions_in_pip": {
+   "screen": "captions",
+   "kind": "vis"
+  },
+  "morphe_caption_scale": {
+   "screen": "captions",
+   "kind": "style"
+  },
+  "morphe_secondary_caption_language": {
+   "screen": "captions",
+   "kind": "style"
+  },
+  "morphe_stable_caption_blocks": {
+   "screen": "captions",
+   "kind": "behaviour"
+  },
+  "morphe_auto_translate_additional_languages": {
+   "screen": "captions",
+   "kind": "scenario"
+  },
+  "morphe_fix_transcript": {
+   "screen": "captions",
+   "kind": "scenario"
+  },
+  "morphe_set_caption_cookies": {
+   "screen": "captions",
+   "kind": "scenario"
+  },
+  "morphe_hide_comments_top_fans_button": {
+   "screen": "comments",
+   "kind": "vis"
+  },
+  "morphe_hide_comments_info_button": {
+   "screen": "comments",
+   "kind": "vis"
+  },
+  "morphe_hide_comments_filter_bar_options": {
+   "screen": "comments",
+   "kind": "vis"
+  },
+  "morphe_hide_comments_ai_chat_summary": {
+   "screen": "comments",
+   "kind": "vis"
+  },
+  "morphe_hide_comments_community_guidelines": {
+   "screen": "comments",
+   "kind": "vis"
+  },
+  "morphe_hide_comments_channel_guidelines": {
+   "screen": "comments",
+   "kind": "vis"
+  },
+  "morphe_hide_comments_by_members_header": {
+   "screen": "comments",
+   "kind": "vis"
+  },
+  "morphe_hide_comments_emoji_button": {
+   "screen": "comments",
+   "kind": "vis"
+  },
+  "morphe_hide_comments_timestamp_button": {
+   "screen": "comments",
+   "kind": "vis"
+  },
+  "morphe_hide_comments_gif_button": {
+   "screen": "comments",
+   "kind": "vis"
+  },
+  "morphe_hide_comments_thanks_button": {
+   "screen": "comments",
+   "kind": "vis"
+  },
+  "morphe_hide_comments_create_a_short_button": {
+   "screen": "comments",
+   "kind": "vis"
+  },
+  "morphe_hide_comments_contexts": {
+   "screen": "comments",
+   "kind": "vis"
+  },
+  "morphe_hide_comments_menu_button": {
+   "screen": "comments",
+   "kind": "vis"
+  },
+  "morphe_hide_comments_translate_button": {
+   "screen": "comments",
+   "kind": "vis"
+  },
+  "morphe_hide_comments_dislike_button": {
+   "screen": "comments",
+   "kind": "vis"
+  },
+  "morphe_hide_comments_gift_button": {
+   "screen": "comments",
+   "kind": "vis"
+  },
+  "morphe_hide_comments_gifs_and_images": {
+   "screen": "comments",
+   "kind": "vis"
+  },
+  "morphe_hide_comments_gift_animation_and_cards": {
+   "screen": "comments",
+   "kind": "vis"
+  },
+  "morphe_copy_comments": {
+   "screen": "comments",
+   "kind": "scenario"
+  },
+  "morphe_search_comments": {
+   "screen": "comments",
+   "kind": "scenario"
+  },
+  "morphe_hide_comments_carousel": {
+   "screen": "comments",
+   "kind": "scenario"
+  },
+  "morphe_hide_comments_live_chat_donators_bar": {
+   "screen": "comments",
+   "kind": "scenario"
+  },
+  "morphe_hide_comments_live_chat_scroll_to_bottom_button": {
+   "screen": "comments",
+   "kind": "scenario"
+  },
+  "morphe_hide_comments_live_chat_tooltips": {
+   "screen": "comments",
+   "kind": "scenario"
+  },
+  "morphe_hide_comments_zero_state": {
+   "screen": "comments",
+   "kind": "scenario"
+  },
+  "morphe_hide_comments_section_in_home_feed": {
+   "screen": "comments",
+   "kind": "scenario"
+  },
+  "morphe_minimal_comments_button": {
+   "screen": "comments",
+   "kind": "scenario"
+  },
+  "morphe_sanitize_comments_highlighted_search_links": {
+   "screen": "comments",
+   "kind": "scenario"
+  },
+  "morphe_hide_player_flyout_quality": {
+   "screen": "flyout",
+   "kind": "vis"
+  },
+  "morphe_hide_player_flyout_quality_header": {
+   "screen": "flyout",
+   "kind": "vis"
+  },
+  "morphe_hide_player_flyout_quality_footer": {
+   "screen": "flyout",
+   "kind": "vis"
+  },
+  "morphe_hide_player_flyout_captions": {
+   "screen": "flyout",
+   "kind": "vis"
+  },
+  "morphe_hide_player_flyout_captions_header": {
+   "screen": "flyout",
+   "kind": "vis"
+  },
+  "morphe_hide_player_flyout_captions_footer": {
+   "screen": "flyout",
+   "kind": "vis"
+  },
+  "morphe_hide_player_flyout_speed": {
+   "screen": "flyout",
+   "kind": "vis"
+  },
+  "morphe_hide_player_flyout_sleep_timer": {
+   "screen": "flyout",
+   "kind": "vis"
+  },
+  "morphe_hide_player_flyout_loop_video": {
+   "screen": "flyout",
+   "kind": "vis"
+  },
+  "morphe_hide_player_flyout_ambient_mode": {
+   "screen": "flyout",
+   "kind": "vis"
+  },
+  "morphe_hide_player_flyout_lock_screen": {
+   "screen": "flyout",
+   "kind": "vis"
+  },
+  "morphe_hide_player_flyout_stable_volume": {
+   "screen": "flyout",
+   "kind": "vis"
+  },
+  "morphe_hide_player_flyout_audio_track": {
+   "screen": "flyout",
+   "kind": "vis"
+  },
+  "morphe_hide_player_flyout_audio_track_footer": {
+   "screen": "flyout",
+   "kind": "vis"
+  },
+  "morphe_pip_button_flyout": {
+   "screen": "flyout",
+   "kind": "vis"
+  },
+  "morphe_video_delay_button_flyout": {
+   "screen": "flyout",
+   "kind": "vis"
+  },
+  "morphe_hide_player_flyout_listen_with_youtube_music": {
+   "screen": "flyout",
+   "kind": "vis"
+  },
+  "morphe_hide_player_flyout_watch_in_vr": {
+   "screen": "flyout",
+   "kind": "vis"
+  },
+  "morphe_hide_player_flyout_on_the_go": {
+   "screen": "flyout",
+   "kind": "vis"
+  },
+  "morphe_hide_player_flyout_additional_settings": {
+   "screen": "flyout",
+   "kind": "vis"
+  },
+  "morphe_hide_player_flyout_help": {
+   "screen": "flyout",
+   "kind": "vis"
+  },
+  "morphe_hide_notification_media_prev_next": {
+   "screen": "miniplayer",
+   "kind": "vis"
+  },
+  "morphe_miniplayer_disable_resuming": {
+   "screen": "miniplayer",
+   "kind": "vis"
+  },
+  "morphe_disable_notification_media_seekbar": {
+   "screen": "miniplayer",
+   "kind": "vis"
+  },
+  "morphe_miniplayer_type": {
+   "screen": "miniplayer",
+   "kind": "layout"
+  },
+  "morphe_miniplayer_hide_title": {
+   "screen": "miniplayer",
+   "kind": "vis"
+  },
+  "morphe_miniplayer_disable_rounded_corners": {
+   "screen": "miniplayer",
+   "kind": "style"
+  },
+  "morphe_miniplayer_glass": {
+   "screen": "miniplayer",
+   "kind": "style"
+  },
+  "morphe_miniplayer_docked": {
+   "screen": "miniplayer",
+   "kind": "style"
+  },
+  "morphe_miniplayer_disable_drag_and_drop": {
+   "screen": "miniplayer",
+   "kind": "scenario"
+  },
+  "morphe_miniplayer_disable_horizontal_drag": {
+   "screen": "miniplayer",
+   "kind": "scenario"
+  },
+  "morphe_miniplayer_swipe_up_expand": {
+   "screen": "miniplayer",
+   "kind": "scenario"
+  },
+  "morphe_niconico_comments": {
+   "screen": "danmaku",
+   "kind": "behaviour"
+  },
+  "morphe_niconico_comments_font_size": {
+   "screen": "danmaku",
+   "kind": "style"
+  },
+  "morphe_niconico_comments_opacity": {
+   "screen": "danmaku",
+   "kind": "style"
+  },
+  "morphe_niconico_comments_display_area": {
+   "screen": "danmaku",
+   "kind": "style"
+  },
+  "morphe_niconico_comments_travel_duration": {
+   "screen": "danmaku",
+   "kind": "style"
+  },
+  "morphe_hide_player_control_buttons_background": {
+   "screen": "player",
+   "kind": "style"
+  },
+  "morphe_player_control_buttons_background_opacity": {
+   "screen": "player",
+   "kind": "style"
+  },
+  "morphe_player_overlay_opacity": {
+   "screen": "player",
+   "kind": "style"
+  },
+  "morphe_hide_collapse_button": {
+   "screen": "player",
+   "kind": "vis"
+  },
+  "morphe_hide_autoplay_button": {
+   "screen": "player",
+   "kind": "vis"
+  },
+  "morphe_hide_captions_button": {
+   "screen": "player",
+   "kind": "vis"
+  },
+  "morphe_hide_cast_button": {
+   "screen": "player",
+   "kind": "vis"
+  },
+  "morphe_hide_settings_button": {
+   "screen": "player",
+   "kind": "vis"
+  },
+  "morphe_hide_player_previous_next_buttons": {
+   "screen": "player",
+   "kind": "vis"
+  },
+  "morphe_hide_fullscreen_button": {
+   "screen": "player",
+   "kind": "vis"
+  },
+  "morphe_copy_video_link_button": {
+   "screen": "player",
+   "kind": "vis"
+  },
+  "morphe_copy_video_link_with_timestamp_button": {
+   "screen": "player",
+   "kind": "scenario"
+  },
+  "morphe_playback_speed_dialog_button": {
+   "screen": "player",
+   "kind": "vis"
+  },
+  "morphe_video_quality_dialog_button": {
+   "screen": "player",
+   "kind": "vis"
+  },
+  "morphe_loop_video_button": {
+   "screen": "player",
+   "kind": "vis"
+  },
+  "morphe_mute_video_button": {
+   "screen": "player",
+   "kind": "vis"
+  },
+  "morphe_pip_button_overlay": {
+   "screen": "player",
+   "kind": "vis"
+  },
+  "morphe_reload_video_button": {
+   "screen": "player",
+   "kind": "vis"
+  },
+  "morphe_save_to_watch_later_button": {
+   "screen": "player",
+   "kind": "vis"
+  },
+  "morphe_playlist_panel_button": {
+   "screen": "player",
+   "kind": "vis"
+  },
+  "morphe_play_all_button": {
+   "screen": "player",
+   "kind": "vis"
+  },
+  "morphe_fullscreen_video_scale_button": {
+   "screen": "player",
+   "kind": "vis"
+  },
+  "morphe_fullscreen_video_scale_button_fullscreen_only": {
+   "screen": "player",
+   "kind": "scenario"
+  },
+  "morphe_video_delay_button_overlay": {
+   "screen": "player",
+   "kind": "vis"
+  },
+  "morphe_external_downloader_overlay_button": {
+   "screen": "player",
+   "kind": "vis"
+  },
+  "morphe_loop_video": {
+   "screen": "player",
+   "kind": "scenario"
+  },
+  "morphe_exit_fullscreen": {
+   "screen": "player",
+   "kind": "scenario"
+  },
+  "morphe_player_icon_style": {
+   "screen": "player",
+   "kind": "style"
+  },
+  "morphe_hide_video_details_section": {
+   "screen": "description",
+   "kind": "vis"
+  },
+  "morphe_hide_ai_generated_video_summary_section": {
+   "screen": "description",
+   "kind": "vis"
+  },
+  "morphe_hide_ask_section": {
+   "screen": "description",
+   "kind": "vis"
+  },
+  "morphe_hide_hype_points": {
+   "screen": "description",
+   "kind": "vis"
+  },
+  "morphe_hide_key_concepts_section": {
+   "screen": "description",
+   "kind": "vis"
+  },
+  "morphe_hide_chapters_section": {
+   "screen": "description",
+   "kind": "vis"
+  },
+  "morphe_hide_search_inside_this_video_section": {
+   "screen": "description",
+   "kind": "vis"
+  },
+  "morphe_hide_transcript_section": {
+   "screen": "description",
+   "kind": "vis"
+  },
+  "morphe_hide_how_this_was_made_section": {
+   "screen": "description",
+   "kind": "vis"
+  },
+  "morphe_hide_corrections_section": {
+   "screen": "description",
+   "kind": "vis"
+  },
+  "morphe_hide_attributes_section": {
+   "screen": "description",
+   "kind": "vis"
+  },
+  "morphe_hide_hashtag_section": {
+   "screen": "description",
+   "kind": "vis"
+  },
+  "morphe_hide_info_cards_section": {
+   "screen": "description",
+   "kind": "vis"
+  },
+  "morphe_hide_featured_links_section": {
+   "screen": "description",
+   "kind": "vis"
+  },
+  "morphe_hide_featured_videos_section": {
+   "screen": "description",
+   "kind": "vis"
+  },
+  "morphe_hide_featured_playlists_section": {
+   "screen": "description",
+   "kind": "vis"
+  },
+  "morphe_hide_featured_channels_section": {
+   "screen": "description",
+   "kind": "vis"
+  },
+  "morphe_hide_channel_links_section": {
+   "screen": "description",
+   "kind": "vis"
+  },
+  "morphe_hide_subscribe_button": {
+   "screen": "description",
+   "kind": "vis"
+  },
+  "morphe_hide_explore_section": {
+   "screen": "description",
+   "kind": "vis"
+  },
+  "morphe_hide_explore_course_section": {
+   "screen": "description",
+   "kind": "vis"
+  },
+  "morphe_hide_explore_podcast_section": {
+   "screen": "description",
+   "kind": "vis"
+  },
+  "morphe_hide_course_progress_section": {
+   "screen": "description",
+   "kind": "vis"
+  },
+  "morphe_hide_quizzes_section": {
+   "screen": "description",
+   "kind": "vis"
+  },
+  "morphe_copy_select_text": {
+   "screen": "description",
+   "kind": "scenario"
+  },
+  "morphe_hide_player_gesture_hints": {
+   "screen": "seekbar",
+   "kind": "vis"
+  },
+  "morphe_seekbar_thumbnail_preview": {
+   "screen": "seekbar",
+   "kind": "vis"
+  },
+  "morphe_hide_timestamp": {
+   "screen": "seekbar",
+   "kind": "vis"
+  },
+  "morphe_hide_seekbar": {
+   "screen": "seekbar",
+   "kind": "vis"
+  },
+  "morphe_tap_to_seek": {
+   "screen": "seekbar",
+   "kind": "gesture"
+  },
+  "morphe_slide_to_seek": {
+   "screen": "seekbar",
+   "kind": "gesture"
+  },
+  "morphe_disable_precise_seeking_gesture": {
+   "screen": "seekbar",
+   "kind": "gesture"
+  },
+  "morphe_seekbar_custom_color": {
+   "screen": "seekbar",
+   "kind": "style"
+  },
+  "morphe_seekbar_custom_color_primary": {
+   "screen": "seekbar",
+   "kind": "style"
+  },
+  "morphe_seekbar_custom_color_accent": {
+   "screen": "seekbar",
+   "kind": "style"
+  },
+  "morphe_disable_haptic_feedback_chapters": {
+   "screen": "seekbar",
+   "kind": "scenario"
+  },
+  "morphe_disable_haptic_feedback_precise_seeking": {
+   "screen": "seekbar",
+   "kind": "scenario"
+  },
+  "morphe_disable_haptic_feedback_seek_undo": {
+   "screen": "seekbar",
+   "kind": "scenario"
+  },
+  "morphe_disable_haptic_feedback_tap_and_hold": {
+   "screen": "seekbar",
+   "kind": "scenario"
+  },
+  "morphe_disable_haptic_feedback_zoom": {
+   "screen": "seekbar",
+   "kind": "scenario"
+  },
+  "morphe_disable_chapter_skip_double_tap": {
+   "screen": "seekbar",
+   "kind": "scenario"
+  },
+  "morphe_speed_tap_and_hold": {
+   "screen": "seekbar",
+   "kind": "scenario"
+  },
+  "morphe_custom_seekbar_thumb": {
+   "screen": "seekbar",
+   "kind": "style"
+  },
+  "morphe_custom_seekbar_thumb_scale_type": {
+   "screen": "seekbar",
+   "kind": "style"
+  },
+  "morphe_live_stream_dvr": {
+   "screen": "seekbar",
+   "kind": "scenario"
+  },
+  "morphe_expand_live_stream_dvr_duration": {
+   "screen": "seekbar",
+   "kind": "scenario"
+  },
+  "morphe_hide_shorts_new_posts_button": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_upcoming_button": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_auto_dubbed_label": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_like_button": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_tagged_products": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_shop_button": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_comments_button": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_use_template_button": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_paused_overlay_buttons": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_effect_button": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_save_sound_button": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_green_screen_button": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_use_sound_button": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_super_thanks_button": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_ai_button": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_share_button": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_info_panel": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_save_button": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_channel_bar": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_gesture_hints": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_subscribe_button": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_join_button": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_video_title": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_hashtag_button": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_remix_button": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_preview_comment": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_sound_metadata_label": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_location_label": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_sound_button": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_full_video_link_label": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_navigation_bar": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_disable_shorts_double_tap_to_like": {
+   "screen": "shorts",
+   "kind": "gesture"
+  },
+  "morphe_shorts_autoplay": {
+   "screen": "shorts",
+   "kind": "scenario"
+  },
+  "morphe_hide_shorts_flyout_audio_track": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_hide_shorts_flyout_captions": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_shorts_playback_speed_flyout_button": {
+   "screen": "shorts",
+   "kind": "vis"
+  },
+  "morphe_shorts_icon_style": {
+   "screen": "shorts",
+   "kind": "style"
+  },
+  "morphe_shorts_player_type": {
+   "screen": "shorts",
+   "kind": "scenario"
+  },
+  "morphe_disable_shorts_resuming_on_startup": {
+   "screen": "shorts",
+   "kind": "scenario"
+  },
+  "morphe_hide_shorts_channel": {
+   "screen": "shorts",
+   "kind": "scenario"
+  },
+  "morphe_hide_shorts_history": {
+   "screen": "shorts",
+   "kind": "scenario"
+  },
+  "morphe_hide_shorts_notifications": {
+   "screen": "shorts",
+   "kind": "scenario"
+  },
+  "morphe_hide_shorts_search": {
+   "screen": "shorts",
+   "kind": "scenario"
+  },
+  "morphe_hide_shorts_subscriptions": {
+   "screen": "shorts",
+   "kind": "scenario"
+  },
+  "morphe_hide_shorts_video_description": {
+   "screen": "shorts",
+   "kind": "scenario"
+  },
+  "morphe_hide_shorts_live_preview": {
+   "screen": "shorts",
+   "kind": "scenario"
+  },
+  "morphe_hide_shorts_search_suggestions": {
+   "screen": "shorts",
+   "kind": "scenario"
+  },
+  "morphe_shorts_autoplay_background": {
+   "screen": "shorts",
+   "kind": "scenario"
+  },
+  "morphe_shorts_disable_background_playback": {
+   "screen": "shorts",
+   "kind": "scenario"
+  },
+  "morphe_shorts_remember_playback_speed": {
+   "screen": "shorts",
+   "kind": "scenario"
+  },
+  "morphe_skip_live_shorts": {
+   "screen": "shorts",
+   "kind": "scenario"
+  },
+  "morphe_sb_enabled": {
+   "screen": "sponsorblock",
+   "kind": "style"
+  },
+  "morphe_sb_square_layout": {
+   "screen": "sponsorblock",
+   "kind": "style"
+  },
+  "morphe_sb_compact_skip_button": {
+   "screen": "sponsorblock",
+   "kind": "style"
+  },
+  "morphe_sb_video_length_without_segments": {
+   "screen": "sponsorblock",
+   "kind": "style"
+  },
+  "morphe_sb_create_new_segment": {
+   "screen": "sponsorblock",
+   "kind": "vis"
+  },
+  "morphe_sb_voting_button": {
+   "screen": "sponsorblock",
+   "kind": "vis"
+  },
+  "morphe_sb_sponsor": {
+   "screen": "sponsorblock",
+   "kind": "style"
+  },
+  "morphe_sb_selfpromo": {
+   "screen": "sponsorblock",
+   "kind": "style"
+  },
+  "morphe_sb_interaction": {
+   "screen": "sponsorblock",
+   "kind": "style"
+  },
+  "morphe_sb_highlight": {
+   "screen": "sponsorblock",
+   "kind": "style"
+  },
+  "morphe_sb_hook": {
+   "screen": "sponsorblock",
+   "kind": "style"
+  },
+  "morphe_sb_intro": {
+   "screen": "sponsorblock",
+   "kind": "style"
+  },
+  "morphe_sb_outro": {
+   "screen": "sponsorblock",
+   "kind": "style"
+  },
+  "morphe_sb_preview": {
+   "screen": "sponsorblock",
+   "kind": "style"
+  },
+  "morphe_sb_filler": {
+   "screen": "sponsorblock",
+   "kind": "style"
+  },
+  "morphe_sb_music_offtopic": {
+   "screen": "sponsorblock",
+   "kind": "style"
+  },
+  "morphe_sb_create_new_segment_step": {
+   "screen": "sponsorblock",
+   "kind": "style"
+  },
+  "morphe_sb_toast_on_skip": {
+   "screen": "sponsorblock",
+   "kind": "scenario"
+  },
+  "morphe_sb_auto_hide_skip_button": {
+   "screen": "sponsorblock",
+   "kind": "scenario"
+  },
+  "morphe_hide_video_title": {
+   "screen": "fullscreen",
+   "kind": "vis"
+  },
+  "morphe_hide_player_related_videos_overlay": {
+   "screen": "fullscreen",
+   "kind": "overlay"
+  },
+  "morphe_hide_quick_actions": {
+   "screen": "fullscreen",
+   "kind": "vis"
+  },
+  "morphe_hide_quick_actions_like_button": {
+   "screen": "fullscreen",
+   "kind": "vis"
+  },
+  "morphe_hide_quick_actions_dislike_button": {
+   "screen": "fullscreen",
+   "kind": "vis"
+  },
+  "morphe_hide_quick_actions_comments_button": {
+   "screen": "fullscreen",
+   "kind": "vis"
+  },
+  "morphe_hide_quick_actions_save_button": {
+   "screen": "fullscreen",
+   "kind": "vis"
+  },
+  "morphe_hide_quick_actions_share_button": {
+   "screen": "fullscreen",
+   "kind": "vis"
+  },
+  "morphe_hide_quick_actions_more_button": {
+   "screen": "fullscreen",
+   "kind": "vis"
+  },
+  "morphe_hide_quick_actions_playlist_button": {
+   "screen": "fullscreen",
+   "kind": "vis"
+  },
+  "morphe_hide_quick_actions_mix_button": {
+   "screen": "fullscreen",
+   "kind": "vis"
+  },
+  "morphe_hide_quick_actions_more_videos_button": {
+   "screen": "fullscreen",
+   "kind": "vis"
+  },
+  "morphe_hide_quick_actions_ask_button": {
+   "screen": "fullscreen",
+   "kind": "vis"
+  },
+  "morphe_fullscreen_video_scale": {
+   "screen": "fullscreen",
+   "kind": "style"
+  },
+  "morphe_swipe_left_zone": {
+   "screen": "fullscreen",
+   "kind": "gesture"
+  },
+  "morphe_swipe_right_zone": {
+   "screen": "fullscreen",
+   "kind": "gesture"
+  },
+  "morphe_swipe_top_zone": {
+   "screen": "fullscreen",
+   "kind": "gesture"
+  },
+  "morphe_swipe_speed_zone_height": {
+   "screen": "fullscreen",
+   "kind": "style"
+  },
+  "morphe_swipe_zone_preview": {
+   "screen": "fullscreen",
+   "kind": "style"
+  },
+  "morphe_swipe_zone_width": {
+   "screen": "fullscreen",
+   "kind": "style"
+  },
+  "morphe_swipe_overlay_style": {
+   "screen": "fullscreen",
+   "kind": "style"
+  },
+  "morphe_swipe_overlay_background_opacity": {
+   "screen": "fullscreen",
+   "kind": "style"
+  },
+  "morphe_swipe_overlay_progress_brightness_color": {
+   "screen": "fullscreen",
+   "kind": "style"
+  },
+  "morphe_swipe_overlay_progress_volume_color": {
+   "screen": "fullscreen",
+   "kind": "style"
+  },
+  "morphe_swipe_overlay_progress_speed_color": {
+   "screen": "fullscreen",
+   "kind": "style"
+  },
+  "morphe_swipe_text_overlay_size": {
+   "screen": "fullscreen",
+   "kind": "style"
+  },
+  "morphe_swipe_haptic_feedback": {
+   "screen": "fullscreen",
+   "kind": "scenario"
+  },
+  "morphe_swipe_press_to_engage": {
+   "screen": "fullscreen",
+   "kind": "scenario"
+  },
+  "morphe_volume_boost": {
+   "screen": "fullscreen",
+   "kind": "scenario"
+  },
+  "morphe_swipe_ignore_when_locked": {
+   "screen": "fullscreen",
+   "kind": "scenario"
+  },
+  "morphe_swipe_lowest_value_enable_auto_brightness": {
+   "screen": "fullscreen",
+   "kind": "scenario"
+  },
+  "morphe_swipe_save_and_restore_brightness": {
+   "screen": "fullscreen",
+   "kind": "scenario"
+  },
+  "morphe_swipe_seek": {
+   "screen": "fullscreen",
+   "kind": "gesture"
+  },
+  "morphe_disable_fullscreen_dragged_down_gesture": {
+   "screen": "fullscreen",
+   "kind": "scenario"
+  },
+  "morphe_disable_fullscreen_pulled_up_gesture": {
+   "screen": "fullscreen",
+   "kind": "scenario"
+  },
+  "morphe_disable_fullscreen_sliding_down_gesture": {
+   "screen": "fullscreen",
+   "kind": "scenario"
+  },
+  "morphe_disable_fullscreen_zoom_gesture": {
+   "screen": "fullscreen",
+   "kind": "scenario"
+  },
+  "morphe_restore_pinch_to_zoom": {
+   "screen": "fullscreen",
+   "kind": "scenario"
+  },
+  "morphe_playback_speed_default": {
+   "screen": "playback",
+   "kind": "style"
+  },
+  "morphe_video_quality_default_wifi": {
+   "screen": "playback",
+   "kind": "style"
+  },
+  "morphe_video_quality_default_mobile": {
+   "screen": "playback",
+   "kind": "style"
+  },
+  "morphe_disable_hdr_video": {
+   "screen": "playback",
+   "kind": "style"
+  },
+  "morphe_force_hdr_video": {
+   "screen": "playback",
+   "kind": "style"
+  },
+  "morphe_video_codec": {
+   "screen": "playback",
+   "kind": "style"
+  },
+  "morphe_playback_audio_pitch_default": {
+   "screen": "playback",
+   "kind": "style"
+  },
+  "morphe_custom_speed_menu": {
+   "screen": "playback",
+   "kind": "style"
+  },
+  "morphe_custom_playback_speeds": {
+   "screen": "playback",
+   "kind": "style"
+  },
+  "morphe_skip_silence": {
+   "screen": "playback",
+   "kind": "behaviour"
+  },
+  "morphe_autoplay_control": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_disable_playlist_autoplay": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_disable_player_popup_panels": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_continue_watching_prompt": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_do_not_remember_loop_video": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_force_fullscreen_landscape": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_fullscreen_playlist_panel": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_hide_ask_gemini_button": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_hide_chapters_timeline_button": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_hide_live_chat_replay_button": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_hide_sync_button": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_hide_subscribers_community_guidelines": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_hide_tap_and_hold_gradient": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_hide_timed_reactions": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_on_the_go": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_sanitize_video_subtitle": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_save_to_watch_later_flyout_button": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_feed_download_flyout_button": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_shorts_download_flyout_button": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_seek_notification_media_prev_next": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_download_force_4k": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_live_chat_translate": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_loop_count": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_advanced_video_quality_menu": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_disable_drc_audio": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_disable_playback_speed_music": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_force_original_audio": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_remember_live_stream_position": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_video_delay_bluetooth_only": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_video_quality_prioritize": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_hide_premium_video_quality": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_remember_playback_speed_last_selected": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_remember_playback_speed_last_selected_toast": {
+   "screen": "playback",
+   "kind": "behaviour"
+  },
+  "morphe_remember_shorts_quality_last_selected": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_remember_video_quality_last_selected": {
+   "screen": "playback",
+   "kind": "scenario"
+  },
+  "morphe_remember_video_quality_last_selected_toast": {
+   "screen": "playback",
+   "kind": "behaviour"
+  },
+  "morphe_vot_enabled": {
+   "screen": "playback",
+   "kind": "scenario"
+  }
+ },
+ "groups": [
+  {
+   "id": "g_player",
+   "title": "Player",
+   "icon": "play",
+   "tabs": [
+    [
+     "player",
+     "Controls"
+    ],
+    [
+     "seekbar",
+     "Seekbar & gestures"
+    ],
+    [
+     "fullscreen",
+     "Fullscreen"
+    ],
+    [
+     "flyout",
+     "Player menu"
+    ]
+   ]
+  },
+  {
+   "id": "g_playback",
+   "title": "Playback",
+   "icon": "speed",
+   "tabs": [
+    [
+     "playback",
+     "Playback"
+    ],
+    [
+     "endscreen",
+     "End screen"
+    ],
+    [
+     "captions",
+     "Captions"
+    ],
+    [
+     "miniplayer",
+     "Miniplayer"
+    ],
+    [
+     "sponsorblock",
+     "SponsorBlock"
+    ]
+   ]
+  },
+  {
+   "id": "g_watch",
+   "title": "Watch page",
+   "icon": "like",
+   "tabs": [
+    [
+     "watch",
+     "Actions"
+    ],
+    [
+     "description",
+     "Description"
+    ],
+    [
+     "comments",
+     "Comments"
+    ],
+    [
+     "danmaku",
+     "Flying comments"
+    ],
+    [
+     "ambient",
+     "Ambient mode"
+    ]
+   ]
+  },
+  {
+   "id": "g_feed",
+   "title": "Feed",
+   "icon": "home",
+   "tabs": [
+    [
+     "feed",
+     "Home"
+    ],
+    [
+     "shorts",
+     "Shorts"
+    ],
+    [
+     "ads",
+     "Ads"
+    ],
+    [
+     "dearrow",
+     "DeArrow"
+    ]
+   ]
+  },
+  {
+   "id": "g_browse",
+   "title": "Browsing",
+   "icon": "layout",
+   "tabs": [
+    [
+     "channel",
+     "Channel page"
+    ],
+    [
+     "explore",
+     "Explore menu"
+    ],
+    [
+     "nav",
+     "Navigation"
+    ]
+   ]
+  },
+  {
+   "id": "g_app",
+   "title": "App",
+   "icon": "palette",
+   "tabs": [
+    [
+     "look",
+     "App look"
+    ],
+    [
+     "snackbar",
+     "Snackbar"
+    ],
+    [
+     "misc",
+     "Other"
+    ]
+   ]
+  }
+ ]
+}

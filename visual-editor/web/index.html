@@ -118,6 +118,16 @@ button { font: inherit; color: inherit; }
 .editor { flex: 1; min-height: 0; container-type: inline-size; container-name: ed; position: relative; }
 .scroller { height: 100%; overflow-y: auto; overflow-x: hidden; position: relative; overscroll-behavior: contain; }
 .stick { position: sticky; top: 0; z-index: 5; background: var(--m-bg); }
+.tabs7 { display: none; gap: 6px; padding: 0 10px 8px; overflow-x: auto; scrollbar-width: none; }
+.tabs7::-webkit-scrollbar { display: none; }
+.stick.grouped .tabs7 { display: flex; }
+.stick.noscene .stagebox { display: none; }
+.stick.noscene .tabs7 { padding-top: 8px; }
+.tab7 { flex: none; height: 32px; padding: 0 12px; border-radius: 8px; border: 0; background: var(--m-c-high, #272727); color: var(--m-on, #f1f1f1); font: inherit; font-size: 13.5px; font-weight: 500; cursor: pointer; transition: background .2s, color .2s; }
+.tab7[aria-selected="true"] { background: var(--m-on, #f1f1f1); color: var(--m-bg, #0f0f0f); }
+.theme-yt .tab7 { background: #272727; color: #f1f1f1; }
+.theme-yt .tab7[aria-selected="true"] { background: #f1f1f1; color: #0f0f0f; }
+.pgroups .pick .ps + .ps { opacity: .7; }
 .stagebox { position: relative; margin: 8px 10px 6px; border: 1.5px solid var(--m-outline, #5f6368); border-radius: 14px; overflow: hidden; overflow: clip; box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 4px 14px rgba(0,0,0,.45); transition: border-color .25s; }
 .stagebox.changed { animation: framepulse .7s var(--ease); }
 @keyframes framepulse { 0% { border-color: var(--yt-blue); box-shadow: 0 0 0 3px rgba(62,166,255,.35), 0 4px 14px rgba(0,0,0,.45); } 100% { } }
@@ -244,7 +254,11 @@ button { font: inherit; color: inherit; }
 .dev { position: relative; background: #111; border: 3px solid #555; border-radius: 14px; overflow: hidden; transition: width .5s var(--ease), height .5s var(--ease), transform .5s var(--ease), scale .5s var(--ease); flex: none; }
 .scbox { transition: width .5s var(--ease), height .5s var(--ease); position: relative; flex: none; }
 /* the phone is centred on its scaled box, so scaling it never pushes it off-centre */
-.scbox > .dev { position: absolute; left: 50%; top: 50%; translate: -50% -50%; }
+.scbox > .dev, .scbox > .duo7 { position: absolute; left: 50%; top: 50%; translate: -50% -50%; }
+.duo7 { width: 206px; height: 186px; display: flex; gap: 10px; transition: scale .5s var(--ease); }
+.dl7 { display: grid; gap: 3px; justify-items: center; align-content: start; }
+.dl7 > span { font-size: 8px; font-weight: 600; color: #fff; background: #3a3a3a; border-radius: 6px; padding: 0 6px; line-height: 11px; }
+.dl7 > span.on { background: #2e7d32; }
 .dev.buzz { animation: buzz .16s linear 2; }
 @keyframes buzz { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-3px) rotate(-1deg); } 75% { transform: translateX(3px) rotate(1deg); } }
 .waves { position: absolute; top: 50%; width: 14px; height: 40px; transform: translateY(-50%); opacity: 0; }
@@ -418,7 +432,7 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 .searchbar input { flex: 1; min-width: 0; background: transparent; border: 0; color: var(--m-on); font: inherit; font-size: 15px; outline: none; }
 .searchbar input::-webkit-search-cancel-button { display: none; }
 .app.searching .searchbar { clip-path: inset(0 round 20px); opacity: 1; pointer-events: auto; transition: clip-path 300ms var(--ease), opacity 80ms linear; }
-.app.searching #btnSearch, .app.searching #btnReset { opacity: 0; pointer-events: none; }
+.app.searching #btnSearch, .app.searching #btnReset, .app.searching .seg { opacity: 0; pointer-events: none; }
 #btnReset:disabled { opacity: .35; cursor: default; }
 /* the top bar slides away while you scroll down the list and comes back when you scroll up */
 .appbar { transition: margin-top 260ms var(--ease), opacity 200ms var(--ease); }
@@ -458,8 +472,9 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 .kids .row .ttl { font-size: 14px; }
 .kids .row.peek { display: flex; }
 .kids .row.hide { display: none; }
-.kidbtn { display: inline-flex; align-items: center; gap: 2px; height: 22px; padding: 0 6px 0 4px; margin-left: 6px; border-radius: 999px; border: 0; background: var(--m-c-highest); color: var(--m-on-var); font-size: 11px; font-weight: 600; cursor: pointer; vertical-align: 1px; }
-.kidbtn svg { width: 16px; height: 16px; fill: currentColor; transition: transform 280ms var(--ease); }
+.ttl .nw { white-space: nowrap; }
+.kidbtn { display: inline-flex; align-items: center; justify-content: center; gap: 1px; height: 20px; min-width: 34px; padding: 0 4px 0 7px; margin-left: 6px; border-radius: 10px; border: 0; background: var(--m-c-highest); color: var(--m-on-var); font-size: 11px; line-height: 1; font-weight: 600; cursor: pointer; vertical-align: 2px; }
+.kidbtn svg { display: block; width: 16px; height: 16px; fill: currentColor; transition: transform 280ms var(--ease); }
 .kidbtn[aria-expanded="true"] svg { transform: rotate(180deg); }
 /* unlock */
 .row.unlock { animation: unlockbg 900ms var(--ease); }
@@ -612,10 +627,11 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .pg7 * { min-width: 0; }
 .dev .toastin { white-space: normal; width: max-content; max-width: 88%; text-align: center; line-height: 1.25; }
 .tgt7 { transition: max-height .45s var(--ease), max-width .45s var(--ease), opacity .3s, margin .45s, padding .45s; max-height: 90px; overflow: hidden; }
-.tgt7.w7 { display: inline-flex; max-width: 90px; vertical-align: bottom; }
+.tgt7.w7 { display: inline-flex; max-width: 90px; vertical-align: bottom; flex: none; white-space: nowrap; }
 .tgt7.gone7 { max-height: 0 !important; opacity: 0; margin-top: 0 !important; margin-bottom: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }
 .tgt7.w7.gone7 { max-width: 0 !important; max-height: none !important; }
 .tgt7.instant7 { transition: none !important; }
+.pg7 > .tgt7.gone7 { margin-bottom: -5px !important; }
 .tgt7.mark7 { outline: 1.5px dashed #ff0033; outline-offset: 1px; border-radius: 3px; animation: mark7 .9s ease-in-out infinite alternate; }
 @keyframes mark7 { from { outline-color: rgba(255,0,51,.35); } to { outline-color: #ff0033; } }
 .x7 { position: absolute; z-index: 32; display: grid; place-items: center; background: rgba(0,0,0,.35); border-radius: 50%; animation: pop .25s var(--ease); pointer-events: none; }
@@ -626,6 +642,10 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .clock7 .face .m { height: 10px; animation: clock7 .5s linear infinite; }
 @keyframes clock7 { to { transform: rotate(360deg); } }
 .check7 { position: absolute; left: 50%; top: 46%; transform: translateX(-50%); z-index: 32; display: flex; gap: 3px; align-items: center; background: rgba(0,0,0,.8); border-radius: 8px; padding: 3px 7px; font-size: 6.5px; width: max-content; max-width: 84%; line-height: 1.25; animation: pop .25s var(--ease); }
+.spin7 { position: absolute; left: 50%; top: 22%; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; background: #f1f1f1; display: grid; place-items: center; z-index: 31; animation: pop .25s var(--ease); box-shadow: 0 1px 4px rgba(0,0,0,.5); }
+.spin7 i { width: 10px; height: 10px; border-radius: 50%; border: 2px solid #3ea6ff; border-top-color: transparent; animation: clock7 .7s linear infinite; }
+.spin7.dead { background: #777; }
+.spin7.dead i { animation: none; border-color: #444; border-top-color: transparent; }
 .ref7 { position: absolute; left: 50%; top: 36%; transform: translateX(-50%); z-index: 31; width: 22px; height: 22px; border-radius: 50%; background: #f1f1f1; display: grid; place-items: center; animation: pop .25s var(--ease); }
 .ref7 svg { fill: #0f0f0f !important; }
 .ref7.spin svg { animation: clock7 .6s linear 2; }
@@ -658,6 +678,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
             <div class="content" id="content">
               <div class="stick" id="stick">
                 <div class="stagebox"><div class="stage" id="stage"></div><div class="canvas" id="canvas"></div></div>
+                <div class="tabs7" id="tabs" role="tablist" aria-label="Tabs"></div>
               </div>
               <div class="list" id="list"></div>
             </div>

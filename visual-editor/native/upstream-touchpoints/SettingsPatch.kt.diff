@@ -1,0 +1,26 @@
+The only change the visual editor needs in an existing upstream file.
+The root preference set of the YouTube settings patch is private, so another patch
+can't put an entry at the top of Morphe settings. This adds a small accessor.
+
+--- a/patches/src/main/kotlin/app/morphe/patches/youtube/misc/settings/SettingsPatch.kt
++++ b/patches/src/main/kotlin/app/morphe/patches/youtube/misc/settings/SettingsPatch.kt
+@@
+ private val preferences = mutableSetOf<BasePreference>()
+
++/**
++ * Adds a preference to the root of the Morphe settings screen (where About is).
++ * Must be called from a patch's execute block that depends on [settingsPatch].
++ */
++internal fun addRootPreference(preference: BasePreference) {
++    preferences += preference
++}
++
+ private val settingsResourcePatch = patch {
+
+--- a/extensions/youtube/src/main/java/app/morphe/extension/youtube/settings/Settings.java
++++ b/extensions/youtube/src/main/java/app/morphe/extension/youtube/settings/Settings.java
+@@
++    // Visual settings editor
++    public static final BooleanSetting VISUAL_EDITOR = new BooleanSetting("morphe_settings_screen_00_0_visual_editor", FALSE);
++    public static final BooleanSetting VISUAL_EDITOR_HIDE_SHOWN = new BooleanSetting("morphe_visual_editor_hide_shown", FALSE, parent(VISUAL_EDITOR));
++    public static final BooleanSetting VISUAL_EDITOR_GROUPED = new BooleanSetting("morphe_visual_editor_grouped", FALSE, parent(VISUAL_EDITOR));
