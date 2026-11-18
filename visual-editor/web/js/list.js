@@ -484,7 +484,7 @@ function closeDialog() { $("dlg").classList.remove("open"); }
 function restartDialog() {
   const keys = pendingRestart();
   openDialog(`<div class="di">${I("restart")}</div><h2 id="dlgTitle">Restart to apply</h2>
-    <p>${keys.length} setting${keys.length > 1 ? "s" : ""} only take effect after YouTube restarts.</p>
+    <p>${keys.length} setting${keys.length > 1 ? "s" : ""} only take${keys.length > 1 ? "" : "s"} effect after YouTube restarts.</p>
     <ul>${keys.map(k => `<li>${esc(title(k))}</li>`).join("")}</ul>
     <div class="acts"><button class="dbtn primary" id="dRestart">Restart now</button><button class="dbtn tonal" id="dStay">Keep editing</button></div>`);
   $("dRestart").onclick = () => { closeDialog(); $("restarting").classList.add("on"); setTimeout(() => { baseline = { ...state }; storeBaseline(); renderBar(); $("restarting").classList.remove("on"); snack("YouTube restarted. All changes are applied."); }, 1400); };
