@@ -69,7 +69,7 @@ recurring maintenance, and the editor keeps working while it waits.
 | `extensions/.../visualeditor/PreferenceTree.java` | Reads the live settings list from `morphe_prefs.xml`. |
 | `extensions/.../visualeditor/SettingsBridge.java` | Reads, changes and resets real settings through the `Setting` API, and tracks whether a restart is needed. |
 | `extensions/.../visualeditor/PreviewMap.java` | Loads the hints, skips entries the installed build doesn't have, and lists the settings it doesn't know. |
-| `extensions/.../visualeditor/VisualEditorSettings.java` | The editor's own three settings. |
+| `extensions/.../visualeditor/VisualEditorSettings.java` | The editor's own two settings (on, tabs). |
 | `extensions/.../visualeditor/VisualEditorSwitchPreference.java` | The on switch (loads `VisualEditorSettings` before the screen binds). |
 | `extensions/.../visualeditor/VisualEditorPreference.java` | The "Open visual editor" entry. |
 | `extensions/.../visualeditor/VisualEditorDialog.java` | The editor: top bar, sticky preview, tabs, list. A full-screen dialog, because root installs can't declare a new activity. |

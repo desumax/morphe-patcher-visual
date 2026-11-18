@@ -1011,15 +1011,27 @@ scen("player", "fullscreen_video_scale_button_fullscreen_only", (box, on) => {
   return on ? "Portrait: no video scale button" : "Portrait: the button is shown";
 });
 scen("player", "copy_video_link_with_timestamp_button", (box, on) => {
-  const [fx, fy] = anchor("morphe_copy_video_link_button", .8, .86);
-  box.innerHTML = device("land", `${miniVideo(0)}<div style="${at_(fx, fy, 18)};display:grid;place-items:center;border-radius:50%;background:rgba(0,0,0,.3)">${I("link", "ico", 'style="width:13px;height:13px"')}</div>${miniSeek(17)}`);
-  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
-  const toast = t => { dev.querySelectorAll(".toastin").forEach(e => e.remove()); dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px;font-size:9px">${t}</div>`); };
-  at(100, () => fingerTo(f, W * fx, H * fy)); at(450, () => tapF(f));
-  at(600, () => { situation("Tap"); toast(`Copied: youtu.be/cAb1n${on ? "?t=192" : ""}`); });
-  at(1500, () => f.classList.add("hold")); at(2000, () => { f.classList.remove("hold"); situation("Tap and hold"); toast(`Copied: youtu.be/cAb1n${on ? "" : "?t=192"}`); });
-  return on ? "Tap copies the link with the current time; hold copies it without" : "Tap copies the plain link; hold adds the current time";
+  // The "Copy video link" button: a tap and a tap-and-hold copy two different links. This option
+  // swaps which one is which. Each side shows the button, the gesture, and the link that was copied.
+  const [fx, fy] = anchor("morphe_copy_video_link_button", .8, .2);
+  box.innerHTML = device("land", `${miniVideo(0)}<div class="cpb" style="${at_(fx, fy, 22)};display:grid;place-items:center;border-radius:50%;background:rgba(0,0,0,.45);transition:transform .2s,background .2s">${I("link", "ico", 'style="width:14px;height:14px"')}</div>${miniSeek(17)}<div style="position:absolute;left:6px;bottom:12px;font-size:8px;color:#ddd">3:12 / 18:42</div>`);
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"), btn = dev.querySelector(".cpb"); const W = dev.clientWidth, H = dev.clientHeight;
+  const plain = "youtu.be/cAb1n", timed = "youtu.be/cAb1n?t=192";
+  const toast = link => { dev.querySelectorAll(".toastin").forEach(e => e.remove()); dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:42%;font-size:9px">Link copied<br><b style="font-weight:500;color:#9cd1ff">${link}</b><br><span style="color:#bbb">${link === timed ? "opens at 3:12" : "opens at the start"}</span></div>`); };
+  const press = on => { btn.style.transform = on ? "scale(.88)" : ""; btn.style.background = on ? "rgba(62,166,255,.55)" : "rgba(0,0,0,.45)"; };
+  const fade = () => dev.querySelectorAll(".toastin").forEach(e => { e.style.transition = "opacity .3s"; e.style.opacity = 0; });
+  // the finger rests just below the button so the button stays visible
+  situation("Tap the Copy link button");
+  at(150, () => fingerTo(f, W * fx + 4, H * fy + 14, 350));
+  at(800, () => { tapF(f); press(true); }); at(1000, () => { press(false); toast(on ? timed : plain); });
+  at(2900, fade);
+  at(3300, () => situation("Tap and hold it"));
+  at(3500, () => { f.classList.add("hold"); press(true); });
+  at(4500, () => { f.classList.remove("hold"); press(false); toast(on ? plain : timed); });
+  at(6600, fade);
+  return on ? "Tap copies the link at 3:12; hold copies it from the start" : "Tap copies the link from the start; hold copies it at 3:12";
 });
+SCN_HOLD.morphe_copy_video_link_with_timestamp_button = 7000;
 scen("player", "loop_video", (box, on) => {
   box.innerHTML = device("land", `${miniVideo(2)}${miniSeek(80)}`);
   const dev = box.querySelector(".dev"); const mp = dev.querySelector(".mp");
@@ -2280,13 +2292,6 @@ scen("captions", "fix_transcript", (box, on) => {
   at(500, () => { tr.innerHTML = on ? ["0:00 Welcome back to the cabin", "0:04 Today: the roof", "0:09 First the beams"].map(t => `<div>${t}</div>`).join("") : `<div style="color:#aaa">Transcript unavailable</div>`; });
   return on ? "The transcript loads" : "The transcript fails to load on patched builds (stock)";
 });
-scen("captions", "set_caption_cookies", (box, on) => {
-  situation("Captions on a video that needs sign-in");
-  box.innerHTML = device("port", pageRows(player7(3, `<span class="cp7" style="position:absolute;left:50%;bottom:4px;transform:translateX(-50%);font-size:6px;background:rgba(0,0,0,.75);padding:0 3px;white-space:nowrap"></span>`) + row7(2, "Up next")));
-  const dev = box.querySelector(".dev");
-  at(600, () => { dev.querySelector(".cp7").textContent = on ? "Today: the roof" : "Captions unavailable"; });
-  return on ? "Captions load with your saved cookies" : "Some captions fail without cookies (stock)";
-});
 for (const [k, sit, html] of [
   ["hide_comments_carousel", "Comments under a video", `<div style="display:flex;gap:3px;overflow:hidden">${[2, 4, 6].map(i => `<div style="width:30px;height:20px;border-radius:3px;background:#272727;flex:none;font-size:5px;padding:2px">Top comment</div>`).join("")}</div>`],
   ["hide_comments_live_chat_donators_bar", "Live chat", `<div style="display:flex;gap:3px">${[1, 3, 5].map(i => `<span style="padding:0 4px;border-radius:6px;background:${["#1e88e5", "#ffb300", "#e53935"][i % 3]};font-size:5.5px">€${i * 2}</span>`).join("")}</div>`],
@@ -2680,7 +2685,6 @@ function renderBar() {
   $("pickGrid").innerHTML = (grouped ? `<div class="pg pvis pgroups">${GROUPS.map(gpick).join("")}</div>` : `<div class="pg pvis">${vis.map(pick).join("")}</div>` + `<div class="plaincard"><div class="ph">${I("list")}No preview · standard settings</div><div class="pg">${plain.map(pick).join("")}</div></div>`)
     + `<div class="themerow"><div class="themetog" data-theme-toggle role="menuitemcheckbox" aria-checked="${theme === "m3"}"><span class="pi">${I("palette")}</span><div class="tt">Morphe design</div><span class="sw" role="presentation" aria-checked="${theme === "m3"}"></span></div>`
     + `<button class="ordreset" data-order-reset ${customOrder ? "" : "disabled"} title="Hold a screen to move it. This restores Morphe's order.">${I("reset")}Reset order</button></div>`
-    + `<div class="themerow simrow"><div class="themetog" data-simple-toggle role="menuitemcheckbox" aria-checked="${simple}"><span class="pi">${I("visibility_off")}</span><div class="tt">Hide shown UI element settings<small>Remove UI elements by double-tapping or holding them in the preview. The list only shows hidden elements.</small></div><span class="sw" role="presentation" aria-checked="${simple}"></span></div></div>`
     + `<div class="themerow simrow"><div class="themetog" data-group-toggle role="menuitemcheckbox" aria-checked="${grouped}"><span class="pi">${I("layers")}</span><div class="tt">Group screens into tabs<small>Six screens instead of ${SECTIONS.length}. Each one has tabs right under the live preview, and every tab brings its own preview.</small></div><span class="sw" role="presentation" aria-checked="${grouped}"></span></div></div>`;
   $("btnReset").disabled = mode !== "mod" || !Object.keys(PREF).some(k => JSON.stringify(state[k]) !== JSON.stringify(defaults[k]));
 }
@@ -2783,6 +2787,8 @@ function renderStage() {
   st.querySelectorAll(".inner-scroll").forEach((e, i) => { if (scrollers[i]) e.scrollTop = scrollers[i]; });
   st.querySelectorAll('[style*="overflow-x:auto"]').forEach((e, i) => { e.dataset.hs = ""; if (hscroll[i]) e.scrollLeft = hscroll[i]; });
   hugComponents(st);
+  st.querySelectorAll(".c").forEach(fitRing);
+  const sel = st.querySelector(".c.sel"); if (sel) watchRing(sel);
 }
 // Many components are drawn as a wrapper around one card that carries its own margins. The outline,
 // flash and ghost dashes belong to the card, not to the full-width wrapper, so move the card's margins
@@ -2944,13 +2950,7 @@ function renderList() {
   let html = "";
   const isLive = k => m.live.includes(k);
   const wantOpen = new Set();
-  // Experimental "hide shown UI element settings": a component you can see is removed in the preview
-  // itself, so its row leaves the list. Its adjustments (sliders, styles) stay, as plain rows.
-  const simpleHide0 = k => simple && isLive(k) && A[k] && (A[k].kind === "vis" || A[k].kind === "overlay") && shown(k) && parentsOk(k) && !!document.querySelector(`#stage [data-k="${k}"]`);
-  const pin = simplePin && simpleHide0(simplePin) ? simplePin : null;
-  const simpleHide = k => k !== pin && simpleHide0(k);
   const withKids = k => {
-    if (simpleHide(k)) return (KIDS[k] || []).filter(x => kidVisible(x) && !simpleHide(x) && x !== pin).map(x => rowHTML(x, isLive(x))).join("");
     let out = rowHTML(k, isLive(k));
     const ks = KIDS[k];
     if (ks) {
@@ -2961,8 +2961,7 @@ function renderList() {
     return out;
   };
   if (section !== "misc") {
-    if (pin) html += `<div class="group pin7"><div class="subhead">${pinLabel}</div>${PARENT_OF[pin] ? rowHTML(pin, true) : withKids(pin)}</div>`;
-    const top = m.live.filter(k => !PARENT_OF[k] && k !== pin);
+    const top = m.live.filter(k => !PARENT_OF[k]);
     const ordered = byPosition(top);
     const rest = m.misc.filter(k => !PARENT_OF[k]);
     let live = "";
@@ -2978,7 +2977,6 @@ function renderList() {
       const left = ordered.filter(x => !used.has(x)).map(withKids).join("");
       if (left) live = left + live;
     } else live = ordered.map(withKids).join("");
-    if (simple && !live && !pin) html += `<div class="secnote" style="padding:16px 20px">Nothing on this screen is hidden. Double-tap or hold an element in the preview to hide it.</div>`;
     if (live) html += `<div class="group">${live}</div>`;
     if (rest.length) html += `${ordered.length ? `<div class="sechead">More settings<span class="nolive">No live preview or animation</span></div>` : ""}<div class="group">${rest.map(withKids).join("")}</div>`;
   } else {
@@ -3295,10 +3293,59 @@ function revealInStage(els) {
 }
 // The selection outline sits outside the element; when that would be clipped by the preview edge,
 // draw it inside instead.
+// The ring (outline, flash, hold, ghost dashes) goes around what an element actually draws, not
+// around its wrapper: a caption line is centred in a full-width positioning box, a menu item's text
+// sits in a padded row, a dot sits in a corner of its button. Measure the painted content and, when
+// the wrapper is clearly bigger, draw the ring at those insets. Runs after every render and whenever
+// the selected element changes size (a slider, text typed in by an animation).
+const paints = st => st.backgroundColor !== "rgba(0, 0, 0, 0)" || st.backgroundImage !== "none" || parseFloat(st.borderTopWidth) > 0 || parseFloat(st.borderBottomWidth) > 0 || st.boxShadow !== "none";
+function paintedBox(el) {
+  let l = 1e9, t = 1e9, r = -1e9, b = -1e9;
+  const add = q => { if (q.width < .5 || q.height < .5) return; l = Math.min(l, q.left); t = Math.min(t, q.top); r = Math.max(r, q.right); b = Math.max(b, q.bottom); };
+  const walk = n => {
+    for (const c of n.childNodes) {
+      if (c.nodeType === 3) { if (c.textContent.trim()) { const rg = document.createRange(); rg.selectNodeContents(c); for (const q of rg.getClientRects()) add(q); } continue; }
+      if (c.nodeType !== 1) continue;
+      const st = getComputedStyle(c);
+      if (st.display === "none" || st.visibility === "hidden" || st.opacity === "0") continue;
+      const tag = c.tagName.toLowerCase();
+      if (tag === "svg" || tag === "img" || tag === "canvas" || paints(st)) add(c.getBoundingClientRect());
+      if (tag !== "svg" && st.overflow === "visible") walk(c); else if (tag !== "svg") add(c.getBoundingClientRect());
+    }
+  };
+  walk(el);
+  return r > l ? { l, t, r, b } : null;
+}
+function fitRing(el) {
+  if (!el.isConnected || el.classList.contains("shade")) { el.classList.remove("fit"); return; }
+  const st = getComputedStyle(el);
+  if (st.display === "none" || paints(st)) { if (st.display !== "none") el.classList.remove("fit"); return; }
+  const box = el.getBoundingClientRect(), u = paintedBox(el);
+  if (!u || !box.width) { el.classList.remove("fit"); return; }
+  const P = 3; // breathing room between the content and the ring
+  const g = [u.l - box.left, u.t - box.top, box.right - u.r, box.bottom - u.b].map(x => Math.max(0, Math.round(x - P)));
+  if (Math.max(...g) < 8) { el.classList.remove("fit"); return; }
+  // a ring that would run into the edge of what clips it stays just inside instead
+  const c = clipOf(el).getBoundingClientRect(), edge = [box.left - c.left, box.top - c.top, c.right - box.right, c.bottom - box.bottom];
+  g.forEach((x, i) => { if (edge[i] > -3 && edge[i] + x < 4) g[i] = Math.max(x, 4 - Math.max(0, edge[i])); });
+  ["--fl", "--ft", "--fr", "--fb"].forEach((v, i) => el.style.setProperty(v, g[i] + "px"));
+  el.classList.add("fit");
+}
+let ringObs = null;
+function watchRing(el) {
+  if (ringObs) ringObs.disconnect();
+  if (!window.ResizeObserver || !el) return;
+  ringObs = new ResizeObserver(() => fitRing(el));
+  ringObs.observe(el); el.querySelectorAll("*").forEach(c => ringObs.observe(c));
+}
+function clipOf(el) {
+  for (let p = el.parentElement; p && p !== $("stage"); p = p.parentElement) { const cs = getComputedStyle(p); if (cs.overflowX !== "visible" || cs.overflowY !== "visible") return p; }
+  return $("stage");
+}
 function fitOutline(el) {
-  let clip = $("stage");
-  for (let p = el.parentElement; p && p !== $("stage"); p = p.parentElement) { const cs = getComputedStyle(p); if (cs.overflowX !== "visible" || cs.overflowY !== "visible") { clip = p; break; } }
-  const r = el.getBoundingClientRect(), b = clip.getBoundingClientRect();
+  fitRing(el); watchRing(el);
+  if (el.classList.contains("fit")) { el.classList.remove("selin"); return; }
+  const r = el.getBoundingClientRect(), b = clipOf(el).getBoundingClientRect();
   el.classList.toggle("selin", r.left < b.left + 4 || r.right > b.right - 4 || r.top < b.top + 4);
 }
 function scrollRowIntoView(k, center, tries = 2) {
@@ -3318,16 +3365,8 @@ function scrollRowIntoView(k, center, tries = 2) {
   if (center || top < sc.scrollTop + stickH || top + row.offsetHeight > sc.scrollTop + sc.clientHeight) { progScrollUntil = performance.now() + 900; sc.scrollTo({ top: target, behavior: "smooth" }); }
 }
 // Tapping something in the preview brings the setting card that controls it to the middle of the list.
-// A sub-option inside a collapsed parent opens it first; in "hide shown UI element settings" mode the
-// card (which that mode leaves out) is pinned at the very top of the list.
-let simplePin = null, pinLabel = "Tapped in the preview";
+// A sub-option inside a collapsed parent opens it first.
 function rowForStage(k) {
-  if (simple) {
-    pinLabel = "Tapped in the preview";
-    const was = simplePin; simplePin = k;
-    if (!document.querySelector(`#list [data-row="${k}"]`) || was !== k) renderList();
-    if (simplePin === k && document.querySelector(`#list .pin7 [data-row="${k}"]`)) { progScrollUntil = performance.now() + 900; $("scroller").scrollTo({ top: 0, behavior: "smooth" }); return; }
-  }
   const par = PARENT_OF[k];
   if (par && !kidVisible(k)) { peekKid = k; collapsed.delete(par); renderList(); holdParentsUntil = Date.now() + 1500; setTimeout(() => scrollRowIntoView(k, true), 300); setTimeout(() => pointToParents(k, true), 700); return; }
   if (par && collapsed.has(par)) { collapsed.delete(par); lastOpen.add(par); const box = document.querySelector(`[data-kids-of="${par}"]`); if (box) box.classList.add("open"); document.querySelector(`[data-kidtoggle="${par}"]`)?.setAttribute("aria-expanded", "true"); setTimeout(() => scrollRowIntoView(k, true), 300); return; }
@@ -3399,6 +3438,7 @@ function focusControl(k) {
   row.classList.remove("nudge"); void row.offsetWidth; row.classList.add("nudge");
   if (ctl) setTimeout(() => ctl.focus({ preventScroll: true }), 250);
 }
+const canToggle = k => { const p = PREF[k]; return !!p && (OFF_LIST.has(k) || p.type === "boolean" || entriesFor(k).length > 0); };
 function toggle(k) {
   const p = PREF[k];
   if (mode === "orig") setMode("mod");
@@ -3487,7 +3527,7 @@ function switchSection(id, after) {
   content.classList.remove("swap-in"); content.classList.add("swap-out");
   stopDemo(); stopScenario();
   setTimeout(() => {
-    section = id; selected = null; peekKid = null; trayOpen = false; simplePin = null; lastTab[groupOf(id).id] = id;
+    section = id; selected = null; peekKid = null; trayOpen = false; lastTab[groupOf(id).id] = id;
     $("scroller").scrollTop = 0; renderAll();
     content.classList.remove("swap-out"); void content.offsetWidth; content.classList.add("swap-in");
     after && setTimeout(after, 120);
@@ -3504,12 +3544,6 @@ function goToSetting(k, after) {
     if (hidden || (par && collapsed.has(par))) { if (hidden) peekKid = k; collapsed.delete(par); renderList(); }
     if (hidden || !parentsOk(k)) holdParentsUntil = Date.now() + 2000;
     quietFlashUntil = Date.now() + 700; // one synced flash on arrival instead of a first one mid-scroll
-    // "hide shown" mode leaves out shown elements: pin the setting (or the shown parent it sits under) on top
-    if (simple && !document.querySelector(`#list [data-row="${k}"]`)) {
-      pinLabel = "Found by search"; simplePin = k; renderList();
-      let root = k; while (PARENT_OF[root]) root = PARENT_OF[root];
-      if (!document.querySelector(`#list [data-row="${k}"]`) && root !== k) { simplePin = root; renderList(); }
-    }
     select(k);
     setTimeout(() => scrollRowIntoView(k, true), par ? 300 : 0);
     setTimeout(() => {
@@ -3543,6 +3577,9 @@ function down(e) {
   if (e.target.closest("input,select,textarea,button.opt,.goto,.kidbtn,.replay,[data-tray]")) return;
   const el = e.target.closest("[data-k]"); if (!el) return;
   const k = el.dataset.k; const from = el.closest("#stage") ? "stage" : "list";
+  // holding only does something for settings it can switch (on/off, or a short list it can step
+  // through); for a slider, colour or text field the hold ring would charge up to nothing
+  if (!canToggle(k)) { press = { el, k, from, x: e.clientX, y: e.clientY, long: false }; return; }
   el.classList.add("pressing");
   if (from === "stage" && el.classList.contains("off")) { (ghostTimers.get(k) || []).forEach(clearTimeout); ghostTimers.delete(k); el.classList.remove("ghost-out"); el.classList.add("charging"); }
   press = { el, k, from, x: e.clientX, y: e.clientY, long: false };
@@ -3651,7 +3688,6 @@ $("tabs").addEventListener("click", e => { const t = e.target.closest("[data-tab
 $("pickScrim").onclick = () => setPicker(false);
 $("pickGrid").addEventListener("click", e => {
   if (pickSuppress) return;
-  if (e.target.closest("[data-simple-toggle]")) { simple = !simple; renderBar(); renderList(); store.save(); if (simple) tutOnce("simple"); snack(simple ? "List shows hidden elements only. Double-tap or hold an element in the preview to hide it" : "List shows every setting again"); return; }
   if (e.target.closest("[data-group-toggle]")) { grouped = !grouped; renderBar(); renderStage(); store.save(); if (grouped) tutOnce("groups"); snack(grouped ? "Screens are grouped. Switch tabs right under the preview" : "Every screen is listed on its own again"); return; }
   const gb = e.target.closest("[data-group]");
   if (gb) { const g = GROUPS.find(x => x.id === gb.dataset.group), tabs = tabsOf(g); setPicker(false); returnTo = null; switchSection(lastTab[g.id] && tabs.some(([t]) => t === lastTab[g.id]) ? lastTab[g.id] : tabs[0][0]); return; }
@@ -3673,7 +3709,7 @@ $("btnOrig").onclick = () => setMode("orig");
 $("btnMod").onclick = () => setMode("mod");
 
 // ------------------------------------------------------------------ theme and tablet layout
-let theme = "yt", simple = false;
+let theme = "yt";
 function applyTheme() { const ph = $("phone"); ph.classList.toggle("theme-yt", theme !== "m3"); ph.classList.toggle("theme-m3", theme === "m3"); applyAppColors(); }
 // Morphe's theme patch (Pure black / AMOLED, Material You, Catppuccin, custom) changes YouTube's
 // background, so the preview and, in the YouTube look, the editor itself follow it.
@@ -3734,10 +3770,9 @@ const TUT_PAGES = {
   tap: { cap: "Tap something in the preview", sub: "Its setting lights up in the list" },
   change: { cap: "Double-tap it to change the setting", sub: "Holding it works too. Here the button gets hidden" },
   find: { cap: "Tap a hidden setting to find it", sub: "An outline shows where it was. Double-tap or hold it, or use the switch, to bring it back" },
-  simple: { cap: "The list shows only what you hid", sub: "Tap an element in the preview and its setting appears at the top" },
-  tools: { cap: "Search, reset and compare", sub: "Search finds any setting. Reset undoes your changes. Original shows stock YouTube, Morphe shows yours" },
+  tools: { ms: 6300, cap: "Search, reset and compare", sub: "Search finds any setting. Reset undoes your changes. Original shows stock YouTube, Morphe shows yours" },
 };
-const tutPages = () => [...(grouped ? ["groups"] : []), "tap", "change", "find", ...(simple ? ["simple"] : []), "tools"];
+const tutPages = () => [...(grouped ? ["groups"] : []), "tap", "change", "find", "tools"];
 const TUT_STEP_MS = 4200;
 let tutTimer = null, tutAnims = [];
 function runTutorial(startAt) {
@@ -3751,14 +3786,14 @@ function runTutorial(startAt) {
         <div class="tpick" id="tPick">${GROUPS.map(g => `<span data-g="${g.id}">${I(g.icon)}${esc(g.title)}</span>`).join("")}</div>
         <div class="tmenu" id="tMenu"><b>Reset settings?</b><span>Only this screen</span><span>Everything</span></div></div>
       <div class="ttabs" id="tTabs"><span class="on">Controls</span><span>Seekbar</span><span>Fullscreen</span><span>Player menu</span></div>
-      <div class="tlist" id="tlist"><div class="tl-pin" id="tlPin">Tapped in the preview</div><div class="tl-t">Hide Cast button<small id="tlSum">Shown</small></div><span class="sw" id="tlSw" role="presentation" aria-checked="false"></span><div class="tl-bar" id="tlBar"></div><div class="tl-none" id="tlNone">Nothing hidden on this screen yet</div></div>
+      <div class="tlist" id="tlist"><div class="tl-t">Hide Cast button<small id="tlSum">Shown</small></div><span class="sw" id="tlSw" role="presentation" aria-checked="false"></span><div class="tl-bar" id="tlBar"></div></div>
     </div>
     <div class="finger tfinger" id="tFinger">${I("gesture")}</div>
     <div class="steps" role="tablist" aria-label="Tutorial pages">${pages.map((_, n) => `<button role="tab" data-step="${n}" aria-label="Page ${n + 1}"><i></i></button>`).join("")}</div>
     <button class="ok" id="tutOk">OK</button>`;
   t.classList.add("on");
   let step = Math.max(0, pages.indexOf(startAt)), loops = 0, manual = false; const seen = new Set();
-  if (startAt) setTimeout(() => $("tutOk") && $("tutOk").classList.add("show"), TUT_STEP_MS); // opened for one new page: OK once it has played
+  if (startAt) setTimeout(() => $("tutOk") && $("tutOk").classList.add("show"), TUT_PAGES[startAt]?.ms || TUT_STEP_MS); // opened for one new page: OK once it has played
   const cast = $("tbCast"), f = $("tFinger"), ring = $("tring"), row = $("tlist"), sw = $("tlSw"), sum = $("tlSum"), bar = $("tlBar");
   const box = t.getBoundingClientRect.bind(t);
   const at2 = (ms, fn) => tutAnims.push(setTimeout(fn, ms));
@@ -3776,7 +3811,7 @@ function runTutorial(startAt) {
     $("tcap").innerHTML = `<b>${step + 1}</b>${TUT_PAGES[id].cap}<small>${TUT_PAGES[id].sub}</small>`;
     // every page starts from the same scene; each one switches on the extras it needs
     t.querySelector(".tdemo").dataset.page = id;
-    f.classList.remove("tap", "hold"); ring.classList.remove("go"); bar.classList.remove("go"); row.classList.remove("sel", "pinned", "empty");
+    f.classList.remove("tap", "hold"); ring.classList.remove("go"); bar.classList.remove("go"); row.classList.remove("sel");
     ["tPick", "tMenu", "tQ"].forEach(x => $(x).classList.remove("show")); $("tQ").textContent = "";
     $("tOrig").classList.remove("on"); $("tMorphe").classList.add("on"); t.querySelector(".tstage").classList.remove("stock");
     t.querySelectorAll("#tTabs span").forEach((s, i) => s.classList.toggle("on", i === 0)); $("tPill").firstChild.textContent = "Player ";
@@ -3813,40 +3848,35 @@ function runTutorial(startAt) {
       at2(2200, () => { tap(); setHidden(false); cast.className = "tb sel reveal"; });
       at2(3400, () => f.classList.remove("show"));
     }
-    if (id === "simple") { // the list starts empty; tapping the button pins its setting on top
-      cast.className = "tb"; setHidden(false); row.classList.add("empty"); move(cast, 0, 0, 120);
-      at2(60, () => move(cast, 700));
-      at2(1000, () => { tap(); cast.classList.add("sel"); row.classList.remove("empty"); row.classList.add("sel", "pinned"); });
-      at2(2000, () => move(cast, 300));
-      at2(2400, () => dbl(() => { setHidden(true); cast.className = "tb off"; }));
-      at2(3600, () => f.classList.remove("show"));
-    }
-    if (id === "tools") { // search, then reset, then Original / Morphe
+    if (id === "tools") { // search, then reset, then Original / Morphe (played half as slow again: a lot happens)
+      const at3 = (ms, fn) => at2(ms * 1.5, fn);
       cast.className = "tb off"; setHidden(true); move($("tSearch"), 0, 0, 60);
-      at2(60, () => move($("tSearch"), 450));
-      at2(600, () => { tap(); $("tQ").classList.add("show"); [..."cast"].forEach((c, i) => at2(150 + i * 110, () => { $("tQ").textContent += c; })); });
-      at2(1500, () => { $("tQ").classList.remove("show"); move($("tReset"), 400); });
-      at2(2000, () => { tap(); $("tMenu").classList.add("show"); });
-      at2(2600, () => { $("tMenu").classList.remove("show"); move($("tOrig"), 400); });
-      at2(3100, () => { tap(); $("tOrig").classList.add("on"); $("tMorphe").classList.remove("on"); t.querySelector(".tstage").classList.add("stock"); cast.className = "tb"; });
-      at2(3700, () => { move($("tMorphe"), 250); });
-      at2(4000, () => { tap(); $("tMorphe").classList.add("on"); $("tOrig").classList.remove("on"); t.querySelector(".tstage").classList.remove("stock"); cast.className = "tb off"; });
+      at3(60, () => move($("tSearch"), 675));
+      at3(600, () => { tap(); $("tQ").classList.add("show"); [..."cast"].forEach((c, i) => at3(150 + i * 110, () => { $("tQ").textContent += c; })); });
+      at3(1500, () => { $("tQ").classList.remove("show"); move($("tReset"), 600); });
+      at3(2000, () => { tap(); $("tMenu").classList.add("show"); });
+      at3(2600, () => { $("tMenu").classList.remove("show"); move($("tOrig"), 600); });
+      at3(3100, () => { tap(); $("tOrig").classList.add("on"); $("tMorphe").classList.remove("on"); t.querySelector(".tstage").classList.add("stock"); cast.className = "tb"; });
+      at3(3700, () => { move($("tMorphe"), 375); });
+      at3(4000, () => { tap(); $("tMorphe").classList.add("on"); $("tOrig").classList.remove("on"); t.querySelector(".tstage").classList.remove("stock"); cast.className = "tb off"; });
     }
   };
   const okCheck = () => { if (loops >= 2 || seen.size === pages.length && manual) { $("tutOk").classList.add("show"); } };
   show();
-  clearInterval(tutTimer);
-  tutTimer = setInterval(() => {
+  // each page stays up as long as its animation needs
+  const pageMs = () => TUT_PAGES[pages[step]].ms || TUT_STEP_MS;
+  const next = () => { clearTimeout(tutTimer); tutTimer = setTimeout(() => {
     if (manual) return;
     step = (step + 1) % pages.length;
     if (step === 0) loops++;
-    okCheck(); show();
-  }, TUT_STEP_MS);
+    okCheck(); show(); next();
+  }, pageMs()); };
+  next();
   t.querySelector(".steps").addEventListener("click", e => {
     const b = e.target.closest("[data-step]"); if (!b) return;
     manual = true; step = Number(b.dataset.step); show(); okCheck();
   });
-  $("tutOk").onclick = () => { clearInterval(tutTimer); tutAnims.forEach(clearTimeout); t.classList.remove("on"); try { localStorage.setItem(LS + "-tutorial", "1"); } catch { /* storage unavailable */ } };
+  $("tutOk").onclick = () => { clearTimeout(tutTimer); tutAnims.forEach(clearTimeout); t.classList.remove("on"); try { localStorage.setItem(LS + "-tutorial", "1"); } catch { /* storage unavailable */ } };
 }
 $("replayTut").onclick = () => runTutorial();
 // The first time tabs or the shorter list are switched on, show the tutorial page that explains them.
@@ -3867,7 +3897,6 @@ async function boot() {
   try { const b = JSON.parse(localStorage.getItem(LS + "-baseline") || "null"); if (b) for (const k in b) if (k in PREF) baseline[k] = b[k]; } catch { /* storage unavailable */ }
   if (saved.section && SECTIONS.some(s => s.id === saved.section)) section = saved.section;
   if (saved.theme === "m3") theme = "m3";
-  if (saved.simple) simple = true;
   if (saved.grouped) grouped = true;
   if (saved.tabs) Object.assign(lastTab, saved.tabs);
   applyTheme();
@@ -3891,6 +3920,6 @@ async function boot() {
   let seen = false; try { seen = localStorage.getItem(LS + "-tutorial") === "1"; } catch { /* storage unavailable */ }
   if (!seen) runTutorial();
 }
-store.save = function () { try { localStorage.setItem(LS, JSON.stringify({ state: changedOnly(), section, device: device_, yt: ytVersion, theme, simple, grouped, tabs: lastTab, order: customOrder, borrowed: Object.fromEntries(Object.entries(borrowed).map(([s, v]) => [s, [...v]])) })); localStorage.setItem(LS + "-baseline", JSON.stringify(baseline)); } catch { /* storage unavailable */ } };
+store.save = function () { try { localStorage.setItem(LS, JSON.stringify({ state: changedOnly(), section, device: device_, yt: ytVersion, theme, grouped, tabs: lastTab, order: customOrder, borrowed: Object.fromEntries(Object.entries(borrowed).map(([s, v]) => [s, [...v]])) })); localStorage.setItem(LS + "-baseline", JSON.stringify(baseline)); } catch { /* storage unavailable */ } };
 boot();
 })();

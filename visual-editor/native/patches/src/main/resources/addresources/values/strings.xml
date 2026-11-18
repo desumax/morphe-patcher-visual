@@ -10,8 +10,6 @@
             <string name="morphe_visual_editor_enabled_summary_off">Settings open as the regular list</string>
             <string name="morphe_visual_editor_open_title">Open visual editor</string>
             <string name="morphe_visual_editor_open_summary">Tap an element in the preview to find its setting. Hold or double-tap it to change it.</string>
-            <string name="morphe_visual_editor_hide_shown_title">Hide shown UI element settings</string>
-            <string name="morphe_visual_editor_hide_shown_summary">Remove UI elements by double-tapping or holding them in the preview. The list only shows hidden elements.</string>
             <string name="morphe_visual_editor_grouped_title">Group screens into tabs</string>
             <string name="morphe_visual_editor_grouped_summary">Six screens, each with tabs right under the live preview</string>
             <string name="morphe_visual_editor_no_preview">Live preview or animation unavailable</string>

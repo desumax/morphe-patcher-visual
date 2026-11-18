@@ -142,12 +142,10 @@ public final class VisualEditorDialog extends Dialog {
         list.removeAllViews();
         PreviewMap.Screen s = map.screens.get(screenId);
         if (s == null) return;
-        boolean hideShown = VisualEditorSettings.HIDE_SHOWN.get();
         List<String> keys = new ArrayList<>(s.keys); // already in preview order (exported that way)
         for (String key : keys) {
             PreferenceTree.Node p = tree.node(key);
             if (p == null) continue; // the map is filtered already; this is just a guard
-            if (hideShown && isShownElement(key) && !key.equals(selected)) continue;
             list.addView(row(p));
         }
     }
@@ -166,25 +164,11 @@ public final class VisualEditorDialog extends Dialog {
         return t;
     }
 
-    private boolean isShownElement(String key) {
-        PreviewMap.Entry e = map.entry(key);
-        if (e == null || !("vis".equals(e.kind) || "overlay".equals(e.kind))) return false;
-        Object v = settings.get(key);
-        // "hide_..." settings show the element while false; "show_..." while true.
-        boolean hideKey = key.contains("_hide_") || key.startsWith("morphe_hide");
-        return v instanceof Boolean b && (hideKey != b);
-    }
-
     private void select(String key, boolean fromPreview) {
         selected = key;
         if (fromPreview) {
-            if (VisualEditorSettings.HIDE_SHOWN.get()) {
-                renderList(); // the tapped element's setting is pinned at the top
-                scroller.smoothScrollTo(0, 0);
-            } else {
-                View row = list.findViewWithTag(key);
-                if (row != null) scroller.smoothScrollTo(0, row.getTop() - (scroller.getHeight() - row.getHeight()) / 2);
-            }
+            View row = list.findViewWithTag(key);
+            if (row != null) scroller.smoothScrollTo(0, row.getTop() - (scroller.getHeight() - row.getHeight()) / 2);
         }
         // TODO: flash the element in the preview, and ghost it in red while it is hidden.
     }

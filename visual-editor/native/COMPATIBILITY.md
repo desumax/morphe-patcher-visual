@@ -69,7 +69,7 @@ uses. At runtime:
 | Need | Done with |
 | --- | --- |
 | An entry at the top of Morphe settings | The public `PreferenceScreen.Screen(...)` API every patch uses. Root entries are sorted by key, so `morphe_settings_screen_00_0_visual_editor` lands above `..._00_about`. |
-| The editor's own settings (on, "hide shown", tabs) | `VisualEditorSettings` in the editor's own package, not `Settings.java`. |
+| The editor's own settings (on, tabs) | `VisualEditorSettings` in the editor's own package, not `Settings.java`. |
 | Opening the editor | A preference class in the editor's package, inflated from the generated XML like any other. |
 | Morphe Manager, the patcher, other patches | Not touched. It is an ordinary optional patch, off by default. |
 
