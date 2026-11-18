@@ -96,8 +96,9 @@ const miniVideo = (i = 0, h = "100%") => `<div style="position:absolute;left:0;r
 function haptic(eventLabel, script) {
   return (box, disabled) => {
     const portrait = script.portrait;
-    // letterbox: a 16:9 video on the wider phone screen, with black bars at the sides (zoom fills them)
-    const land = script.letterbox ? `<div style="position:absolute;inset:0;background:#000"></div><div class="mv7" style="position:absolute;top:0;bottom:0;left:11%;right:11%;background:${ART[1]}"></div>` : `${miniVideo(1)}${miniSeek(30, [45, 62, 80])}`;
+    // letterbox: a 16:9 video on the wider phone screen, with black bars at the sides (zoom fills them);
+    // the seekbar stays drawn on top, as in the app
+    const land = script.letterbox ? `<div style="position:absolute;inset:0;background:#000"></div><div class="mv7" style="position:absolute;top:0;bottom:0;left:11%;right:11%;background:${ART[1]}"></div>${miniSeek(30, [45, 62, 80])}` : `${miniVideo(1)}${miniSeek(30, [45, 62, 80])}`;
     box.innerHTML = device(portrait ? "port" : "land", portrait ? `${miniVideo(1, "34%")}<div style="position:absolute;left:0;right:0;top:34%;bottom:0;background:#0f0f0f"></div>` : land);
     const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger");
     script.run(dev, f, () => buzz(dev, !disabled));
