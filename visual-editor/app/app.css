@@ -6,3 +6,23 @@ html.inapp #inspector, html.inapp #devBtns, html.inapp .devonly { display: none 
 html.inapp #phone > .status { display: none !important; }
 html.inapp .bench { padding: 0 !important; margin: 0 !important; min-height: 0 !important; height: 100% !important; }
 html.inapp .devdone { display: none !important; } /* development markers stay in the web preview only */
+/* In the app the screen menu is a page of its own: it fills the space under the top bar, and the
+   top bar shows the screen title without the dropdown arrow (a screen is left with Back). */
+html.inapp .secpill { pointer-events: none; }
+html.inapp .secpill .chev { display: none; }
+html.inapp .menutitle { display: none; flex: 1; min-width: 0; padding-left: 4px; font-size: 18px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html.inapp.menupage .menutitle { display: block; }
+html.inapp.menupage .secpill, html.inapp.menupage #btnReset, html.inapp.menupage .appbar .seg { display: none !important; }
+html.inapp.menupage #pickScrim { display: none; }
+html.inapp.menupage .editor { visibility: hidden; }
+html.inapp #picker { left: 0; right: 0; top: var(--abh, 56px); bottom: 0; max-height: none; border-radius: 0; box-shadow: none; background: var(--m-bg); padding: 8px 12px 12px; transform: none; display: flex; flex-direction: column; overscroll-behavior: contain; }
+html.inapp #picker.open { transform: none; }
+html.inapp #pickGrid { flex: 1 0 auto; display: flex !important; flex-direction: column; gap: 8px; }
+html.inapp #pickGrid .pg.pvis { gap: 8px; grid-template-columns: 1fr 1fr; }
+html.inapp #pickGrid .pg.pgroups { flex: 1 0 auto; grid-auto-rows: minmax(132px, 1fr); }
+html.inapp #pickGrid .pg.pvis .pick { flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 14px; border-radius: 16px; background: var(--m-c-high, #212121); min-height: 112px; }
+html.inapp #pickGrid .pg.pvis .pick[aria-current="true"] { background: var(--m-c-high, #212121); }
+html.inapp #pickGrid .pg.pvis .pick .pi { width: 40px; height: 40px; background: var(--m-c-highest, #303030); border-radius: 12px; }
+html.inapp #pickGrid .pg.pvis .pick .pi svg { width: 22px; height: 22px; }
+html.inapp #pickGrid .pg.pvis .pick .pt { font-size: 15.5px; }
+html.inapp #pickGrid .themerow { margin-top: 0; }

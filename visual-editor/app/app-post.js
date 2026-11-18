@@ -39,16 +39,38 @@ if (INAPP) {
     $("dStay").textContent = "Later";
     $("dStay").onclick = () => { closeDialog(); try { MorpheApp.close(); } catch (e) { /* ignore */ } };
   };
-  $("btnBack").onclick = () => {
+  // Navigation in the app: the editor opens on the screen menu, shown as a page of cards. A card
+  // opens its live preview screen; Back (key, gesture or arrow) from a screen returns to the menu,
+  // Back from the menu leaves the editor. The restart prompt only comes when leaving the editor.
+  let menuPage = false;
+  const pickerToggle = setPicker;
+  const menuTitle = document.createElement("div");
+  menuTitle.className = "menutitle"; menuTitle.textContent = "Visual settings";
+  $("secPill").before(menuTitle);
+  $("secPill").onclick = null; $("secPill").removeAttribute("aria-haspopup"); $("secPill").tabIndex = -1;
+  function setMenu(on) {
+    menuPage = on;
+    document.documentElement.classList.toggle("menupage", on);
+    if (on) { $("scroller").scrollTop = 0; $("app").classList.remove("barhidden"); }
+    pickerToggle(on);
+    $("app").style.setProperty("--abh", document.querySelector(".appbar").offsetHeight + "px");
+  }
+  // Every caller that closed the dropdown (a card, search, the scrim) now leaves the menu page.
+  setPicker = open => setMenu(open);
+  const searchOpen = openResult;
+  openResult = k => { setMenu(false); searchOpen(k); };
+  const leave = () => {
     if (pendingRestart().length) return restartDialog();
     try { MorpheApp.close(); } catch (e) { /* ignore */ }
   };
-  // The phone's Back key: close what is open first, then leave like the back arrow.
+  $("btnBack").onclick = () => (menuPage ? leave() : setMenu(true));
+  $("btnBack").setAttribute("aria-label", "Back");
+  // The phone's Back key: close what is open first, then go back like the arrow.
   window.morpheBack = () => {
     if ($("dlg").classList.contains("open")) { closeDialog(); return; }
-    if ($("picker").classList.contains("open")) { setPicker(false); return; }
     if ($("tut") && $("tut").classList.contains("on")) { $("tutOk") && $("tutOk").click(); return; }
     if (searching) { $("qClose").click(); return; }
     $("btnBack").click();
   };
+  setMenu(true);
 }
