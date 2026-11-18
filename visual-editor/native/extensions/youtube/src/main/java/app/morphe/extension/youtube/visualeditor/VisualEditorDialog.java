@@ -124,8 +124,18 @@ public final class VisualEditorDialog extends Dialog {
 
     private void renderPreview() {
         preview.removeAllViews();
-        // TODO: PreviewHost.forScreen(screenId) draws the screen; each adapter binds its keys
-        // to views and reports taps back through onPreviewTap / onPreviewHold.
+        try {
+            // TODO: PreviewHost.forScreen(screenId, YouTubeLayout.current()) draws the screen; each
+            // adapter binds its keys to views and reports taps back through onPreviewTap / onPreviewHold.
+            // YouTubeLayout picks the drawing variant from VersionCheckPatch (for example the action
+            // bar from 21.36, no legacy miniplayer types from 21.29), the same flags the patches use.
+        } catch (Throwable ex) {
+            // A drawing that fails on this YouTube version costs only the picture: the list below
+            // still works, so every setting can still be found and changed.
+            app.morphe.extension.shared.Logger.printException(() -> "Visual editor preview failed: " + screenId, ex);
+            preview.removeAllViews();
+            preview.setVisibility(View.GONE);
+        }
     }
 
     private void renderList() {

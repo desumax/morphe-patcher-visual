@@ -77,6 +77,9 @@ recurring maintenance, and the editor keeps working while it waits.
 `../data/catalogue.json` and `extract_catalogue.py` are for the web prototype and the map check
 only. Nothing from them ships in the patch.
 
+The full compatibility design, with the history numbers and the YouTube version safeguards, is in
+[COMPATIBILITY.md](COMPATIBILITY.md).
+
 ## Two ways to ship it
 
 1. **As a pull request to morphe-patches (preferred).** The patch sits next to the others, and

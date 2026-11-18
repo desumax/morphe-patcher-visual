@@ -2643,7 +2643,23 @@ function kidVisible(k, depth = 0) {
   return !d || !PARENT_OF[d] || depth > 6 || kidVisible(d, depth + 1);
 }
 const sectionKeys = () => MEMBERS[section] ? [...MEMBERS[section].live, ...MEMBERS[section].misc] : [];
-const sectionOf = k => SECTIONS.find(s => MEMBERS[s.id].live.includes(k) || MEMBERS[s.id].misc.includes(k))?.id || "misc";
+const sectionOf0 = k => SECTIONS.find(s => MEMBERS[s.id].live.includes(k) || MEMBERS[s.id].misc.includes(k))?.id || "misc";
+// A Morphe sub-screen (Captions, Miniplayer...) is not a row: it leads to the editor screen that
+// holds most of its settings.
+const screenSecCache = {};
+function screenSection(k) {
+  if (screenSecCache[k]) return screenSecCache[k];
+  const n = {};
+  for (const p of CAT.preferences) if (p.subScreen === k && p.type !== "screen" && inVersion(p.key)) { const s = sectionOf0(p.key); n[s] = (n[s] || 0) + 1; }
+  const best = Object.entries(n).sort((a, b) => b[1] - a[1])[0];
+  return (screenSecCache[k] = best ? best[0] : "misc");
+}
+const sectionOf = k => PREF[k] && PREF[k].type === "screen" ? screenSection(k) : sectionOf0(k);
+// Where a screen is, in the words of the current layout: "Captions", or "Playback › Captions" with tabs.
+function placeLabel(id) {
+  if (grouped) { const g = groupOf(id), t = g.tabs.find(([x]) => x === id); return `${g.title} › ${t ? t[1] : id}`; }
+  return SECTIONS.find(s => s.id === id)?.title || "Other";
+}
 
 // ------------------------------------------------------------------ rendering
 const $ = id => document.getElementById(id);
@@ -2945,7 +2961,7 @@ function renderList() {
     return out;
   };
   if (section !== "misc") {
-    if (pin) html += `<div class="group pin7"><div class="subhead">Tapped in the preview</div>${PARENT_OF[pin] ? rowHTML(pin, true) : withKids(pin)}</div>`;
+    if (pin) html += `<div class="group pin7"><div class="subhead">${pinLabel}</div>${PARENT_OF[pin] ? rowHTML(pin, true) : withKids(pin)}</div>`;
     const top = m.live.filter(k => !PARENT_OF[k] && k !== pin);
     const ordered = byPosition(top);
     const rest = m.misc.filter(k => !PARENT_OF[k]);
@@ -3028,7 +3044,7 @@ function renderSearch() {
   const hits = [];
   for (const p of all) {
     const sec = SECTIONS.find(s => s.id === sectionOf(p.key));
-    const hay = `${title(p.key)} ${p.summary || ""} ${p.summaryOn || ""} ${p.summaryOff || ""} ${p.subScreenTitle || ""} ${sec ? sec.title : ""} ${p.key}`.toLowerCase();
+    const hay = `${title(p.key)} ${p.summary || ""} ${p.summaryOn || ""} ${p.summaryOff || ""} ${p.subScreenTitle || ""} ${placeLabel(sectionOf(p.key))} ${p.key}`.toLowerCase();
     if (!words.every(w => hay.includes(w))) continue;
     const t = title(p.key).toLowerCase();
     hits.push({ p, sec, score: (t.startsWith(q) ? 0 : t.includes(q) ? 1 : 2) });
@@ -3038,7 +3054,8 @@ function renderSearch() {
   $("list").innerHTML = hits.length
     ? `<div class="sechead">${hits.length} result${hits.length > 1 ? "s" : ""}</div><div class="group">${hits.slice(0, 120).map(({ p, sec }) => {
         const par = PARENT_OF[p.key];
-        return `<div class="sres" data-res="${p.key}" tabindex="0"><div class="ttl">${mark(title(p.key))}</div><div class="where">${esc(sec ? sec.title : "Misc")}${par ? ` › ${esc(title(par))}` : ""}</div>${summaryFor(p.key) ? `<div class="sum">${esc(summaryFor(p.key))}</div>` : ""}</div>`;
+        const where = p.type === "screen" ? `Screen · ${placeLabel(sectionOf(p.key))}` : `${placeLabel(sectionOf(p.key))}${par ? ` › ${title(par)}` : ""}`;
+        return `<div class="sres" data-res="${p.key}" tabindex="0"><div class="ttl">${mark(title(p.key))}</div><div class="where">${esc(where)}</div>${summaryFor(p.key) ? `<div class="sum">${esc(summaryFor(p.key))}</div>` : ""}</div>`;
       }).join("")}</div>`
     : `<div class="shint">No settings match “${esc(query)}”.</div>`;
 }
@@ -3212,20 +3229,35 @@ let skipReveal = false;
 // One flash look for everything: the selected element, and the parent settings it depends on,
 // in the preview and in the list, all start on the same frame with the same pulse (FLASH_MS each).
 const FLASH_MS = 480;
-let lastFlash = { k: null, t: 0 }, parentFlashFor = null, holdParentsUntil = 0;
+let lastFlash = { k: null, t: 0 }, parentFlashFor = null, holdParentsUntil = 0, quietFlashUntil = 0;
 function flashStage(e, times = 1) {
+  if (times === 1 && Date.now() < quietFlashUntil) return;
   const big = e.offsetWidth > $("stage").clientWidth * .5 || e.offsetHeight > 80; // big components only glow
   clearTimeout(e._flashT); e.classList.remove("flash", "flat", "twice"); void e.offsetWidth;
   e.classList.add("flash"); e.classList.toggle("flat", big); e.classList.toggle("twice", times > 1);
   e._flashT = setTimeout(() => e.classList.remove("flash", "flat", "twice"), FLASH_MS * times + 40);
 }
 function flashRow(el) { clearTimeout(el._attnT); el.classList.remove("attn"); void el.offsetWidth; el.classList.add("attn"); el._attnT = setTimeout(() => el.classList.remove("attn"), FLASH_MS * 2 + 40); }
-function flashParents(k) {
-  parentFlashFor = null; holdParentsUntil = 0;
+// The setting and its element(s) flash together: used when arriving at a setting (search, "Take me there").
+function flashTarget(k) {
   document.querySelectorAll(`#stage [data-k="${k}"], #stage [data-also="${k}"]`).forEach(e => flashStage(e, 2));
   document.querySelectorAll(`[data-row="${k}"]`).forEach(el => { if (el.offsetParent) flashRow(el); });
-  for (const key of [...PREF[k].parents.map(x => x.key), ...(PREF[k].availabilityParents || [])]) {
-    document.querySelectorAll(`#stage [data-k="${key}"]`).forEach(e => flashStage(e, 2));
+}
+// Only the parents that actually block k: "Hide snackbar" is already off, so it does not flash
+// when "Custom snackbar" is the one to switch on.
+function blockingParents(k) {
+  const p = PREF[k], out = [];
+  const any = p.parents.filter(x => x.mode === "any");
+  for (const x of p.parents) if (x.mode !== "any" && (x.mode === "not" ? !!state[x.key] : !state[x.key])) out.push(x.key);
+  if (any.length && !any.some(x => !!state[x.key])) out.push(...any.map(x => x.key));
+  if (!availOk(k)) out.push(...(p.availabilityParents || []), ...availKeys(k));
+  return [...new Set(out)];
+}
+function flashParents(k) {
+  parentFlashFor = null; holdParentsUntil = 0;
+  flashTarget(k);
+  for (const key of blockingParents(k)) {
+    document.querySelectorAll(`#stage [data-k="${key}"], #stage [data-also="${key}"]`).forEach(e => flashStage(e, 2));
     document.querySelectorAll(`[data-row="${key}"]`).forEach(flashRow);
   }
 }
@@ -3269,8 +3301,17 @@ function fitOutline(el) {
   const r = el.getBoundingClientRect(), b = clip.getBoundingClientRect();
   el.classList.toggle("selin", r.left < b.left + 4 || r.right > b.right - 4 || r.top < b.top + 4);
 }
-function scrollRowIntoView(k, center) {
+function scrollRowIntoView(k, center, tries = 2) {
   const row = document.querySelector(`[data-row="${k}"]`); if (!row) return;
+  // a long smooth scroll can be cut short (the list or the preview changes height while it runs),
+  // so check where the row ended up and finish the job if it is still away from the target
+  if (center && tries) setTimeout(() => {
+    const r = document.querySelector(`[data-row="${k}"]`); if (!r || selected !== k) return;
+    const sc = $("scroller"), sr = sc.getBoundingClientRect(), rr = r.getBoundingClientRect(), stickH = $("stick").offsetHeight;
+    const mid = sr.top + stickH + (sc.clientHeight - stickH) / 2, rmid = rr.top + rr.height / 2;
+    const atEnd = sc.scrollTop + sc.clientHeight >= sc.scrollHeight - 2 || sc.scrollTop <= 0;
+    if (Math.abs(rmid - mid) > 60 && !(atEnd && rr.top >= sr.top + stickH && rr.bottom <= sr.bottom)) scrollRowIntoView(k, true, tries - 1);
+  }, 750);
   const sc = $("scroller"), two = $("content").offsetWidth >= 600 && !$("content").classList.contains("stacked"), stickH = two ? 0 : $("stick").offsetHeight;
   const top = row.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop;
   const target = center ? top - stickH - (sc.clientHeight - stickH) / 2 + row.offsetHeight / 2 : top - stickH - 8;
@@ -3279,9 +3320,10 @@ function scrollRowIntoView(k, center) {
 // Tapping something in the preview brings the setting card that controls it to the middle of the list.
 // A sub-option inside a collapsed parent opens it first; in "hide shown UI element settings" mode the
 // card (which that mode leaves out) is pinned at the very top of the list.
-let simplePin = null;
+let simplePin = null, pinLabel = "Tapped in the preview";
 function rowForStage(k) {
   if (simple) {
+    pinLabel = "Tapped in the preview";
     const was = simplePin; simplePin = k;
     if (!document.querySelector(`#list [data-row="${k}"]`) || was !== k) renderList();
     if (simplePin === k && document.querySelector(`#list .pin7 [data-row="${k}"]`)) { progScrollUntil = performance.now() + 900; $("scroller").scrollTo({ top: 0, behavior: "smooth" }); return; }
@@ -3452,17 +3494,28 @@ function switchSection(id, after) {
   }, 120);
 }
 function goToSetting(k, after) {
+  if (PREF[k] && PREF[k].type === "screen") { // a sub-screen: open the editor screen and show it from the top
+    switchSection(sectionOf(k), () => { $("scroller").scrollTo({ top: 0 }); const pill = $("secPill"); if (pill) { pill.classList.remove("attn"); void pill.offsetWidth; pill.classList.add("attn"); } after && after(); });
+    return;
+  }
   switchSection(sectionOf(k), () => {
     const par = PARENT_OF[k];
     const hidden = par && !kidVisible(k);
     if (hidden || (par && collapsed.has(par))) { if (hidden) peekKid = k; collapsed.delete(par); renderList(); }
-    if (hidden) holdParentsUntil = Date.now() + 2000;
+    if (hidden || !parentsOk(k)) holdParentsUntil = Date.now() + 2000;
+    quietFlashUntil = Date.now() + 700; // one synced flash on arrival instead of a first one mid-scroll
+    // "hide shown" mode leaves out shown elements: pin the setting (or the shown parent it sits under) on top
+    if (simple && !document.querySelector(`#list [data-row="${k}"]`)) {
+      pinLabel = "Found by search"; simplePin = k; renderList();
+      let root = k; while (PARENT_OF[root]) root = PARENT_OF[root];
+      if (!document.querySelector(`#list [data-row="${k}"]`) && root !== k) { simplePin = root; renderList(); }
+    }
     select(k);
     setTimeout(() => scrollRowIntoView(k, true), par ? 300 : 0);
     setTimeout(() => {
       const row = document.querySelector(`[data-row="${k}"]`);
-      if (hidden) pointToParents(k, true); // the row, its element and its parents flash together
-      else if (row) flashRow(row);
+      if (hidden || !parentsOk(k)) pointToParents(k, true); // the row, its element and its blockers flash together
+      else flashTarget(k);
       after && after();
     }, par ? 520 : 380);
   });
@@ -3598,8 +3651,8 @@ $("tabs").addEventListener("click", e => { const t = e.target.closest("[data-tab
 $("pickScrim").onclick = () => setPicker(false);
 $("pickGrid").addEventListener("click", e => {
   if (pickSuppress) return;
-  if (e.target.closest("[data-simple-toggle]")) { simple = !simple; renderBar(); renderList(); store.save(); snack(simple ? "List shows hidden elements only. Double-tap or hold an element in the preview to hide it" : "List shows every setting again"); return; }
-  if (e.target.closest("[data-group-toggle]")) { grouped = !grouped; renderBar(); renderStage(); store.save(); snack(grouped ? "Screens are grouped. Switch tabs right under the preview" : "Every screen is listed on its own again"); return; }
+  if (e.target.closest("[data-simple-toggle]")) { simple = !simple; renderBar(); renderList(); store.save(); if (simple) tutOnce("simple"); snack(simple ? "List shows hidden elements only. Double-tap or hold an element in the preview to hide it" : "List shows every setting again"); return; }
+  if (e.target.closest("[data-group-toggle]")) { grouped = !grouped; renderBar(); renderStage(); store.save(); if (grouped) tutOnce("groups"); snack(grouped ? "Screens are grouped. Switch tabs right under the preview" : "Every screen is listed on its own again"); return; }
   const gb = e.target.closest("[data-group]");
   if (gb) { const g = GROUPS.find(x => x.id === gb.dataset.group), tabs = tabsOf(g); setPicker(false); returnTo = null; switchSection(lastTab[g.id] && tabs.some(([t]) => t === lastTab[g.id]) ? lastTab[g.id] : tabs[0][0]); return; }
   if (e.target.closest("[data-theme-toggle]")) { theme = theme === "m3" ? "yt" : "m3"; applyTheme(); renderBar(); store.save(); return; }
@@ -3672,73 +3725,120 @@ $("uiScale").addEventListener("input", e => { uiScale = Number(e.target.value); 
 window.addEventListener("resize", () => { if (window.innerWidth > 860) applyDevice(); else { $("phone").style.transform = ""; $("devwrap").style.width = ""; $("devwrap").style.height = ""; $("phone").style.width = ""; $("phone").style.height = ""; } });
 
 // ------------------------------------------------------------------ first-run tutorial
-// Three short pages that loop on their own; OK appears after two full loops, or once every page
+// Short numbered pages that loop on their own; OK appears after two full loops, or once every page
 // has been opened by hand. Tapping a page jumps there and stops the automatic advance.
-const TUT_STEPS = [
-  { cap: "Tap something in the preview", sub: "Its setting lights up in the list" },
-  { cap: "Hold it to change the setting", sub: "Double-tap it, or tap the switch, works too" },
-  { cap: "Tap a hidden setting to find it", sub: "An outline shows where it was. Hold it to bring it back" },
-];
-const TUT_STEP_MS = 3600;
+// The pages follow the current layout: "Group screens into tabs" adds a first page about screens
+// and tabs, "Hide shown UI element settings" adds one about the shorter list.
+const TUT_PAGES = {
+  groups: { cap: "Pick a screen, then a tab", sub: "Six screens in the menu. Tabs under the preview switch it to that part of the app" },
+  tap: { cap: "Tap something in the preview", sub: "Its setting lights up in the list" },
+  change: { cap: "Double-tap it to change the setting", sub: "Holding it works too. Here the button gets hidden" },
+  find: { cap: "Tap a hidden setting to find it", sub: "An outline shows where it was. Double-tap or hold it, or use the switch, to bring it back" },
+  simple: { cap: "The list shows only what you hid", sub: "Tap an element in the preview and its setting appears at the top" },
+  tools: { cap: "Search, reset and compare", sub: "Search finds any setting. Reset undoes your changes. Original shows stock YouTube, Morphe shows yours" },
+};
+const tutPages = () => [...(grouped ? ["groups"] : []), "tap", "change", "find", ...(simple ? ["simple"] : []), "tools"];
+const TUT_STEP_MS = 4200;
 let tutTimer = null, tutAnims = [];
-function runTutorial() {
-  const t = $("tut");
+function runTutorial(startAt) {
+  const t = $("tut"), pages = tutPages();
   t.innerHTML = `<h2>Visual settings</h2><p class="tsub">See what each Morphe setting changes</p>
     <div class="tcap" id="tcap"></div>
-    <div class="tstage"><div class="tbtns"><div class="tb" id="tbCC">${I("cc")}</div><div class="tb" id="tbCast">${I("cast")}<div class="tring" id="tring"></div></div><div class="tb">${I("gear")}</div></div>
-      <div style="position:absolute;left:12px;right:12px;bottom:12px;height:3px;background:rgba(255,255,255,.3)"><div style="width:30%;height:3px;background:#ff0033"></div></div></div>
-    <div class="tlist" id="tlist"><div class="tl-t">Hide Cast button<small id="tlSum">Shown</small></div><span class="sw" id="tlSw" role="presentation" aria-checked="false"></span><div class="tl-bar" id="tlBar"></div></div>
+    <div class="tdemo">
+      <div class="tbar7" id="tBar"><span class="tpill" id="tPill">Player ${I("expand")}</span><span class="tsp"></span><span class="tic" id="tSearch">${I("search")}</span><span class="tic" id="tReset">${I("reset")}</span><span class="tseg"><b id="tOrig">Original</b><b id="tMorphe" class="on">Morphe</b></span><div class="tq" id="tQ"></div></div>
+      <div class="tstage"><div class="tbtns"><div class="tb" id="tbCC">${I("cc")}</div><div class="tb" id="tbCast">${I("cast")}<div class="tring" id="tring"></div></div><div class="tb">${I("gear")}</div></div>
+        <div style="position:absolute;left:12px;right:12px;bottom:12px;height:3px;background:rgba(255,255,255,.3)"><div style="width:30%;height:3px;background:#ff0033"></div></div>
+        <div class="tpick" id="tPick">${GROUPS.map(g => `<span data-g="${g.id}">${I(g.icon)}${esc(g.title)}</span>`).join("")}</div>
+        <div class="tmenu" id="tMenu"><b>Reset settings?</b><span>Only this screen</span><span>Everything</span></div></div>
+      <div class="ttabs" id="tTabs"><span class="on">Controls</span><span>Seekbar</span><span>Fullscreen</span><span>Player menu</span></div>
+      <div class="tlist" id="tlist"><div class="tl-pin" id="tlPin">Tapped in the preview</div><div class="tl-t">Hide Cast button<small id="tlSum">Shown</small></div><span class="sw" id="tlSw" role="presentation" aria-checked="false"></span><div class="tl-bar" id="tlBar"></div><div class="tl-none" id="tlNone">Nothing hidden on this screen yet</div></div>
+    </div>
     <div class="finger tfinger" id="tFinger">${I("gesture")}</div>
-    <div class="steps" role="tablist" aria-label="Tutorial pages">${TUT_STEPS.map((_, n) => `<button role="tab" data-step="${n}" aria-label="Page ${n + 1}"><i></i></button>`).join("")}</div>
+    <div class="steps" role="tablist" aria-label="Tutorial pages">${pages.map((_, n) => `<button role="tab" data-step="${n}" aria-label="Page ${n + 1}"><i></i></button>`).join("")}</div>
     <button class="ok" id="tutOk">OK</button>`;
   t.classList.add("on");
-  let step = 0, loops = 0, manual = false; const seen = new Set();
+  let step = Math.max(0, pages.indexOf(startAt)), loops = 0, manual = false; const seen = new Set();
+  if (startAt) setTimeout(() => $("tutOk") && $("tutOk").classList.add("show"), TUT_STEP_MS); // opened for one new page: OK once it has played
   const cast = $("tbCast"), f = $("tFinger"), ring = $("tring"), row = $("tlist"), sw = $("tlSw"), sum = $("tlSum"), bar = $("tlBar");
   const box = t.getBoundingClientRect.bind(t);
   const at2 = (ms, fn) => tutAnims.push(setTimeout(fn, ms));
   const centerOf = el => { const r = el.getBoundingClientRect(), b = box(); return [r.left - b.left + r.width / 2, r.top - b.top + r.height / 2]; };
   const move = (el, ms, dx = 0, dy = 0) => { const [x, y] = centerOf(el); f.style.transition = ms ? `left ${ms}ms var(--ease), top ${ms}ms var(--ease), opacity 160ms` : "opacity 160ms"; f.style.left = (x + dx) + "px"; f.style.top = (y + dy) + "px"; f.classList.add("show"); };
   const tap = () => { f.classList.remove("tap"); void f.offsetWidth; f.classList.add("tap"); };
+  const dbl = fn => { tap(); at2(170, () => { tap(); fn(); }); };
   const hold = r => { f.classList.add("hold"); r.classList.remove("go"); void r.offsetWidth; r.classList.add("go"); };
   const setHidden = h => { sw.setAttribute("aria-checked", String(h)); sum.textContent = h ? "Hidden" : "Shown"; };
   const show = () => {
     tutAnims.forEach(clearTimeout); tutAnims = [];
     seen.add(step);
+    const id = pages[step];
     t.querySelectorAll(".steps button").forEach((b, n) => { b.classList.toggle("on", n === step); b.setAttribute("aria-selected", String(n === step)); b.classList.toggle("done", seen.has(n)); });
-    $("tcap").innerHTML = `<b>${step + 1}</b>${TUT_STEPS[step].cap}<small>${TUT_STEPS[step].sub}</small>`;
-    f.classList.remove("tap", "hold"); ring.classList.remove("go"); bar.classList.remove("go"); row.classList.remove("sel");
-    if (step === 0) { // tap the button: it and its row light up together
+    $("tcap").innerHTML = `<b>${step + 1}</b>${TUT_PAGES[id].cap}<small>${TUT_PAGES[id].sub}</small>`;
+    // every page starts from the same scene; each one switches on the extras it needs
+    t.querySelector(".tdemo").dataset.page = id;
+    f.classList.remove("tap", "hold"); ring.classList.remove("go"); bar.classList.remove("go"); row.classList.remove("sel", "pinned", "empty");
+    ["tPick", "tMenu", "tQ"].forEach(x => $(x).classList.remove("show")); $("tQ").textContent = "";
+    $("tOrig").classList.remove("on"); $("tMorphe").classList.add("on"); t.querySelector(".tstage").classList.remove("stock");
+    t.querySelectorAll("#tTabs span").forEach((s, i) => s.classList.toggle("on", i === 0)); $("tPill").firstChild.textContent = "Player ";
+    t.querySelectorAll("#tPick span").forEach(s => s.classList.remove("hit"));
+    if (id === "groups") { // open the screen menu, pick Player, then switch tabs under the preview
+      cast.className = "tb"; setHidden(false); move($("tPill"), 0, 0, 60);
+      at2(60, () => move($("tPill"), 500));
+      at2(650, () => { tap(); $("tPick").classList.add("show"); });
+      at2(1250, () => move(t.querySelector('#tPick [data-g="g_playback"]'), 450));
+      at2(1800, () => { tap(); t.querySelector('#tPick [data-g="g_playback"]').classList.add("hit"); });
+      at2(2100, () => { $("tPick").classList.remove("show"); $("tPill").firstChild.textContent = "Playback "; t.querySelectorAll("#tTabs span").forEach((s, i) => { s.textContent = ["Playback", "End screen", "Captions", "Miniplayer"][i]; s.classList.toggle("on", i === 0); }); });
+      at2(2500, () => move(t.querySelectorAll("#tTabs span")[2], 450));
+      at2(3050, () => { tap(); t.querySelectorAll("#tTabs span").forEach((s, i) => s.classList.toggle("on", i === 2)); cast.className = "tb sel reveal"; });
+      at2(3800, () => { f.classList.remove("show"); t.querySelectorAll("#tTabs span").forEach((s, i) => { s.textContent = ["Controls", "Seekbar", "Fullscreen", "Player menu"][i]; }); });
+    }
+    if (id === "tap") { // tap the button: it and its row light up together
       cast.className = "tb"; setHidden(false);
       move(cast, 0, 0, 120);
       at2(60, () => move(cast, 700));
       at2(900, () => { tap(); cast.classList.add("sel"); row.classList.add("sel"); });
-      at2(2600, () => f.classList.remove("show"));
+      at2(3000, () => f.classList.remove("show"));
     }
-    if (step === 1) { // hold the button: it goes away; then the switch brings it back
+    if (id === "change") { // double-tap the button: it goes away, and its switch follows
       cast.className = "tb sel"; row.classList.add("sel"); setHidden(false); move(cast, 0, 0, 80);
-      at2(60, () => move(cast, 500));
-      at2(700, () => hold(ring));
-      at2(700 + 480, () => { f.classList.remove("hold"); setHidden(true); ring.classList.remove("go"); cast.className = "tb off"; });
-      at2(1900, () => move(sw, 500));
-      at2(2500, () => { tap(); setHidden(false); cast.className = "tb sel reveal"; });
-      at2(3200, () => f.classList.remove("show"));
+      at2(60, () => move(cast, 600));
+      at2(900, () => dbl(() => { setHidden(true); cast.className = "tb off"; }));
+      at2(2200, () => f.classList.remove("show"));
     }
-    if (step === 2) { // hidden: tapping the row shows an outline where it was; holding it brings it back
+    if (id === "find") { // hidden: tapping its row shows an outline where it was; the switch brings it back
       cast.className = "tb off"; setHidden(true); move(row, 0, -40, 40);
       at2(60, () => move(row, 500, -40));
       at2(700, () => { tap(); row.classList.add("sel"); cast.className = "tb ghost"; });
-      at2(1300, () => move(cast, 500));
-      at2(1900, () => hold(ring));
-      at2(1900 + 480, () => { cast.className = "tb sel reveal"; f.classList.remove("hold"); ring.classList.remove("go"); setHidden(false); });
-      at2(3200, () => f.classList.remove("show"));
+      at2(1500, () => move(sw, 500));
+      at2(2200, () => { tap(); setHidden(false); cast.className = "tb sel reveal"; });
+      at2(3400, () => f.classList.remove("show"));
+    }
+    if (id === "simple") { // the list starts empty; tapping the button pins its setting on top
+      cast.className = "tb"; setHidden(false); row.classList.add("empty"); move(cast, 0, 0, 120);
+      at2(60, () => move(cast, 700));
+      at2(1000, () => { tap(); cast.classList.add("sel"); row.classList.remove("empty"); row.classList.add("sel", "pinned"); });
+      at2(2000, () => move(cast, 300));
+      at2(2400, () => dbl(() => { setHidden(true); cast.className = "tb off"; }));
+      at2(3600, () => f.classList.remove("show"));
+    }
+    if (id === "tools") { // search, then reset, then Original / Morphe
+      cast.className = "tb off"; setHidden(true); move($("tSearch"), 0, 0, 60);
+      at2(60, () => move($("tSearch"), 450));
+      at2(600, () => { tap(); $("tQ").classList.add("show"); [..."cast"].forEach((c, i) => at2(150 + i * 110, () => { $("tQ").textContent += c; })); });
+      at2(1500, () => { $("tQ").classList.remove("show"); move($("tReset"), 400); });
+      at2(2000, () => { tap(); $("tMenu").classList.add("show"); });
+      at2(2600, () => { $("tMenu").classList.remove("show"); move($("tOrig"), 400); });
+      at2(3100, () => { tap(); $("tOrig").classList.add("on"); $("tMorphe").classList.remove("on"); t.querySelector(".tstage").classList.add("stock"); cast.className = "tb"; });
+      at2(3700, () => { move($("tMorphe"), 250); });
+      at2(4000, () => { tap(); $("tMorphe").classList.add("on"); $("tOrig").classList.remove("on"); t.querySelector(".tstage").classList.remove("stock"); cast.className = "tb off"; });
     }
   };
-  const okCheck = () => { if (loops >= 2 || seen.size === TUT_STEPS.length && manual) { $("tutOk").classList.add("show"); } };
+  const okCheck = () => { if (loops >= 2 || seen.size === pages.length && manual) { $("tutOk").classList.add("show"); } };
   show();
   clearInterval(tutTimer);
   tutTimer = setInterval(() => {
     if (manual) return;
-    step = (step + 1) % TUT_STEPS.length;
+    step = (step + 1) % pages.length;
     if (step === 0) loops++;
     okCheck(); show();
   }, TUT_STEP_MS);
@@ -3748,7 +3848,9 @@ function runTutorial() {
   });
   $("tutOk").onclick = () => { clearInterval(tutTimer); tutAnims.forEach(clearTimeout); t.classList.remove("on"); try { localStorage.setItem(LS + "-tutorial", "1"); } catch { /* storage unavailable */ } };
 }
-$("replayTut").onclick = runTutorial;
+$("replayTut").onclick = () => runTutorial();
+// The first time tabs or the shorter list are switched on, show the tutorial page that explains them.
+function tutOnce(id) { let done = false; try { done = localStorage.getItem(LS + "-tut-" + id) === "1"; localStorage.setItem(LS + "-tut-" + id, "1"); } catch { /* storage unavailable */ } if (!done) setTimeout(() => runTutorial(id), 400); }
 
 function tick() { const d = new Date(); $("clock").textContent = `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`; }
 

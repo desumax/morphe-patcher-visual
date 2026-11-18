@@ -38,6 +38,13 @@ public class VisualEditorPreference extends Preference {
     protected void onClick() {
         // A full screen dialog inside the settings activity: no new activity is declared,
         // which root installs can't do.
-        new VisualEditorDialog(getContext()).show();
+        // Fail safe: if anything in the editor goes wrong on this YouTube or Morphe build, the
+        // regular Morphe settings are still right here and nothing else is affected.
+        try {
+            new VisualEditorDialog(getContext()).show();
+        } catch (Throwable ex) {
+            app.morphe.extension.shared.Logger.printException(() -> "Visual editor could not open", ex);
+            app.morphe.extension.shared.Utils.showToastShort("The visual editor isn't available on this version. Use the settings below.");
+        }
     }
 }
