@@ -24,7 +24,10 @@ function rotate(dev, orient) { const [w, h] = DEV_SIZE[orient]; dev.classList.re
 // The phone in a scenario is drawn at a fixed small size (so all coordinates stay simple) and then
 // scaled up to fill the space the canvas has, between the caption line and the footer.
 function fitScale(w, h) {
-  const canvas = $("canvas"), sit = canvas.querySelector(".sit"), availW = canvas.clientWidth - 8, availH = canvas.clientHeight - 64 - (sit ? sit.offsetHeight + 8 : 0) - 10;
+  // the preview keeps its size during a comparison, so use all of it: room for the title, the
+  // situation line, and the bottom caption only when there is one
+  const canvas = $("canvas"), sit = canvas.querySelector(".sit"), foot = canvas.querySelector(".foot");
+  const availW = canvas.clientWidth - 8, availH = canvas.clientHeight - 30 - (foot && foot.textContent.trim() ? 24 : 0) - (sit ? sit.offsetHeight + 6 : 0) - 6;
   return Math.max(.35, Math.min(3, availW / (w + 6), availH / (h + 6)));
 }
 // The pair is measured, not estimated: an invisible copy with every transition switched off shows
@@ -69,7 +72,10 @@ function setFoot(text) { if (scSide) { const f = scSide.foot; if (f.textContent 
 // A vibration: the phone trembles fast with a tiny amplitude (a big slow shake read as "no"), arcs
 // ripple out on both sides, and a vibrate icon pops up over the phone and buzzes with it. Without
 // vibration the same moment shows the icon crossed out and still, so both sides mark the event.
+const BUZZ_MS = 120; // the drawn tremble and the phone's own vibration last the same and start together
 function buzz(dev, on) {
+  // the real vibration first, so it lands on the same frame as the tremble below
+  if (on) try { navigator.vibrate && navigator.vibrate(BUZZ_MS); } catch { /* not supported */ }
   const host = dev;
   host.querySelectorAll(".vib7").forEach(e => e.remove());
   host.insertAdjacentHTML("beforeend", `<div class="vib7 ${on ? "on" : "off"}">${I(on ? "vibration" : "phone7")}</div>`);
@@ -78,7 +84,6 @@ function buzz(dev, on) {
   if (!on) return;
   dev.classList.remove("buzz"); void dev.offsetWidth; dev.classList.add("buzz");
   dev.querySelectorAll(".waves").forEach(w => { w.classList.remove("go"); void w.offsetWidth; w.classList.add("go"); });
-  try { navigator.vibrate && navigator.vibrate(60); } catch { /* not supported */ }
 }
 // steps belong to the scenario that scheduled them; a replaced scenario never runs its leftover steps
 // a sub-step inside a comparison step (not slowed down again); it belongs to the same pass
@@ -760,7 +765,7 @@ function playScenario(k, prevValue) {
   const canvas = $("canvas"); const stick = $("stick");
   const wasHidden = stick.hidden || stick.classList.contains("noscene");
   if (wasHidden) { stick.hidden = false; stick.classList.remove("noscene"); $("stage").innerHTML = `<div style="height:320px"></div>`; }
-  $("stage").style.minHeight = "300px"; // two phones need room, even over a short preview
+  // the comparison draws inside the preview as it is: the preview area never grows for it
   canvas.innerHTML = `<div class="cap"><b>${esc(title(k))}</b></div><div class="sit"></div><div class="scbox" style="display:grid;place-items:center"></div><div class="foot"></div><div class="prog"></div>`;
   canvas.classList.add("show");
   const box = canvas.querySelector(".scbox"), self = SCN_SELF_DUO.has(k);
@@ -794,7 +799,7 @@ function playScenario(k, prevValue) {
     canvas.querySelector(".prog").animate([{ width: "0%" }, { width: "100%" }], { duration: SC_TOTAL, delay: SC_FADE, fill: "forwards" });
     clock.after("scenario", SC_FADE + SC_TOTAL, () => {
       canvas.classList.remove("show");
-      clock.after("scenario", SC_FADE, () => { clock.stop("scenario"); clock.stop("steps"); canvas.innerHTML = ""; $("stage").style.minHeight = ""; if (wasHidden && !SCENES[section]) { stick.hidden = !grouped; stick.classList.add("noscene"); $("stage").innerHTML = ""; } });
+      clock.after("scenario", SC_FADE, () => { clock.stop("scenario"); clock.stop("steps"); canvas.innerHTML = ""; if (wasHidden && !SCENES[section]) { stick.hidden = !grouped; stick.classList.add("noscene"); $("stage").innerHTML = ""; } });
     });
   };
   if (!ask) return start();
@@ -809,4 +814,4 @@ function playScenario(k, prevValue) {
   fitDev();
   document.querySelectorAll(`#list [data-row="${k}"] .ctl .opt`).forEach(o => { o.classList.remove("nudge7"); void o.offsetWidth; o.classList.add("nudge7"); });
 }
-function stopScenario() { clock.stop("scenario"); clock.stop("steps"); $("canvas").classList.remove("show"); $("stage").style.minHeight = ""; }
+function stopScenario() { clock.stop("scenario"); clock.stop("steps"); $("canvas").classList.remove("show"); }

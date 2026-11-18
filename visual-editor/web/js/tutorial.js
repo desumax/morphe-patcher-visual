@@ -12,7 +12,7 @@ const TUT_PAGES = {
   change: { cap: "Double-tap it to change the setting", sub: "Holding it, or the toggle on its card, works too. Here the button gets hidden" },
   find: { cap: "Tap a hidden setting to find it", sub: "An outline shows where it was. Double-tap or hold it, or use the toggle, to bring it back" },
   tools: { ms: 6300, cap: "Search, reset and compare", sub: "Search finds any setting. Reset undoes your changes. Original shows stock YouTube, Morphe shows yours" },
-  custom: { ms: 8200, cap: "Make it yours", sub: "At the end of the screen menu: group screens into tabs, and pick how the settings list looks" },
+  custom: { ms: 12300, cap: "Make it yours", sub: "At the end of the screen menu: group screens into tabs, and pick how the settings list looks" },
 };
 const tutPages = () => [...(grouped ? ["groups"] : []), "tap", "change", "find", "tools", "custom"];
 const TUT_STEP_MS = 4200;
@@ -131,23 +131,23 @@ function runTutorial(startAt) {
       at2(3000, () => move($("tReset"), 400, 0, 34)); // the finger steps aside so the menu can be read
       at2(4150, () => $("tMenu").classList.remove("show"));
       at2(4656, () => move($("tOrig"), 450));
-      at2(5200, () => { tap(); $("tOrig").classList.add("on"); $("tMorphe").classList.remove("on"); stage.classList.add("stock"); });
+      at2(5200, () => { tap(); $("tOrig").classList.add("on"); $("tMorphe").classList.remove("on"); stage.classList.add("stock"); cast.className = "tb reveal"; }); // stock YouTube has the Cast button
       at2(5928, () => move($("tMorphe"), 220));
-      at2(6180, () => { tap(); $("tMorphe").classList.add("on"); $("tOrig").classList.remove("on"); stage.classList.remove("stock"); });
+      at2(6180, () => { tap(); $("tMorphe").classList.add("on"); $("tOrig").classList.remove("on"); stage.classList.remove("stock"); cast.className = "tb off"; }); // and with your settings it is hidden again
     }
     if (id === "custom") { // the screen menu's own settings: tabs off and on again, then each list design
       cast.className = "tb"; setHidden(false, true); move($("tPill"), 0, 0, 60);
-      at2(60, () => move($("tPill"), 450));
-      at2(560, () => { tap(); $("tPick").classList.add("show"); });
-      at2(1100, () => move($("tGsw"), 450));
-      at2(1650, () => { tap(); setGrouped(!grouped); });
-      at2(2550, () => { tap(); setGrouped(grouped); });
+      at2(90, () => move($("tPill"), 600));
+      at2(840, () => { tap(); $("tPick").classList.add("show"); });
+      at2(1650, () => move($("tGsw"), 600));
+      at2(2475, () => { tap(); setGrouped(!grouped); });
+      at2(3825, () => { tap(); setGrouped(grouped); });
       const others = ["toggles", "classic", "clean"].filter(d => d !== design);
       [...others, design].forEach((d, i) => {
-        at2(3300 + i * 1300, () => move(t.querySelector(`.tseg3 [data-d="${d}"]`), 420));
-        at2(3800 + i * 1300, () => { tap(); setRowDesign(d); });
+        at2(4950 + i * 1950, () => move(t.querySelector(`.tseg3 [data-d="${d}"]`), 420));
+        at2(5700 + i * 1950, () => { tap(); setRowDesign(d); });
       });
-      at2(7500, () => { $("tPick").classList.remove("show"); f.classList.remove("show"); });
+      at2(11250, () => { $("tPick").classList.remove("show"); f.classList.remove("show"); });
     }
   };
   const okCheck = () => { if (loops >= 2 || seen.size === pages.length && manual) { $("tutOk").classList.add("show"); } };

@@ -241,12 +241,13 @@ button { font: inherit; color: inherit; }
 .demo-label.bad { background: rgba(120,0,0,.85); }
 
 /* scenario canvas: standard black stage for animations of settings the live preview cannot show */
-.canvas { position: absolute; inset: 0; background: #000; z-index: 45; opacity: 0; transition: opacity var(--dur) var(--ease); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; overflow: hidden; pointer-events: none; }
+.canvas { position: absolute; inset: 0; background: #000; z-index: 45; opacity: 0; transition: opacity var(--dur) var(--ease); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 26px 0 4px; overflow: hidden; pointer-events: none; }
 .canvas.show { opacity: 1; pointer-events: auto; }
 .canvas .cap { position: absolute; top: 8px; left: 10px; right: 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 11.5px; color: #ddd; }
 .canvas .cap b { color: #fff; font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .canvas .cap .st { flex: none; font-size: 10.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #2b2b2b; }
 .canvas .cap .st.on { background: rgba(144,216,137,.2); color: var(--m-success); }
+.canvas:has(> .foot:not(:empty)) { padding-bottom: 28px; }
 .canvas .foot { position: absolute; bottom: 8px; left: 10px; right: 10px; text-align: center; font-size: 11.5px; color: #ccc; }
 .zones { position: absolute; inset: 0; pointer-events: none; z-index: 29; transition: opacity .35s var(--ease); }
 .zones.out { opacity: 0; }
@@ -287,12 +288,12 @@ button { font: inherit; color: inherit; }
 .ctl .opt.nudge7 { animation: nudge7 .9s var(--ease) 2; }
 @keyframes nudge7 { 50% { border-color: var(--m-primary, #3ea6ff); box-shadow: 0 0 0 2px rgba(62,166,255,.35); } }
 .sf7 { font-size: 14px; line-height: 17px; color: #ddd; text-align: center; text-wrap: balance; overflow-wrap: break-word; hyphens: auto; min-height: 17px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; width: 100%; min-width: 110px; margin-top: 2px; }
-.dev.buzz { animation: buzz 45ms linear 8; }
+.dev.buzz { animation: buzz 40ms linear 3; } /* 120 ms, the same as navigator.vibrate(120) */
 @keyframes buzz { 0%,100% { transform: translate(0,0); } 25% { transform: translate(-1.2px,.5px); } 50% { transform: translate(1px,-.5px); } 75% { transform: translate(-.6px,-.4px); } }
 .vib7 { position: absolute; left: 7px; top: 7px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; z-index: 40; pointer-events: none; animation: vibin .18s var(--ease); transition: opacity .3s; }
 .vib7 svg { width: 18px; height: 18px; fill: #fff; }
 .vib7.on { background: var(--m-primary, #3ea6ff); }
-.vib7.on svg { fill: #062e6f; animation: buzz 45ms linear 10 .1s; }
+.vib7.on svg { fill: #062e6f; animation: buzz 40ms linear 3; }
 .vib7.off { background: #3a3a3a; }
 .vib7.off svg { fill: #aaa; }
 .vib7.off::after { content: ""; position: absolute; left: 4px; right: 4px; top: 50%; height: 2px; background: #ff6b6b; rotate: -45deg; border-radius: 1px; }
@@ -301,7 +302,7 @@ button { font: inherit; color: inherit; }
 .waves { position: absolute; top: 50%; width: 14px; height: 40px; transform: translateY(-50%); opacity: 0; }
 .waves.l { left: -20px; border-left: 2px solid var(--m-primary); border-radius: 50%; }
 .waves.r { right: -20px; border-right: 2px solid var(--m-primary); border-radius: 50%; }
-.waves.go { animation: waves .26s var(--ease) 3; }
+.waves.go { animation: waves .3s var(--ease) 1; }
 @keyframes waves { 0% { opacity: 0; } 30% { opacity: 1; } 100% { opacity: 0; transform: translateY(-50%) scale(1.4); } }
 
 /* ---------- list (Manager settings cards) ---------- */

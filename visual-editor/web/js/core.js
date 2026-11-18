@@ -111,10 +111,10 @@ const ART_LAKE = svgArt(`<defs><linearGradient id="s" x1="0" y1="0" x2="0" y2="1
 <path d="M0 56 L18 44 L30 50 L46 38 L62 51 L80 42 L98 53 L118 40 L136 52 L160 44 V60 H0Z" fill="#43375f"/>
 <rect y="58" width="160" height="32" fill="url(#w)"/><rect x="104" y="60" width="16" height="1.4" rx=".7" fill="#ffe2b0" opacity=".6"/><rect x="107" y="64" width="10" height="1.2" rx=".6" fill="#ffe2b0" opacity=".4"/><rect x="109" y="68" width="6" height="1" rx=".5" fill="#ffe2b0" opacity=".25"/>
 <path d="M8 90 L14 66 L20 90Z M20 90 L27 60 L34 90Z M134 90 L141 63 L148 90Z M146 90 L151 70 L156 90Z" fill="#141830"/>`);
-const ART_CITY = svgArt(`<defs><linearGradient id="n" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d1330"/><stop offset=".7" stop-color="#3a2a63"/><stop offset="1" stop-color="#6b3d6e"/></linearGradient></defs>
+const ART_CITY = svgArt(`<defs><linearGradient id="n" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#26346e"/><stop offset=".55" stop-color="#7a5aa6"/><stop offset="1" stop-color="#e3958c"/></linearGradient></defs>
 <rect width="160" height="90" fill="url(#n)"/>${[[12, 8], [30, 15], [52, 6], [76, 12], [98, 5], [120, 14], [146, 9], [64, 20], [138, 22]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".6" fill="#fff" opacity=".8"/>`).join("")}
-<circle cx="128" cy="18" r="6" fill="#f4ecd0"/><circle cx="131" cy="16" r="5.4" fill="#141a3c"/>
-<path d="M0 90 V58 H10 V50 H20 V62 H28 V40 H40 V56 H48 V46 H58 V60 H66 V34 H74 V30 H80 V60 H90 V48 H102 V64 H110 V42 H122 V56 H132 V50 H144 V62 H152 V54 H160 V90Z" fill="#0b0e22"/>
+<circle cx="128" cy="18" r="6" fill="#f4ecd0"/><circle cx="131" cy="16" r="5.4" fill="#2f3c78"/>
+<path d="M0 90 V58 H10 V50 H20 V62 H28 V40 H40 V56 H48 V46 H58 V60 H66 V34 H74 V30 H80 V60 H90 V48 H102 V64 H110 V42 H122 V56 H132 V50 H144 V62 H152 V54 H160 V90Z" fill="#2a2546"/>
 ${[[30, 44], [34, 48], [30, 52], [68, 38], [72, 42], [68, 50], [76, 34], [92, 52], [98, 56], [112, 46], [118, 50], [114, 54], [136, 54], [50, 50], [14, 56]].map(([x, y]) => `<rect x="${x}" y="${y}" width="2" height="2" fill="#ffd36e" opacity=".85"/>`).join("")}`);
 const ART = [
   ART_LAKE,
