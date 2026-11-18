@@ -36,7 +36,7 @@ function fitScale(w, h) {
 function measurePair(gen) {
   const probe = gen.cloneNode(true);
   probe.removeAttribute("data-fit"); probe.classList.add("probe7");
-  probe.querySelectorAll("[id]").forEach(e => e.removeAttribute("id")); probe.querySelectorAll(".glide7").forEach(e => e.remove());
+  probe.querySelectorAll("[id]").forEach(e => e.removeAttribute("id")); probe.querySelectorAll(".glide7").forEach(e => e.remove()); probe.classList.remove("capgo");
   gen.parentElement.appendChild(probe);
   const size = (dir, side = false) => { probe.classList.toggle("capside", side); probe.style.flexDirection = dir; return [probe.offsetWidth, probe.offsetHeight]; };
   const rowWH = size("row"), colWH = size("column");
@@ -64,6 +64,7 @@ const moveEase = (() => { // cubic-bezier(.4, 0, .2, 1), the CSS --ease
 function finalCapPlaces(gen) {
   const probe = gen.cloneNode(true); probe.removeAttribute("data-fit"); probe.classList.add("probe7");
   probe.querySelectorAll("[id]").forEach(e => e.removeAttribute("id")); probe.querySelectorAll(".glide7").forEach(e => e.remove());
+  if (gen.dataset.lay === "side") { probe.classList.remove("capgo"); probe.classList.add("capside"); }
   gen.parentElement.appendChild(probe);
   const out = [...probe.querySelectorAll(".dl7 > .sf7")].map(c => inPair(probe, c));
   probe.remove(); return out;
@@ -119,7 +120,16 @@ function fitDev(orient) {
     // where each caption was last drawn (a phone may already have turned before this call)
     const before = moved ? caps.map(c => c._pos || snap(c)) : null;
     gen.dataset.lay = pick;
-    gen.classList.toggle("capside", pick === "side"); gen.style.flexDirection = pick === "column" ? "column" : "row";
+    const pending = gen.classList.contains("capgo");
+    if (pending && pick === "side") { /* already on its way into the side layout: let it finish */ }
+    else if (moved && pick === "side") {
+      // turning back to portrait: the phones are still landscape-wide for a moment, too wide for the
+      // captions beside them. Until they finish, the captions leave the flow (the gliding copies show
+      // them) and the phones sit as they will in the side layout; then the side layout takes over.
+      gen.classList.remove("capside"); gen.classList.add("capgo"); gen.style.flexDirection = "row";
+      clearTimeout(gen._sideT);
+      gen._sideT = setTimeout(() => { gen.classList.remove("capgo"); if (gen.dataset.lay === "side") gen.classList.add("capside"); }, MOVE_MS - 30);
+    } else { clearTimeout(gen._sideT); gen.classList.remove("capgo"); gen.classList.toggle("capside", pick === "side"); gen.style.flexDirection = pick === "column" ? "column" : "row"; }
     gen.style.scale = sc.toFixed(3);
     if (before) { const ends = finalCapPlaces(gen); caps.forEach((c, i) => glideCap(gen, c, before[i], ends[i])); }
     // the other phone turning a moment later changes where the captions end: retarget them
@@ -262,7 +272,8 @@ scen("player", "fullscreen_video_scale_button_fullscreen_only", (box, on) => {
   b.style.opacity = on ? "0" : "1";
   setFoot(on ? "Portrait: no video scale button" : "Portrait: the button is shown");
   at(1300, () => { situation("Fullscreen"); rotate(dev, "land"); b.style.opacity = "1"; setFoot("Fullscreen: the button is shown"); });
-  at(2500, () => { situation("Portrait player"); rotate(dev, "port"); b.style.opacity = on ? "0" : "1"; setFoot(on ? "Back in portrait: hidden again" : "Back in portrait: still shown"); });
+  // the loop ends as it began: same captions as the first portrait state
+  at(2500, () => { situation("Portrait player"); rotate(dev, "port"); b.style.opacity = on ? "0" : "1"; setFoot(on ? "Portrait: no video scale button" : "Portrait: the button is shown"); });
   return on ? "Portrait: no video scale button" : "Portrait: the button is shown";
 });
 scen("player", "copy_video_link_with_timestamp_button", (box, on) => {
