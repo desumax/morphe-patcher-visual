@@ -1,0 +1,216 @@
+"use strict";
+// Selecting a setting (focus path), ghosts, toggling and navigating to a setting.
+
+// ------------------------------------------------------------------ focus: select, scroll, flash
+// The one path from "this setting is selected" to "you can see it". Every way of getting to a
+// setting (a tap in the preview, a tap on its card, search, "Take me there") comes through here,
+// and every step runs on the clock's "focus" track, so selecting something else cancels whatever
+// is still queued for the previous setting:
+//   1. open:    a sub-option whose parent is folded (or that is still locked) is shown first
+//   2. reveal:  its preview element scrolls into view inside its feed or strip, then flashes
+//   3. card:    its card scrolls to the middle of the list (after a tap in the preview, or on arrival)
+//   4. parents: the settings that block it flash together with it
+const fT = (fn, ms) => clock.after("focus", ms, fn);
+// step 1: unfold the parent of a sub-option, or show a locked one for a moment; true when it had to
+function openFor(k) {
+  const par = PARENT_OF[k], hidden = !!par && !kidVisible(k);
+  if (!par || !(hidden || collapsed.has(par))) return false;
+  collapsed.delete(par);
+  if (hidden) { peekKid = k; renderList(); }
+  else { lastOpen.add(par); document.querySelector(`[data-kids-of="${par}"]`)?.classList.add("open"); document.querySelector(`[data-kidtoggle="${par}"]`)?.setAttribute("aria-expanded", "true"); }
+  return true;
+}
+function focusSetting(k, { from, arrive = false } = {}) {
+  const par = PARENT_OF[k], hidden = !!par && !kidVisible(k);
+  const bring = from === "stage" || arrive, opened = bring && openFor(k);
+  const blocked = hidden || !parentsOk(k);
+  if (arrive) quietFlashUntil = Date.now() + 700; // one synced flash on arrival instead of a first one mid-scroll
+  highlight(k, true, from !== "stage");
+  if (bring) fT(() => scrollRowIntoView(k, true), opened ? 300 : 0);
+  // arriving: the card, its element and its blockers flash together once everything is in place
+  if (arrive) fT(() => blocked ? flashParents(k) : flashTarget(k), par ? 520 : 380);
+  else if (from === "stage" && hidden) fT(() => flashParents(k), 700);
+  else if (blocked) pointToParents(k);
+}
+function select(k, from, arrive = false) {
+  const prevSel = selected;
+  selected = k;
+  clock.start("focus");
+  const dropGhost = prevSel && prevSel !== k && ghosts.has(prevSel) ? prevSel : null, renders = renderCount;
+  if (section === "flyout" && (FLY_SUB[k] || null) !== flySub) renderStage();
+  if (section === "player" && mode === "mod") {
+    // the tray of 13 buttons only opens from its own pill; selecting a hidden one previews it in place
+    if (trayOpen && from !== "stage") trayOpen = false;
+    if (CUSTOM_KEYS.has(k) || CUSTOM_KEYS.has(prevSel)) renderStage();
+  }
+  if (section === "endscreen" && (ENDSCREEN_SEL.has(k) || ENDSCREEN_SEL.has(prevSel))) renderStage();
+  if (section === "shorts" && (SHORTS_SHEET.has(k) || SHORTS_SHEET.has(prevSel))) renderStage();
+  if (section === "feed" && (k === "morphe_feed_card_layout" || prevSel === "morphe_feed_card_layout")) renderStage();
+  if (section === "captions" && (k === "morphe_secondary_caption_language" || prevSel === "morphe_secondary_caption_language")) renderStage();
+  // a hidden setting stays revealed while it is selected; it collapses once you move to another one
+  if (dropGhost) { if (renders === renderCount) unghost(dropGhost); else { clearGhost(dropGhost); renderStage(); } }
+  focusSetting(k, { from, arrive });
+  renderInspector();
+  if (from === "list" && mode === "mod" && A[k] && (A[k].kind === "vis" || A[k].kind === "overlay") && !shown(k) && document.querySelector(`#stage [data-k="${k}"]`)) ghost(k);
+  if (DEMOS[k]) startDemo(k); else stopDemo();
+  // any move to another setting ends a running animation (also a change made through a value pill,
+  // which selects without a "from")
+  if (SCN[k] && from) playScenario(k); else if (k !== prevSel) stopScenario();
+  const a = A[k];
+  const notApplicable = a && (a.kind === "vis" || a.kind === "overlay") && a.section === section && !CUSTOM_KEYS.has(k) && !document.querySelector(`#stage [data-k="${k}"], #stage [data-also="${k}"]`);
+  if (notApplicable && SCENES[section]) {
+    const why = k === "morphe_hide_end_screen_suggested_video" ? "Appears only when autoplay is off. Set Autoplay mode to Off to see it."
+      : k === "morphe_hide_autoplay_preview" ? "Appears only when autoplay is on."
+      : /^morphe_miniplayer_/.test(k) ? "Not part of the current miniplayer type." : "Not shown in the current layout.";
+    label(why, true, 2600);
+  }
+}
+function pointToParents(k) {
+  // wait for the element's own flash (it may first scroll into view), then flash everything together
+  const onStage = document.querySelector(`#stage [data-k="${k}"], #stage [data-also="${k}"]`);
+  if (!onStage || selected !== k || (lastFlash.k === k && Date.now() - lastFlash.t < 200)) return flashParents(k);
+  parentFlashFor = k;
+  fT(() => { if (parentFlashFor === k) flashParents(k); }, 1500);
+}
+const ghostTimers = new Map();
+const stageEls = k => document.querySelectorAll(`#stage [data-k="${k}"]`);
+function clearGhost(k) { (ghostTimers.get(k) || []).forEach(clearTimeout); ghostTimers.delete(k); ghosts.delete(k); fading.delete(k); stageEls(k).forEach(e => { e.classList.remove("leaving", "ghost-out"); e.getAnimations().forEach(a => a.cancel()); }); }
+function ghost(k, grow = true) {
+  const already = ghosts.has(k) || fading.has(k);
+  clearGhost(k);
+  ghosts.add(k);
+  stageEls(k).forEach(e => { e.getAnimations().forEach(a => a.cancel()); e.classList.remove("ghost-out", "leaving"); e.classList.add("ghost"); hugWidth(e); if (grow && !already && !e.classList.contains("intray")) sizeAnim(e, true); });
+}
+function unghost(k) {
+  (ghostTimers.get(k) || []).forEach(clearTimeout);
+  ghosts.delete(k); fading.add(k);
+  stageEls(k).forEach(e => { e.classList.remove("sel", "selin", "flash"); if (e.classList.contains("intray")) e.classList.add("ghost-out"); else { e.classList.add("leaving"); sizeAnim(e, false, 420); } });
+  const t2 = setTimeout(() => { fading.delete(k); ghostTimers.delete(k); stageEls(k).forEach(e => { e.classList.remove("ghost", "ghost-out", "leaving", "sizing", "sizew", "sizei"); e.getAnimations().forEach(a => a.cancel()); }); }, 440);
+  ghostTimers.set(k, [t2]);
+}
+
+// Settings with a value (number, colour, text) can't flip on a hold: jump to their control instead.
+function focusControl(k) {
+  if (selected !== k) select(k);
+  scrollRowIntoView(k);
+  const row = document.querySelector(`[data-row="${k}"]`); if (!row) return;
+  const ctl = row.querySelector("input,select,textarea,button.opt");
+  row.classList.remove("nudge"); void row.offsetWidth; row.classList.add("nudge");
+  if (ctl) setTimeout(() => ctl.focus({ preventScroll: true }), 250);
+}
+const canToggle = k => { const p = PREF[k]; return !!p && (OFF_LIST.has(k) || p.type === "boolean" || entriesFor(k).length > 0); };
+function toggle(k) {
+  const p = PREF[k];
+  if (mode === "orig") setMode("mod");
+  if (!parentsOk(k)) { pointToParents(k); snack(needText(k)); return; }
+  const before = state[k];
+  if (OFF_LIST.has(k)) { if (String(state[k]) === "off") state[k] = offListPick[k] || entriesFor(k).find(e => e.value !== "off" && e.value !== "en").value; else { offListPick[k] = state[k]; state[k] = "off"; } }
+  else if (p.type === "boolean") state[k] = !state[k];
+  else if (entriesFor(k).length && !p.entries) { const vals = entriesFor(k).map(e => e.value); const i = vals.findIndex(x => String(x) === String(state[k]) || Number(x) === Number(state[k])); state[k] = coerce(k, vals[(i + 1) % vals.length]); }
+  else if (p.entries && p.entries.length) { const vals = entriesFor(k).map(e => e.value); const i = vals.indexOf(String(state[k])); state[k] = coerce(k, vals[(i + 1) % vals.length]); }
+  else { focusControl(k); return; }
+  const visual = A[k] && (A[k].kind === "vis" || A[k].kind === "overlay");
+  const wasShown = visual ? (isHideKey(k) ? !before : !!before) : null;
+  const wasGhost = ghosts.has(k) || fading.has(k);
+  clearGhost(k);
+  const nowShown = visual ? shown(k) : null;
+  if (visual && wasShown && !nowShown) {
+    // collapse the visible component first, then draw the new layout
+    const els = [...stageEls(k)].filter(e => !e.classList.contains("intray") && e.offsetParent);
+    if (els.length) {
+      stageHold++;
+      const done = () => { if (!stageHold) return; stageHold = 0; renderStage(); if (selected) highlight(selected); };
+      els.forEach(e => e.classList.remove("pressing", "charging"));
+      // scroll the component into view first so you see it go
+      const wait = revealInStage(els) ? 360 : 0; skipReveal = true;
+      setTimeout(() => { els.forEach(e => sizeAnim(e, false)); setTimeout(done, SIZE_MS + 20); }, wait);
+    }
+  }
+  afterChange(k, before);
+  if (visual && !wasShown && nowShown) stageEls(k).forEach(e => { if (wasGhost || e.closest(".tray")) { e.classList.remove("reveal"); void e.offsetWidth; e.classList.add("reveal"); } else sizeAnim(e, true); });
+}
+// Collapse or expand a component along the axis it takes space in.
+const SIZE_MS = 280;
+function axisOf(el) {
+  const cs = getComputedStyle(el);
+  if (cs.position === "absolute" || cs.position === "fixed") return "none";
+  const ps = el.parentElement ? getComputedStyle(el.parentElement) : null;
+  if (ps && ps.display.includes("flex") && !ps.flexDirection.startsWith("column")) return "w";
+  if (ps && !ps.display.includes("flex") && !ps.display.includes("grid") && cs.display.startsWith("inline")) return "w";
+  return "h";
+}
+function sizeAnim(el, show, ms = SIZE_MS) {
+  const ax = axisOf(el), r = el.getBoundingClientRect(), cs = getComputedStyle(el);
+  let full, zero;
+  if (ax === "w") {
+    // in a flex row the gap would stay behind and jump away at the end, so pull it in with a negative margin
+    const gap = parseFloat(getComputedStyle(el.parentElement).columnGap) || 0;
+    full = { width: r.width + "px", marginLeft: cs.marginLeft, marginRight: cs.marginRight, opacity: 1 }; zero = { width: "0px", marginLeft: "0px", marginRight: -gap + "px", opacity: 0 };
+    el.classList.add("sizew");
+    if (cs.display === "inline") el.classList.add("sizei");
+  }
+  else if (ax === "h") { full = { height: r.height + "px", marginTop: cs.marginTop, marginBottom: cs.marginBottom, opacity: 1 }; zero = { height: "0px", marginTop: "0px", marginBottom: "0px", opacity: 0 }; }
+  else { full = { opacity: 1, transform: cs.transform === "none" ? "scale(1)" : cs.transform }; zero = { opacity: 0, transform: (cs.transform === "none" ? "" : cs.transform + " ") + "scale(.8)" }; }
+  if (!r.width && !r.height && ax !== "none") return null;
+  el.classList.add("sizing");
+  const a = el.animate(show ? [zero, full] : [full, zero], { duration: ms, easing: "cubic-bezier(.4,0,.2,1)", fill: show ? "none" : "forwards" });
+  // a collapsed element keeps overflow:hidden until it is hidden for good, otherwise its content
+  // would paint at full size for a frame between the end of the animation and display:none
+  if (show) a.onfinish = a.oncancel = () => el.classList.remove("sizing", "sizew", "sizei");
+  return a;
+}
+function afterChange(k, before) {
+  if (peekKid && kidVisible(peekKid)) peekKid = null;
+  commit(); select(k);
+  // the whole preview only pulses when nothing in it stands for this setting
+  const sb = document.querySelector(".stagebox"); if (sb && !document.querySelector(`#stage [data-k="${k}"], #stage [data-also="${k}"]`) && !proxyEls(k).length) { sb.classList.remove("changed"); void sb.offsetWidth; sb.classList.add("changed"); }
+  try { navigator.vibrate && navigator.vibrate(20); } catch { /* ignore */ }
+  if (SCN[k]) playScenario(k, before);
+  // teleport back to the setting that was waiting on this one
+  if (returnTo && parentsOk(returnTo.key) && dependsOn(returnTo.key, k)) {
+    const back = returnTo; returnTo = null;
+    setTimeout(() => goToSetting(back.key, () => {
+      const row = document.querySelector(`[data-row="${back.key}"]`);
+      if (row) unlockFx(row);
+      snack(`<b>${esc(title(back.key))}</b> is unlocked`);
+    }), 650);
+  }
+}
+// Colour inputs only take #RRGGBB; keep the alpha byte of Morphe's #AARRGGBB values.
+function fromColor(k, hex) { const cur = String(state[k] || ""); const alpha = cur.length === 9 ? cur.slice(1, 3) : ""; return ("#" + alpha + hex.slice(1)).toUpperCase(); }
+function ensureMod() { if (mode === "orig") { mode = "mod"; $("btnOrig").setAttribute("aria-pressed", "false"); $("btnMod").setAttribute("aria-pressed", "true"); } }
+function coerce(k, v) { const t = PREF[k].type; if (t === "integer" || t === "long" || t === "float") return Number(v); if (t === "boolean") return v === true || v === "true"; return v; }
+
+function switchSection(id, after) {
+  if (id === section) { after && after(); return; }
+  const from = SECTIONS.findIndex(s => s.id === section), to = SECTIONS.findIndex(s => s.id === id);
+  // The tabs stay put. The preview and the settings slide out and in together, and the preview
+  // frame grows or shrinks smoothly to the new screen's height.
+  const content = $("content"); content.style.setProperty("--dir", (to > from ? -24 : 24) + "px");
+  const box = document.querySelector(".stagebox"), parts = [$("stage"), $("list")];
+  const shown = el => el && el.offsetParent !== null;
+  const h0 = shown(box) ? box.offsetHeight : 0;
+  parts.forEach(p => { p.classList.remove("swap-in"); p.classList.add("swap-out"); });
+  stopDemo(); stopScenario();
+  setTimeout(() => {
+    section = id; selected = null; peekKid = null; trayOpen = false; lastTab[groupOf(id).id] = id;
+    $("scroller").scrollTop = 0; renderAll();
+    const h1 = shown(box) ? box.offsetHeight : 0;
+    if (h0 && h1 && Math.abs(h1 - h0) > 2) {
+      box.getAnimations().forEach(a => a.cancel());
+      box.animate([{ height: h0 + "px" }, { height: h1 + "px" }], { duration: 260, easing: "cubic-bezier(.2,0,0,1)" });
+    }
+    parts.forEach(p => { p.classList.remove("swap-out"); void p.offsetWidth; p.classList.add("swap-in"); });
+    after && setTimeout(after, 120);
+  }, 120);
+}
+function goToSetting(k, after) {
+  if (PREF[k] && PREF[k].type === "screen") { // a sub-screen: open the editor screen and show it from the top
+    switchSection(sectionOf(k), () => { $("scroller").scrollTo({ top: 0 }); const pill = $("secPill"); if (pill) { pill.classList.remove("attn"); void pill.offsetWidth; pill.classList.add("attn"); } after && after(); });
+    return;
+  }
+  switchSection(sectionOf(k), () => {
+    select(k, undefined, true);
+    if (after) fT(after, PARENT_OF[k] ? 520 : 380);
+  });
+}

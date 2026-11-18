@@ -6,7 +6,7 @@ file can be copied to the same path in a fork of that repository.
 
 It is groundwork. The structure, the data flow and the interaction rules are in place, but it has
 not been compiled against morphe-patches yet, and the live preview drawing still has to be ported
-screen by screen from `web/app.js`.
+screen by screen from the web preview (`web/js/`).
 
 ## A front end, not a fork of the settings
 

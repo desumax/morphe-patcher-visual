@@ -42,7 +42,7 @@ import app.morphe.extension.shared.Utils;
  * Leaving the editor asks for a restart only if a changed setting needs one.
  *
  * Groundwork: the structure and the data flow are in place; the preview drawing
- * (PreviewHost and the adapters) is ported screen by screen from web/app.js.
+ * (PreviewHost and the adapters) is ported screen by screen from web/js/ (the web preview).
  */
 public final class VisualEditorDialog extends Dialog {
 
