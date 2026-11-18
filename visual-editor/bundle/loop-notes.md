@@ -31,5 +31,26 @@ Cycle time: bundle build 26–46 s, patch 14–21 s, install 4 s (≈ 1 min tota
    Verified: Copy video link button on/off locks and unlocks "Copy timestamp by default" exactly as
    `Setting.isAvailable()` and the regular list.
 
+3. Card menu (Max, test 3): in the app the editor opens on the screen menu as a full-screen page of
+   cards (grouped: six group cards filling the screen, then Morphe design / Reset order / Group /
+   list design rows). A card opens its live screen; the top bar then shows the title without the
+   dropdown arrow and does nothing on tap. Back (key, gesture or arrow) from a screen returns to the
+   menu, Back from the menu leaves the editor; the restart prompt only comes then (verified: a
+   restart setting changed in Player, Back → menu with no prompt, Back → prompt). Search results
+   leave the menu page and open the setting's screen.
+4. Opening hitch (Max, test 3): the dialog has no window animation, the settings list behind it is
+   hidden while it is open, and the WebView stays transparent on the dark background until the page
+   calls `MorpheApp.ready()` after its first drawn frame (fallback 2.5 s), then fades in (160 ms).
+   Screen recording: YouTube settings → one dark frame → menu fades in; the Morphe list never shows.
+   Opening time (tap to ready): 1.86 s first open after app start, 0.62 s afterwards (emulator).
+5. Restart prompt copy: "1 setting only takes effect".
+
+## Parity checks (emulator vs web preview at the same density)
+- Option grid (Player icon style), search page, Player screen: same layout; differences come only
+  from live values (e.g. Collapse button hidden on the emulator) and live-only setting counts.
+- Rows keep their height when a Hide/Show or option changes (12 rows measured before/after).
+- Scrolling: 182 frames in 3 s, median 16.7 ms, p95 17.9 ms, none over 33 ms (emulator, host GPU).
+
 ## Still open
-- Web copy: "1 setting only take effect after YouTube restarts" (should be "takes").
+- The two entry rows both reuse About's info icon (no own icon in the patches resources).
+- After typing in search with a hardware keyboard, the back arrow can keep a focus ring.
