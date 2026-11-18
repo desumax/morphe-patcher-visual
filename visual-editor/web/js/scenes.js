@@ -86,7 +86,7 @@ SCENES.seekbar = () => {
     ${C("hide_seekbar", `<div class="seek" id="seek" style="position:relative;left:0;right:0;height:4px;${custom ? `background:linear-gradient(90deg,rgba(255,255,255,.3),rgba(255,255,255,.3))` : ""}">
         <div class="buf" style="width:55%"></div><div class="played" id="played" style="width:17%;${custom ? `background:linear-gradient(90deg,${c1},${c2})` : ""};transition:width .35s"></div>
         <div class="knob" id="knob" style="left:17%;transition:left .35s;${custom ? `background:${c2}` : ""}"></div>
-        <div class="c knobring" id="knobRing" data-also="morphe_custom_seekbar_thumb" style="left:17%;transition:left .35s;--kr:${V("morphe_custom_seekbar_thumb") && V("morphe_custom_seekbar_thumb_scale_type") === "ORIGINAL" ? 30 : 18}px"></div></div>`, { style: "position:absolute;left:12px;right:12px;bottom:10px;padding:6px 0" })}
+        <div class="c knobring" id="knobRing" data-also="morphe_custom_seekbar_thumb" style="position:absolute;top:50%;translate:-50% -50%;left:17%;transition:left .35s;--kr:${V("morphe_custom_seekbar_thumb") && V("morphe_custom_seekbar_thumb_scale_type") === "ORIGINAL" ? 30 : 18}px"></div></div>`, { style: "position:absolute;left:12px;right:12px;bottom:10px;padding:6px 0" })}
     <div id="film" style="position:absolute;left:0;right:0;bottom:30px;display:none;gap:3px;padding:0 12px;justify-content:center">${[0, 1, 2, 3, 4].map(i => thumb(i + 1, "width:58px;border-radius:3px")).join("")}</div>
     <div class="finger" id="finger"></div>
   </div>`;

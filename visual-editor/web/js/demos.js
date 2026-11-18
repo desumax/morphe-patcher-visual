@@ -4,6 +4,30 @@
 // ------------------------------------------------------------------ demos (gesture / behaviour), faster loop
 const LOOP_MS = 1500;
 let demoStep = 0;
+// What each demo does, by type. A bug or a wish that applies to one type ("should also play while the
+// element is only previewed") is fixed once, for the whole type, in startDemo / the shared helpers.
+//   transient  the setting's own element appears during a gesture and goes again (a hint, a thumbnail,
+//              a sheet). When your settings hide it, the selected element is previewed as a ghost and the
+//              demo still spawns and removes it, on the ghost, so you see what you are hiding.
+//   gesture    a finger does something and the result shows (seek, swipe, double-tap, tap and hold);
+//              the element it acts on comes from NEEDS when your settings hide it.
+//   toast      a confirmation pill appears (remember speed / quality, skip silence).
+//   motion     an element already on screen changes over time (countdown, glow, captions, nav width).
+//   overlay    guides drawn over the player (swipe zones and their style, size and colours).
+// Comparisons (Off / On side by side) are not demos: they live in scenarios.js (scen()).
+const DEMO_TYPES = {
+  transient: "hide_player_gesture_hints seekbar_thumbnail_preview sb_create_new_segment sb_create_new_segment_step sb_voting_button",
+  gesture: "tap_to_seek slide_to_seek disable_precise_seeking_gesture swipe_seek disable_shorts_double_tap_to_like swap_save_and_queue_actions",
+  toast: "remember_playback_speed_last_selected_toast remember_video_quality_last_selected_toast skip_silence",
+  motion: "autoplay_mode disable_like_subscribe_glow stable_caption_blocks niconico_comments narrow_navigation_buttons",
+  overlay: "swipe_left_zone swipe_right_zone swipe_top_zone swipe_overlay_style swipe_overlay_background_opacity swipe_text_overlay_size swipe_overlay_progress_volume_color swipe_overlay_progress_brightness_color swipe_overlay_progress_speed_color swipe_zone_width swipe_zone_preview swipe_speed_zone_height",
+};
+const DEMO_TYPE = {};
+Object.entries(DEMO_TYPES).forEach(([t, ks]) => ks.split(" ").forEach(k => { DEMO_TYPE["morphe_" + k] = t; }));
+// true while a transient demo plays on a ghost (its element is hidden by your settings)
+let demoOnGhost = false;
+// fade a selectable element in or out, also when it is a ghost (whose opacity is otherwise fixed)
+function fadeC(el, show) { if (!el) return; el.classList.add("dzt"); el.classList.toggle("dz", !show); }
 // Every timer a demo starts runs on the clock's "demo" track, so switching to another setting (or
 // toggling this one) cancels what the previous run still had queued, and the finger starts clean:
 // no hold ring, seek position or toast from the last demo leaks into the next.
@@ -15,6 +39,7 @@ const onDemoStop = fn => { if (demoUndo.length < 8) demoUndo.push(fn); };
 function stopDemo() {
   clock.stop("demo");
   demoUndo.splice(0).forEach(fn => { try { fn(); } catch { /* the scene was redrawn */ } });
+  demoOnGhost = false;
   document.querySelectorAll("#stage .finger").forEach(f => { f.style.transition = "none"; f.classList.remove("show", "hold", "tap"); });
   document.querySelectorAll("#stage .toastin.dyn").forEach(n => n.remove()); document.querySelectorAll("#stage .demo-label.dyn").forEach(n => { n.style.opacity = "0"; setTimeout(() => { n.remove(); showSceneLabel(); }, 250); }); }
 const showSceneLabel = () => { if (!document.querySelector("#stage .demo-label.dyn")) document.querySelectorAll("#stage .demo-label:not(.dyn)").forEach(n => { n.style.visibility = ""; }); };
@@ -24,7 +49,7 @@ function label(text, bad, ms) {
   st.querySelectorAll(".demo-label:not(.dyn)").forEach(n => { n.style.visibility = "hidden"; }); // the scene's own label would sit right under it
   const d = document.createElement("div");
   d.className = "demo-label dyn" + (bad ? " bad" : "");
-  d.textContent = text;
+  d.textContent = text + (demoOnGhost ? " (hidden)" : "");
   st.firstElementChild?.appendChild(d);
   const top = d.getBoundingClientRect().bottom - (st.firstElementChild || st).getBoundingClientRect().top + 8;
   st.querySelectorAll(".toastin.dyn").forEach(t => { if (parseFloat(t.style.top) < top) t.style.top = top + "px"; }); // a pill shown first moves below
@@ -77,9 +102,15 @@ const DEMOS = {
     const film = $("film"), f = finger(); if (!film || !f) return; const st = $("stage");
     place(f, st.clientWidth * .42, st.clientHeight - 40);
     dT(() => place(f, st.clientWidth * .42, st.clientHeight - 110, 450), 120);
-    if (!disabled) { dT(() => { film.style.display = "flex"; }, 450); label("Pull up on the seekbar: precise seeking opens"); }
-    else label("Pull up on the seekbar: precise seeking stays off", true);
-    dT(() => { film.style.display = "none"; }, 1250); hideF(f, 1150); onDemoStop(() => { film.style.display = "none"; });
+    // the thumbnails rise into place one after another, then fade out together
+    const cards = [...film.children], ease = "cubic-bezier(.2,.8,.2,1)";
+    if (!disabled) {
+      dT(() => { film.style.display = "flex"; cards.forEach((c, i) => c.animate([{ opacity: 0, transform: "translateY(10px) scale(.92)" }, { opacity: 1, transform: "none" }], { duration: 320, delay: Math.abs(i - 2) * 45, easing: ease, fill: "backwards" })); }, 430);
+      dT(() => film.animate([{ opacity: 1 }, { opacity: 0, transform: "translateY(4px)" }], { duration: 220, easing: ease, fill: "forwards" }), 1050);
+      label("Pull up on the seekbar: precise seeking opens");
+    } else label("Pull up on the seekbar: precise seeking stays off", true);
+    const close = () => { film.style.display = "none"; film.getAnimations().forEach(a => a.cancel()); };
+    dT(close, 1290); hideF(f, 1150); onDemoStop(close);
   },
   morphe_swipe_left_zone(v) { swipeDemo("left", v); },
   morphe_swipe_right_zone(v) { swipeDemo("right", v); },
@@ -179,7 +210,12 @@ function startDemo(k) {
   const fn = DEMOS[k]; if (!fn) return;
   demoStep = 0;
   // the clock drops these as soon as another demo starts, so a stale loop can't stop the new one
-  const run = () => { if (selected !== k) return stopDemo(); fn(V(k)); demoStep++; };
+  const run = () => {
+    if (selected !== k) return stopDemo();
+    demoOnGhost = DEMO_TYPE[k] === "transient" && (ghosts.has(k) || fading.has(k));
+    // previewed while hidden: play the story of the element being there (a hide key's "shown" value is false)
+    fn(demoOnGhost ? !isHideKey(k) : V(k)); demoStep++;
+  };
   dT(run, 60);
   clock.every("demo", LOOP_MS, run);
 }
@@ -232,7 +268,7 @@ Object.assign(DEMOS, {
     const f = finger(); if (!f) return; const st = $("stage");
     const hint = document.querySelector('#stage [data-k="morphe_hide_player_gesture_hints"]');
     place(f, st.clientWidth * .42, st.clientHeight - 16); dT(() => place(f, st.clientWidth * .42, st.clientHeight - 90, 600), 120);
-    if (hint) { hint.style.transition = "opacity .2s"; hint.style.opacity = "0"; dT(() => { hint.style.opacity = hidden ? "0" : "1"; }, 300); dT(() => { hint.style.opacity = ""; }, 1400); onDemoStop(() => { hint.style.opacity = ""; }); }
+    if (hint) { fadeC(hint, false); dT(() => fadeC(hint, !hidden), 300); dT(() => fadeC(hint, true), 1400); onDemoStop(() => hint.classList.remove("dz", "dzt")); }
     label(hidden ? "Pull up on the seekbar: no hint appears" : "Pull up on the seekbar: the hint explains the gesture", hidden);
     hideF(f, 1100);
   },
