@@ -221,6 +221,8 @@ button { font: inherit; color: inherit; }
 .bigbtn .ico { width: 36px; height: 36px; }
 .seek { position: absolute; left: 12px; right: 12px; height: 3px; background: rgba(255,255,255,.3); border-radius: 2px; }
 .seek .played { position: absolute; left: 0; top: 0; bottom: 0; background: var(--seek-1, var(--yt-red)); border-radius: 2px; }
+.seek .knobring { position: absolute; top: 50%; width: var(--kr, 18px); height: var(--kr, 18px); border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+.seek .knobring.sel, .seek .knobring.flash::after { border-radius: 50%; }
 .seek .knob { position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%; background: var(--seek-1, var(--yt-red)); transform: translate(-50%, -50%); }
 .seek .buf { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,255,255,.45); }
 .time { font-size: 12px; font-weight: 500; text-shadow: 0 0 3px rgba(0,0,0,.6); white-space: nowrap; }
@@ -271,7 +273,8 @@ button { font: inherit; color: inherit; }
 .duo7 { width: 206px; height: 186px; display: flex; gap: 10px; transition: scale .5s var(--ease); }
 .dl7 { display: grid; gap: 3px; justify-items: center; align-content: start; }
 .dl7 > span { font-size: 20px; font-weight: 600; color: #fff; background: #3a3a3a; border-radius: 14px; padding: 0 15px; line-height: 28px; }
-.dl7 > span.on { background: #2e7d32; }
+.dl7 > span.on { background: var(--m-primary, #3ea6ff); color: var(--m-on-primary, #062e6f); } /* the same colours as the list toggles */
+.dl7 > span.neg { background: #5c2b2b; color: #ffd9d6; }
 .duo7:not(.gen) .dl7 > span { font-size: 8px; line-height: 11px; border-radius: 6px; padding: 0 6px; } /* drawn much larger by its own scale */
 /* the invisible copy fitDev measures: final sizes, no transitions, never painted */
 .duo7.gen.probe7 { position: absolute !important; left: 0 !important; top: 0 !important; translate: none !important; scale: 1 !important; visibility: hidden; pointer-events: none; }
@@ -289,7 +292,7 @@ button { font: inherit; color: inherit; }
 @keyframes nudge7 { 50% { border-color: var(--m-primary, #3ea6ff); box-shadow: 0 0 0 2px rgba(62,166,255,.35); } }
 .sf7 { font-size: 14px; line-height: 17px; color: #ddd; text-align: center; text-wrap: balance; overflow-wrap: break-word; hyphens: auto; min-height: 17px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; width: 100%; min-width: 110px; margin-top: 2px; }
 .dev.buzz { animation: buzz 40ms linear 3; } /* 120 ms, the same as navigator.vibrate(120) */
-@keyframes buzz { 0%,100% { transform: translate(0,0); } 25% { transform: translate(-1.2px,.5px); } 50% { transform: translate(1px,-.5px); } 75% { transform: translate(-.6px,-.4px); } }
+@keyframes buzz { 0%,100% { transform: translate(0,0) rotate(0); } 25% { transform: translate(-3.5px,1px) rotate(-1.2deg); } 50% { transform: translate(3px,-1px) rotate(1deg); } 75% { transform: translate(-2px,-.8px) rotate(-.6deg); } }
 .vib7 { position: absolute; left: 7px; top: 7px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; z-index: 40; pointer-events: none; animation: vibin .18s var(--ease); transition: opacity .3s; }
 .vib7 svg { width: 18px; height: 18px; fill: #fff; }
 .vib7.on { background: var(--m-primary, #3ea6ff); }

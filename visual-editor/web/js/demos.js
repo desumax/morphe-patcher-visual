@@ -36,7 +36,7 @@ function place(f, x, y, ms) { f.style.transition = ms ? `left ${ms}ms var(--ease
 function hideF(f, after) { dT(() => { f.classList.remove("show", "hold"); }, after); }
 function tapAt(x, y) { const f = finger(); if (!f) return; place(f, x, y); f.classList.remove("tap"); void f.offsetWidth; f.classList.add("tap"); hideF(f, 520); }
 function fmt(total, pct) { const s = Math.round(total * pct / 100); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }
-function setSeek(pct) { const p = $("played"), k = $("knob"); if (p) p.style.width = pct + "%"; if (k) k.style.left = pct + "%"; }
+function setSeek(pct) { const p = $("played"); if (p) p.style.width = pct + "%"; ["knob", "knobRing"].forEach(id => { const k = $(id); if (k) k.style.left = pct + "%"; }); }
 function showPill(text, ms = 1100) {
   const st = $("stage").firstElementChild; if (!st) return;
   const d = document.createElement("div"); d.className = "toastin dyn";
@@ -62,7 +62,14 @@ const DEMOS = {
   morphe_slide_to_seek(on) {
     const f = finger(); if (!f) return; const W = $("stage").clientWidth;
     place(f, W * .3, 90); f.classList.add("hold"); onDemoStop(() => setSeek(17));
-    if (on) { label("Press and hold the video, then slide: seeks"); dT(() => { place(f, W * .7, 90, 700); setSeek(60); }, 250); }
+    if (on) {
+      // every loop starts from the resting point, so the seekbar moves each time, in step with the finger
+      const moving = [$("played"), $("knob"), $("knobRing")].filter(Boolean);
+      moving.forEach(e => e.style.transition = "none"); setSeek(17); void $("stage").offsetWidth;
+      label("Press and hold the video, then slide: seeks");
+      dT(() => { place(f, W * .7, 90, 700); moving.forEach(e => e.style.transition = "width .7s var(--ease), left .7s var(--ease)"); setSeek(60); }, 250);
+      dT(() => moving.forEach(e => e.style.transition = ""), 1000); onDemoStop(() => moving.forEach(e => e.style.transition = ""));
+    }
     else { label("Press and hold the video: plays at 2x speed (stock)", true); showPill("2x ▸▸"); }
     hideF(f, 1150);
   },
@@ -187,15 +194,15 @@ Object.assign(DEMOS, {
     const pr = bub && bub.offsetParent ? bub.offsetParent.getBoundingClientRect() : st;
     const y = r.top - st.top + r.height / 2, p0 = 17, p1 = 70, total = 18 * 60 + 42;
     const xAt = pct => r.left + r.width * pct / 100;
-    const played = $("played"), knob = $("knob"), tl = bub && bub.querySelector(".time");
-    [played, knob].forEach(e => e && (e.style.transition = "none"));
+    const played = $("played"), knob = $("knob"), ring = $("knobRing"), tl = bub && bub.querySelector(".time");
+    [played, knob, ring].forEach(e => e && (e.style.transition = "none"));
     if (bub) { bub.classList.add("dragging"); bub.style.opacity = on ? "1" : "0"; }
     const frame = pct => {
       setSeek(pct); place(f, xAt(pct) - st.left, y);
       if (bub) { const half = 50, x = Math.min(Math.max(xAt(pct) - pr.left, half + 4), pr.width - half - 4); bub.style.left = x + "px"; }
       if (tl) tl.textContent = fmt(total, pct);
     };
-    const reset = () => { if (bub) { bub.classList.remove("dragging"); bub.style.left = ""; bub.style.opacity = ""; } if (tl) tl.textContent = "7:51"; [played, knob].forEach(e => e && (e.style.transition = "")); setSeek(p0); };
+    const reset = () => { if (bub) { bub.classList.remove("dragging"); bub.style.left = ""; bub.style.opacity = ""; } if (tl) tl.textContent = "7:51"; [played, knob, ring].forEach(e => e && (e.style.transition = "")); setSeek(p0); };
     onDemoStop(reset);
     frame(p0); f.classList.add("hold");
     const t0 = performance.now() + 180, dur = 1000, tok = clock.run("demo");

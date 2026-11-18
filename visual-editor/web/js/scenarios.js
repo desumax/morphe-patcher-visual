@@ -14,7 +14,7 @@ const scen = (section, keys, fn) => keys.split(/\s+/).forEach(k => { A["morphe_"
 // scenario can rotate the phone with rotate() and nothing ends up covering anything else.
 const DEV_SIZE = { port: [92, 172], land: [190, 108], duo: [206, 186] };
 // Two phones side by side (stock on the left, the setting on the right), scaled together as one.
-const duo7 = (left, right) => `<div class="duo7"><div class="dl7"><span>Off</span>${device("port", left)}</div><div class="dl7"><span class="on">On</span>${device("port", right)}</div></div>`;
+const duo7 = (left, right) => `<div class="duo7"><div class="dl7"><span class="neg">Off</span>${device("port", left)}</div><div class="dl7"><span class="on">On</span>${device("port", right)}</div></div>`;
 function device(orient, inner, extra = "") {
   const [w, h] = DEV_SIZE[orient];
   return `<div class="dev ${orient}" style="width:${w}px;height:${h}px;${extra}"><div class="waves l"></div><div class="waves r"></div>${inner}<div class="finger" id="scFinger">${I("gesture")}</div></div>`;
@@ -238,7 +238,8 @@ scen("seekbar", "speed_tap_and_hold", (box, v) => {
   box.innerHTML = device("land", `${miniVideo(4)}${miniSeek(30)}`);
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
   at(150, () => { fingerTo(f, W * .5, H * .45); f.classList.add("hold"); });
-  at(600, () => { dev.querySelector(".mp").style.transition = `width ${(2.4 / v).toFixed(2)}s linear`; dev.querySelector(".mp").style.width = "75%"; dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px;font-size:9px">${v}x ▸▸</div>`); });
+  // both sides hold for the same time, so the faster speed covers proportionally more of the video
+  at(600, () => { dev.querySelector(".mp").style.transition = `width ${1.4 * scStretch}s linear`; dev.querySelector(".mp").style.width = Math.min(95, 30 + 11 * v) + "%"; dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px;font-size:9px">${v}x ▸▸</div>`); });
   at(2000, () => f.classList.remove("hold"));
   return `Hold the video: plays at ${v}x`;
 });
@@ -751,11 +752,14 @@ def("snackbar", "style", "custom_snackbar_theme custom_snackbar_color_dark custo
 // compares its default with the chosen value (or the first other value when it is on the default).
 const SC_TOTAL = 11000;
 const SCN_SELF_DUO = new Set(["morphe_disable_player_popup_panels"]);
+const DUO_OTHER = { morphe_speed_tap_and_hold: 4 };
 function duoValues(k, prev) {
   const p = PREF[k];
   if (p.type === "boolean") return [[false, "Off"], [true, "On"]];
   const ents = entriesFor(k), lab = v => ents.find(e => sameVal(e.value, v))?.label || String(v) + (/speed/.test(k) ? "×" : "");
   const d = defaults[k], cur = V(k);
+  // a clearer contrast than the next step up for a few settings (2x vs 4x speed)
+  if (DUO_OTHER[k] !== undefined && sameVal(cur, d) && (prev === undefined || sameVal(prev, d))) return [[d, lab(d)], [DUO_OTHER[k], lab(DUO_OTHER[k])]];
   const other = ents.length ? ents.find(e => !sameVal(e.value, d))?.value : typeof d === "number" ? Math.round(d * 150) / 100 : undefined;
   const r = !sameVal(cur, d) ? cur : prev !== undefined && !sameVal(prev, d) ? prev : (other ?? cur);
   return [[d, lab(d)], [r, lab(r)]];
@@ -784,7 +788,7 @@ function playScenario(k, prevValue) {
       const foot = fn(box, V(k), prevValue);
       if (foot) canvas.querySelector(".foot").textContent = foot;
     } else {
-      box.innerHTML = `<div class="duo7 gen">${vals.map(([, l], i) => `<div class="dl7"><span class="${i ? "on" : ""} ${String(l).length > 14 ? "xlong" : String(l).length > 8 ? "long" : ""}">${esc(l)}</span><div class="side"></div><div class="sf7"></div></div>`).join("")}</div>`;
+      box.innerHTML = `<div class="duo7 gen">${vals.map(([, l], i) => `<div class="dl7"><span class="${NEG_WORD.has(String(l)) ? "neg" : i ? "on" : ""} ${String(l).length > 14 ? "xlong" : String(l).length > 8 ? "long" : ""}">${esc(l)}</span><div class="side"></div><div class="sf7"></div></div>`).join("")}</div>`;
       box.querySelectorAll(".dl7").forEach((cell, i) => {
         const side = { i, foot: cell.querySelector(".sf7") };
         scSide = side;

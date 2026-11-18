@@ -14,7 +14,7 @@ $("snackUndo").onclick = () => { if (undoFn) undoFn(); undoFn = null; $("snack")
 // A setting that has no element of its own in the preview (it changes how something behaves) points
 // at the element that does the behaviour: its parent's element (Playback speed button for "Tap to
 // cycle speeds"), or a named one (the seekbar for the seekbar colour and thumb settings).
-const PROXY_K = { morphe_seekbar_custom_color: "morphe_hide_seekbar", morphe_custom_seekbar_thumb: "morphe_hide_seekbar" };
+const PROXY_K = { morphe_seekbar_custom_color: "morphe_hide_seekbar" };
 function proxyEls(k) {
   const q = x => [...document.querySelectorAll(`#stage [data-k="${x}"], #stage [data-also="${x}"]`)].filter(e => e.getClientRects().length && (!e.classList.contains("off") || e.classList.contains("ghost")));
   if (q(k).length) return [];
