@@ -22,9 +22,9 @@ import app.morphe.extension.shared.Logger;
 import app.morphe.extension.shared.Utils;
 
 /**
- * Where the editor joins the regular Morphe settings. The patch calls {@link #onSettingsCreated}
- * at the end of the Morphe settings fragment's initialize(), after Morphe has built, translated
- * and sorted its own list. Nothing in Morphe's code or resources is changed: two rows are added
+ * Where the editor joins the regular Morphe settings. The patch calls {@link #onSettingsInitializing}
+ * at the start of the Morphe settings fragment's initialize(); the rows are added right after
+ * Morphe has built, translated and sorted its own list. Nothing in Morphe's code or resources is changed: two rows are added
  * to the top of the live list, above About.
  */
 @SuppressWarnings({"deprecation", "unused"})
@@ -45,8 +45,20 @@ public final class VisualEditorEntry {
         return liveRoot.get();
     }
 
-    /** Injection point. Must never throw: the regular settings have to keep working regardless. */
-    public static void onSettingsCreated(PreferenceFragment fragment) {
+    /**
+     * Injection point, the first instruction of the settings fragment's initialize(). Runs the
+     * real work once initialize() (and the fragment's onCreate) have finished building the list.
+     * Must never throw: the regular settings have to keep working regardless.
+     */
+    public static void onSettingsInitializing(PreferenceFragment fragment) {
+        try {
+            Utils.runOnMainThread(() -> onSettingsCreated(fragment));
+        } catch (Throwable ex) {
+            Logger.printException(() -> "Visual editor: could not schedule its entry", ex);
+        }
+    }
+
+    static void onSettingsCreated(PreferenceFragment fragment) {
         try {
             PreferenceScreen root = fragment.getPreferenceScreen();
             if (root == null) return;
@@ -110,8 +122,8 @@ public final class VisualEditorEntry {
             Activity activity = fragment.getActivity();
             if (VisualEditorSettings.ENABLED.get() && activity != null && autoOpenedIn.get() != activity) {
                 autoOpenedIn = new WeakReference<>(activity);
-                // After the settings screen is on screen, so closing the editor lands on it.
-                Utils.runOnMainThread(() -> show(activity));
+                // Already posted after onCreate, so closing the editor lands on the settings list.
+                show(activity);
             }
         } catch (Throwable ex) {
             Logger.printException(() -> "Visual editor: could not add its entry", ex);

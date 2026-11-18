@@ -14,7 +14,6 @@ import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.classDefByOrNull
 import app.morphe.patcher.patch.mutableClassDefBy
-import com.android.tools.smali.dexlib2.Opcode
 
 private const val ENTRY =
     "Lapp/morphe/extension/youtube/visualeditor/VisualEditorEntry;"
@@ -30,8 +29,8 @@ private const val SETTINGS_FRAGMENT =
  * It is a front end only. It reads the settings list from the same morphe_prefs.xml the regular
  * Morphe screens use, and reads and writes values through the same Setting API. It depends on no
  * patch object of another bundle, adds no resources and edits no other patch: its only change to
- * Morphe's code is one call at the end of the settings fragment's initialize(), which adds the
- * editor's two rows above About.
+ * Morphe's code is one call at the start of the settings fragment's initialize(); the editor's
+ * two rows are added above About right after initialize() has built the list.
  *
  * That call is made in finalize, after every patch of every bundle has run, so the official
  * settings extension is already merged no matter in which order the bundles' patches run.
@@ -73,18 +72,12 @@ val visualSettingsEditorPatch = bytecodePatch(
             method.name == "initialize" && method.parameterTypes.isEmpty() && method.returnType == "V"
         } ?: throw PatchException("Morphe settings changed: initialize() not found")
 
-        // Before every return, so the rows are added after Morphe built, translated and sorted its list.
-        val returns = initialize.implementation!!.instructions
-            .withIndex()
-            .filter { (_, instruction) -> instruction.opcode == Opcode.RETURN_VOID }
-            .map { it.index }
-        if (returns.isEmpty()) throw PatchException("Morphe settings changed: initialize() has no return")
-
-        returns.asReversed().forEach { index ->
-            initialize.addInstruction(
-                index,
-                "invoke-static { p0 }, $ENTRY->onSettingsCreated(Landroid/preference/PreferenceFragment;)V",
-            )
-        }
+        // At the very start, where p0 is still the fragment: D8 reuses p0 for other values later in
+        // the method, so a call before a return would hand the verifier a wrong type (test 1 crashed
+        // on that). The extension posts its work to run once initialize() and onCreate() are done.
+        initialize.addInstruction(
+            0,
+            "invoke-static { p0 }, $ENTRY->onSettingsInitializing(Landroid/preference/PreferenceFragment;)V",
+        )
     }
 }
