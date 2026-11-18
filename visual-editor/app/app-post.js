@@ -73,4 +73,6 @@ if (INAPP) {
     $("btnBack").click();
   };
   setMenu(true);
+  // Tell the app the first screen is drawn, so it can fade the editor in (no loading frames).
+  requestAnimationFrame(() => requestAnimationFrame(() => { try { MorpheApp.ready(); } catch (e) { /* older app */ } }));
 }

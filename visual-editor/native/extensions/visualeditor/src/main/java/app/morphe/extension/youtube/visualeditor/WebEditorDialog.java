@@ -14,6 +14,7 @@ import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
+import android.os.SystemClock;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.util.Base64;
@@ -72,6 +73,10 @@ final class WebEditorDialog extends Dialog {
     private final WebView web;
     /** Live titles, entries, defaults and availability, read on the main thread before the page loads. */
     private String meta = "{}";
+    private final long openedAt = SystemClock.uptimeMillis();
+    /** The settings list behind the editor, hidden until the editor closes so it never flashes. */
+    @Nullable private View hiddenList;
+    private boolean revealed;
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     WebEditorDialog(Activity activity) {
@@ -101,6 +106,9 @@ final class WebEditorDialog extends Dialog {
         if (isEmulator()) WebView.setWebContentsDebuggingEnabled(true);
         web = new WebView(activity);
         web.setBackgroundColor(0xFF0F0F0F);
+        // The page fades in once it has drawn its first screen (MorpheApp.ready), so the WebView's
+        // loading frames never show; the dark root stays behind it until then.
+        web.setAlpha(0f);
         web.setOverScrollMode(View.OVER_SCROLL_NEVER);
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
@@ -127,6 +135,7 @@ final class WebEditorDialog extends Dialog {
         Window w = getWindow();
         if (w != null) {
             w.setBackgroundDrawable(new ColorDrawable(0xFF0F0F0F));
+            w.setWindowAnimations(0); // appears at once over the settings list, no pop-in
             w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
             w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING);
             w.setStatusBarColor(0xFF0F0F0F);
@@ -146,6 +155,27 @@ final class WebEditorDialog extends Dialog {
             Logger.printException(() -> "Visual editor: live settings unavailable", ex);
         }
         web.loadUrl(ORIGIN + "index.html");
+        web.postDelayed(this::reveal, 2500); // in case the page never reports ready
+    }
+
+    @Override
+    public void show() {
+        super.show();
+        try {
+            View list = activity.findViewById(android.R.id.content);
+            if (list != null && list.getVisibility() == View.VISIBLE) {
+                list.setVisibility(View.INVISIBLE);
+                hiddenList = list;
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private void reveal() {
+        if (revealed || destroyed) return;
+        revealed = true;
+        android.util.Log.i("MorpheVisualEditor", "ready after " + (SystemClock.uptimeMillis() - openedAt) + " ms");
+        web.animate().alpha(1f).setDuration(160).start();
     }
 
     // ------------------------------------------------------------------ files
@@ -241,6 +271,11 @@ final class WebEditorDialog extends Dialog {
         }
 
         @JavascriptInterface
+        public void ready() {
+            Utils.runOnMainThread(WebEditorDialog.this::reveal);
+        }
+
+        @JavascriptInterface
         public void close() {
             Utils.runOnMainThread(WebEditorDialog.this::dismiss);
         }
@@ -327,6 +362,10 @@ final class WebEditorDialog extends Dialog {
     @Override
     public void dismiss() {
         super.dismiss();
+        if (hiddenList != null) {
+            hiddenList.setVisibility(View.VISIBLE);
+            hiddenList = null;
+        }
         if (destroyed) return;
         destroyed = true;
         try {
