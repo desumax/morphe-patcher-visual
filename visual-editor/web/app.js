@@ -76,6 +76,9 @@ const P = {
   shorts: "M17.77 10.32l-1.2-.5L18 9.06a3.74 3.74 0 0 0-3.5-6.62L6 6.94a3.74 3.74 0 0 0 .23 6.74l1.2.49L6 14.93a3.75 3.75 0 0 0 3.5 6.63l8.5-4.5a3.74 3.74 0 0 0-.23-6.74zM10 14.65v-5.3L15 12l-5 2.65z",
   queue: "M4 6h12v2H4zm0 4h12v2H4zm0 4h8v2H4zm10 0v6l5-3z",
   vr: "M20.74 6H3.21C2.55 6 2 6.57 2 7.28v10.44c0 .7.55 1.28 1.23 1.28h4.79c.52 0 .96-.33 1.14-.79l1.4-3.48c.23-.59.79-1.01 1.44-1.01s1.21.42 1.45 1.01l1.39 3.48c.19.46.63.79 1.11.79h4.79c.71 0 1.26-.57 1.26-1.28V7.28c0-.7-.55-1.28-1.26-1.28zM7.5 14.62c-1.17 0-2.13-.95-2.13-2.12 0-1.17.96-2.13 2.13-2.13s2.12.96 2.12 2.13-.95 2.12-2.12 2.12zm9 0c-1.17 0-2.13-.95-2.13-2.12 0-1.17.96-2.13 2.13-2.13s2.12.96 2.12 2.13-.95 2.12-2.12 2.12z",
+  vibration: "M0 15h2V9H0v6zm3 2h2V7H3v10zm19-8v6h2V9h-2zm-3 8h2V7h-2v10zM16.5 3h-9C6.67 3 6 3.67 6 4.5v15c0 .83.67 1.5 1.5 1.5h9c.83 0 1.5-.67 1.5-1.5v-15c0-.83-.67-1.5-1.5-1.5zM16 19H8V5h8v14z",
+  phone7: "M16.5 3h-9C6.67 3 6 3.67 6 4.5v15c0 .83.67 1.5 1.5 1.5h9c.83 0 1.5-.67 1.5-1.5v-15c0-.83-.67-1.5-1.5-1.5zM16 19H8V5h8v14z",
+  image: "M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z",
   tv: "M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z",
   eye: "M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z",
   visibility_off: "M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z",
@@ -840,7 +843,7 @@ def("seekbar", "style", "fullscreen_large_seekbar");
       ${C("hide_playables", `<div style="margin:0 12px 14px;padding:10px 12px;border-radius:12px;background:#1d2a3a;display:flex;gap:10px;align-items:center">${I("vr")}<div><div class="t1" style="font-size:13px">Playables</div><div class="t2">Play instant games on YouTube</div></div></div>`, { blk: 1 })}
       ${C("hide_surveys", `<div style="margin:0 12px 14px;padding:10px 12px;border-radius:12px;border:1px solid #333"><div class="t1" style="font-size:13px">How are your recommendations?</div><div style="display:flex;gap:6px;margin-top:8px">${["Great", "OK", "Bad"].map(t => `<span class="chip" style="height:26px">${t}</span>`).join("")}</div></div>`, { blk: 1 })}
       ${C("hide_ticket_shelf", `<div style="margin:0 12px 14px;padding:10px 12px;border-radius:12px;background:#272727"><div class="t1" style="font-size:13px">Tickets · Midnight Tapes live in Oslo</div><div class="t2">Sat, 21 Nov · Rockefeller</div></div>`, { blk: 1 })}$1`));
-  wrap("seekbar", html => !V("morphe_custom_seekbar_thumb") ? html : html.replace('<div class="knob" id="knob" style="', `<div class="knob" id="knob" data-thumb="${V("morphe_custom_seekbar_thumb_scale_type") === "ORIGINAL" ? "big" : "fit"}" style="`));
+  wrap("seekbar", html => !V("morphe_custom_seekbar_thumb") ? html : html.replace('<div class="knob" id="knob" style="', `<div class="knob" id="knob" data-thumb="${V("morphe_custom_seekbar_thumb_scale_type") === "ORIGINAL" ? "big" : "fit"}" ${pickedFiles.morphe_custom_seekbar_thumb_file ? `data-img style="--img:url('${pickedFiles.morphe_custom_seekbar_thumb_file}');` : 'style="'}`));
   wrap("seekbar", html => V("morphe_fullscreen_large_seekbar") ? html.replace('id="seek" style="position:relative;left:0;right:0;height:4px;', 'id="seek" style="position:relative;left:0;right:0;height:9px;') : html);
 }
 
@@ -901,7 +904,7 @@ function rotate(dev, orient) { const [w, h] = DEV_SIZE[orient]; dev.classList.re
 // The phone in a scenario is drawn at a fixed small size (so all coordinates stay simple) and then
 // scaled up to fill the space the canvas has, between the caption line and the footer.
 function fitScale(w, h) {
-  const canvas = $("canvas"), sit = canvas.querySelector(".sit"), availW = canvas.clientWidth - 28, availH = canvas.clientHeight - 64 - (sit ? sit.offsetHeight + 8 : 0) - 10;
+  const canvas = $("canvas"), sit = canvas.querySelector(".sit"), availW = canvas.clientWidth - 12, availH = canvas.clientHeight - 64 - (sit ? sit.offsetHeight + 8 : 0) - 10;
   return Math.max(.35, Math.min(3, availW / (w + 6), availH / (h + 6)));
 }
 function fitDev(orient) {
@@ -910,8 +913,8 @@ function fitDev(orient) {
     const first = !gen.dataset.fit; gen.dataset.fit = "1";
     if (first) gen.style.transition = "none"; // a new pair appears at its size; only later changes animate
     // sizes come from the phones' target sizes (a turning phone is still mid-transition when measured)
-    const cells = [...gen.querySelectorAll(".dl7")].map(c => { const d = c.querySelector(".dev"), f = c.querySelector(".sf7"); return [Math.max(parseFloat(d && d.style.width) || 92, 92), (parseFloat(d && d.style.height) || 172) + 14 + (f ? f.offsetHeight + 3 : 0)]; });
-    const G = 10, rowWH = [cells.reduce((a, c) => a + c[0], 0) + G, Math.max(...cells.map(c => c[1]))], colWH = [Math.max(...cells.map(c => c[0])), cells.reduce((a, c) => a + c[1], 0) + G];
+    const cells = [...gen.querySelectorAll(".dl7")].map(c => { const d = c.querySelector(".dev"), f = c.querySelector(".sf7"); return [Math.max(parseFloat(d && d.style.width) || 92, f ? 124 : 92), (parseFloat(d && d.style.height) || 172) + 36 + (f ? f.offsetHeight + 4 : 0)]; });
+    const G = 4, rowWH = [cells.reduce((a, c) => a + c[0], 0) + G, Math.max(...cells.map(c => c[1]))], colWH = [Math.max(...cells.map(c => c[0])), cells.reduce((a, c) => a + c[1], 0) + G];
     const row = fitScale(rowWH[0], rowWH[1]), col = fitScale(colWH[0], colWH[1]);
     const [w, h] = row >= col ? rowWH : colWH, sc = Math.max(row, col);
     gen.style.flexDirection = row >= col ? "row" : "column";
@@ -932,11 +935,19 @@ const devScale = dev => (dev.getBoundingClientRect().width / (dev.offsetWidth ||
 let scSide = null, scStretch = 1, scRun = 0;
 function situation(text) { if (scSide && scSide.i) return; const el = document.querySelector("#canvas .sit"); if (!el) return; el.style.opacity = 0; setTimeout(() => { el.textContent = text; el.style.opacity = 1; }, 160); }
 function setFoot(text) { if (scSide) { scSide.foot.textContent = text; return; } const el = document.querySelector("#canvas .foot"); if (el) el.textContent = text; }
+// A vibration: the phone trembles fast with a tiny amplitude (a big slow shake read as "no"), arcs
+// ripple out on both sides, and a vibrate icon pops up over the phone and buzzes with it. Without
+// vibration the same moment shows the icon crossed out and still, so both sides mark the event.
 function buzz(dev, on) {
+  const host = dev;
+  host.querySelectorAll(".vib7").forEach(e => e.remove());
+  host.insertAdjacentHTML("beforeend", `<div class="vib7 ${on ? "on" : "off"}">${I(on ? "vibration" : "phone7")}</div>`);
+  const ic = host.querySelector(".vib7");
+  setTimeout(() => ic.classList.add("out"), on ? 650 : 750); setTimeout(() => ic.remove(), 1000);
   if (!on) return;
   dev.classList.remove("buzz"); void dev.offsetWidth; dev.classList.add("buzz");
   dev.querySelectorAll(".waves").forEach(w => { w.classList.remove("go"); void w.offsetWidth; w.classList.add("go"); });
-  try { navigator.vibrate && navigator.vibrate(40); } catch { /* not supported */ }
+  try { navigator.vibrate && navigator.vibrate(60); } catch { /* not supported */ }
 }
 // steps belong to the scenario that scheduled them; a replaced scenario never runs its leftover steps
 const at = (ms, f) => { const tk = scenarioToken, side = scSide, run = scRun; return setTimeout(() => { if (!tk.alive || tk !== scenarioToken || run !== scRun) return; const p = scSide; scSide = side; try { f(); } finally { scSide = p; } }, ms * scStretch); };
@@ -954,10 +965,19 @@ function haptic(eventLabel, script) {
   };
 }
 scen("seekbar", "disable_haptic_feedback_chapters", haptic("Crossing a chapter", { run(dev, f, b) {
-  const W = dev.clientWidth, H = dev.clientHeight, y = H * .84 - 2, x0 = W * .3;
-  at(100, () => fingerTo(f, x0, y)); at(300, () => { fingerTo(f, W * .85, y, 1500); dev.querySelector(".mp").style.width = "85%"; });
-  [0.45, 0.62, 0.80].forEach(m => at(300 + 1500 * (m * W - x0) / (W * .85 - x0), b));
+  // the finger drags the seekbar; at each chapter mark the thumb sticks for a moment (as in the app)
+  // and the phone vibrates the instant the thumb reaches the mark
+  const W = dev.clientWidth, H = dev.clientHeight, y = H * .84 - 2, X = m => W * (.08 + .84 * m), mp = dev.querySelector(".mp");
+  const stops = [.30, .45, .62, .80, .92]; let t = 300;
+  at(100, () => { fingerTo(f, X(stops[0]), y); mp.style.width = "30%"; });
+  for (let i = 1; i < stops.length; i++) {
+    const dur = Math.round(1700 * (stops[i] - stops[i - 1]));
+    at(t, () => { fingerTo(f, X(stops[i]), y, dur * scStretch); mp.style.transition = `width ${dur * scStretch}ms linear`; mp.style.width = stops[i] * 100 + "%"; });
+    t += dur;
+    if (i < stops.length - 1) { at(t, b); t += 420; }
+  }
 } }));
+
 scen("seekbar", "disable_haptic_feedback_precise_seeking", haptic("Entering precise seeking", { run(dev, f, b) {
   const W = dev.clientWidth, H = dev.clientHeight;
   at(100, () => fingerTo(f, W * .4, H * .84)); at(400, () => fingerTo(f, W * .4, H * .45, 600));
@@ -974,10 +994,15 @@ scen("seekbar", "disable_haptic_feedback_tap_and_hold", haptic("Tap and hold for
   at(2000, () => f.classList.remove("hold"));
 } }));
 scen("seekbar", "disable_haptic_feedback_zoom", haptic("Pinch to zoom snaps to fill", { run(dev, f, b) {
+  // two fingers spread apart (a pinch needs two)
   const W = dev.clientWidth, H = dev.clientHeight; const v = dev.firstElementChild.nextElementSibling.nextElementSibling;
-  at(150, () => fingerTo(f, W * .45, H * .5)); at(400, () => { fingerTo(f, W * .8, H * .25, 700); v.style.transition = "transform .7s"; v.style.transform = "scale(1.25)"; });
+  const f2 = f.cloneNode(true); f2.removeAttribute("id"); dev.appendChild(f2);
+  at(150, () => { fingerTo(f, W * .44, H * .42); fingerTo(f2, W * .56, H * .58); });
+  at(400, () => { fingerTo(f, W * .22, H * .2, 700 * scStretch); fingerTo(f2, W * .78, H * .8, 700 * scStretch); v.style.transition = `transform ${700 * scStretch}ms`; v.style.transform = "scale(1.25)"; });
   at(1100, () => { b(); dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px;font-size:9px">Zoomed to fill</div>`); });
+  at(1900, () => { f.classList.remove("show"); f2.classList.remove("show"); });
 } }));
+
 scen("fullscreen", "swipe_haptic_feedback", (box, on) => {
   box.innerHTML = device("land", `${miniVideo(6)}`);
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
@@ -1033,12 +1058,20 @@ scen("player", "copy_video_link_with_timestamp_button", (box, on) => {
 });
 SCN_HOLD.morphe_copy_video_link_with_timestamp_button = 7000;
 scen("player", "loop_video", (box, on) => {
-  box.innerHTML = device("land", `${miniVideo(2)}${miniSeek(80)}`);
-  const dev = box.querySelector(".dev"); const mp = dev.querySelector(".mp");
-  at(100, () => { mp.style.width = "100%"; });
-  at(1100, () => { if (on) { mp.style.transition = "none"; mp.style.width = "0%"; dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:40%;font-size:10px">⟲ Replaying</div>`); } else dev.insertAdjacentHTML("beforeend", `<div style="position:absolute;inset:0;background:rgba(0,0,0,.6);display:grid;place-items:center;font-size:10px">Up next</div>`); });
-  return on ? "At the end the video starts again" : "At the end YouTube moves on";
+  box.innerHTML = device("land", `${miniVideo(2)}<div class="lv7" style="position:absolute;left:8px;bottom:22%;font-size:8px;color:#ddd">0:00 / 0:42</div>${miniSeek(55)}`);
+  const dev = box.querySelector(".dev"); const mp = dev.querySelector(".mp"), t = dev.querySelector(".lv7");
+  const clock = (from, to, ms) => { const t0 = performance.now(); const tick = () => { const p = Math.min(1, (performance.now() - t0) / (ms * scStretch)); const s = Math.round(from + (to - from) * p); if (t.isConnected) t.textContent = `0:${String(s).padStart(2, "0")} / 0:42`; if (p < 1 && t.isConnected) requestAnimationFrame(tick); }; tick(); };
+  situation("The video reaches its end");
+  at(100, () => { mp.style.transition = `width ${1000 * scStretch}ms linear`; mp.style.width = "100%"; clock(23, 42, 1000); });
+  at(1150, () => {
+    if (on) { mp.style.transition = "none"; mp.style.width = "0%"; t.textContent = "0:00 / 0:42"; dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:30%;font-size:10px">⟲ Replaying</div>`); }
+    else dev.insertAdjacentHTML("beforeend", `<div style="position:absolute;inset:0;background:rgba(0,0,0,.65);display:grid;place-content:center;gap:4px;justify-items:center;font-size:10px"><span style="color:#aaa;font-size:8px">Up next in 3</span><b style="font-weight:500">Night train to Bodø</b></div>`);
+  });
+  // with the option on, the same video really plays again from the start
+  at(1500, () => { if (!on) return; situation("…and plays again from the start"); dev.querySelectorAll(".toastin").forEach(e => { e.style.transition = "opacity .3s"; e.style.opacity = 0; }); void mp.offsetWidth; mp.style.transition = `width ${2200 * scStretch}ms linear`; mp.style.width = "48%"; clock(0, 20, 2200); });
+  return on ? "At the end the video starts again and keeps playing" : "At the end YouTube moves on to the next video";
 });
+SCN_HOLD.morphe_loop_video = 3800;
 scen("shorts", "shorts_autoplay", (box, on) => {
   situation("A Short is ending");
   box.innerHTML = device("port", `<div class="sh" style="position:absolute;left:0;right:0;top:0;height:200%;transition:transform .5s var(--ease)"><div style="height:50%;background:${ART[5]}"></div><div style="height:50%;background:${ART[7]}"></div></div>${miniSeek(70)}`);
@@ -1592,14 +1625,19 @@ function playScenario(k, prevValue) {
   const box = canvas.querySelector(".scbox"), self = SCN_SELF_DUO.has(k);
   const L = SCN_HOLD[k] || SC_HOLD, runs = self ? 1 : Math.max(1, Math.floor(SC_TOTAL / (L * 1.45)));
   const slot = SC_TOTAL / runs, stretch = Math.max(1, Math.min(1.6, (slot - 400) / L));
-  const vals = duoValues(k, prevValue);
+  let vals = duoValues(k, prevValue);
+  // A list setting with several choices, opened on its default (tapping the card or its value):
+  // instead of guessing which choice to compare, the right side asks. The story starts once one
+  // is picked. Picking a choice in the list itself compares straight away.
+  const d = defaults[k], choices = entriesFor(k).filter(e => !sameVal(e.value, d));
+  const ask = !self && PREF[k].type !== "boolean" && choices.length > 1 && sameVal(V(k), d) && (prevValue === undefined || sameVal(prevValue, d));
   const draw = () => {
     scRun++; scStretch = stretch;
     if (self) {
       const foot = fn(box, V(k), prevValue);
       if (foot) canvas.querySelector(".foot").textContent = foot;
     } else {
-      box.innerHTML = `<div class="duo7 gen">${vals.map(([, l], i) => `<div class="dl7"><span class="${i ? "on" : ""}">${esc(l)}</span><div class="side"></div><div class="sf7"></div></div>`).join("")}</div>`;
+      box.innerHTML = `<div class="duo7 gen">${vals.map(([, l], i) => `<div class="dl7"><span class="${i ? "on" : ""} ${String(l).length > 14 ? "xlong" : String(l).length > 8 ? "long" : ""}">${esc(l)}</span><div class="side"></div><div class="sf7"></div></div>`).join("")}</div>`;
       box.querySelectorAll(".dl7").forEach((cell, i) => {
         const side = { i, foot: cell.querySelector(".sf7") };
         scSide = side;
@@ -1609,21 +1647,48 @@ function playScenario(k, prevValue) {
     }
     fitDev();
   };
-  draw();
-  for (let r = 1; r < runs; r++) setTimeout(() => { if (token.alive && token === scenarioToken) draw(); }, SC_FADE + r * slot);
-  canvas.querySelector(".prog").animate([{ width: "0%" }, { width: "100%" }], { duration: SC_TOTAL, delay: SC_FADE, fill: "forwards" });
-  setTimeout(() => {
-    if (!token.alive) return;
-    canvas.classList.remove("show");
-    setTimeout(() => { if (!token.alive) return; token.alive = false; canvas.innerHTML = ""; $("stage").style.minHeight = ""; if (wasHidden && !SCENES[section]) { stick.hidden = !grouped; stick.classList.add("noscene"); $("stage").innerHTML = ""; } }, SC_FADE);
-  }, SC_FADE + SC_TOTAL);
+  const start = () => {
+    draw();
+    for (let r = 1; r < runs; r++) setTimeout(() => { if (token.alive && token === scenarioToken) draw(); }, SC_FADE + r * slot);
+    canvas.querySelector(".prog").animate([{ width: "0%" }, { width: "100%" }], { duration: SC_TOTAL, delay: SC_FADE, fill: "forwards" });
+    setTimeout(() => {
+      if (!token.alive) return;
+      canvas.classList.remove("show");
+      setTimeout(() => { if (!token.alive) return; token.alive = false; canvas.innerHTML = ""; $("stage").style.minHeight = ""; if (wasHidden && !SCENES[section]) { stick.hidden = !grouped; stick.classList.add("noscene"); $("stage").innerHTML = ""; } }, SC_FADE);
+    }, SC_FADE + SC_TOTAL);
+  };
+  if (!ask) return start();
+  // the default side is drawn as its first frame and held; the other side lists the choices
+  draw(); scRun++;
+  const cells = box.querySelectorAll(".dl7"), right = cells[1];
+  right.querySelector("span").textContent = "Select an option"; right.querySelector("span").classList.add("ask");
+  right.querySelector(".sf7").textContent = "";
+  const dev = right.querySelector(".dev"), dw = dev ? dev.style.width : "92px", dh = dev ? dev.style.height : "172px";
+  right.querySelector(".side").innerHTML = `<div class="ask7" style="width:${dw};height:${dh}">${choices.map(e => `<button data-pick="${esc(String(e.value))}">${esc(e.label)}</button>`).join("")}</div>`;
+  fitDev();
+  right.querySelector(".ask7").addEventListener("click", e => {
+    e.stopPropagation(); // the canvas closes on a tap anywhere else
+    const b = e.target.closest("[data-pick]"); if (!b || !token.alive || token !== scenarioToken) return;
+    const v = choices.find(c => String(c.value) === b.dataset.pick).value;
+    const lab = x => entriesFor(k).find(c => sameVal(c.value, x))?.label || String(x);
+    vals = [[d, lab(d)], [v, lab(v)]]; right.querySelector("span").classList.remove("ask");
+    start();
+  });
 }
 function stopScenario() { scenarioToken.alive = false; $("canvas").classList.remove("show"); $("stage").style.minHeight = ""; }
 
 // ------------------------------------------------------------------ demos (gesture / behaviour), faster loop
 const LOOP_MS = 1500;
 let demoTimer = null, demoStep = 0;
-function stopDemo() { clearInterval(demoTimer); demoTimer = null; document.querySelectorAll("#stage .demo-label.dyn").forEach(n => { n.style.opacity = "0"; setTimeout(() => n.remove(), 250); }); }
+// Every timer a demo starts goes through dT, so switching to another setting (or toggling this one)
+// cancels what the previous run still had queued, and the finger starts clean: no hold ring, seek
+// position or toast from the last demo leaks into the next.
+let demoTimers = [];
+function dT(fn, ms) { const id = setTimeout(fn, ms); demoTimers.push(id); return id; }
+function stopDemo() {
+  clearInterval(demoTimer); demoTimer = null; demoTimers.forEach(clearTimeout); demoTimers = [];
+  document.querySelectorAll("#stage .finger").forEach(f => { f.style.transition = "none"; f.classList.remove("show", "hold", "tap"); });
+  document.querySelectorAll("#stage .toastin.dyn").forEach(n => n.remove()); document.querySelectorAll("#stage .demo-label.dyn").forEach(n => { n.style.opacity = "0"; setTimeout(() => n.remove(), 250); }); }
 function label(text, bad, ms) {
   const st = $("stage");
   st.querySelectorAll(".demo-label.dyn").forEach(n => n.remove());
@@ -1636,14 +1701,14 @@ function label(text, bad, ms) {
 const ENDSCREEN_SEL = new Set(["morphe_hide_autoplay_preview", "morphe_hide_end_screen_suggested_video"]);
 function finger() { return document.querySelector("#stage .finger"); }
 function place(f, x, y, ms) { f.style.transition = ms ? `left ${ms}ms var(--ease), top ${ms}ms var(--ease), opacity 120ms` : "opacity 120ms"; f.style.left = x + "px"; f.style.top = y + "px"; f.classList.add("show"); }
-function hideF(f, after) { setTimeout(() => { f.classList.remove("show", "hold"); }, after); }
+function hideF(f, after) { dT(() => { f.classList.remove("show", "hold"); }, after); }
 function tapAt(x, y) { const f = finger(); if (!f) return; place(f, x, y); f.classList.remove("tap"); void f.offsetWidth; f.classList.add("tap"); hideF(f, 520); }
 function fmt(total, pct) { const s = Math.round(total * pct / 100); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }
 function setSeek(pct) { const p = $("played"), k = $("knob"); if (p) p.style.width = pct + "%"; if (k) k.style.left = pct + "%"; }
 function showPill(text, ms = 1100) {
   const st = $("stage").firstElementChild; if (!st) return;
-  const d = document.createElement("div"); d.className = "toastin"; d.style.top = "14px"; d.textContent = text; st.appendChild(d);
-  setTimeout(() => d.remove(), ms);
+  const d = document.createElement("div"); d.className = "toastin dyn"; d.style.top = "14px"; d.textContent = text; st.appendChild(d);
+  dT(() => d.remove(), ms);
 }
 const DEMOS = {
   morphe_tap_to_seek(on) {
@@ -1651,23 +1716,23 @@ const DEMOS = {
     const st = $("stage").getBoundingClientRect(), r = seek.getBoundingClientRect();
     const pct = [72, 30, 55, 88, 12][demoStep % 5];
     tapAt(r.left - st.left + r.width * pct / 100, r.top - st.top + r.height / 2);
-    if (on) { setTimeout(() => setSeek(pct), 120); label(`Tap on seekbar: jumps to ${fmt(18 * 60 + 42, pct)}`); }
+    if (on) { dT(() => setSeek(pct), 120); label(`Tap on seekbar: jumps to ${fmt(18 * 60 + 42, pct)}`); }
     else label("Tap on seekbar: nothing happens. Stock YouTube needs a drag.", true);
   },
   morphe_slide_to_seek(on) {
     const f = finger(); if (!f) return; const W = $("stage").clientWidth;
     place(f, W * .3, 90); f.classList.add("hold");
-    if (on) { label("Press and hold the video, then slide: seeks"); setTimeout(() => { place(f, W * .7, 90, 700); setSeek(60); }, 250); }
+    if (on) { label("Press and hold the video, then slide: seeks"); dT(() => { place(f, W * .7, 90, 700); setSeek(60); }, 250); }
     else { label("Press and hold the video: plays at 2x speed (stock)", true); showPill("2x ▸▸"); }
     hideF(f, 1150);
   },
   morphe_disable_precise_seeking_gesture(disabled) {
     const film = $("film"), f = finger(); if (!film || !f) return; const st = $("stage");
     place(f, st.clientWidth * .42, st.clientHeight - 40);
-    setTimeout(() => place(f, st.clientWidth * .42, st.clientHeight - 110, 450), 120);
-    if (!disabled) { setTimeout(() => { film.style.display = "flex"; }, 450); label("Pull up on the seekbar: precise seeking opens"); }
+    dT(() => place(f, st.clientWidth * .42, st.clientHeight - 110, 450), 120);
+    if (!disabled) { dT(() => { film.style.display = "flex"; }, 450); label("Pull up on the seekbar: precise seeking opens"); }
     else label("Pull up on the seekbar: precise seeking stays off", true);
-    setTimeout(() => { film.style.display = "none"; }, 1250); hideF(f, 1150);
+    dT(() => { film.style.display = "none"; }, 1250); hideF(f, 1150);
   },
   morphe_swipe_left_zone(v) { swipeDemo("left", v); },
   morphe_swipe_right_zone(v) { swipeDemo("right", v); },
@@ -1686,15 +1751,15 @@ const DEMOS = {
   morphe_swipe_zone_width() { swipeZones(1400, true); label(`Left and right zones: ${V("morphe_swipe_zone_width")}% of the width each`, false, 1400); },
   morphe_swipe_seek(on) {
     const f = finger(); if (!f) return; const W = $("stage").clientWidth;
-    place(f, W * .35, 80); setTimeout(() => place(f, W * .7, 80, 650), 150);
+    place(f, W * .35, 80); dT(() => place(f, W * .7, 80, 650), 150);
     if (on) { label("Swipe sideways in fullscreen: +1:30, release to seek"); showPill("+1:30  ▸▸"); } else label("Swipe sideways: does nothing (stock)", true);
     hideF(f, 1100);
   },
   morphe_disable_shorts_double_tap_to_like(disabled) {
     const W = $("stage").clientWidth;
-    tapAt(W * .45, 170); setTimeout(() => tapAt(W * .45, 170), 180);
+    tapAt(W * .45, 170); dT(() => tapAt(W * .45, 170), 180);
     const h = $("heart");
-    if (!disabled && h) { setTimeout(() => { h.style.transform = "translate(-50%,-50%) scale(1)"; }, 260); setTimeout(() => { h.style.transform = "translate(-50%,-50%) scale(0)"; }, 900); label("Double-tap: likes the Short (stock)"); }
+    if (!disabled && h) { dT(() => { h.style.transform = "translate(-50%,-50%) scale(1)"; }, 260); dT(() => { h.style.transform = "translate(-50%,-50%) scale(0)"; }, 900); label("Double-tap: likes the Short (stock)"); }
     else label("Double-tap: does nothing, no accidental likes", true);
   },
   morphe_autoplay_mode(v) {
@@ -1728,15 +1793,15 @@ function swipeZones(ms = 900, labels = false) {
   const z = document.createElement("div"); z.className = "zones" + (labels ? " lab" : "");
   z.innerHTML = `<i class="${act("left") === "OFF" ? "zoff" : ""}" style="left:0;width:${zw}%">${lab("left")}</i><i class="${act("right") === "OFF" ? "zoff" : ""}" style="right:0;width:${zw}%">${lab("right")}</i>${top || labels ? `<i class="${top ? "" : "zoff"}" style="left:${zw}%;right:${zw}%;top:0;bottom:auto;height:${th}%">${lab("top")}</i>` : ""}`;
   st.appendChild(z);
-  if (ms) { setTimeout(() => z.classList.add("out"), ms); setTimeout(() => z.remove(), ms + 400); }
+  if (ms) { dT(() => z.classList.add("out"), ms); dT(() => z.remove(), ms + 400); }
 }
 function swipeDemo(side, action, prefix = "") {
   const st = $("stage"), f = finger(), hud = $("hud"); if (!f || !hud) return;
   const zw = Math.max(5, Math.min(50, Number(V("morphe_swipe_zone_width")) || 37)) / 100;
   const W = st.clientWidth, H = st.firstElementChild.clientHeight, x = side === "top" ? W * .5 : side === "left" ? W * zw / 2 : W * (1 - zw / 2);
   swipeZones();
-  if (side === "top") { place(f, W * .35, H * .12); setTimeout(() => place(f, W * .65, H * .12, 800), 120); }
-  else { place(f, x, H * .75); setTimeout(() => place(f, x, H * .25, 800), 120); }
+  if (side === "top") { place(f, W * .35, H * .12); dT(() => place(f, W * .65, H * .12, 800), 120); }
+  else { place(f, x, H * .75); dT(() => place(f, x, H * .25, 800), 120); }
   const sideName = side === "top" ? "Top" : side === "left" ? "Left" : "Right";
   if (!action || action === "OFF") { label(`${sideName} swipe: does nothing (off)`, true); hud.style.display = "none"; }
   else {
@@ -1758,7 +1823,7 @@ function swipeDemo(side, action, prefix = "") {
     let p = 20; hud.style.setProperty("--p", p + "%");
     const t = setInterval(() => { p += 10; hud.style.setProperty("--p", Math.min(p, 90) + "%"); if (p > 90) clearInterval(t); }, 80);
     label(`${prefix}${sideName} swipe: ${entryLabel("morphe_swipe_" + side + "_zone", action) || action.toLowerCase()}`);
-    setTimeout(() => { hud.style.display = "none"; }, 1200);
+    dT(() => { hud.style.display = "none"; }, 1200);
   }
   hideF(f, 1050);
 }
@@ -1796,7 +1861,7 @@ Object.assign(DEMOS, {
       const t = Math.min(1, Math.max(0, (now - t0) / dur)), e = t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
       frame(p0 + (p1 - p0) * e);
       if (t < 1) requestAnimationFrame(step);
-      else setTimeout(() => { if (demoTimer !== tok) return; f.classList.remove("show", "hold"); if (bub) { bub.classList.remove("dragging"); bub.style.left = ""; bub.style.opacity = ""; } if (tl) tl.textContent = "7:51"; [played, knob].forEach(e => e && (e.style.transition = "")); setSeek(p0); }, 450);
+      else dT(() => { if (demoTimer !== tok) return; f.classList.remove("show", "hold"); if (bub) { bub.classList.remove("dragging"); bub.style.left = ""; bub.style.opacity = ""; } if (tl) tl.textContent = "7:51"; [played, knob].forEach(e => e && (e.style.transition = "")); setSeek(p0); }, 450);
     };
     requestAnimationFrame(step);
     label(on ? "Drag the seekbar: a thumbnail follows your finger" : "Drag the seekbar: no thumbnail, only the time", !on);
@@ -1804,8 +1869,8 @@ Object.assign(DEMOS, {
   morphe_hide_player_gesture_hints(hidden) {
     const f = finger(); if (!f) return; const st = $("stage");
     const hint = document.querySelector('#stage [data-k="morphe_hide_player_gesture_hints"]');
-    place(f, st.clientWidth * .42, st.clientHeight - 16); setTimeout(() => place(f, st.clientWidth * .42, st.clientHeight - 90, 600), 120);
-    if (hint) { hint.style.transition = "opacity .2s"; hint.style.opacity = "0"; setTimeout(() => { hint.style.opacity = hidden ? "0" : "1"; }, 300); setTimeout(() => { hint.style.opacity = ""; }, 1400); }
+    place(f, st.clientWidth * .42, st.clientHeight - 16); dT(() => place(f, st.clientWidth * .42, st.clientHeight - 90, 600), 120);
+    if (hint) { hint.style.transition = "opacity .2s"; hint.style.opacity = "0"; dT(() => { hint.style.opacity = hidden ? "0" : "1"; }, 300); dT(() => { hint.style.opacity = ""; }, 1400); }
     label(hidden ? "Pull up on the seekbar: no hint appears" : "Pull up on the seekbar: the hint explains the gesture", hidden);
     hideF(f, 1100);
   },
@@ -1839,7 +1904,7 @@ Object.assign(DEMOS, {
     const ed = document.createElement("div"); ed.className = "sbedit";
     ed.innerHTML = `<span class="chip">${I("prev", "ico", 'style="width:14px;height:14px"')} −${step} ms</span><span class="chip" style="background:#3ea6ff;color:#000">Start 1:30</span><span class="chip">End …</span><span class="chip">+${step} ms ${I("next", "ico", 'style="width:14px;height:14px"')}</span><span class="chip">${I("arrow", "ico", 'style="width:14px;height:14px"')} Publish</span>`;
     st.appendChild(ed); label("Create a segment: mark start and end, adjust, publish", false, 1300);
-    setTimeout(() => ed.remove(), 1450);
+    dT(() => ed.remove(), 1450);
   },
   morphe_sb_create_new_segment_step() { DEMOS.morphe_sb_create_new_segment(true); },
   morphe_sb_voting_button(on) {
@@ -1847,7 +1912,7 @@ Object.assign(DEMOS, {
     st.querySelectorAll(".sbedit").forEach(n => n.remove());
     const ed = document.createElement("div"); ed.className = "sbedit";
     ed.innerHTML = `<span class="chip">${I("like", "ico", 'style="width:14px;height:14px"')} Upvote</span><span class="chip">${I("dislike", "ico", 'style="width:14px;height:14px"')} Downvote</span><span class="chip">Change category</span>`;
-    st.appendChild(ed); label("Vote on the segments of this video", false, 1300); setTimeout(() => ed.remove(), 1450);
+    st.appendChild(ed); label("Vote on the segments of this video", false, 1300); dT(() => ed.remove(), 1450);
   },
 });
 // Shared pieces for small "phone" scenarios: a page made of rows, a toast, a sheet.
@@ -1990,7 +2055,7 @@ Object.assign(DEMOS, {
   morphe_skip_silence(on) {
     const t = $("pbTime"); if (!t) return;
     t.textContent = "3:12 / 18:42"; label(on ? "A quiet pause: skipped" : "A quiet pause: plays through (stock)", !on, 1300);
-    if (on) setTimeout(() => { t.style.transition = "color .2s"; t.style.color = "#3ea6ff"; t.textContent = "3:14 / 18:42"; showPill("Skipped 2 s of silence", 900); setTimeout(() => { t.style.color = ""; }, 600); }, 500);
+    if (on) dT(() => { t.style.transition = "color .2s"; t.style.color = "#3ea6ff"; t.textContent = "3:14 / 18:42"; showPill("Skipped 2 s of silence", 900); dT(() => { t.style.color = ""; }, 600); }, 500);
   },
 });
 def("playback", "behaviour", "remember_playback_speed_last_selected_toast remember_video_quality_last_selected_toast skip_silence");
@@ -2026,7 +2091,7 @@ Object.assign(DEMOS, {
   morphe_narrow_navigation_buttons(on) {
     const nb = document.querySelector("#stage .navbar"); if (!nb) return;
     nb.classList.toggle("narrow", !on);
-    setTimeout(() => { if (document.body.contains(nb)) nb.classList.toggle("narrow", on); }, 650);
+    dT(() => { if (document.body.contains(nb)) nb.classList.toggle("narrow", on); }, 650);
     label(on ? "Narrow buttons: grouped in the middle, easier to reach" : "Default: buttons spread over the whole width", !on, 1300);
   },
 });
@@ -2678,22 +2743,30 @@ function renderBar() {
   const pick = (x, i) => {
     const m = MEMBERS[x.id];
     const sub = `${m.live.length + m.misc.length} settings`;
-    return `<button class="pick" role="menuitem" data-sec="${x.id}" aria-current="${x.id === section}" style="transition-delay:${Math.min(i, 12) * 12}ms"><span class="pi">${I(x.icon)}</span><span><div class="pt">${esc(x.title)}</div><div class="ps">${sub}</div></span></button>`;
+    return `<button class="pick" role="menuitem" data-sec="${x.id}" aria-current="${x.id === section}" style="transition-delay:${Math.min(i, 12) * 12}ms"><span class="pi">${I(x.icon)}</span><span><div class="pt">${esc(x.title)}${devMark(x.id)}</div><div class="ps">${sub}</div></span></button>`;
   };
   const vis = SECTIONS.filter(x => SCENES[x.id]), plain = SECTIONS.filter(x => !SCENES[x.id]);
-  const gpick = (x, i) => { const n = tabsOf(x).reduce((a, [t]) => a + MEMBERS[t].live.length + MEMBERS[t].misc.length, 0); return `<button class="pick" role="menuitem" data-group="${x.id}" aria-current="${x === g}" style="transition-delay:${i * 12}ms"><span class="pi">${I(x.icon)}</span><span><div class="pt">${esc(x.title)}</div><div class="ps">${tabsOf(x).map(([, t]) => esc(t)).join(" · ")}</div><div class="ps">${n} settings</div></span></button>`; };
+  const gpick = (x, i) => { const n = tabsOf(x).reduce((a, [t]) => a + MEMBERS[t].live.length + MEMBERS[t].misc.length, 0); return `<button class="pick" role="menuitem" data-group="${x.id}" aria-current="${x === g}" style="transition-delay:${i * 12}ms"><span class="pi">${I(x.icon)}</span><span><div class="pt">${esc(x.title)}${devMarkGroup(x)}</div><div class="ps">${tabsOf(x).map(([, t]) => esc(t)).join(" · ")}</div><div class="ps">${n} settings</div></span></button>`; };
   $("pickGrid").innerHTML = (grouped ? `<div class="pg pvis pgroups">${GROUPS.map(gpick).join("")}</div>` : `<div class="pg pvis">${vis.map(pick).join("")}</div>` + `<div class="plaincard"><div class="ph">${I("list")}No preview · standard settings</div><div class="pg">${plain.map(pick).join("")}</div></div>`)
     + `<div class="themerow"><div class="themetog" data-theme-toggle role="menuitemcheckbox" aria-checked="${theme === "m3"}"><span class="pi">${I("palette")}</span><div class="tt">Morphe design</div><span class="sw" role="presentation" aria-checked="${theme === "m3"}"></span></div>`
     + `<button class="ordreset" data-order-reset ${customOrder ? "" : "disabled"} title="Hold a screen to move it. This restores Morphe's order.">${I("reset")}Reset order</button></div>`
     + `<div class="themerow simrow"><div class="themetog" data-group-toggle role="menuitemcheckbox" aria-checked="${grouped}"><span class="pi">${I("layers")}</span><div class="tt">Group screens into tabs<small>Six screens instead of ${SECTIONS.length}. Each one has tabs right under the live preview, and every tab brings its own preview.</small></div><span class="sw" role="presentation" aria-checked="${grouped}"></span></div></div>`;
   $("btnReset").disabled = mode !== "mod" || !Object.keys(PREF).some(k => JSON.stringify(state[k]) !== JSON.stringify(defaults[k]));
 }
+// ---- DEV ONLY: "finished" checkmarks -------------------------------------------------------------
+// Screens Max has signed off ("lock it"). Shown as a small check in the screen menu and on the tabs.
+// To remove before shipping: delete this block, the .devdone CSS rule, and the three devMark /
+// devMarkGroup calls (screen menu card, group card, tab).
+const DEV_DONE = new Set([]); // section ids, e.g. "player"
+const devMark = id => DEV_DONE.has(id) ? `<span class="devdone" title="Finished (development marker)">✓</span>` : "";
+const devMarkGroup = g => tabsOf(g).length && tabsOf(g).every(([id]) => DEV_DONE.has(id)) ? devMark(tabsOf(g)[0][0]) : "";
+// ---- end DEV ONLY ---------------------------------------------------------------------------------
 function renderTabs() {
   const box = $("tabs"); if (!box) return;
   $("stick").classList.toggle("grouped", grouped);
   if (!grouped) { box.innerHTML = ""; return; }
   const g = groupOf(section);
-  box.innerHTML = tabsOf(g).map(([id, t]) => `<button class="tab7" role="tab" data-tab="${id}" aria-selected="${id === section}">${esc(t)}</button>`).join("");
+  box.innerHTML = tabsOf(g).map(([id, t]) => `<button class="tab7" role="tab" data-tab="${id}" aria-selected="${id === section}">${esc(t)}${devMark(id)}</button>`).join("");
   const cur = box.querySelector('[aria-selected="true"]');
   if (cur) box.scrollTo({ left: cur.offsetLeft - (box.clientWidth - cur.offsetWidth) / 2, behavior: "smooth" });
 }
@@ -2831,7 +2904,9 @@ function controlFor(k) {
   const p = PREF[k]; const v = V(k); const dis = !parentsOk(k) ? "disabled" : "";
   const ents = entriesFor(k).filter(e => !(OFF_LIST.has(k) && e.value === "off"));
   if (OFF_LIST.has(k) && String(v) === "off") return "";
-  if (ents.length && ents.length <= 8) return `<div class="ctl">${ents.map(e => `<button class="opt" data-set="${k}" data-val="${esc(e.value)}" aria-pressed="${sameVal(e.value, v)}" ${dis}>${esc(e.label)}</button>`).join("")}</div>`;
+  // up to 8 choices: a row of pills; 9 to 16 (icon styles, theme colours, qualities): a 4-column grid
+  // of pills built from the same entries, so it follows whatever list Morphe ships; more: a dropdown
+  if (ents.length && ents.length <= 16) return `<div class="ctl ${ents.length > 8 ? "grid4" : ""}">${ents.map(e => `<button class="opt" data-set="${k}" data-val="${esc(e.value)}" aria-pressed="${sameVal(e.value, v)}" ${dis}>${esc(e.label)}</button>`).join("")}</div>`;
   if (ents.length) return `<div class="ctl"><select data-set="${k}" ${dis} aria-label="${esc(title(k))}">${ents.map(e => `<option value="${esc(e.value)}" ${sameVal(e.value, v) ? "selected" : ""}>${esc(e.label)}</option>`).join("")}</select></div>`;
   if (p.type === "integer" || p.type === "float" || p.type === "long") {
     const r = Object.entries(RANGES).find(([n]) => k.includes(n));
@@ -2842,6 +2917,8 @@ function controlFor(k) {
     return `<div class="ctl"><input type="number" value="${v}" data-set="${k}" ${dis} aria-label="${esc(title(k))}" step="${p.type === "float" ? "0.05" : "1"}"></div>`;
   }
   if (p.type === "string") {
+    // Morphe opens the system file picker for these; the preview does the same and draws the image
+    if (p.widget === "NonInteractivePreference" && /_file$/.test(k)) return `<div class="ctl"><label class="opt filepick" ${dis ? 'aria-disabled="true"' : ""}>${I("image")}${v ? "Change image" : "Choose image"}<input type="file" accept="image/*" data-file="${k}" ${dis} hidden></label>${v ? `<span class="val">${esc(v)}</span>` : ""}</div>`;
     if (/color/.test(k) && /^#/.test(String(v))) return `<div class="ctl"><input type="color" value="#${String(v).slice(-6)}" data-set="${k}" ${dis} aria-label="${esc(title(k))}"><span class="val">${esc(v)}</span></div>`;
     if (String(p.default ?? "").includes("\n") || /strings|phrases|speeds|whitelist|filter/.test(k)) return `<div class="ctl"><textarea data-set="${k}" ${dis} aria-label="${esc(title(k))}">${esc(v)}</textarea></div>`;
     return `<div class="ctl"><input type="text" value="${esc(v)}" data-set="${k}" ${dis} aria-label="${esc(title(k))}"></div>`;
@@ -2879,7 +2956,7 @@ function rowHTML(k, live) {
   if (OFF_LIST.has(k)) { right = `<button class="sw" role="switch" data-sw="${k}" aria-checked="${String(V(k)) !== "off"}" aria-label="${esc(title(k))}"></button>`; ctl = controlFor(k); }
   else if (live && a.kind !== "scenario") { right = stateChip(k); if (!isBool) ctl = controlFor(k); }
   else if (isBool) right = `<button class="sw" role="switch" data-sw="${k}" aria-checked="${!!V(k)}" aria-label="${esc(title(k))}"></button>`;
-  else if (!info) ctl = controlFor(k);
+  else if (!info || (p.widget === "NonInteractivePreference" && /_file$/.test(k))) ctl = controlFor(k);
   const cls = ["row", live ? "live" : "fallback"];
   if (selected === k) cls.push("sel");
   if (dis) cls.push("dis");
@@ -2942,6 +3019,7 @@ function byPosition(keys) {
   return [...placed, ...keys.filter(k => at(k) === null)];
 }
 let lastVis = { sec: null, keys: new Set() };
+const pickedFiles = {}; // images chosen with a file picker, kept for this visit only
 let peekKid = null, lastOpen = new Set(), lastDis = { sec: null, keys: new Set() };
 const collapsed = new Set();
 function renderList() {
@@ -2991,7 +3069,17 @@ function renderList() {
     for (const g of Object.keys(groups).sort()) html += `<div class="gtitle">${esc(g)} · ${groups[g].length}</div><div class="group">${groups[g].map(withKids).join("")}</div>`;
   }
   const list = $("list");
+  // sub-options that are about to fold away keep their old look (no locks popping in) while they
+  // close; the new state is swapped in once they are out of sight
+  const closingOld = new Map();
+  if (lastVis.sec === section) list.querySelectorAll(".kids.open").forEach(b => { if (!wantOpen.has(b.dataset.kidsOf)) closingOld.set(b.dataset.kidsOf, b.querySelector(".kin").innerHTML); });
   list.innerHTML = html;
+  closingOld.forEach((old, grp) => {
+    const kin = list.querySelector(`[data-kids-of="${grp}"] > .kin`); if (!kin) return;
+    const fresh = kin.innerHTML; kin.innerHTML = old;
+    kin.querySelectorAll(".row").forEach(r => r.classList.remove("sel", "attn", "nudge"));
+    setTimeout(() => { if (kin.isConnected && !kin.parentElement.classList.contains("open")) kin.innerHTML = fresh; }, 320);
+  });
   // animate sub-option groups and rows from their previous state to the new one
   void list.offsetHeight;
   const sameSec = lastVis.sec === section;
@@ -3202,15 +3290,27 @@ function snack(msg, undo) {
 $("canvas").addEventListener("click", () => stopScenario());
 $("snackUndo").onclick = () => { if (undoFn) undoFn(); undoFn = null; $("snack").classList.remove("show"); };
 
+// A setting that has no element of its own in the preview (it changes how something behaves) points
+// at the element that does the behaviour: its parent's element (Playback speed button for "Tap to
+// cycle speeds"), or a named one (the seekbar for the seekbar colour and thumb settings).
+const PROXY_K = { morphe_seekbar_custom_color: "morphe_hide_seekbar", morphe_custom_seekbar_thumb: "morphe_hide_seekbar" };
+function proxyEls(k) {
+  const q = x => [...document.querySelectorAll(`#stage [data-k="${x}"], #stage [data-also="${x}"]`)].filter(e => e.getClientRects().length && !e.classList.contains("off"));
+  if (q(k).length) return [];
+  const seen = new Set();
+  for (let p = PROXY_K[k] || PARENT_OF[k]; p && !seen.has(p); p = PROXY_K[p] || PARENT_OF[p]) { seen.add(p); const e = q(p); if (e.length) return e; }
+  return [];
+}
 function highlight(k, flash = true, reveal = false) {
   document.querySelectorAll(".sel").forEach(e => e.classList.remove("sel", "selin"));
   document.querySelectorAll(`[data-k="${k}"], [data-row="${k}"], [data-also="${k}"]`).forEach(e => e.classList.add("sel"));
   const els = [...document.querySelectorAll(`#stage [data-k="${k}"], #stage [data-also="${k}"]`)];
-  const finish = () => els.forEach(e => {
+  const proxy = els.length ? [] : proxyEls(k);
+  const finish = () => { els.forEach(e => {
     fitOutline(e);
     // big components (bars, shelves) only glow: scaling them up looked like the whole preview jumping
     if (flash) flashStage(e);
-  });
+  }); if (flash) proxy.forEach(e => { fitRing(e); flashStage(e); }); };
   const finish0 = finish;
   const finishAll = () => { finish0(); lastFlash = { k, t: Date.now() }; if (parentFlashFor === k) flashParents(k); };
   if (!reveal || skipReveal) { skipReveal = false; return finishAll(); }
@@ -3265,8 +3365,10 @@ function scrollBoxes(el) {
   const out = [], stage = $("stage");
   for (let p = el.parentElement; p && p !== stage; p = p.parentElement) {
     const cs = getComputedStyle(p);
-    const sx = !p.classList.contains("inner-scroll") && p.scrollWidth > p.clientWidth + 1 && p.scrollHeight <= p.clientHeight + 1 && /auto|scroll|hidden/.test(cs.overflowX);
-    const sy = p.scrollHeight > p.clientHeight + 1 && /auto|scroll|hidden/.test(cs.overflowY);
+    // a sideways strip stays sideways even while a flashing (slightly scaled up) child makes it a
+    // few pixels taller than its box; reading it as a vertical scroller sent the selection off screen
+    const sx = !p.classList.contains("inner-scroll") && p.scrollWidth > p.clientWidth + 1 && /auto|scroll|hidden/.test(cs.overflowX);
+    const sy = p.scrollHeight > p.clientHeight + (sx ? 12 : 1) && /auto|scroll|hidden/.test(cs.overflowY);
     if (sx || sy) out.push([p, sx, sy]);
   }
   return out;
@@ -3286,7 +3388,11 @@ function revealInStage(els) {
       let dx = 0, dy = 0;
       if (sx && (r.left < b.left + 4 || r.right > b.right - 4)) dx = (r.left + r.width / 2) - (b.left + b.width / 2);
       if (sy && (r.top < b.top + 4 || r.bottom > b.bottom - 4)) dy = (r.top + Math.min(r.height, b.height) / 2) - (b.top + b.height / 2);
-      if (dx || dy) { box.scrollBy({ left: dx, top: dy, behavior: "smooth" }); moved = true; }
+      // absolute targets: a relative scrollBy issued while an earlier smooth scroll is still running
+      // lands off target (quick successive selections). With nothing to move, stop any scroll still
+      // running from the previous selection so it can't carry this element out of view.
+      if (dx || dy) { box.scrollTo({ left: box.scrollLeft + dx, top: box.scrollTop + dy, behavior: "smooth" }); moved = true; }
+      else box.scrollTo({ left: box.scrollLeft, top: box.scrollTop, behavior: "instant" });
     });
   });
   return moved;
@@ -3502,7 +3608,8 @@ function sizeAnim(el, show, ms = SIZE_MS) {
 function afterChange(k, before) {
   if (peekKid && kidVisible(peekKid)) peekKid = null;
   commit(); select(k);
-  const sb = document.querySelector(".stagebox"); if (sb) { sb.classList.remove("changed"); void sb.offsetWidth; sb.classList.add("changed"); }
+  // the whole preview only pulses when nothing in it stands for this setting
+  const sb = document.querySelector(".stagebox"); if (sb && !document.querySelector(`#stage [data-k="${k}"], #stage [data-also="${k}"]`) && !proxyEls(k).length) { sb.classList.remove("changed"); void sb.offsetWidth; sb.classList.add("changed"); }
   try { navigator.vibrate && navigator.vibrate(20); } catch { /* ignore */ }
   if (SCN[k]) playScenario(k, before);
   // teleport back to the setting that was waiting on this one
@@ -3523,13 +3630,23 @@ function coerce(k, v) { const t = PREF[k].type; if (t === "integer" || t === "lo
 function switchSection(id, after) {
   if (id === section) { after && after(); return; }
   const from = SECTIONS.findIndex(s => s.id === section), to = SECTIONS.findIndex(s => s.id === id);
+  // The tabs stay put. The preview and the settings slide out and in together, and the preview
+  // frame grows or shrinks smoothly to the new screen's height.
   const content = $("content"); content.style.setProperty("--dir", (to > from ? -24 : 24) + "px");
-  content.classList.remove("swap-in"); content.classList.add("swap-out");
+  const box = document.querySelector(".stagebox"), parts = [$("stage"), $("list")];
+  const shown = el => el && el.offsetParent !== null;
+  const h0 = shown(box) ? box.offsetHeight : 0;
+  parts.forEach(p => { p.classList.remove("swap-in"); p.classList.add("swap-out"); });
   stopDemo(); stopScenario();
   setTimeout(() => {
     section = id; selected = null; peekKid = null; trayOpen = false; lastTab[groupOf(id).id] = id;
     $("scroller").scrollTop = 0; renderAll();
-    content.classList.remove("swap-out"); void content.offsetWidth; content.classList.add("swap-in");
+    const h1 = shown(box) ? box.offsetHeight : 0;
+    if (h0 && h1 && Math.abs(h1 - h0) > 2) {
+      box.getAnimations().forEach(a => a.cancel());
+      box.animate([{ height: h0 + "px" }, { height: h1 + "px" }], { duration: 260, easing: "cubic-bezier(.2,0,0,1)" });
+    }
+    parts.forEach(p => { p.classList.remove("swap-out"); void p.offsetWidth; p.classList.add("swap-in"); });
     after && setTimeout(after, 120);
   }, 120);
 }
@@ -3574,7 +3691,7 @@ function down(e) {
   if (e.pointerType === "mouse" && e.target.closest("#stage")) drag = { x: e.clientX, y: e.clientY, t: e.target, on: false };
   // tapping a switch flips it straight away (the row itself keeps tap = select, hold = switch)
   if (e.target.closest(".sw")) return;
-  if (e.target.closest("input,select,textarea,button.opt,.goto,.kidbtn,.replay,[data-tray]")) return;
+  if (e.target.closest("input,select,textarea,button.opt,.filepick,.goto,.kidbtn,.replay,[data-tray]")) return;
   const el = e.target.closest("[data-k]"); if (!el) return;
   const k = el.dataset.k; const from = el.closest("#stage") ? "stage" : "list";
   // holding only does something for settings it can switch (on/off, or a short list it can step
@@ -3613,6 +3730,13 @@ function up() {
     if (from !== "stage" && document.querySelector(`#stage [data-k="${k}"]`)) ghost(k);
   } else select(k, from);
 }
+$("list").addEventListener("change", e => {
+  const inp = e.target.closest("input[data-file]"); if (!inp || !inp.files || !inp.files[0]) return;
+  const k = inp.dataset.file, file = inp.files[0];
+  if (pickedFiles[k]) URL.revokeObjectURL(pickedFiles[k]);
+  pickedFiles[k] = URL.createObjectURL(file);
+  const before = state[k]; state[k] = file.name; afterChange(k, before);
+});
 ["stage", "list"].forEach(id => {
   const el = $(id);
   el.addEventListener("pointerdown", down); el.addEventListener("pointermove", move);
