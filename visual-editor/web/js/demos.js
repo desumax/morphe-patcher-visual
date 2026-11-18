@@ -43,7 +43,10 @@ function stopDemo() {
   document.querySelectorAll("#stage .finger").forEach(f => { f.style.transition = "none"; f.classList.remove("show", "hold", "tap"); });
   document.querySelectorAll("#stage .toastin.dyn").forEach(n => n.remove()); document.querySelectorAll("#stage .demo-label.dyn").forEach(n => { n.style.opacity = "0"; setTimeout(() => { n.remove(); showSceneLabel(); }, 250); }); }
 const showSceneLabel = () => { if (!document.querySelector("#stage .demo-label.dyn")) document.querySelectorAll("#stage .demo-label:not(.dyn)").forEach(n => { n.style.visibility = ""; }); };
-function label(text, bad, ms) {
+// Demos no longer caption themselves (Max, Round 24: the animation explains itself). Only notes
+// that say why nothing shows (force) still appear.
+function label(text, bad, ms, force) {
+  if (!force) return;
   const st = $("stage");
   st.querySelectorAll(".demo-label.dyn").forEach(n => n.remove());
   st.querySelectorAll(".demo-label:not(.dyn)").forEach(n => { n.style.visibility = "hidden"; }); // the scene's own label would sit right under it

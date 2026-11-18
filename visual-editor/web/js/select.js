@@ -67,7 +67,7 @@ function select(k, from, arrive = false) {
     const why = k === "morphe_hide_end_screen_suggested_video" ? "Appears only when autoplay is off. Set Autoplay mode to Off to see it."
       : k === "morphe_hide_autoplay_preview" ? "Appears only when autoplay is on."
       : /^morphe_miniplayer_/.test(k) ? "Not part of the current miniplayer type." : "Not shown in the current layout.";
-    label(why, true, 2600);
+    label(why, true, 2600, true);
   }
 }
 function pointToParents(k) {

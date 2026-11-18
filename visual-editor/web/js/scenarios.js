@@ -38,21 +38,40 @@ function measurePair(gen) {
   probe.removeAttribute("data-fit"); probe.classList.add("probe7");
   probe.querySelectorAll("[id]").forEach(e => e.removeAttribute("id"));
   gen.parentElement.appendChild(probe);
-  const size = dir => { probe.style.flexDirection = dir; return [probe.offsetWidth, probe.offsetHeight]; };
+  const size = (dir, side = false) => { probe.classList.toggle("capside", side); probe.style.flexDirection = dir; return [probe.offsetWidth, probe.offsetHeight]; };
   const rowWH = size("row"), colWH = size("column");
+  // captions beside the phones: only for portrait pairs (landscape phones are already wide)
+  const portrait = !probe.querySelector(".dev.land");
+  const sideWH = portrait ? size("row", true) : null;
   probe.remove();
-  return { rowWH, colWH };
+  return { rowWH, colWH, sideWH };
 }
 function fitDev(orient) {
   const canvas = $("canvas"), box = canvas.querySelector(".scbox"), gen = box && box.querySelector(".duo7.gen");
   if (gen) { // the two phones sit side by side or stacked, whichever lets them be drawn larger
     const first = !gen.dataset.fit; gen.dataset.fit = "1";
     if (first) gen.style.transition = "none"; // a new pair appears at its size; only later changes animate
-    const { rowWH, colWH } = measurePair(gen);
-    const row = fitScale(rowWH[0], rowWH[1]), col = fitScale(colWH[0], colWH[1]);
-    const [w, h] = row >= col ? rowWH : colWH, sc = Math.max(row, col);
-    gen.style.flexDirection = row >= col ? "row" : "column";
+    const { rowWH, colWH, sideWH } = measurePair(gen);
+    const row = fitScale(rowWH[0], rowWH[1]), col = fitScale(colWH[0], colWH[1]), side = sideWH ? fitScale(sideWH[0], sideWH[1]) : 0;
+    const S = { side, row, column: col }, WH = { side: sideWH, row: rowWH, column: colWH };
+    let pick = side >= Math.max(row, col) * 1.04 ? "side" : row >= col ? "row" : "column";
+    // a caption changing mid-story must not flip the layout back and forth or nudge the size:
+    // keep the current layout (and scale) unless the new one is clearly better
+    const cur = gen.dataset.lay, curSc = parseFloat(gen.style.scale) || 0;
+    if (!first && cur && S[cur] && S[pick] < S[cur] * 1.1) pick = cur;
+    let sc = S[pick];
+    if (!first && pick === cur && Math.abs(sc - curSc) / curSc < .06 && sc > curSc * .97) sc = Math.min(curSc, sc * 1.03);
+    const [w0, h0] = WH[pick], w = w0, h = h0;
+    // the captions glide to their new place when the layout changes (a phone turning mid-story)
+    const caps = [...gen.querySelectorAll(".sf7")], was = gen.dataset.lay;
+    const before = !first && was && was !== pick ? caps.map(c => c.getBoundingClientRect()) : null;
+    gen.dataset.lay = pick;
+    gen.classList.toggle("capside", pick === "side");
+    gen.style.flexDirection = pick === "column" ? "column" : "row";
     gen.style.scale = sc.toFixed(3);
+    if (before) requestAnimationFrame(() => caps.forEach((c, i) => {
+      c.animate([{ opacity: 0, filter: "blur(2px)" }, { opacity: 1, filter: "none" }], { duration: 380, delay: 60, easing: "cubic-bezier(.2,.8,.2,1)", fill: "backwards" }); void i;
+    }));
     box.style.width = Math.round(w * sc) + "px"; box.style.height = Math.round(h * sc) + "px";
     if (first) { box.style.transition = "none"; void gen.offsetWidth; gen.style.transition = ""; box.style.transition = ""; }
     return;
