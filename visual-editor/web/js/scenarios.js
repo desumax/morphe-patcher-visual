@@ -46,10 +46,18 @@ function measurePair(gen) {
   probe.remove();
   return { rowWH, colWH, sideWH };
 }
-function fitDev(orient) {
+// Captions change in one short beat: a fast fade out, the swap (new text, new place), a fade back in.
+const CAP_OUT = 110, CAP_IN = 170;
+function capsSwap(caps, swap) {
+  caps.forEach(c => { c.getAnimations().forEach(a => a.cancel()); c.animate([{ opacity: 1 }, { opacity: 0 }], { duration: CAP_OUT, easing: "ease-in", fill: "forwards" }); });
+  setTimeout(() => { swap(); caps.forEach(c => { c.getAnimations().forEach(a => a.cancel()); c.animate([{ opacity: 0, transform: "translateY(3px)" }, { opacity: 1, transform: "none" }], { duration: CAP_IN, easing: "cubic-bezier(.2,.8,.2,1)" }); }); }, CAP_OUT);
+}
+function fitDev(orient, capsHidden = false) {
   const canvas = $("canvas"), box = canvas.querySelector(".scbox"), gen = box && box.querySelector(".duo7.gen");
   if (gen) { // the two phones sit side by side or stacked, whichever lets them be drawn larger
-    const first = !gen.dataset.fit; gen.dataset.fit = "1";
+    // the pair's first moments (its own setup calls, the first caption) settle without animating
+    if (!gen.dataset.fit) gen.dataset.fit = String(performance.now());
+    const first = performance.now() - Number(gen.dataset.fit) < 250;
     if (first) gen.style.transition = "none"; // a new pair appears at its size; only later changes animate
     const { rowWH, colWH, sideWH } = measurePair(gen);
     const row = fitScale(rowWH[0], rowWH[1]), col = fitScale(colWH[0], colWH[1]), side = sideWH ? fitScale(sideWH[0], sideWH[1]) : 0;
@@ -62,16 +70,13 @@ function fitDev(orient) {
     let sc = S[pick];
     if (!first && pick === cur && Math.abs(sc - curSc) / curSc < .06 && sc > curSc * .97) sc = Math.min(curSc, sc * 1.03);
     const [w0, h0] = WH[pick], w = w0, h = h0;
-    // the captions glide to their new place when the layout changes (a phone turning mid-story)
-    const caps = [...gen.querySelectorAll(".sf7")], was = gen.dataset.lay;
-    const before = !first && was && was !== pick ? caps.map(c => c.getBoundingClientRect()) : null;
+    // a layout change (a phone turning mid-story): the phones resize at once, the captions blink
+    // out, move to their new place and come back in the same beat
+    const caps = [...gen.querySelectorAll(".sf7")], was = gen.dataset.lay, moved = !first && was && was !== pick;
     gen.dataset.lay = pick;
-    gen.classList.toggle("capside", pick === "side");
-    gen.style.flexDirection = pick === "column" ? "column" : "row";
+    const place = () => { gen.classList.toggle("capside", pick === "side"); gen.style.flexDirection = pick === "column" ? "column" : "row"; };
+    if (moved && !capsHidden) capsSwap(caps, () => { if (gen.dataset.lay === pick) place(); }); else place();
     gen.style.scale = sc.toFixed(3);
-    if (before) requestAnimationFrame(() => caps.forEach((c, i) => {
-      c.animate([{ opacity: 0, filter: "blur(2px)" }, { opacity: 1, filter: "none" }], { duration: 380, delay: 60, easing: "cubic-bezier(.2,.8,.2,1)", fill: "backwards" }); void i;
-    }));
     box.style.width = Math.round(w * sc) + "px"; box.style.height = Math.round(h * sc) + "px";
     if (first) { box.style.transition = "none"; void gen.offsetWidth; gen.style.transition = ""; box.style.transition = ""; }
     return;
@@ -87,7 +92,15 @@ const devScale = dev => (dev.getBoundingClientRect().width / (dev.offsetWidth ||
 // scenario that draws its own comparison); scStretch slows the whole story down to the 11 s budget.
 let scSide = null, scStretch = 1;
 function situation(text) { if (scSide && scSide.i) return; const el = document.querySelector("#canvas .sit"); if (!el) return; el.style.opacity = 0; later(() => { el.textContent = text; el.style.opacity = 1; }, 160); }
-function setFoot(text) { if (scSide) { const f = scSide.foot; if (f.textContent !== text) { f.textContent = text; if (f.closest(".duo7.gen")) fitDev(); } return; } const el = document.querySelector("#canvas .foot"); if (el) el.textContent = text; }
+function setFoot(text) {
+  if (scSide) {
+    const f = scSide.foot; if (f.textContent === text) return;
+    const gen = f.closest(".duo7.gen");
+    // a caption already on screen is swapped in one beat (out, new text and layout, in); the first one just appears
+    if (gen && f.textContent && gen.dataset.fit && performance.now() - Number(gen.dataset.fit) > 250) capsSwap([f], () => { f.textContent = text; fitDev(undefined, true); });
+    else { f.textContent = text; if (gen) fitDev(); }
+    return;
+  } const el = document.querySelector("#canvas .foot"); if (el) el.textContent = text; }
 // A vibration: the phone trembles fast with a tiny amplitude (a big slow shake read as "no"), arcs
 // ripple out on both sides, and a vibrate icon pops up over the phone and buzzes with it. Without
 // vibration the same moment shows the icon crossed out and still, so both sides mark the event.
