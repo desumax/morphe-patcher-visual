@@ -1,0 +1,8 @@
+/* In-app mode: the editor is the whole screen, no device frame or desktop panels. */
+html.inapp, html.inapp body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: var(--app-bg, #0f0f0f); }
+html.inapp #devwrap { width: 100% !important; height: 100% !important; transform: none !important; }
+html.inapp #phone { width: 100% !important; height: 100% !important; transform: none !important; border-radius: 0 !important; box-shadow: none !important; border: 0 !important; }
+html.inapp #inspector, html.inapp #devBtns, html.inapp .devonly { display: none !important; }
+html.inapp #phone > .status { display: none !important; }
+html.inapp .bench { padding: 0 !important; margin: 0 !important; min-height: 0 !important; height: 100% !important; }
+html.inapp .devdone { display: none !important; } /* development markers stay in the web preview only */

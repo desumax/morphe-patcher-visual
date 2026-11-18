@@ -90,7 +90,7 @@ public final class VisualEditorEntry {
             open.setKey(KEY_OPEN);
             open.setPersistent(false);
             open.setTitle("Open visual editor");
-            open.setSummary("Test build: list, toggles and the Clean, Switches and Morphe designs");
+            open.setSummary("Live preview of each YouTube screen: tap an element to find its setting, hold it to change it");
             open.setOrder(top - 1);
             open.setEnabled(VisualEditorSettings.ENABLED.get());
 
@@ -135,6 +135,14 @@ public final class VisualEditorEntry {
         // Fail safe: if anything in the editor goes wrong on this YouTube or Morphe build, the
         // regular Morphe settings are still right there and nothing else is affected.
         try {
+            if (WebEditorDialog.available()) {
+                try {
+                    new WebEditorDialog(activity).show();
+                    return;
+                } catch (Throwable ex) {
+                    Logger.printException(() -> "Visual editor: WebView editor failed, using the list editor", ex);
+                }
+            }
             new VisualEditorDialog(activity).show();
         } catch (Throwable ex) {
             Logger.printException(() -> "Visual editor could not open", ex);

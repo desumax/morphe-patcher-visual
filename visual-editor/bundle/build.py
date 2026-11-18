@@ -50,7 +50,7 @@ def main():
     args = ap.parse_args()
 
     started = time.time()
-    work = Path(args.work)
+    work = Path(args.work).resolve()
     repo = work / "morphe-patches"
     rmtree(repo)
     work.mkdir(parents=True, exist_ok=True)
@@ -70,6 +70,12 @@ def main():
     run([sys.executable, HERE / "gen_preview_map_data.py", NATIVE / "preview_map.json",
          repo / "extensions/visualeditor/src/main/java/app/morphe/extension/youtube/visualeditor/PreviewMapData.java"])
 
+    # The designed editor: the web preview plus the in-app scripts, packed into the extension.
+    appweb = work / "appweb"
+    run([sys.executable, HERE.parent / "app" / "build_app_web.py", appweb])
+    run([sys.executable, HERE / "gen_web_assets.py", appweb,
+         repo / "extensions/visualeditor/src/main/java/app/morphe/extension/youtube/visualeditor/WebAssets.java"])
+
     props = repo / "gradle.properties"
     lines = [l for l in props.read_text().splitlines() if not l.startswith("version")]
     props.write_text("\n".join(lines + [f"version = {args.version}", ""]))
@@ -83,7 +89,7 @@ def main():
         os.chmod(gradlew, 0o755)
     run([gradlew, ":patches:buildAndroid", ":patches:listBundlePatches", "--no-daemon", "--stacktrace"], cwd=repo)
 
-    out = Path(args.out)
+    out = Path(args.out).resolve()
     out.mkdir(parents=True, exist_ok=True)
     built = sorted((repo / "patches/build/libs").glob("*.mpp"), key=lambda p: p.stat().st_mtime)
     if not built:

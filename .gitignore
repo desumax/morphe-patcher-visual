@@ -38,3 +38,4 @@ google-services.json
 node_modules/
 visual-editor/bundle/work/
 visual-editor/bundle/out/
+visual-editor/bundle/work*/

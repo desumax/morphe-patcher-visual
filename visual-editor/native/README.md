@@ -2,9 +2,11 @@
 
 **Test bundle:** `../bundle/build.py` builds this into a bundle of its own (one patch, "Visual
 settings editor"), used in Morphe Manager next to the official Morphe Patches bundle. It depends
-on no patch object of the official bundle, so nothing runs twice and no patch name clashes. The
-preview drawings are not ported yet: the test build has the entry, the list, the toggles, the
-three designs, search and reset.
+on no patch object of the official bundle, so nothing runs twice and no patch name clashes. From
+test 3 on, the editor is the web preview itself (`../web`, plus `../app` for in-app mode) hosted in
+a WebView and bridged to the real settings (`WebEditorDialog`), so the app looks and animates
+exactly like the preview. The native list editor (`VisualEditorDialog`) stays as the fallback when
+no WebView is available.
 
 This folder is the starting point for turning the web prototype (`../web`) into a real Morphe
 patch. Its folders mirror [morphe-patches](https://github.com/MorpheApp/morphe-patches), so each
