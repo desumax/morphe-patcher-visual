@@ -9,8 +9,12 @@ let demoStep = 0;
 // no hold ring, seek position or toast from the last demo leaks into the next.
 const dT = (fn, ms) => clock.after("demo", ms, fn);
 const dEvery = (fn, ms) => clock.every("demo", ms, fn);
+// cleanups a demo registers for when it is cut short (another setting selected mid-animation)
+const demoUndo = [];
+const onDemoStop = fn => { if (demoUndo.length < 8) demoUndo.push(fn); };
 function stopDemo() {
   clock.stop("demo");
+  demoUndo.splice(0).forEach(fn => { try { fn(); } catch { /* the scene was redrawn */ } });
   document.querySelectorAll("#stage .finger").forEach(f => { f.style.transition = "none"; f.classList.remove("show", "hold", "tap"); });
   document.querySelectorAll("#stage .toastin.dyn").forEach(n => n.remove()); document.querySelectorAll("#stage .demo-label.dyn").forEach(n => { n.style.opacity = "0"; setTimeout(() => { n.remove(); showSceneLabel(); }, 250); }); }
 const showSceneLabel = () => { if (!document.querySelector("#stage .demo-label.dyn")) document.querySelectorAll("#stage .demo-label:not(.dyn)").forEach(n => { n.style.visibility = ""; }); };
@@ -51,13 +55,13 @@ const DEMOS = {
     const seek = $("seek"); if (!seek) return;
     const st = $("stage").getBoundingClientRect(), r = seek.getBoundingClientRect();
     const pct = [72, 30, 55, 88, 12][demoStep % 5];
-    tapAt(r.left - st.left + r.width * pct / 100, r.top - st.top + r.height / 2);
+    tapAt(r.left - st.left + r.width * pct / 100, r.top - st.top + r.height / 2); onDemoStop(() => setSeek(17));
     if (on) { dT(() => setSeek(pct), 120); label(`Tap on seekbar: jumps to ${fmt(18 * 60 + 42, pct)}`); }
     else label("Tap on seekbar: nothing happens. Stock YouTube needs a drag.", true);
   },
   morphe_slide_to_seek(on) {
     const f = finger(); if (!f) return; const W = $("stage").clientWidth;
-    place(f, W * .3, 90); f.classList.add("hold");
+    place(f, W * .3, 90); f.classList.add("hold"); onDemoStop(() => setSeek(17));
     if (on) { label("Press and hold the video, then slide: seeks"); dT(() => { place(f, W * .7, 90, 700); setSeek(60); }, 250); }
     else { label("Press and hold the video: plays at 2x speed (stock)", true); showPill("2x ▸▸"); }
     hideF(f, 1150);
@@ -68,7 +72,7 @@ const DEMOS = {
     dT(() => place(f, st.clientWidth * .42, st.clientHeight - 110, 450), 120);
     if (!disabled) { dT(() => { film.style.display = "flex"; }, 450); label("Pull up on the seekbar: precise seeking opens"); }
     else label("Pull up on the seekbar: precise seeking stays off", true);
-    dT(() => { film.style.display = "none"; }, 1250); hideF(f, 1150);
+    dT(() => { film.style.display = "none"; }, 1250); hideF(f, 1150); onDemoStop(() => { film.style.display = "none"; });
   },
   morphe_swipe_left_zone(v) { swipeDemo("left", v); },
   morphe_swipe_right_zone(v) { swipeDemo("right", v); },
@@ -191,6 +195,8 @@ Object.assign(DEMOS, {
       if (bub) { const half = 50, x = Math.min(Math.max(xAt(pct) - pr.left, half + 4), pr.width - half - 4); bub.style.left = x + "px"; }
       if (tl) tl.textContent = fmt(total, pct);
     };
+    const reset = () => { if (bub) { bub.classList.remove("dragging"); bub.style.left = ""; bub.style.opacity = ""; } if (tl) tl.textContent = "7:51"; [played, knob].forEach(e => e && (e.style.transition = "")); setSeek(p0); };
+    onDemoStop(reset);
     frame(p0); f.classList.add("hold");
     const t0 = performance.now() + 180, dur = 1000, tok = clock.run("demo");
     const step = now => {
@@ -198,7 +204,7 @@ Object.assign(DEMOS, {
       const t = Math.min(1, Math.max(0, (now - t0) / dur)), e = t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
       frame(p0 + (p1 - p0) * e);
       if (t < 1) requestAnimationFrame(step);
-      else dT(() => { f.classList.remove("show", "hold"); if (bub) { bub.classList.remove("dragging"); bub.style.left = ""; bub.style.opacity = ""; } if (tl) tl.textContent = "7:51"; [played, knob].forEach(e => e && (e.style.transition = "")); setSeek(p0); }, 450);
+      else dT(() => { f.classList.remove("show", "hold"); reset(); }, 300);
     };
     requestAnimationFrame(step);
     label(on ? "Drag the seekbar: a thumbnail follows your finger" : "Drag the seekbar: no thumbnail, only the time", !on);
@@ -207,7 +213,7 @@ Object.assign(DEMOS, {
     const f = finger(); if (!f) return; const st = $("stage");
     const hint = document.querySelector('#stage [data-k="morphe_hide_player_gesture_hints"]');
     place(f, st.clientWidth * .42, st.clientHeight - 16); dT(() => place(f, st.clientWidth * .42, st.clientHeight - 90, 600), 120);
-    if (hint) { hint.style.transition = "opacity .2s"; hint.style.opacity = "0"; dT(() => { hint.style.opacity = hidden ? "0" : "1"; }, 300); dT(() => { hint.style.opacity = ""; }, 1400); }
+    if (hint) { hint.style.transition = "opacity .2s"; hint.style.opacity = "0"; dT(() => { hint.style.opacity = hidden ? "0" : "1"; }, 300); dT(() => { hint.style.opacity = ""; }, 1400); onDemoStop(() => { hint.style.opacity = ""; }); }
     label(hidden ? "Pull up on the seekbar: no hint appears" : "Pull up on the seekbar: the hint explains the gesture", hidden);
     hideF(f, 1100);
   },

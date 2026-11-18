@@ -16,7 +16,7 @@ $("snackUndo").onclick = () => { if (undoFn) undoFn(); undoFn = null; $("snack")
 // cycle speeds"), or a named one (the seekbar for the seekbar colour and thumb settings).
 const PROXY_K = { morphe_seekbar_custom_color: "morphe_hide_seekbar", morphe_custom_seekbar_thumb: "morphe_hide_seekbar" };
 function proxyEls(k) {
-  const q = x => [...document.querySelectorAll(`#stage [data-k="${x}"], #stage [data-also="${x}"]`)].filter(e => e.getClientRects().length && !e.classList.contains("off"));
+  const q = x => [...document.querySelectorAll(`#stage [data-k="${x}"], #stage [data-also="${x}"]`)].filter(e => e.getClientRects().length && (!e.classList.contains("off") || e.classList.contains("ghost")));
   if (q(k).length) return [];
   const seen = new Set();
   for (let p = PROXY_K[k] || PARENT_OF[k]; p && !seen.has(p); p = PROXY_K[p] || PARENT_OF[p]) { seen.add(p); const e = q(p); if (e.length) return e; }

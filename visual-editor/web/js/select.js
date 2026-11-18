@@ -48,7 +48,10 @@ function select(k, from, arrive = false) {
   if (section === "feed" && (k === "morphe_feed_card_layout" || prevSel === "morphe_feed_card_layout")) renderStage();
   if (section === "captions" && (k === "morphe_secondary_caption_language" || prevSel === "morphe_secondary_caption_language")) renderStage();
   // a hidden setting stays revealed while it is selected; it collapses once you move to another one
-  if (dropGhost) { if (renders === renderCount) unghost(dropGhost); else { clearGhost(dropGhost); renderStage(); } }
+  // (unless the new selection needs it, such as the hidden seekbar for Tap to seek)
+  if (dropGhost && lentTo(k, dropGhost)) { ghosts.delete(dropGhost); stageEls(dropGhost).forEach(e => e.classList.remove("sel", "selin")); }
+  else if (dropGhost) { if (renders === renderCount) unghost(dropGhost); else { clearGhost(dropGhost); renderStage(); } }
+  lend(prevSel, k);
   focusSetting(k, { from, arrive });
   renderInspector();
   if (from === "list" && mode === "mod" && A[k] && (A[k].kind === "vis" || A[k].kind === "overlay") && !shown(k) && document.querySelector(`#stage [data-k="${k}"]`)) ghost(k);
@@ -71,6 +74,12 @@ function pointToParents(k) {
   if (!onStage || selected !== k || (lastFlash.k === k && Date.now() - lastFlash.t < 200)) return flashParents(k);
   parentFlashFor = k;
   fT(() => { if (parentFlashFor === k) flashParents(k); }, 1500);
+}
+// elements a setting needs (NEEDS) show as ghosts while it is selected, and go again when it isn't
+function lend(prev, k) {
+  const was = (NEEDS[prev] || []).filter(x => !ghosts.has(x) && !fading.has(x)), now = (NEEDS[k] || []).filter(x => lentTo(k, x));
+  was.filter(x => !now.includes(x)).forEach(x => stageEls(x).forEach(e => e.classList.remove("ghost")));
+  now.forEach(x => stageEls(x).forEach(e => { if (!e.classList.contains("ghost")) { e.classList.add("ghost"); hugWidth(e); fitRing(e); } }));
 }
 const ghostTimers = new Map();
 const stageEls = k => document.querySelectorAll(`#stage [data-k="${k}"]`);

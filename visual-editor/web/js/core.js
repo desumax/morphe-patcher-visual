@@ -258,6 +258,12 @@ const KIND_NAME = { vis: "VisibilityPreview", overlay: "OverlayPreview", gesture
 // ------------------------------------------------------------------ state
 let CAT, PREF = {}, state = {}, mode = "mod", section = "player", selected = null;
 const ghosts = new Set();
+// Settings whose preview acts on an element another setting can hide. While one of them is selected,
+// that element is drawn as a ghost (dimmed, dashed) even when your settings hide it, so the demo
+// still has something to act on: a hidden seekbar still shows for tap to seek, thumbnails, colours.
+const SEEKBAR_USERS = "tap_to_seek slide_to_seek seekbar_thumbnail_preview hide_player_gesture_hints disable_precise_seeking_gesture seekbar_custom_color seekbar_custom_color_primary seekbar_custom_color_accent custom_seekbar_thumb custom_seekbar_thumb_scale_type custom_seekbar_thumb_file";
+const NEEDS = Object.fromEntries(SEEKBAR_USERS.split(" ").map(k => ["morphe_" + k, ["morphe_hide_seekbar"]]));
+const lentTo = (k, x) => !!k && (NEEDS[k] || []).includes(x) && !shown(x);
 const LS = "morphe-visual-editor-v1";
 const store = {
   load() { try { return JSON.parse(localStorage.getItem(LS) || "{}"); } catch { return {}; } },
@@ -353,7 +359,7 @@ function C(k, inner, o = {}) {
   if (o.blk) cls.push("blk");
   if (o.cls) cls.push(o.cls);
   if (a && (a.kind === "vis" || a.kind === "overlay") && !shown(full)) cls.push("off");
-  if (ghosts.has(full)) cls.push("ghost");
+  if (ghosts.has(full) || lentTo(selected, full)) cls.push("ghost");
   if (selected === full || (o.also && selected === "morphe_" + o.also)) cls.push("sel");
   return `<${o.tag || "div"} class="${cls.join(" ")}" data-k="${full}" ${o.also ? `data-also="morphe_${o.also}"` : ""} data-label="${esc(title(full))}" style="${o.style || ""}">${inner}</${o.tag || "div"}>`;
 }
