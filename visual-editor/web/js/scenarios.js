@@ -53,26 +53,43 @@ function inPair(gen, el) {
   const G = gen.getBoundingClientRect(), r = el.getBoundingClientRect(), k = G.width / (gen.offsetWidth || 1) || 1, cs = getComputedStyle(el);
   return { x: (r.left - (G.left + G.width / 2)) / k, y: (r.top - (G.top + G.height / 2)) / k, w: el.offsetWidth, fs: cs.fontSize, lh: cs.lineHeight };
 }
-// A caption moving to a new layout: a stand-in copy starts where the caption was and follows the
-// caption's live position (the phones are still turning and resizing) for 500 ms, morphing its width,
-// font size and line breaks on the way, then hands over to the real caption.
-function glideCap(gen, cap, from) {
+// The one motion curve of a comparison: phones turning, the pair resizing and captions moving all
+// use .5 s on --ease (cubic-bezier(.4, 0, .2, 1)), started on the same frame, so they move as one.
+const MOVE_MS = 500;
+const moveEase = (() => { // cubic-bezier(.4, 0, .2, 1), the CSS --ease
+  const x1 = .4, y1 = 0, x2 = .2, y2 = 1, B = (t, a, b) => 3 * a * t * (1 - t) ** 2 + 3 * b * t * t * (1 - t) + t ** 3;
+  return x => { if (x <= 0) return 0; if (x >= 1) return 1; let lo = 0, hi = 1, t = x; for (let n = 0; n < 24; n++) { t = (lo + hi) / 2; if (B(t, x1, x2) < x) lo = t; else hi = t; } return B(t, y1, y2); };
+})();
+// where a caption ends up once the phones have finished turning: an untransitioned copy of the pair
+function finalCapPlaces(gen) {
+  const probe = gen.cloneNode(true); probe.removeAttribute("data-fit"); probe.classList.add("probe7");
+  probe.querySelectorAll("[id]").forEach(e => e.removeAttribute("id")); probe.querySelectorAll(".glide7").forEach(e => e.remove());
+  gen.parentElement.appendChild(probe);
+  const out = [...probe.querySelectorAll(".dl7 > .sf7")].map(c => inPair(probe, c));
+  probe.remove(); return out;
+}
+// A caption moving to a new layout: a stand-in copy goes from where the caption was to where it will
+// be, on the same curve and clock as the phones, morphing its width, font size and line breaks, then
+// hands over to the real caption.
+function glideCap(gen, cap, from, to) {
   if (cap._gliding) { cap._gliding.remove(); }
-  const g = cap.cloneNode(true); g.className = "sf7 glide7"; cap._gliding = g;
-  const px = v => parseFloat(v) || 0, ease = t => 1 - Math.pow(1 - t, 3), t0 = performance.now(), D = 500;
+  const g = cap.cloneNode(true); g.className = "sf7 glide7"; cap._gliding = g; g._to = to;
+  const px = v => parseFloat(v) || 0, t0 = performance.now();
   g.style.cssText = `position:absolute;margin:0;min-width:0;pointer-events:none;z-index:0;text-align:center;left:${from.x + gen.offsetWidth / 2}px;top:${from.y + gen.offsetHeight / 2}px;width:${from.w}px;font-size:${from.fs};line-height:${from.lh}`;
   gen.appendChild(g); cap.style.opacity = "0";
+  const lerp = (a, b, e) => a + (b - a) * e;
   const step = now => {
     if (!g.isConnected || !cap.isConnected) { g.remove(); cap.style.opacity = ""; cap._gliding = null; return; }
-    const t = Math.min(1, (now - t0) / D), e = ease(t), q = inPair(gen, cap);
-    const to = { x: q.x, y: q.y, w: q.w, fs: px(q.fs), lh: px(q.lh) };
+    const t = Math.min(1, (now - t0) / MOVE_MS), e = moveEase(t), to = g._to;
     g.textContent = cap.textContent;
-    g.style.left = from.x + (to.x - from.x) * e + gen.offsetWidth / 2 + "px"; g.style.top = from.y + (to.y - from.y) * e + gen.offsetHeight / 2 + "px";
-    g.style.width = from.w + (to.w - from.w) * e + "px";
-    g.style.fontSize = px(from.fs) + (to.fs - px(from.fs)) * e + "px"; g.style.lineHeight = px(from.lh) + (to.lh - px(from.lh)) * e + "px";
+    // measured from the pair's centre, which the pair's own resize keeps in place
+    g.style.left = lerp(from.x, to.x, e) + gen.offsetWidth / 2 + "px"; g.style.top = lerp(from.y, to.y, e) + gen.offsetHeight / 2 + "px";
+    g.style.width = lerp(from.w, to.w, e) + "px";
+    g.style.fontSize = lerp(px(from.fs), px(to.fs), e) + "px"; g.style.lineHeight = lerp(px(from.lh), px(to.lh), e) + "px";
     if (t < 1) requestAnimationFrame(step);
     else { g.remove(); cap.style.opacity = ""; cap._gliding = null; cap._pos = inPair(gen, cap); }
   };
+  step(t0);
   requestAnimationFrame(step);
 }
 function fitDev(orient) {
@@ -104,7 +121,9 @@ function fitDev(orient) {
     gen.dataset.lay = pick;
     gen.classList.toggle("capside", pick === "side"); gen.style.flexDirection = pick === "column" ? "column" : "row";
     gen.style.scale = sc.toFixed(3);
-    if (before) caps.forEach((c, i) => glideCap(gen, c, before[i]));
+    if (before) { const ends = finalCapPlaces(gen); caps.forEach((c, i) => glideCap(gen, c, before[i], ends[i])); }
+    // the other phone turning a moment later changes where the captions end: retarget them
+    else if (caps.some(c => c._gliding)) { const ends = finalCapPlaces(gen); caps.forEach((c, i) => { if (c._gliding) c._gliding._to = ends[i]; }); }
     caps.forEach(c => { if (!c._gliding) c._pos = snap(c); });
     box.style.width = Math.round(w * sc) + "px"; box.style.height = Math.round(h * sc) + "px";
     if (first) { box.style.transition = "none"; void gen.offsetWidth; gen.style.transition = ""; box.style.transition = ""; }
