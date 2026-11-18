@@ -36,7 +36,7 @@ function fitScale(w, h) {
 function measurePair(gen) {
   const probe = gen.cloneNode(true);
   probe.removeAttribute("data-fit"); probe.classList.add("probe7");
-  probe.querySelectorAll("[id]").forEach(e => e.removeAttribute("id"));
+  probe.querySelectorAll("[id]").forEach(e => e.removeAttribute("id")); probe.querySelectorAll(".glide7").forEach(e => e.remove());
   gen.parentElement.appendChild(probe);
   const size = (dir, side = false) => { probe.classList.toggle("capside", side); probe.style.flexDirection = dir; return [probe.offsetWidth, probe.offsetHeight]; };
   const rowWH = size("row"), colWH = size("column");
@@ -46,13 +46,29 @@ function measurePair(gen) {
   probe.remove();
   return { rowWH, colWH, sideWH };
 }
-// Captions change in one short beat: a fast fade out, the swap (new text, new place), a fade back in.
-const CAP_OUT = 110, CAP_IN = 170;
-function capsSwap(caps, swap) {
-  caps.forEach(c => { c.getAnimations().forEach(a => a.cancel()); c.animate([{ opacity: 1 }, { opacity: 0 }], { duration: CAP_OUT, easing: "ease-in", fill: "forwards" }); });
-  setTimeout(() => { swap(); caps.forEach(c => { c.getAnimations().forEach(a => a.cancel()); c.animate([{ opacity: 0, transform: "translateY(3px)" }, { opacity: 1, transform: "none" }], { duration: CAP_IN, easing: "cubic-bezier(.2,.8,.2,1)" }); }); }, CAP_OUT);
+// A caption moving to a new layout: a stand-in copy starts where the caption was and follows the
+// caption's live position (the phones are still turning and resizing) for 500 ms, morphing its width,
+// font size and line breaks on the way, then hands over to the real caption.
+function glideCap(gen, cap, from) {
+  if (cap._gliding) { cap._gliding.remove(); }
+  const g = cap.cloneNode(true); g.className = "sf7 glide7"; cap._gliding = g;
+  const px = v => parseFloat(v) || 0, ease = t => 1 - Math.pow(1 - t, 3), t0 = performance.now(), D = 500;
+  g.style.cssText = `position:absolute;margin:0;min-width:0;pointer-events:none;z-index:2;text-align:center;left:${from.x}px;top:${from.y}px;width:${from.w}px;font-size:${from.fs};line-height:${from.lh}`;
+  gen.appendChild(g); cap.style.opacity = "0";
+  const step = now => {
+    if (!g.isConnected || !cap.isConnected) { g.remove(); cap.style.opacity = ""; cap._gliding = null; return; }
+    const t = Math.min(1, (now - t0) / D), e = ease(t), cs = getComputedStyle(cap);
+    const to = { x: cap.offsetLeft, y: cap.offsetTop, w: cap.offsetWidth, fs: px(cs.fontSize), lh: px(cs.lineHeight) };
+    g.textContent = cap.textContent;
+    g.style.left = from.x + (to.x - from.x) * e + "px"; g.style.top = from.y + (to.y - from.y) * e + "px";
+    g.style.width = from.w + (to.w - from.w) * e + "px";
+    g.style.fontSize = px(from.fs) + (to.fs - px(from.fs)) * e + "px"; g.style.lineHeight = px(from.lh) + (to.lh - px(from.lh)) * e + "px";
+    if (t < 1) requestAnimationFrame(step);
+    else { g.remove(); cap.style.opacity = ""; cap._gliding = null; const c2 = getComputedStyle(cap); cap._pos = { x: cap.offsetLeft, y: cap.offsetTop, w: cap.offsetWidth, fs: c2.fontSize, lh: c2.lineHeight }; }
+  };
+  requestAnimationFrame(step);
 }
-function fitDev(orient, capsHidden = false) {
+function fitDev(orient) {
   const canvas = $("canvas"), box = canvas.querySelector(".scbox"), gen = box && box.querySelector(".duo7.gen");
   if (gen) { // the two phones sit side by side or stacked, whichever lets them be drawn larger
     // the pair's first moments (its own setup calls, the first caption) settle without animating
@@ -70,13 +86,19 @@ function fitDev(orient, capsHidden = false) {
     let sc = S[pick];
     if (!first && pick === cur && Math.abs(sc - curSc) / curSc < .06 && sc > curSc * .97) sc = Math.min(curSc, sc * 1.03);
     const [w0, h0] = WH[pick], w = w0, h = h0;
-    // a layout change (a phone turning mid-story): the phones resize at once, the captions blink
-    // out, move to their new place and come back in the same beat
+    // a layout change (a phone turning mid-story): each caption flows from its old place to the new one
+    // while its box, font and line breaks morph into the new shape, in step with the phones resizing.
+    // Positions are read in the pair's own (unscaled) coordinates, so the pair's scale animation and the
+    // caption's move add up to one smooth path.
     const caps = [...gen.querySelectorAll(".sf7")], was = gen.dataset.lay, moved = !first && was && was !== pick;
+    const snap = c => { const cs = getComputedStyle(c); return { x: c.offsetLeft, y: c.offsetTop, w: c.offsetWidth, fs: cs.fontSize, lh: cs.lineHeight }; };
+    // where each caption was last drawn (a phone may already have turned before this call)
+    const before = moved ? caps.map(c => c._pos || snap(c)) : null;
     gen.dataset.lay = pick;
-    const place = () => { gen.classList.toggle("capside", pick === "side"); gen.style.flexDirection = pick === "column" ? "column" : "row"; };
-    if (moved && !capsHidden) capsSwap(caps, () => { if (gen.dataset.lay === pick) place(); }); else place();
+    gen.classList.toggle("capside", pick === "side"); gen.style.flexDirection = pick === "column" ? "column" : "row";
     gen.style.scale = sc.toFixed(3);
+    if (before) caps.forEach((c, i) => glideCap(gen, c, before[i]));
+    caps.forEach(c => { if (!c._gliding) c._pos = snap(c); });
     box.style.width = Math.round(w * sc) + "px"; box.style.height = Math.round(h * sc) + "px";
     if (first) { box.style.transition = "none"; void gen.offsetWidth; gen.style.transition = ""; box.style.transition = ""; }
     return;
@@ -97,8 +119,10 @@ function setFoot(text) {
     const f = scSide.foot; if (f.textContent === text) return;
     const gen = f.closest(".duo7.gen");
     // a caption already on screen is swapped in one beat (out, new text and layout, in); the first one just appears
-    if (gen && f.textContent && gen.dataset.fit && performance.now() - Number(gen.dataset.fit) > 250) capsSwap([f], () => { f.textContent = text; fitDev(undefined, true); });
-    else { f.textContent = text; if (gen) fitDev(); }
+    // new words fade up in place (no gap); if the layout changes with them, fitDev flows it to its new place
+    const shown = gen && f.textContent && gen.dataset.fit && performance.now() - Number(gen.dataset.fit) > 250;
+    f.textContent = text; if (gen) fitDev();
+    if (shown && !f._gliding) f.animate([{ opacity: .35 }, { opacity: 1 }], { duration: 260, easing: "ease-out" });
     return;
   } const el = document.querySelector("#canvas .foot"); if (el) el.textContent = text; }
 // A vibration: the phone trembles fast with a tiny amplitude (a big slow shake read as "no"), arcs

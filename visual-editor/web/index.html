@@ -298,8 +298,7 @@ button { font: inherit; color: inherit; }
 .duo7.gen.capside .dl7 > span { grid-area: pill; }
 .duo7.gen.capside .dl7 > .side { grid-area: dev; }
 .duo7.gen.capside .dl7 > .sf7 { grid-area: cap; }
-.duo7.gen.capside .dl7:first-child > .sf7 { text-align: right; }
-.duo7.gen.capside .dl7:last-child > .sf7 { text-align: left; }
+.duo7.gen.capside .dl7 > .sf7 { text-align: center; } /* centred like below, so moving between them doesn't jump */
 .duo7.gen .dl7 > span.long { font-size: 15px; padding: 0 11px; }
 .duo7.gen .dl7 > span.xlong { font-size: 12px; padding: 0 9px; }
 .duo7.gen .dl7 > span.ask { font-size: 14px; line-height: 28px; white-space: nowrap; overflow: visible; max-width: none; background: #1a73e8; }
@@ -381,6 +380,9 @@ button { font: inherit; color: inherit; }
 .row .ctl.side { grid-column: 2; grid-row: 1 / span 2; margin-top: 0; flex-direction: column; flex-wrap: nowrap; gap: 1px; align-self: center; }
 /* the card is only as tall as its text: the side box takes no line of its own */
 .row:has(> .txt > .ctl.side) { min-height: 0; }
+/* no spinner arrows in number boxes: the value stays centred (type a number instead) */
+input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .row .ctl.side input[type=number] { width: 64px; height: 30px; text-align: center; padding: 0 8px; border-radius: 999px; }
 .row .ctl.side input[type=color] { -webkit-appearance: none; appearance: none; width: 44px; height: 26px; padding: 0; border: 0; border-radius: 999px; background: none; cursor: pointer; overflow: hidden; }
 .row .ctl.side input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
