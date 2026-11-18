@@ -8,6 +8,8 @@
 package app.morphe.patches.youtube.misc.visualeditor
 
 import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
+import app.morphe.patcher.patch.ApkFileType
+import app.morphe.patcher.patch.Compatibility
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.classDefByOrNull
@@ -41,7 +43,21 @@ val visualSettingsEditorPatch = bytecodePatch(
         "Apply it together with the Morphe Patches bundle, including its settings.",
     default = false,
 ) {
-    compatibleWith("com.google.android.youtube")
+    // Same app identity as the official bundle's YouTube compatibility, without pinning versions.
+    compatibleWith(
+        Compatibility(
+            name = "YouTube",
+            packageName = "com.google.android.youtube",
+            apkFileType = ApkFileType.APK_REQUIRED,
+            appIconColor = 0xFF0033,
+            signatures = setOf(
+                // Android 13+
+                "5aad2bee6db95d17e05a08d7d1e64c10a1511879154483916b6ae6c7fd9cb0c6",
+                // Android 7+
+                "3d7a1223019aa39d9ea0e3436ab7c0896bfb4fb679f4de5fe7c23f326c8f994a",
+            ),
+        ),
+    )
 
     extendWith("extensions/visualeditor.mpe")
 
