@@ -151,10 +151,12 @@ const GROUPS = [
   { id: "g_browse", icon: "layout", title: "Browsing", tabs: [["channel", "Channel page"], ["explore", "Explore menu"], ["nav", "Navigation"]] },
   { id: "g_app", icon: "palette", title: "App", tabs: [["look", "App look"], ["snackbar", "Snackbar"], ["misc", "Other"]] },
 ];
-let grouped = false;
+let grouped = true; // tabs are the default layout; the menu toggle switches back to 24 screens
 const lastTab = {};
 const groupOf = id => GROUPS.find(g => g.tabs.some(([t]) => t === id)) || GROUPS[GROUPS.length - 1];
-const tabsOf = g => g.tabs.filter(([t]) => SECTIONS.some(s => s.id === t));
+// tabs follow Morphe's order unless they were rearranged (hold a tab, then drag it)
+let tabOrder = {};
+const tabsOf = g => { const base = g.tabs.filter(([t]) => SECTIONS.some(s => s.id === t)), o = tabOrder[g.id]; if (!o) return base; const pos = id => { const i = o.indexOf(id); return i < 0 ? 1e3 + base.findIndex(([t]) => t === id) : i; }; return [...base].sort((a, b) => pos(a[0]) - pos(b[0])); };
 
 // ------------------------------------------------------------------ adapters
 // Kinds mirror the proposed native adapters:
@@ -290,6 +292,36 @@ const title = k => {
   const p = PREF[k]; if (!p) return k;
   return (p.title && p.title.trim()) || TITLE_FALLBACK[k] || k.replace(/^morphe_/, "").replace(/_/g, " ");
 };
+// ------------------------------------------------------------------ list designs
+// Three looks for the settings list, picked at the bottom of the screen menu:
+//   "classic"  Morphe's own titles; visible elements show Shown / Hidden, other switches stay switches
+//   "toggles"  Morphe's own titles; every on/off setting is a switch
+//   "clean"    (default) titles without the leading Hide / Show / Enable / Disable, and a two-way
+//              toggle that names both states ("Show | Hide", "On | Off")
+// "clean" is derived at runtime from Morphe's title, so renamed or new settings convert by themselves.
+// A setting it can't read (no title) keeps Morphe's look and is listed at the end of its screen.
+let design = "clean";
+const CLEAN_RE = /^(hide|show|enable|disable)\s+(.+)$/i;
+function cleanOf(k) {
+  const p = PREF[k]; if (!p || p.type !== "boolean" || OFF_LIST.has(k)) return null;
+  const t = p.title && p.title.trim(); if (!t) return null;
+  const a = A[k], visual = !!a && (a.kind === "vis" || a.kind === "overlay");
+  const m = CLEAN_RE.exec(t);
+  if (!m) return { title: t, labels: ["Off", "On"] };
+  const rest = m[2].trim(); if (!rest) return null;
+  const nice = rest.charAt(0).toUpperCase() + rest.slice(1);
+  const verb = m[1].toLowerCase();
+  const labels = verb === "hide" ? ["Show", "Hide"] : verb === "show" ? ["Hide", "Show"]
+    : verb === "enable" ? (visual ? ["Hide", "Show"] : ["Off", "On"]) : ["On", "Off"];
+  return { title: nice, labels };
+}
+const shownTitle = k => (design === "clean" && cleanOf(k)?.title) || title(k);
+const cleanBroken = k => design === "clean" && PREF[k] && PREF[k].type === "boolean" && !OFF_LIST.has(k) && !cleanOf(k);
+function toggleHTML(k) {
+  const c = cleanOf(k), on = !!V(k), [l0, l1] = c.labels, cur = on ? l1 : l0;
+  const pos = cur === "Show" || cur === "On";
+  return `<button class="lt7 ${pos ? "pos" : "neg"}" role="switch" data-sw="${k}" aria-checked="${on}" aria-label="${esc(c.title)}: ${cur}"><span class="${on ? "" : "cur"}">${l0}</span><span class="${on ? "cur" : ""}">${l1}</span></button>`;
+}
 function entryLabel(k, v) { const e = (PREF[k]?.entries || []).find(x => String(x.value) === String(v)); return e ? e.label : String(v); }
 
 // ------------------------------------------------------------------ component helper
@@ -904,7 +936,7 @@ function rotate(dev, orient) { const [w, h] = DEV_SIZE[orient]; dev.classList.re
 // The phone in a scenario is drawn at a fixed small size (so all coordinates stay simple) and then
 // scaled up to fill the space the canvas has, between the caption line and the footer.
 function fitScale(w, h) {
-  const canvas = $("canvas"), sit = canvas.querySelector(".sit"), availW = canvas.clientWidth - 12, availH = canvas.clientHeight - 64 - (sit ? sit.offsetHeight + 8 : 0) - 10;
+  const canvas = $("canvas"), sit = canvas.querySelector(".sit"), availW = canvas.clientWidth - 8, availH = canvas.clientHeight - 64 - (sit ? sit.offsetHeight + 8 : 0) - 10;
   return Math.max(.35, Math.min(3, availW / (w + 6), availH / (h + 6)));
 }
 function fitDev(orient) {
@@ -913,7 +945,10 @@ function fitDev(orient) {
     const first = !gen.dataset.fit; gen.dataset.fit = "1";
     if (first) gen.style.transition = "none"; // a new pair appears at its size; only later changes animate
     // sizes come from the phones' target sizes (a turning phone is still mid-transition when measured)
-    const cells = [...gen.querySelectorAll(".dl7")].map(c => { const d = c.querySelector(".dev"), f = c.querySelector(".sf7"); return [Math.max(parseFloat(d && d.style.width) || 92, f ? 124 : 92), (parseFloat(d && d.style.height) || 172) + 36 + (f ? f.offsetHeight + 4 : 0)]; });
+    // a caption is measured at its final width, since a turning phone changes how many lines it wraps to
+    const cells = [...gen.querySelectorAll(".dl7")].map(c => { const d = c.querySelector(".dev"), f = c.querySelector(".sf7"), w = Math.max(parseFloat(d && d.style.width) || 92, f ? 110 : 92);
+      let fh = 0; if (f) { const old = f.style.width; f.style.width = w + "px"; fh = f.offsetHeight + 4; f.style.width = old; }
+      return [w, (parseFloat(d && d.style.height) || 172) + 31 + fh]; });
     const G = 4, rowWH = [cells.reduce((a, c) => a + c[0], 0) + G, Math.max(...cells.map(c => c[1]))], colWH = [Math.max(...cells.map(c => c[0])), cells.reduce((a, c) => a + c[1], 0) + G];
     const row = fitScale(rowWH[0], rowWH[1]), col = fitScale(colWH[0], colWH[1]);
     const [w, h] = row >= col ? rowWH : colWH, sc = Math.max(row, col);
@@ -934,7 +969,7 @@ const devScale = dev => (dev.getBoundingClientRect().width / (dev.offsetWidth ||
 // scenario that draws its own comparison); scStretch slows the whole story down to the 11 s budget.
 let scSide = null, scStretch = 1, scRun = 0;
 function situation(text) { if (scSide && scSide.i) return; const el = document.querySelector("#canvas .sit"); if (!el) return; el.style.opacity = 0; setTimeout(() => { el.textContent = text; el.style.opacity = 1; }, 160); }
-function setFoot(text) { if (scSide) { scSide.foot.textContent = text; return; } const el = document.querySelector("#canvas .foot"); if (el) el.textContent = text; }
+function setFoot(text) { if (scSide) { const f = scSide.foot; if (f.textContent !== text) { f.textContent = text; if (f.closest(".duo7.gen")) fitDev(); } return; } const el = document.querySelector("#canvas .foot"); if (el) el.textContent = text; }
 // A vibration: the phone trembles fast with a tiny amplitude (a big slow shake read as "no"), arcs
 // ripple out on both sides, and a vibrate icon pops up over the phone and buzzes with it. Without
 // vibration the same moment shows the icon crossed out and still, so both sides mark the event.
@@ -1045,9 +1080,8 @@ scen("player", "copy_video_link_with_timestamp_button", (box, on) => {
   const toast = link => { dev.querySelectorAll(".toastin").forEach(e => e.remove()); dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:42%;font-size:9px">Link copied<br><b style="font-weight:500;color:#9cd1ff">${link}</b><br><span style="color:#bbb">${link === timed ? "opens at 3:12" : "opens at the start"}</span></div>`); };
   const press = on => { btn.style.transform = on ? "scale(.88)" : ""; btn.style.background = on ? "rgba(62,166,255,.55)" : "rgba(0,0,0,.45)"; };
   const fade = () => dev.querySelectorAll(".toastin").forEach(e => { e.style.transition = "opacity .3s"; e.style.opacity = 0; });
-  // the finger rests just below the button so the button stays visible
   situation("Tap the Copy link button");
-  at(150, () => fingerTo(f, W * fx + 4, H * fy + 14, 350));
+  at(150, () => fingerTo(f, W * fx, H * fy, 350));
   at(800, () => { tapF(f); press(true); }); at(1000, () => { press(false); toast(on ? timed : plain); });
   at(2900, fade);
   at(3300, () => situation("Tap and hold it"));
@@ -1551,7 +1585,9 @@ function statusBar() {
   const bat = `<span style="display:inline-flex;align-items:center;gap:2px;font-size:10px">78%<span style="width:18px;height:9px;border:1.3px solid #e8e8e8;border-radius:2.5px;padding:1px;display:inline-block;position:relative"><i style="display:block;height:100%;width:78%;background:#e8e8e8;border-radius:1px"></i></span></span>`;
   return `<div style="height:22px;display:flex;align-items:center;gap:5px;padding:0 12px;font-size:11.5px;color:#e8e8e8"><b style="font-weight:500;margin-right:3px">9:41</b>${left}<span style="flex:1"></span>${sv(alarm, 11)}${sv(wifi)}${sv(sig, 11)}<span style="font-size:9.5px;font-weight:600">5G</span>${bat}</div>`;
 }
-const THEME_DARK = { APP_DEFAULT: "#0f0f0f", PURE_BLACK: "#000000", MATERIAL_YOU_PURE_BLACK: "#000000", MATERIAL_YOU_NEUTRAL: "#1b1b1f", MATERIAL_YOU_PRIMARY: "#1a2433", MATERIAL_YOU_SECONDARY: "#22262e", MATERIAL_YOU_TERTIARY: "#2a2230", CATPPUCCIN_MOCHA: "#1e1e2e" };
+const THEME_DARK = { APP_DEFAULT: "#0f0f0f", PURE_BLACK: "#000000", MATERIAL_YOU_PURE_BLACK: "#000000", MATERIAL_YOU_NEUTRAL: "#1b1b1f", MATERIAL_YOU_PRIMARY: "#1a2433", MATERIAL_YOU_SECONDARY: "#22262e", MATERIAL_YOU_TERTIARY: "#2a2230", CATPPUCCIN_MOCHA: "#181825",
+  // the rest are the exact colours in Morphe's theme patch (BaseThemePatch THEME_COLORS_DARK)
+  CLASSIC_YOUTUBE: "#212121", DARK_PINK: "#290025", DARK_BLUE: "#001029", DARK_GREEN: "#002905", DARK_YELLOW: "#282900", DARK_ORANGE: "#291800", DARK_RED: "#290000" };
 SCENES.look = () => {
   const t = V("morphe_theme_color_dark");
   const bg = t === "CUSTOM" ? String(V("morphe_theme_color_dark_custom") || "#0f0f0f").replace(/^#(..)(......)$/, "#$2") : (THEME_DARK[t] || "#0f0f0f");
@@ -1658,22 +1694,16 @@ function playScenario(k, prevValue) {
     }, SC_FADE + SC_TOTAL);
   };
   if (!ask) return start();
-  // the default side is drawn as its first frame and held; the other side lists the choices
+  // the default side is drawn as its first frame and held; the other side waits, empty, until a
+  // choice is picked on the setting's pills in the list (which plays the comparison)
   draw(); scRun++;
-  const cells = box.querySelectorAll(".dl7"), right = cells[1];
+  const right = box.querySelectorAll(".dl7")[1];
   right.querySelector("span").textContent = "Select an option"; right.querySelector("span").classList.add("ask");
-  right.querySelector(".sf7").textContent = "";
+  right.querySelector(".sf7").textContent = "Pick one on the setting below";
   const dev = right.querySelector(".dev"), dw = dev ? dev.style.width : "92px", dh = dev ? dev.style.height : "172px";
-  right.querySelector(".side").innerHTML = `<div class="ask7" style="width:${dw};height:${dh}">${choices.map(e => `<button data-pick="${esc(String(e.value))}">${esc(e.label)}</button>`).join("")}</div>`;
+  right.querySelector(".side").innerHTML = `<div class="ask7" style="width:${dw};height:${dh}"></div>`;
   fitDev();
-  right.querySelector(".ask7").addEventListener("click", e => {
-    e.stopPropagation(); // the canvas closes on a tap anywhere else
-    const b = e.target.closest("[data-pick]"); if (!b || !token.alive || token !== scenarioToken) return;
-    const v = choices.find(c => String(c.value) === b.dataset.pick).value;
-    const lab = x => entriesFor(k).find(c => sameVal(c.value, x))?.label || String(x);
-    vals = [[d, lab(d)], [v, lab(v)]]; right.querySelector("span").classList.remove("ask");
-    start();
-  });
+  document.querySelectorAll(`#list [data-row="${k}"] .ctl .opt`).forEach(o => { o.classList.remove("nudge7"); void o.offsetWidth; o.classList.add("nudge7"); });
 }
 function stopScenario() { scenarioToken.alive = false; $("canvas").classList.remove("show"); $("stage").style.minHeight = ""; }
 
@@ -1688,15 +1718,19 @@ function dT(fn, ms) { const id = setTimeout(fn, ms); demoTimers.push(id); return
 function stopDemo() {
   clearInterval(demoTimer); demoTimer = null; demoTimers.forEach(clearTimeout); demoTimers = [];
   document.querySelectorAll("#stage .finger").forEach(f => { f.style.transition = "none"; f.classList.remove("show", "hold", "tap"); });
-  document.querySelectorAll("#stage .toastin.dyn").forEach(n => n.remove()); document.querySelectorAll("#stage .demo-label.dyn").forEach(n => { n.style.opacity = "0"; setTimeout(() => n.remove(), 250); }); }
+  document.querySelectorAll("#stage .toastin.dyn").forEach(n => n.remove()); document.querySelectorAll("#stage .demo-label.dyn").forEach(n => { n.style.opacity = "0"; setTimeout(() => { n.remove(); showSceneLabel(); }, 250); }); }
+const showSceneLabel = () => { if (!document.querySelector("#stage .demo-label.dyn")) document.querySelectorAll("#stage .demo-label:not(.dyn)").forEach(n => { n.style.visibility = ""; }); };
 function label(text, bad, ms) {
   const st = $("stage");
   st.querySelectorAll(".demo-label.dyn").forEach(n => n.remove());
+  st.querySelectorAll(".demo-label:not(.dyn)").forEach(n => { n.style.visibility = "hidden"; }); // the scene's own label would sit right under it
   const d = document.createElement("div");
   d.className = "demo-label dyn" + (bad ? " bad" : "");
   d.textContent = text;
   st.firstElementChild?.appendChild(d);
-  if (ms) setTimeout(() => { d.style.opacity = "0"; setTimeout(() => d.remove(), 300); }, ms);
+  const top = d.getBoundingClientRect().bottom - (st.firstElementChild || st).getBoundingClientRect().top + 8;
+  st.querySelectorAll(".toastin.dyn").forEach(t => { if (parseFloat(t.style.top) < top) t.style.top = top + "px"; }); // a pill shown first moves below
+  if (ms) setTimeout(() => { d.style.opacity = "0"; setTimeout(() => { d.remove(); showSceneLabel(); }, 300); }, ms);
 }
 const ENDSCREEN_SEL = new Set(["morphe_hide_autoplay_preview", "morphe_hide_end_screen_suggested_video"]);
 function finger() { return document.querySelector("#stage .finger"); }
@@ -1707,7 +1741,15 @@ function fmt(total, pct) { const s = Math.round(total * pct / 100); return `${Ma
 function setSeek(pct) { const p = $("played"), k = $("knob"); if (p) p.style.width = pct + "%"; if (k) k.style.left = pct + "%"; }
 function showPill(text, ms = 1100) {
   const st = $("stage").firstElementChild; if (!st) return;
-  const d = document.createElement("div"); d.className = "toastin dyn"; d.style.top = "14px"; d.textContent = text; st.appendChild(d);
+  const d = document.createElement("div"); d.className = "toastin dyn";
+  // never under the explanation pill in the top-left corner: sit just below it
+  const lab = st.querySelector(".demo-label.dyn"), sr = st.getBoundingClientRect();
+  d.style.top = (lab ? Math.max(14, lab.getBoundingClientRect().bottom - sr.top + 8) : 14) + "px"; d.textContent = text; st.appendChild(d);
+  // nor over a hint the scene already shows (such as "Pull up for precise seeking"): step below it
+  for (let i = 0; i < 4; i++) {
+    const a = d.getBoundingClientRect(), hit = [...st.querySelectorAll(".toastin:not(.dyn), .demo-label")].find(o => { if (o === d || !o.offsetWidth || getComputedStyle(o).visibility === "hidden") return false; const q = o.getBoundingClientRect(); return Math.min(a.right, q.right) - Math.max(a.left, q.left) > 2 && Math.min(a.bottom, q.bottom) - Math.max(a.top, q.top) > 2; });
+    if (!hit) break; d.style.top = (hit.getBoundingClientRect().bottom - sr.top + 6) + "px";
+  }
   dT(() => d.remove(), ms);
 }
 const DEMOS = {
@@ -2750,7 +2792,8 @@ function renderBar() {
   $("pickGrid").innerHTML = (grouped ? `<div class="pg pvis pgroups">${GROUPS.map(gpick).join("")}</div>` : `<div class="pg pvis">${vis.map(pick).join("")}</div>` + `<div class="plaincard"><div class="ph">${I("list")}No preview · standard settings</div><div class="pg">${plain.map(pick).join("")}</div></div>`)
     + `<div class="themerow"><div class="themetog" data-theme-toggle role="menuitemcheckbox" aria-checked="${theme === "m3"}"><span class="pi">${I("palette")}</span><div class="tt">Morphe design</div><span class="sw" role="presentation" aria-checked="${theme === "m3"}"></span></div>`
     + `<button class="ordreset" data-order-reset ${customOrder ? "" : "disabled"} title="Hold a screen to move it. This restores Morphe's order.">${I("reset")}Reset order</button></div>`
-    + `<div class="themerow simrow"><div class="themetog" data-group-toggle role="menuitemcheckbox" aria-checked="${grouped}"><span class="pi">${I("layers")}</span><div class="tt">Group screens into tabs<small>Six screens instead of ${SECTIONS.length}. Each one has tabs right under the live preview, and every tab brings its own preview.</small></div><span class="sw" role="presentation" aria-checked="${grouped}"></span></div></div>`;
+    + `<div class="themerow simrow"><div class="themetog" data-group-toggle role="menuitemcheckbox" aria-checked="${grouped}"><span class="pi">${I("layers")}</span><div class="tt">Group screens into tabs<small>Six screens instead of ${SECTIONS.length}. Each one has tabs right under the live preview, and every tab brings its own preview.</small></div><span class="sw" role="presentation" aria-checked="${grouped}"></span></div></div>`
+    + `<div class="themerow designrow"><div class="dsg"><span class="pi">${I("list")}</span><div class="tt">Settings list design</div></div><div class="seg3" role="radiogroup" aria-label="Settings list design">${[["classic", "Morphe"], ["toggles", "Switches"], ["clean", "Clean"]].map(([id, t]) => `<button role="radio" data-design="${id}" aria-checked="${design === id}">${t}</button>`).join("")}</div></div>`;
   $("btnReset").disabled = mode !== "mod" || !Object.keys(PREF).some(k => JSON.stringify(state[k]) !== JSON.stringify(defaults[k]));
 }
 // ---- DEV ONLY: "finished" checkmarks -------------------------------------------------------------
@@ -2904,9 +2947,9 @@ function controlFor(k) {
   const p = PREF[k]; const v = V(k); const dis = !parentsOk(k) ? "disabled" : "";
   const ents = entriesFor(k).filter(e => !(OFF_LIST.has(k) && e.value === "off"));
   if (OFF_LIST.has(k) && String(v) === "off") return "";
-  // up to 8 choices: a row of pills; 9 to 16 (icon styles, theme colours, qualities): a 4-column grid
+  // up to 8 choices: a row of pills; 9 to 16 (icon styles, theme colours, qualities): a 3-column grid
   // of pills built from the same entries, so it follows whatever list Morphe ships; more: a dropdown
-  if (ents.length && ents.length <= 16) return `<div class="ctl ${ents.length > 8 ? "grid4" : ""}">${ents.map(e => `<button class="opt" data-set="${k}" data-val="${esc(e.value)}" aria-pressed="${sameVal(e.value, v)}" ${dis}>${esc(e.label)}</button>`).join("")}</div>`;
+  if (ents.length && ents.length <= 16) return `<div class="ctl ${ents.length > 8 ? "grid3" : ""}">${ents.map(e => `<button class="opt" data-set="${k}" data-val="${esc(e.value)}" aria-pressed="${sameVal(e.value, v)}" ${dis}>${esc(e.label)}</button>`).join("")}</div>`;
   if (ents.length) return `<div class="ctl"><select data-set="${k}" ${dis} aria-label="${esc(title(k))}">${ents.map(e => `<option value="${esc(e.value)}" ${sameVal(e.value, v) ? "selected" : ""}>${esc(e.label)}</option>`).join("")}</select></div>`;
   if (p.type === "integer" || p.type === "float" || p.type === "long") {
     const r = Object.entries(RANGES).find(([n]) => k.includes(n));
@@ -2953,9 +2996,12 @@ function rowHTML(k, live) {
   const isBool = p.type === "boolean";
   const info = !p.type || p.type === "screen" || p.widget === "NonInteractivePreference" || p.widget === "IntentPreference";
   let right = "", ctl = "";
+  const swHTML = () => `<button class="sw" role="switch" data-sw="${k}" aria-checked="${!!V(k)}" aria-label="${esc(title(k))}"></button>`;
   if (OFF_LIST.has(k)) { right = `<button class="sw" role="switch" data-sw="${k}" aria-checked="${String(V(k)) !== "off"}" aria-label="${esc(title(k))}"></button>`; ctl = controlFor(k); }
+  else if (isBool && design === "clean" && cleanOf(k)) right = toggleHTML(k);
+  else if (isBool && design === "toggles") right = swHTML();
   else if (live && a.kind !== "scenario") { right = stateChip(k); if (!isBool) ctl = controlFor(k); }
-  else if (isBool) right = `<button class="sw" role="switch" data-sw="${k}" aria-checked="${!!V(k)}" aria-label="${esc(title(k))}"></button>`;
+  else if (isBool) right = swHTML();
   else if (!info || (p.widget === "NonInteractivePreference" && /_file$/.test(k))) ctl = controlFor(k);
   const cls = ["row", live ? "live" : "fallback"];
   if (selected === k) cls.push("sel");
@@ -2971,10 +3017,10 @@ function rowHTML(k, live) {
   const tags = "";
   const kids = KIDS[k] ? KIDS[k].filter(x => kidVisible(x) || x === peekKid).length : 0;
   const kidbtn = kids ? `<button class="kidbtn" data-kidtoggle="${k}" aria-expanded="${!collapsed.has(k)}" aria-label="${kids} sub-options">${kids}${I("expand")}</button>`
-    : KIDS[k] ? `<span class="kidhid">Sub-settings hidden</span>` : "";
+    : KIDS[k] ? `<span class="kidbtn kidoff" title="Sub-settings hidden while this is off" aria-label="${KIDS[k].length} sub-settings, hidden">${KIDS[k].length}${I("lock")}</span>` : ""; // same footprint as the open/close button, so the card never changes width
   const over = /^(hide|show) in /i.test(title(k)) && p.subScreenTitle ? `<div class="over">${esc(p.subScreenTitle)}</div>` : "";
   return `<div class="${cls.join(" ")}" data-row="${k}" data-k="${k}" tabindex="0">
-    <div class="txt">${over}<div class="ttl">${ttlHTML(title(k), (dis ? I("lock", "lk") : "") + (chg ? '<span class="changed-dot" title="Changed from default"></span>' : "") + tags + kidbtn)}</div>
+    <div class="txt">${over}<div class="ttl">${ttlHTML(shownTitle(k), (dis ? I("lock", "lk") : "") + (chg ? '<span class="changed-dot" title="Changed from default"></span>' : "") + tags + kidbtn)}</div>
       ${sum ? `<div class="sum">${esc(sum)}</div>` : ""}${need}${ctl}</div>${right || goto ? `<div class="side">${right}${goto}</div>` : ""}</div>`;
 }
 // The last word of a title and the badges after it never wrap apart, so a sub-options pill can't end up alone on a line.
@@ -3034,13 +3080,15 @@ function renderList() {
     if (ks) {
       const any = ks.some(x => kidVisible(x) || x === peekKid);
       if (any && (!collapsed.has(k) || ks.includes(peekKid))) wantOpen.add(k);
-      out += `<div class="kids ${lastOpen.has(k) ? "open" : ""}" data-kids-of="${k}"><div class="kin">${ks.map(x => rowHTML(x, isLive(x))).join("")}</div></div>`;
+      // parent and its sub-options travel as one unit, so in two columns they stay in the same column
+      out = `<div class="unit">${out}<div class="kids ${lastOpen.has(k) ? "open" : ""}" data-kids-of="${k}"><div class="kin">${ks.map(x => rowHTML(x, isLive(x))).join("")}</div></div></div>`;
     }
     return out;
   };
   if (section !== "misc") {
     const top = m.live.filter(k => !PARENT_OF[k]);
-    const ordered = byPosition(top);
+    // in the clean design a setting whose title can't be converted keeps Morphe's look, at the end
+    const ordered0 = byPosition(top), ordered = [...ordered0.filter(k => !cleanBroken(k)), ...ordered0.filter(cleanBroken)];
     const rest = m.misc.filter(k => !PARENT_OF[k]);
     let live = "";
     const lay = LAYOUT[section];
@@ -3080,6 +3128,7 @@ function renderList() {
     kin.querySelectorAll(".row").forEach(r => r.classList.remove("sel", "attn", "nudge"));
     setTimeout(() => { if (kin.isConnected && !kin.parentElement.classList.contains("open")) kin.innerHTML = fresh; }, 320);
   });
+  fitSums(list);
   // animate sub-option groups and rows from their previous state to the new one
   void list.offsetHeight;
   const sameSec = lastVis.sec === section;
@@ -3301,9 +3350,19 @@ function proxyEls(k) {
   for (let p = PROXY_K[k] || PARENT_OF[k]; p && !seen.has(p); p = PROXY_K[p] || PARENT_OF[p]) { seen.add(p); const e = q(p); if (e.length) return e; }
   return [];
 }
+// Descriptions show two lines; a longer one is cut (with a fade) and unfolds when its setting is
+// selected, folding back when another one is. Every card keeps the same size whatever its state.
+function fitSums(root = $("list")) {
+  root.querySelectorAll(".row > .txt > .sum:not(.need)").forEach(el => {
+    const lh = parseFloat(getComputedStyle(el).lineHeight) || 17.5, full = el.scrollHeight;
+    el.classList.toggle("long", full > lh * 2 + 3); el.style.setProperty("--full", full + "px");
+    el.classList.toggle("open", el.classList.contains("long") && !!el.closest(".row.sel"));
+  });
+}
 function highlight(k, flash = true, reveal = false) {
   document.querySelectorAll(".sel").forEach(e => e.classList.remove("sel", "selin"));
   document.querySelectorAll(`[data-k="${k}"], [data-row="${k}"], [data-also="${k}"]`).forEach(e => e.classList.add("sel"));
+  document.querySelectorAll("#list .sum.open").forEach(e => { if (!e.closest(".row.sel")) e.classList.remove("open"); }); document.querySelectorAll(`#list [data-row="${k}"] > .txt > .sum.long`).forEach(e => e.classList.add("open"));
   const els = [...document.querySelectorAll(`#stage [data-k="${k}"], #stage [data-also="${k}"]`)];
   const proxy = els.length ? [] : proxyEls(k);
   const finish = () => { els.forEach(e => {
@@ -3499,7 +3558,9 @@ function select(k, from) {
   if (from === "stage") rowForStage(k);
   if (from === "list" && mode === "mod" && A[k] && (A[k].kind === "vis" || A[k].kind === "overlay") && !shown(k) && document.querySelector(`#stage [data-k="${k}"]`)) ghost(k);
   if (DEMOS[k]) startDemo(k); else stopDemo();
-  if (SCN[k] && from) playScenario(k); else if (from && k !== prevSel) stopScenario();
+  // any move to another setting ends a running animation (also a change made through a value pill,
+  // which selects without a "from")
+  if (SCN[k] && from) playScenario(k); else if (k !== prevSel) stopScenario();
   const a = A[k];
   const notApplicable = a && (a.kind === "vis" || a.kind === "overlay") && a.section === section && !CUSTOM_KEYS.has(k) && !document.querySelector(`#stage [data-k="${k}"], #stage [data-also="${k}"]`);
   if (notApplicable && SCENES[section]) {
@@ -3690,7 +3751,7 @@ function down(e) {
   if (e.button > 0) return;
   if (e.pointerType === "mouse" && e.target.closest("#stage")) drag = { x: e.clientX, y: e.clientY, t: e.target, on: false };
   // tapping a switch flips it straight away (the row itself keeps tap = select, hold = switch)
-  if (e.target.closest(".sw")) return;
+  if (e.target.closest(".sw,.lt7")) return;
   if (e.target.closest("input,select,textarea,button.opt,.filepick,.goto,.kidbtn,.replay,[data-tray]")) return;
   const el = e.target.closest("[data-k]"); if (!el) return;
   const k = el.dataset.k; const from = el.closest("#stage") ? "stage" : "list";
@@ -3808,10 +3869,49 @@ $("list").addEventListener("change", e => {
 });
 
 $("secPill").onclick = () => setPicker(!pickerOpen);
-$("tabs").addEventListener("click", e => { const t = e.target.closest("[data-tab]"); if (!t || t.dataset.tab === section) return; returnTo = null; switchSection(t.dataset.tab); });
+$("tabs").addEventListener("click", e => { if (tabDrag.justDragged) { tabDrag.justDragged = false; return; } const t = e.target.closest("[data-tab]"); if (!t || t.dataset.tab === section) return; returnTo = null; switchSection(t.dataset.tab); });
+// Tabs scroll sideways (touch, mouse wheel, mouse drag). Holding a tab lifts it; drag it to reorder.
+const tabDrag = { justDragged: false };
+(() => {
+  const box = $("tabs"); let st = null;
+  box.addEventListener("wheel", e => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { box.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false });
+  box.addEventListener("pointerdown", e => {
+    if (e.button > 0) return;
+    const t = e.target.closest("[data-tab]");
+    st = { x: e.clientX, sl: box.scrollLeft, t, mode: null, id: e.pointerId };
+    if (t) st.hold = setTimeout(() => { if (!st || st.mode) return; st.mode = "lift"; t.classList.add("lift"); box.setPointerCapture(st.id); try { navigator.vibrate && navigator.vibrate(15); } catch { /* ignore */ } }, 450);
+  });
+  box.addEventListener("pointermove", e => {
+    if (!st) return;
+    const dx = e.clientX - st.x;
+    if (!st.mode && Math.abs(dx) > 8) { clearTimeout(st.hold); st.mode = e.pointerType === "mouse" ? "scroll" : "native"; if (st.mode === "scroll") box.setPointerCapture(st.id); }
+    if (st.mode === "scroll") box.scrollLeft = st.sl - dx;
+    if (st.mode === "lift") {
+      const tabs = [...box.querySelectorAll(".tab7")], me = st.t;
+      const over = tabs.find(o => { if (o === me) return false; const r = o.getBoundingClientRect(); return e.clientX > r.left && e.clientX < r.right; });
+      if (over) { const r = over.getBoundingClientRect(); over.parentNode.insertBefore(me, e.clientX < r.left + r.width / 2 ? over : over.nextSibling); }
+      const br = box.getBoundingClientRect(); if (e.clientX > br.right - 24) box.scrollLeft += 8; else if (e.clientX < br.left + 24) box.scrollLeft -= 8;
+    }
+  });
+  const end = () => {
+    if (!st) return; clearTimeout(st.hold);
+    if (st.mode === "lift") {
+      st.t.classList.remove("lift");
+      const g = groupOf(section), ids = [...box.querySelectorAll(".tab7")].map(b => b.dataset.tab), def = g.tabs.map(([t]) => t).filter(t => ids.includes(t));
+      if (JSON.stringify(ids) === JSON.stringify(def)) delete tabOrder[g.id]; else tabOrder[g.id] = ids;
+      store.save(); tabDrag.justDragged = true; setTimeout(() => { tabDrag.justDragged = false; }, 300);
+    } else if (st.mode === "scroll") { tabDrag.justDragged = true; setTimeout(() => { tabDrag.justDragged = false; }, 300); }
+    st = null;
+  };
+  box.addEventListener("pointerup", end); box.addEventListener("pointercancel", end);
+  box.addEventListener("contextmenu", e => e.preventDefault());
+  box.addEventListener("touchmove", e => { if (st && st.mode === "lift") e.preventDefault(); }, { passive: false }); // a lifted tab moves, the strip doesn't
+})();
 $("pickScrim").onclick = () => setPicker(false);
 $("pickGrid").addEventListener("click", e => {
   if (pickSuppress) return;
+  const dz = e.target.closest("[data-design]");
+  if (dz) { design = dz.dataset.design; renderBar(); renderList(); store.save(); snack(design === "clean" ? "Clean titles: each setting names both of its states" : design === "toggles" ? "Every on/off setting is a switch" : "Morphe's own titles and labels"); return; }
   if (e.target.closest("[data-group-toggle]")) { grouped = !grouped; renderBar(); renderStage(); store.save(); if (grouped) tutOnce("groups"); snack(grouped ? "Screens are grouped. Switch tabs right under the preview" : "Every screen is listed on its own again"); return; }
   const gb = e.target.closest("[data-group]");
   if (gb) { const g = GROUPS.find(x => x.id === gb.dataset.group), tabs = tabsOf(g); setPicker(false); returnTo = null; switchSection(lastTab[g.id] && tabs.some(([t]) => t === lastTab[g.id]) ? lastTab[g.id] : tabs[0][0]); return; }
@@ -3894,6 +3994,7 @@ const TUT_PAGES = {
   tap: { cap: "Tap something in the preview", sub: "Its setting lights up in the list" },
   change: { cap: "Double-tap it to change the setting", sub: "Holding it works too. Here the button gets hidden" },
   find: { cap: "Tap a hidden setting to find it", sub: "An outline shows where it was. Double-tap or hold it, or use the switch, to bring it back" },
+  // the list row follows the chosen list design (see cleanOf)
   tools: { ms: 6300, cap: "Search, reset and compare", sub: "Search finds any setting. Reset undoes your changes. Original shows stock YouTube, Morphe shows yours" },
 };
 const tutPages = () => [...(grouped ? ["groups"] : []), "tap", "change", "find", "tools"];
@@ -3910,7 +4011,7 @@ function runTutorial(startAt) {
         <div class="tpick" id="tPick">${GROUPS.map(g => `<span data-g="${g.id}">${I(g.icon)}${esc(g.title)}</span>`).join("")}</div>
         <div class="tmenu" id="tMenu"><b>Reset settings?</b><span>Only this screen</span><span>Everything</span></div></div>
       <div class="ttabs" id="tTabs"><span class="on">Controls</span><span>Seekbar</span><span>Fullscreen</span><span>Player menu</span></div>
-      <div class="tlist" id="tlist"><div class="tl-t">Hide Cast button<small id="tlSum">Shown</small></div><span class="sw" id="tlSw" role="presentation" aria-checked="false"></span><div class="tl-bar" id="tlBar"></div></div>
+      <div class="tlist" id="tlist"><div class="tl-t">${design === "clean" ? "Cast button" : "Hide Cast button"}<small id="tlSum">${esc((PREF.morphe_hide_cast_button && PREF.morphe_hide_cast_button.summary) || "")}</small></div>${design === "clean" ? `<span class="lt7 pos" id="tlSw" role="presentation" aria-checked="false"><span class="cur">Show</span><span>Hide</span></span>` : design === "toggles" ? `<span class="sw" id="tlSw" role="presentation" aria-checked="false"></span>` : `<span class="state on" id="tlSw" aria-checked="false">Shown</span>`}<div class="tl-bar" id="tlBar"></div></div>
     </div>
     <div class="finger tfinger" id="tFinger">${I("gesture")}</div>
     <div class="steps" role="tablist" aria-label="Tutorial pages">${pages.map((_, n) => `<button role="tab" data-step="${n}" aria-label="Page ${n + 1}"><i></i></button>`).join("")}</div>
@@ -3926,13 +4027,22 @@ function runTutorial(startAt) {
   const tap = () => { f.classList.remove("tap"); void f.offsetWidth; f.classList.add("tap"); };
   const dbl = fn => { tap(); at2(170, () => { tap(); fn(); }); };
   const hold = r => { f.classList.add("hold"); r.classList.remove("go"); void r.offsetWidth; r.classList.add("go"); };
-  const setHidden = h => { sw.setAttribute("aria-checked", String(h)); sum.textContent = h ? "Hidden" : "Shown"; };
+  const setHidden = h => {
+    sw.setAttribute("aria-checked", String(h)); // the description stays as in the list; only the toggle changes
+    if (design === "clean") { sw.className = "lt7 " + (h ? "neg" : "pos"); sw.children[0].className = h ? "" : "cur"; sw.children[1].className = h ? "cur" : ""; }
+    if (design === "classic") { sw.className = "state " + (h ? "off" : "on"); sw.textContent = h ? "Hidden" : "Shown"; }
+  };
+  const findSub = design === "clean" ? "An outline shows where it was. Double-tap or hold it, or use its Show / Hide toggle, to bring it back"
+    : design === "classic" ? "An outline shows where it was. Double-tap or hold it to bring it back" : TUT_PAGES.find.sub;
+  // the caption area keeps the height of the tallest page, so the demo below never jumps
+  { const cap = $("tcap"); let hMax = 0; pages.forEach((id, n) => { cap.innerHTML = `<b>${n + 1}</b>${TUT_PAGES[id].cap}<small>${id === "find" ? findSub : TUT_PAGES[id].sub}</small>`; hMax = Math.max(hMax, cap.offsetHeight); }); cap.style.minHeight = hMax + "px"; }
+  t.querySelector(".tdemo").classList.toggle("grouped", grouped);
   const show = () => {
     tutAnims.forEach(clearTimeout); tutAnims = [];
     seen.add(step);
     const id = pages[step];
     t.querySelectorAll(".steps button").forEach((b, n) => { b.classList.toggle("on", n === step); b.setAttribute("aria-selected", String(n === step)); b.classList.toggle("done", seen.has(n)); });
-    $("tcap").innerHTML = `<b>${step + 1}</b>${TUT_PAGES[id].cap}<small>${TUT_PAGES[id].sub}</small>`;
+    $("tcap").innerHTML = `<b>${step + 1}</b>${TUT_PAGES[id].cap}<small>${id === "find" ? findSub : TUT_PAGES[id].sub}</small>`;
     // every page starts from the same scene; each one switches on the extras it needs
     t.querySelector(".tdemo").dataset.page = id;
     f.classList.remove("tap", "hold"); ring.classList.remove("go"); bar.classList.remove("go"); row.classList.remove("sel");
@@ -3968,21 +4078,23 @@ function runTutorial(startAt) {
       cast.className = "tb off"; setHidden(true); move(row, 0, -40, 40);
       at2(60, () => move(row, 500, -40));
       at2(700, () => { tap(); row.classList.add("sel"); cast.className = "tb ghost"; });
-      at2(1500, () => move(sw, 500));
-      at2(2200, () => { tap(); setHidden(false); cast.className = "tb sel reveal"; });
+      if (design === "classic") { at2(1500, () => move(row, 400, -40)); at2(2100, () => dbl(() => { setHidden(false); cast.className = "tb sel reveal"; })); }
+      else { at2(1500, () => move(sw, 500)); at2(2200, () => { tap(); setHidden(false); cast.className = "tb sel reveal"; }); }
       at2(3400, () => f.classList.remove("show"));
     }
-    if (id === "tools") { // search, then reset, then Original / Morphe (played half as slow again: a lot happens)
-      const at3 = (ms, fn) => at2(ms * 1.5, fn);
+    if (id === "tools") { // search, then reset (the longest part), then Original / Morphe; 6.3 s in all
       cast.className = "tb off"; setHidden(true); move($("tSearch"), 0, 0, 60);
-      at3(60, () => move($("tSearch"), 675));
-      at3(600, () => { tap(); $("tQ").classList.add("show"); [..."cast"].forEach((c, i) => at3(150 + i * 110, () => { $("tQ").textContent += c; })); });
-      at3(1500, () => { $("tQ").classList.remove("show"); move($("tReset"), 600); });
-      at3(2000, () => { tap(); $("tMenu").classList.add("show"); });
-      at3(2600, () => { $("tMenu").classList.remove("show"); move($("tOrig"), 600); });
-      at3(3100, () => { tap(); $("tOrig").classList.add("on"); $("tMorphe").classList.remove("on"); t.querySelector(".tstage").classList.add("stock"); cast.className = "tb"; });
-      at3(3700, () => { move($("tMorphe"), 375); });
-      at3(4000, () => { tap(); $("tMorphe").classList.add("on"); $("tOrig").classList.remove("on"); t.querySelector(".tstage").classList.remove("stock"); cast.className = "tb off"; });
+      at2(60, () => move($("tSearch"), 560));
+      at2(760, () => { tap(); $("tQ").classList.add("show"); [..."cast"].forEach((c, i) => at2(960 + i * 140, () => { $("tQ").textContent += c; })); });
+      at2(1872, () => { $("tQ").classList.remove("show"); move($("tReset"), 560); });
+      at2(2540, () => { tap(); $("tMenu").classList.add("show"); });
+      at2(3200, () => move(t.querySelector("#tMenu span"), 450));
+      at2(3800, () => { tap(); t.querySelector("#tMenu span").classList.add("hit"); });
+      at2(4150, () => { $("tMenu").classList.remove("show"); t.querySelector("#tMenu span").classList.remove("hit"); setHidden(false); cast.className = "tb reveal"; });
+      at2(4656, () => move($("tOrig"), 450));
+      at2(5200, () => { tap(); $("tOrig").classList.add("on"); $("tMorphe").classList.remove("on"); t.querySelector(".tstage").classList.add("stock"); });
+      at2(5928, () => move($("tMorphe"), 220));
+      at2(6180, () => { tap(); $("tMorphe").classList.add("on"); $("tOrig").classList.remove("on"); t.querySelector(".tstage").classList.remove("stock"); });
     }
   };
   const okCheck = () => { if (loops >= 2 || seen.size === pages.length && manual) { $("tutOk").classList.add("show"); } };
@@ -4021,7 +4133,7 @@ async function boot() {
   try { const b = JSON.parse(localStorage.getItem(LS + "-baseline") || "null"); if (b) for (const k in b) if (k in PREF) baseline[k] = b[k]; } catch { /* storage unavailable */ }
   if (saved.section && SECTIONS.some(s => s.id === saved.section)) section = saved.section;
   if (saved.theme === "m3") theme = "m3";
-  if (saved.grouped) grouped = true;
+  if (saved.lv >= 2 && typeof saved.grouped === "boolean") grouped = saved.grouped; // older saves predate tabs being the default
   if (saved.tabs) Object.assign(lastTab, saved.tabs);
   applyTheme();
   if (saved.device && DEVICES.some(d => d.id === saved.device)) device_ = saved.device;
@@ -4036,6 +4148,8 @@ async function boot() {
   $("ytVer").onchange = e => { ytVersion = e.target.value; applyVersion(); trayOpen = false; buildMembers(); commit(); };
   buildMembers();
   if (Array.isArray(saved.order)) customOrder = saved.order;
+  if (saved.tabOrder && typeof saved.tabOrder === "object") tabOrder = saved.tabOrder;
+  if (["classic", "toggles", "clean"].includes(saved.design)) design = saved.design;
   if (saved.borrowed && typeof saved.borrowed === "object") for (const [sec, ks] of Object.entries(saved.borrowed)) if (Array.isArray(ks)) borrowed[sec] = new Set(ks.filter(x => PREF[x]));
   applyOrder();
   renderAll();
@@ -4044,6 +4158,6 @@ async function boot() {
   let seen = false; try { seen = localStorage.getItem(LS + "-tutorial") === "1"; } catch { /* storage unavailable */ }
   if (!seen) runTutorial();
 }
-store.save = function () { try { localStorage.setItem(LS, JSON.stringify({ state: changedOnly(), section, device: device_, yt: ytVersion, theme, grouped, tabs: lastTab, order: customOrder, borrowed: Object.fromEntries(Object.entries(borrowed).map(([s, v]) => [s, [...v]])) })); localStorage.setItem(LS + "-baseline", JSON.stringify(baseline)); } catch { /* storage unavailable */ } };
+store.save = function () { try { localStorage.setItem(LS, JSON.stringify({ state: changedOnly(), section, device: device_, yt: ytVersion, theme, grouped, lv: 2, design, tabs: lastTab, tabOrder, order: customOrder, borrowed: Object.fromEntries(Object.entries(borrowed).map(([s, v]) => [s, [...v]])) })); localStorage.setItem(LS + "-baseline", JSON.stringify(baseline)); } catch { /* storage unavailable */ } };
 boot();
 })();

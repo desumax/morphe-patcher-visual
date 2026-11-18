@@ -8,6 +8,7 @@
 package app.morphe.extension.youtube.visualeditor;
 
 import static java.lang.Boolean.FALSE;
+import static java.lang.Boolean.TRUE;
 import static app.morphe.extension.shared.settings.Setting.parent;
 
 import app.morphe.extension.shared.settings.BooleanSetting;
@@ -19,7 +20,7 @@ import app.morphe.extension.shared.settings.BooleanSetting;
  */
 public final class VisualEditorSettings {
     public static final BooleanSetting ENABLED = new BooleanSetting("morphe_visual_editor_enabled", FALSE);
-    public static final BooleanSetting GROUPED = new BooleanSetting("morphe_visual_editor_grouped", FALSE, parent(ENABLED));
+    public static final BooleanSetting GROUPED = new BooleanSetting("morphe_visual_editor_grouped", TRUE, parent(ENABLED));
 
     private VisualEditorSettings() {
     }
