@@ -1,4 +1,10 @@
-# Visual settings editor: native patch groundwork
+# Visual settings editor: native patch
+
+**Test bundle:** `../bundle/build.py` builds this into a bundle of its own (one patch, "Visual
+settings editor"), used in Morphe Manager next to the official Morphe Patches bundle. It depends
+on no patch object of the official bundle, so nothing runs twice and no patch name clashes. The
+preview drawings are not ported yet: the test build has the entry, the list, the toggles, the
+three designs, search and reset.
 
 This folder is the starting point for turning the web prototype (`../web`) into a real Morphe
 patch. Its folders mirror [morphe-patches](https://github.com/MorpheApp/morphe-patches), so each
@@ -63,22 +69,15 @@ recurring maintenance, and the editor keeps working while it waits.
 
 | Path | What it does |
 | --- | --- |
-| `patches/.../misc/visualeditor/VisualSettingsEditorPatch.kt` | The patch: the entry above About, its screen, and the bundled map. |
-| `patches/src/main/resources/visualeditor/raw/morphe_visual_editor_preview_map.json` | Hints: which preview and animation kind each known setting uses, in preview order, plus the six groups for the tabbed layout. Exported from the web prototype. |
-| `patches/src/main/resources/addresources/values/strings.xml` | The editor's own strings. |
-| `extensions/.../visualeditor/PreferenceTree.java` | Reads the live settings list from `morphe_prefs.xml`. |
-| `extensions/.../visualeditor/SettingsBridge.java` | Reads, changes and resets real settings through the `Setting` API, and tracks whether a restart is needed. |
-| `extensions/.../visualeditor/PreviewMap.java` | Loads the hints, skips entries the installed build doesn't have, and lists the settings it doesn't know. |
-| `extensions/.../visualeditor/VisualEditorSettings.java` | The editor's own two settings (on, tabs). |
-| `extensions/.../visualeditor/VisualEditorSwitchPreference.java` | The on switch (loads `VisualEditorSettings` before the screen binds). |
-| `extensions/.../visualeditor/VisualEditorPreference.java` | The "Open visual editor" entry. |
-| `extensions/.../visualeditor/VisualEditorDialog.java` | The editor: top bar, sticky preview, tabs, list. A full-screen dialog, because root installs can't declare a new activity. |
-
-`../data/catalogue.json` and `extract_catalogue.py` are for the web prototype and the map check
-only. Nothing from them ships in the patch.
-
-The full compatibility design, with the history numbers and the YouTube version safeguards, is in
-[COMPATIBILITY.md](COMPATIBILITY.md).
+| `patches/.../misc/visualeditor/VisualSettingsEditorPatch.kt` | The patch. Depends on no other patch object; in finalize it adds one call at the end of Morphe's settings fragment `initialize()`. |
+| `preview_map.json` | Hints: which preview and animation kind each known setting uses, in preview order, plus the six groups for the tabbed layout. Built into `PreviewMapData.java` by `../bundle/gen_preview_map_data.py`, so the patch adds no resources. |
+| `extensions/visualeditor/.../VisualEditorEntry.java` | Adds the "Visual settings editor" switch and "Open visual editor" row above About, and opens the editor when settings open while the switch is on. |
+| `extensions/visualeditor/.../VisualEditorDialog.java` | The editor: top bar (screen picker, search, design, reset), preview placeholder, tabs, list. |
+| `extensions/visualeditor/.../CleanTitle.java` | The Clean design's titles and two-state labels (same rules as the web preview). |
+| `extensions/visualeditor/.../PreferenceTree.java` | Reads the live settings list from `morphe_prefs.xml`. |
+| `extensions/visualeditor/.../SettingsBridge.java` | Reads, changes and resets real settings through the `Setting` API, with Morphe's own confirmations and restart flag. |
+| `extensions/visualeditor/.../PreviewMap.java` | Loads the hints, skips entries the installed build doesn't have, and lists the settings it doesn't know. |
+| `extensions/visualeditor/.../VisualEditorSettings.java` | The editor's own settings (on, grouped tabs, design). |
 
 ## Two ways to ship it
 

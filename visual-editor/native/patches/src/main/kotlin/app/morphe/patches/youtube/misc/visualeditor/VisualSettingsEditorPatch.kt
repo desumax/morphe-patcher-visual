@@ -7,76 +7,68 @@
 
 package app.morphe.patches.youtube.misc.visualeditor
 
+import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
+import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
-import app.morphe.patches.all.misc.resources.addResources
-import app.morphe.patches.all.misc.resources.addResourcesPatch
-import app.morphe.patches.shared.misc.settings.preference.NonInteractivePreference
-import app.morphe.patches.shared.misc.settings.preference.PreferenceScreenPreference.Sorting
-import app.morphe.patches.youtube.misc.extension.sharedExtensionPatch
-import app.morphe.patches.youtube.misc.settings.PreferenceScreen
-import app.morphe.patches.youtube.misc.settings.settingsPatch
-import app.morphe.patches.youtube.shared.Constants.COMPATIBILITY_YOUTUBE
-import app.morphe.util.ResourceGroup
-import app.morphe.util.copyResources
+import app.morphe.patcher.patch.classDefByOrNull
+import app.morphe.patcher.patch.mutableClassDefBy
+import com.android.tools.smali.dexlib2.Opcode
 
-private const val EXTENSION_PACKAGE = "app.morphe.extension.youtube.visualeditor"
+private const val ENTRY =
+    "Lapp/morphe/extension/youtube/visualeditor/VisualEditorEntry;"
+
+// The Morphe settings screen of the official Morphe Patches (its YouTube extension).
+private const val SETTINGS_FRAGMENT =
+    "Lapp/morphe/extension/youtube/settings/preference/YouTubePreferenceFragment;"
 
 /**
- * Optional visual front end for the Morphe settings screen.
+ * Optional visual front end for the Morphe settings screen, shipped as a bundle of its own that is
+ * applied on top of the official Morphe Patches.
  *
- * It is a front end only: it reads the settings list at runtime from the same morphe_prefs.xml
- * the regular Morphe screens use, and reads and writes values through the same Setting API. It
- * edits no existing file and no other patch, so the developer keeps working exactly as before.
- * Settings the bundled preview map does not know yet still appear, as plain rows.
+ * It is a front end only. It reads the settings list from the same morphe_prefs.xml the regular
+ * Morphe screens use, and reads and writes values through the same Setting API. It depends on no
+ * patch object of another bundle, adds no resources and edits no other patch: its only change to
+ * Morphe's code is one call at the end of the settings fragment's initialize(), which adds the
+ * editor's two rows above About.
  *
- * Off by default. When selected, it adds a "Visual settings editor" entry at the top of Morphe
- * settings, above About (root entries are sorted by key, and "00_0" sorts before "00_about").
+ * That call is made in finalize, after every patch of every bundle has run, so the official
+ * settings extension is already merged no matter in which order the bundles' patches run.
  */
 @Suppress("unused")
 val visualSettingsEditorPatch = bytecodePatch(
     name = "Visual settings editor",
-    description = "Adds an optional visual editor for Morphe settings: a live preview of each " +
-        "YouTube screen where you tap an element to find its setting and hold it to change it.",
+    description = "Adds an optional visual editor at the top of Morphe settings (test build). " +
+        "Apply it together with the Morphe Patches bundle, including its settings.",
     default = false,
 ) {
-    dependsOn(
-        sharedExtensionPatch,
-        settingsPatch,
-        addResourcesPatch,
-    )
+    compatibleWith("com.google.android.youtube")
 
-    compatibleWith(COMPATIBILITY_YOUTUBE)
+    extendWith("extensions/visualeditor.mpe")
 
-    execute {
-        addResources("youtube", "misc.visualeditor.visualSettingsEditorPatch")
+    finalize {
+        if (classDefByOrNull(SETTINGS_FRAGMENT) == null) {
+            throw PatchException(
+                "Morphe settings were not found. Select the Morphe Patches bundle too " +
+                    "(any patch with Morphe settings, for example Hide ads).",
+            )
+        }
 
-        // Hints only: which preview each known setting appears in. Not a copy of the settings.
-        copyResources(
-            "visualeditor",
-            ResourceGroup("raw", "morphe_visual_editor_preview_map.json"),
-        )
+        val initialize = mutableClassDefBy(SETTINGS_FRAGMENT).methods.firstOrNull { method ->
+            method.name == "initialize" && method.parameterTypes.isEmpty() && method.returnType == "V"
+        } ?: throw PatchException("Morphe settings changed: initialize() not found")
 
-        // A screen of its own, made with the public PreferenceScreen API every patch uses, so
-        // SettingsPatch.kt needs no change. Holds the on switch, the editor entry and its options.
-        PreferenceScreen.Screen(
-            key = "morphe_settings_screen_00_0_visual_editor",
-            summaryKey = null,
-            icon = "@drawable/morphe_settings_screen_00_about",
-            layout = "@layout/preference_with_icon",
-            sorting = Sorting.UNSORTED,
-        ).addPreferences(
-            NonInteractivePreference(
-                key = "morphe_visual_editor_enabled",
-                summaryKey = null, // the switch shows ..._summary_on / ..._summary_off
-                tag = "$EXTENSION_PACKAGE.VisualEditorSwitchPreference",
-                selectable = true,
-            ),
-            NonInteractivePreference(
-                key = "morphe_visual_editor_open",
-                tag = "$EXTENSION_PACKAGE.VisualEditorPreference",
-                selectable = true,
-                dependency = "morphe_visual_editor_enabled",
-            ),
-        )
+        // Before every return, so the rows are added after Morphe built, translated and sorted its list.
+        val returns = initialize.implementation!!.instructions
+            .withIndex()
+            .filter { (_, instruction) -> instruction.opcode == Opcode.RETURN_VOID }
+            .map { it.index }
+        if (returns.isEmpty()) throw PatchException("Morphe settings changed: initialize() has no return")
+
+        returns.asReversed().forEach { index ->
+            initialize.addInstruction(
+                index,
+                "invoke-static { p0 }, $ENTRY->onSettingsCreated(Landroid/preference/PreferenceFragment;)V",
+            )
+        }
     }
 }

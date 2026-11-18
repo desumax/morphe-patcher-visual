@@ -19,11 +19,10 @@ import java.util.List;
 import java.util.Map;
 
 import app.morphe.extension.shared.Logger;
-import app.morphe.extension.shared.Utils;
 
 /**
  * Which live preview a setting belongs to and how it is shown there, exported from the web
- * prototype (res/raw/morphe_visual_editor_preview_map.json).
+ * prototype (preview_map.json, built into PreviewMapData so the patch adds no resources).
  *
  * Kinds, one native adapter each:
  *   vis        VisibilityAdapter   hide or show a component, collapsing it with a size animation
@@ -56,6 +55,8 @@ public final class PreviewMap {
     public static final class Group {
         public final String id, title;
         public final List<String> tabs = new ArrayList<>();
+        /** Tab title per screen id, in the grouped layout's own words. */
+        public final Map<String, String> tabTitles = new LinkedHashMap<>();
 
         Group(String id, String title) {
             this.id = id;
@@ -96,7 +97,7 @@ public final class PreviewMap {
         PreviewMap m = new PreviewMap();
         try {
             PreferenceTree tree = PreferenceTree.get();
-            JSONObject root = new JSONObject(readRaw(Utils.getContext(), "morphe_visual_editor_preview_map"));
+            JSONObject root = new JSONObject(PreviewMapData.json());
             JSONArray scr = root.getJSONArray("screens");
             for (int i = 0; i < scr.length(); i++) {
                 JSONObject o = scr.getJSONObject(i);
@@ -117,7 +118,11 @@ public final class PreviewMap {
                 JSONObject o = grp.getJSONObject(i);
                 Group g = new Group(o.getString("id"), o.getString("title"));
                 JSONArray tabs = o.getJSONArray("tabs");
-                for (int j = 0; j < tabs.length(); j++) g.tabs.add(tabs.getJSONArray(j).getString(0));
+                for (int j = 0; j < tabs.length(); j++) {
+                    JSONArray t = tabs.getJSONArray(j);
+                    g.tabs.add(t.getString(0));
+                    g.tabTitles.put(t.getString(0), t.optString(1, t.getString(0)));
+                }
                 m.groups.add(g);
             }
         } catch (Exception ex) {
@@ -141,16 +146,6 @@ public final class PreviewMap {
             list.add(n.key);
         }
         return out;
-    }
-
-    static String readRaw(android.content.Context context, String name) throws java.io.IOException {
-        int id = context.getResources().getIdentifier(name, "raw", context.getPackageName());
-        try (java.io.InputStream in = context.getResources().openRawResource(id)) {
-            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
-            byte[] buf = new byte[8192];
-            for (int n; (n = in.read(buf)) > 0; ) out.write(buf, 0, n);
-            return out.toString("UTF-8");
-        }
     }
 
     public List<Screen> screenList() {

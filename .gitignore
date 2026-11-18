@@ -36,3 +36,5 @@ google-services.json
 
 # npm modules used during release
 node_modules/
+visual-editor/bundle/work/
+visual-editor/bundle/out/
