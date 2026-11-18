@@ -285,7 +285,7 @@ button { font: inherit; color: inherit; }
 .duo7.gen { width: max-content; height: auto; align-items: flex-start; justify-content: center; gap: 4px; }
 .duo7.gen .dl7 { width: min-content; }
 .duo7.gen .dl7 > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.duo7.gen .side { position: relative; }
+.duo7.gen .side { position: relative; z-index: 1; } /* a gliding caption passes behind the phones */
 .duo7.gen .side > .dev { position: relative; }
 /* captions beside the phones (portrait pairs): left caption on the left, right one on the right, larger */
 .duo7.gen.capside { flex-direction: row !important; align-items: stretch; gap: 6px; }

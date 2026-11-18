@@ -46,6 +46,13 @@ function measurePair(gen) {
   probe.remove();
   return { rowWH, colWH, sideWH };
 }
+// where an element sits inside the pair, in the pair's own unscaled pixels (whatever its scale is right
+// now), measured from the pair's centre: the pair is centred in the preview, so when it changes size its
+// centre stays put while its corner moves
+function inPair(gen, el) {
+  const G = gen.getBoundingClientRect(), r = el.getBoundingClientRect(), k = G.width / (gen.offsetWidth || 1) || 1, cs = getComputedStyle(el);
+  return { x: (r.left - (G.left + G.width / 2)) / k, y: (r.top - (G.top + G.height / 2)) / k, w: el.offsetWidth, fs: cs.fontSize, lh: cs.lineHeight };
+}
 // A caption moving to a new layout: a stand-in copy starts where the caption was and follows the
 // caption's live position (the phones are still turning and resizing) for 500 ms, morphing its width,
 // font size and line breaks on the way, then hands over to the real caption.
@@ -53,18 +60,18 @@ function glideCap(gen, cap, from) {
   if (cap._gliding) { cap._gliding.remove(); }
   const g = cap.cloneNode(true); g.className = "sf7 glide7"; cap._gliding = g;
   const px = v => parseFloat(v) || 0, ease = t => 1 - Math.pow(1 - t, 3), t0 = performance.now(), D = 500;
-  g.style.cssText = `position:absolute;margin:0;min-width:0;pointer-events:none;z-index:2;text-align:center;left:${from.x}px;top:${from.y}px;width:${from.w}px;font-size:${from.fs};line-height:${from.lh}`;
+  g.style.cssText = `position:absolute;margin:0;min-width:0;pointer-events:none;z-index:0;text-align:center;left:${from.x + gen.offsetWidth / 2}px;top:${from.y + gen.offsetHeight / 2}px;width:${from.w}px;font-size:${from.fs};line-height:${from.lh}`;
   gen.appendChild(g); cap.style.opacity = "0";
   const step = now => {
     if (!g.isConnected || !cap.isConnected) { g.remove(); cap.style.opacity = ""; cap._gliding = null; return; }
-    const t = Math.min(1, (now - t0) / D), e = ease(t), cs = getComputedStyle(cap);
-    const to = { x: cap.offsetLeft, y: cap.offsetTop, w: cap.offsetWidth, fs: px(cs.fontSize), lh: px(cs.lineHeight) };
+    const t = Math.min(1, (now - t0) / D), e = ease(t), q = inPair(gen, cap);
+    const to = { x: q.x, y: q.y, w: q.w, fs: px(q.fs), lh: px(q.lh) };
     g.textContent = cap.textContent;
-    g.style.left = from.x + (to.x - from.x) * e + "px"; g.style.top = from.y + (to.y - from.y) * e + "px";
+    g.style.left = from.x + (to.x - from.x) * e + gen.offsetWidth / 2 + "px"; g.style.top = from.y + (to.y - from.y) * e + gen.offsetHeight / 2 + "px";
     g.style.width = from.w + (to.w - from.w) * e + "px";
     g.style.fontSize = px(from.fs) + (to.fs - px(from.fs)) * e + "px"; g.style.lineHeight = px(from.lh) + (to.lh - px(from.lh)) * e + "px";
     if (t < 1) requestAnimationFrame(step);
-    else { g.remove(); cap.style.opacity = ""; cap._gliding = null; const c2 = getComputedStyle(cap); cap._pos = { x: cap.offsetLeft, y: cap.offsetTop, w: cap.offsetWidth, fs: c2.fontSize, lh: c2.lineHeight }; }
+    else { g.remove(); cap.style.opacity = ""; cap._gliding = null; cap._pos = inPair(gen, cap); }
   };
   requestAnimationFrame(step);
 }
@@ -91,7 +98,7 @@ function fitDev(orient) {
     // Positions are read in the pair's own (unscaled) coordinates, so the pair's scale animation and the
     // caption's move add up to one smooth path.
     const caps = [...gen.querySelectorAll(".sf7")], was = gen.dataset.lay, moved = !first && was && was !== pick;
-    const snap = c => { const cs = getComputedStyle(c); return { x: c.offsetLeft, y: c.offsetTop, w: c.offsetWidth, fs: cs.fontSize, lh: cs.lineHeight }; };
+    const snap = c => inPair(gen, c);
     // where each caption was last drawn (a phone may already have turned before this call)
     const before = moved ? caps.map(c => c._pos || snap(c)) : null;
     gen.dataset.lay = pick;
