@@ -51,11 +51,24 @@ public final class SettingsBridge {
         if (s.rebootApp) needRestart.add(key);
     }
 
-    private static <T extends Enum<?>> void cycle(EnumSetting<T> e) {
-        // TODO: confirm the accessor name for the enum constants in the extensions library.
-        T[] values = e.enumValues();
-        int i = e.get().ordinal();
-        e.save(values[(i + 1) % values.length]);
+    /**
+     * Moves a list setting to its next entry. The entries come from the live settings screen
+     * (PreferenceTree), so a value the developer adds or drops is picked up automatically, and
+     * only the entries the regular screen offers are ever chosen.
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static void cycle(EnumSetting e) {
+        PreferenceTree.Node n = PreferenceTree.get().node(e.key);
+        if (n == null || n.entryValues == null || n.entryValues.length == 0) return;
+        String cur = ((Enum<?>) e.get()).name();
+        int i = 0;
+        while (i < n.entryValues.length && !n.entryValues[i].toString().equals(cur)) i++;
+        String next = n.entryValues[(i + 1) % n.entryValues.length].toString();
+        try {
+            e.save(Enum.valueOf(((Enum) e.get()).getDeclaringClass(), next));
+        } catch (IllegalArgumentException ignored) {
+            // the screen offers a value this build's enum doesn't have: leave the setting alone
+        }
     }
 
     public void reset(Iterable<String> keys) {

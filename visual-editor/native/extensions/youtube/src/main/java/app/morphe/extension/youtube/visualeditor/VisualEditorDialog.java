@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import app.morphe.extension.shared.Utils;
-import app.morphe.extension.youtube.settings.Settings;
 
 /**
  * The editor itself, laid out like the web prototype:
@@ -48,7 +47,7 @@ import app.morphe.extension.youtube.settings.Settings;
 public final class VisualEditorDialog extends Dialog {
 
     private final SettingsBridge settings = new SettingsBridge();
-    private final Catalogue catalogue = Catalogue.get();
+    private final PreferenceTree tree = PreferenceTree.get();
     private final PreviewMap map = PreviewMap.get();
 
     private String screenId;
@@ -107,7 +106,7 @@ public final class VisualEditorDialog extends Dialog {
     /** Grouped layout: the tabs of the current group, under the preview. */
     private void renderTabs() {
         tabs.removeAllViews();
-        if (!Settings.VISUAL_EDITOR_GROUPED.get()) return;
+        if (!VisualEditorSettings.GROUPED.get()) return;
         for (PreviewMap.Group g : map.groups) {
             if (!g.tabs.contains(screenId)) continue;
             for (String tab : g.tabs) {
@@ -133,17 +132,17 @@ public final class VisualEditorDialog extends Dialog {
         list.removeAllViews();
         PreviewMap.Screen s = map.screens.get(screenId);
         if (s == null) return;
-        boolean hideShown = Settings.VISUAL_EDITOR_HIDE_SHOWN.get();
+        boolean hideShown = VisualEditorSettings.HIDE_SHOWN.get();
         List<String> keys = new ArrayList<>(s.keys); // already in preview order (exported that way)
         for (String key : keys) {
-            Catalogue.Pref p = catalogue.prefs.get(key);
-            if (p == null) continue;
+            PreferenceTree.Node p = tree.node(key);
+            if (p == null) continue; // the map is filtered already; this is just a guard
             if (hideShown && isShownElement(key) && !key.equals(selected)) continue;
             list.addView(row(p));
         }
     }
 
-    private View row(Catalogue.Pref p) {
+    private View row(PreferenceTree.Node p) {
         TextView t = new TextView(getContext()); // TODO: real row (title, summary, switch or value, sub-options)
         t.setText(p.title);
         t.setPadding(dp(20), dp(14), dp(20), dp(14));
@@ -169,7 +168,7 @@ public final class VisualEditorDialog extends Dialog {
     private void select(String key, boolean fromPreview) {
         selected = key;
         if (fromPreview) {
-            if (Settings.VISUAL_EDITOR_HIDE_SHOWN.get()) {
+            if (VisualEditorSettings.HIDE_SHOWN.get()) {
                 renderList(); // the tapped element's setting is pinned at the top
                 scroller.smoothScrollTo(0, 0);
             } else {
@@ -181,7 +180,8 @@ public final class VisualEditorDialog extends Dialog {
     }
 
     private void openPicker() {
-        // TODO: screen picker (24 screens, or 6 groups when VISUAL_EDITOR_GROUPED is on).
+        // TODO: screen picker (24 screens, or 6 groups when GROUPED is on), plus "More settings"
+        // listing map.unmapped(): settings the preview map does not know yet, as plain rows.
     }
 
     @Override

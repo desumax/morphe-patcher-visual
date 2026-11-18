@@ -33,7 +33,11 @@ import app.morphe.extension.shared.Utils;
  *   style      StyleAdapter        opacity, size, colour, shape
  *   behaviour  BehaviourAdapter    playback behaviour
  *   scenario   ScenarioAdapter     a short before / after story on a small phone
- * Settings without an entry go to the screen's plain list ("No live preview or animation").
+ * The map is only a list of hints, never the source of truth: an entry whose setting is not in
+ * the installed Morphe build (renamed, removed, not in this YouTube version) is skipped, and a
+ * setting with no entry is still listed, as a plain row under "More settings". So when the
+ * developer changes settings, the editor at worst shows a new setting without its animation
+ * until the map catches up; it never breaks and never hides a setting.
  */
 public final class PreviewMap {
 
@@ -91,7 +95,8 @@ public final class PreviewMap {
     private static PreviewMap load() {
         PreviewMap m = new PreviewMap();
         try {
-            JSONObject root = new JSONObject(Catalogue.readRaw(Utils.getContext(), "morphe_visual_editor_preview_map"));
+            PreferenceTree tree = PreferenceTree.get();
+            JSONObject root = new JSONObject(readRaw(Utils.getContext(), "morphe_visual_editor_preview_map"));
             JSONArray scr = root.getJSONArray("screens");
             for (int i = 0; i < scr.length(); i++) {
                 JSONObject o = scr.getJSONObject(i);
@@ -100,6 +105,7 @@ public final class PreviewMap {
             JSONObject ent = root.getJSONObject("entries");
             for (java.util.Iterator<String> it = ent.keys(); it.hasNext(); ) {
                 String key = it.next();
+                if (!tree.has(key)) continue; // not in this Morphe build: skip quietly
                 JSONObject o = ent.getJSONObject(key);
                 Entry e = new Entry(o.getString("screen"), o.getString("kind"));
                 m.entries.put(key, e);
@@ -118,6 +124,33 @@ public final class PreviewMap {
             Logger.printException(() -> "Could not load the visual editor preview map", ex);
         }
         return m;
+    }
+
+    /**
+     * Settings of the installed Morphe build that the map does not know yet, in Morphe's order,
+     * grouped by the Morphe screen they are on. Shown as plain rows, so nothing is ever missing.
+     */
+    public Map<String, List<String>> unmapped() {
+        Map<String, List<String>> out = new LinkedHashMap<>();
+        for (PreferenceTree.Node n : PreferenceTree.get().byKey.values()) {
+            if (n.isScreen() || n.key == null || entries.containsKey(n.key)) continue;
+            if (app.morphe.extension.shared.settings.Setting.getSettingFromPath(n.key) == null) continue; // buttons, headers
+            String screen = n.screen == null ? "" : n.screen;
+            List<String> list = out.get(screen);
+            if (list == null) out.put(screen, list = new ArrayList<>());
+            list.add(n.key);
+        }
+        return out;
+    }
+
+    static String readRaw(android.content.Context context, String name) throws java.io.IOException {
+        int id = context.getResources().getIdentifier(name, "raw", context.getPackageName());
+        try (java.io.InputStream in = context.getResources().openRawResource(id)) {
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            byte[] buf = new byte[8192];
+            for (int n; (n = in.read(buf)) > 0; ) out.write(buf, 0, n);
+            return out.toString("UTF-8");
+        }
     }
 
     public List<Screen> screenList() {

@@ -3194,12 +3194,14 @@ function highlight(k, flash = true, reveal = false) {
   const finish = () => els.forEach(e => {
     fitOutline(e);
     // big components (bars, shelves) only glow: scaling them up looked like the whole preview jumping
-    if (flash) { const big = e.offsetWidth > $("stage").clientWidth * .5 || e.offsetHeight > 80; e.classList.remove("flash", "flat"); void e.offsetWidth; e.classList.add("flash"); e.classList.toggle("flat", big); setTimeout(() => e.classList.remove("flash", "flat"), 520); }
+    if (flash) flashStage(e);
   });
-  if (!reveal || skipReveal) { skipReveal = false; return finish(); }
+  const finish0 = finish;
+  const finishAll = () => { finish0(); lastFlash = { k, t: Date.now() }; if (parentFlashFor === k) flashParents(k); };
+  if (!reveal || skipReveal) { skipReveal = false; return finishAll(); }
   // wait until a growing (ghost-revealed or restored) element has its full size, then scroll to it
   const liveEls = () => [...document.querySelectorAll(`#stage [data-k="${k}"], #stage [data-also="${k}"]`)];
-  const go = () => { if (selected !== k) return; const live = liveEls(); els.splice(0, els.length, ...live); setTimeout(finish, revealInStage(live) ? 340 : 0); };
+  const go = () => { if (selected !== k) return; const live = liveEls(); els.splice(0, els.length, ...live); setTimeout(finishAll, revealInStage(live) ? 340 : 0); };
   setTimeout(() => {
     if (selected !== k) return;
     const growing = liveEls().flatMap(e => e.getAnimations()).filter(a => a.playState === "running" && isFinite(a.effect?.getComputedTiming().endTime) && a.effect?.getComputedTiming().fill !== "forwards");
@@ -3207,6 +3209,26 @@ function highlight(k, flash = true, reveal = false) {
   }, 60);
 }
 let skipReveal = false;
+// One flash look for everything: the selected element, and the parent settings it depends on,
+// in the preview and in the list, all start on the same frame with the same pulse (FLASH_MS each).
+const FLASH_MS = 480;
+let lastFlash = { k: null, t: 0 }, parentFlashFor = null, holdParentsUntil = 0;
+function flashStage(e, times = 1) {
+  const big = e.offsetWidth > $("stage").clientWidth * .5 || e.offsetHeight > 80; // big components only glow
+  clearTimeout(e._flashT); e.classList.remove("flash", "flat", "twice"); void e.offsetWidth;
+  e.classList.add("flash"); e.classList.toggle("flat", big); e.classList.toggle("twice", times > 1);
+  e._flashT = setTimeout(() => e.classList.remove("flash", "flat", "twice"), FLASH_MS * times + 40);
+}
+function flashRow(el) { clearTimeout(el._attnT); el.classList.remove("attn"); void el.offsetWidth; el.classList.add("attn"); el._attnT = setTimeout(() => el.classList.remove("attn"), FLASH_MS * 2 + 40); }
+function flashParents(k) {
+  parentFlashFor = null; holdParentsUntil = 0;
+  document.querySelectorAll(`#stage [data-k="${k}"], #stage [data-also="${k}"]`).forEach(e => flashStage(e, 2));
+  document.querySelectorAll(`[data-row="${k}"]`).forEach(el => { if (el.offsetParent) flashRow(el); });
+  for (const key of [...PREF[k].parents.map(x => x.key), ...(PREF[k].availabilityParents || [])]) {
+    document.querySelectorAll(`#stage [data-k="${key}"]`).forEach(e => flashStage(e, 2));
+    document.querySelectorAll(`[data-row="${key}"]`).forEach(flashRow);
+  }
+}
 // Scrollable boxes inside the preview (feeds, action bars, chip rows) scroll so the selected
 // element is centred before it flashes. Works for overflow:hidden strips too.
 function scrollBoxes(el) {
@@ -3265,7 +3287,7 @@ function rowForStage(k) {
     if (simplePin === k && document.querySelector(`#list .pin7 [data-row="${k}"]`)) { progScrollUntil = performance.now() + 900; $("scroller").scrollTo({ top: 0, behavior: "smooth" }); return; }
   }
   const par = PARENT_OF[k];
-  if (par && !kidVisible(k)) { peekKid = k; collapsed.delete(par); renderList(); setTimeout(() => scrollRowIntoView(k, true), 300); setTimeout(() => pointToParents(k), 700); return; }
+  if (par && !kidVisible(k)) { peekKid = k; collapsed.delete(par); renderList(); holdParentsUntil = Date.now() + 1500; setTimeout(() => scrollRowIntoView(k, true), 300); setTimeout(() => pointToParents(k, true), 700); return; }
   if (par && collapsed.has(par)) { collapsed.delete(par); lastOpen.add(par); const box = document.querySelector(`[data-kids-of="${par}"]`); if (box) box.classList.add("open"); document.querySelector(`[data-kidtoggle="${par}"]`)?.setAttribute("aria-expanded", "true"); setTimeout(() => scrollRowIntoView(k, true), 300); return; }
   scrollRowIntoView(k, true);
 }
@@ -3301,10 +3323,13 @@ function select(k, from) {
   }
   if (!parentsOk(k)) pointToParents(k);
 }
-function pointToParents(k) {
-  for (const key of [...PREF[k].parents.map(x => x.key), ...(PREF[k].availabilityParents || [])]) {
-    document.querySelectorAll(`[data-row="${key}"], #stage [data-k="${key}"]`).forEach(el => { el.classList.remove("attn"); void el.offsetWidth; el.classList.add("attn"); });
-  }
+function pointToParents(k, force) {
+  if (!force && Date.now() < holdParentsUntil) return; // a later, scripted call flashes them once the row is in place
+  // wait for the element's own flash (it may first scroll into view), then flash everything together
+  const onStage = document.querySelector(`#stage [data-k="${k}"], #stage [data-also="${k}"]`);
+  if (!onStage || selected !== k || (lastFlash.k === k && Date.now() - lastFlash.t < 200)) return flashParents(k);
+  parentFlashFor = k;
+  setTimeout(() => { if (parentFlashFor === k) flashParents(k); }, 1500);
 }
 const ghostTimers = new Map();
 const stageEls = k => document.querySelectorAll(`#stage [data-k="${k}"]`);
@@ -3431,12 +3456,13 @@ function goToSetting(k, after) {
     const par = PARENT_OF[k];
     const hidden = par && !kidVisible(k);
     if (hidden || (par && collapsed.has(par))) { if (hidden) peekKid = k; collapsed.delete(par); renderList(); }
+    if (hidden) holdParentsUntil = Date.now() + 2000;
     select(k);
     setTimeout(() => scrollRowIntoView(k, true), par ? 300 : 0);
     setTimeout(() => {
       const row = document.querySelector(`[data-row="${k}"]`);
-      if (row) { row.classList.remove("attn"); void row.offsetWidth; row.classList.add("attn"); }
-      if (hidden) setTimeout(() => pointToParents(k), 450);
+      if (hidden) pointToParents(k, true); // the row, its element and its parents flash together
+      else if (row) flashRow(row);
       after && after();
     }, par ? 520 : 380);
   });
