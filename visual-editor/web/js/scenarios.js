@@ -159,7 +159,7 @@ function fitDev(orient) {
     // move); the phones and labels glide there (pairGlide). Taking the captions out of the flow until
     // the end of the move made everything jump into place when they came back.
     gen.classList.remove("capgo"); gen.classList.toggle("capside", pick === "side"); gen.style.flexDirection = pick === "column" ? "column" : "row";
-    gen.style.scale = sc.toFixed(3); gen.style.setProperty("--dsc", sc.toFixed(3));
+    gen.style.scale = sc.toFixed(3); if (first || !gen.style.getPropertyValue("--dsc")) gen.style.setProperty("--dsc", sc.toFixed(3));
     pairGlide(gen, wasParts);
     if (before) { const ends = finalCapPlaces(gen); caps.forEach((c, i) => glideCap(gen, c, before[i], ends[i])); }
     // the other phone turning a moment later changes where the captions end: retarget them
@@ -172,7 +172,7 @@ function fitDev(orient) {
   const duo = box && box.querySelector(".duo7"), dev = duo || (box && box.querySelector(".dev")); if (!dev) return;
   const o = duo ? "duo" : orient || (dev.classList.contains("land") ? "land" : "port"), [w, h] = DEV_SIZE[o];
   const sc = fitScale(w, h);
-  dev.style.scale = sc.toFixed(3); dev.style.setProperty("--dsc", sc.toFixed(3));
+  dev.style.scale = sc.toFixed(3); if (!dev.style.getPropertyValue("--dsc")) dev.style.setProperty("--dsc", sc.toFixed(3));
   box.style.width = Math.round((w + 6) * sc) + "px"; box.style.height = Math.round((h + 6) * sc) + "px";
 }
 const devScale = dev => (dev.getBoundingClientRect().width / (dev.offsetWidth || 1)) || 1;

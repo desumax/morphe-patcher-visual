@@ -305,14 +305,14 @@ html #pickGrid .pg.pgroups.pvis:not(.nx) .gcard .pi svg { width: 24px; height: 2
 .dev .dv-below i:nth-child(2) { width: 70%; }
 .dev.land .dv-below { opacity: 0; }
 .canvas .prog { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--m-primary); width: 0; }
-.dev { position: relative; background: #111; border: 3px solid #555; border-radius: 14px; overflow: hidden; transition: width .5s var(--ease), height .5s var(--ease), transform .5s var(--ease), scale .5s var(--ease), --dsc .5s var(--ease); flex: none; }
+.dev { position: relative; background: #111; border: 3px solid #555; border-radius: 14px; overflow: hidden; transition: width .5s var(--ease), height .5s var(--ease), transform .5s var(--ease), scale .5s var(--ease); flex: none; }
 .scbox { transition: width .5s var(--ease), height .5s var(--ease); position: relative; flex: none; }
 /* the phone is centred on its scaled box, so scaling it never pushes it off-centre */
 .scbox > .dev, .scbox > .duo7 { position: absolute; left: 50%; top: 50%; translate: -50% -50%; }
 /* a pair hangs from the top of its box: when a caption joins or leaves the flow below the phones, the
    phones stay put instead of jumping by half the caption's height (the box itself resizes smoothly) */
 .scbox > .duo7.gen { top: 0; translate: -50% 0; transform-origin: 50% 0; }
-.duo7 { width: 206px; height: 186px; display: flex; gap: 10px; transition: scale .5s var(--ease), --dsc .5s var(--ease); }
+.duo7 { width: 206px; height: 186px; display: flex; gap: 10px; transition: scale .5s var(--ease); }
 .dl7 { display: grid; gap: 3px; justify-items: center; align-content: start; }
 .dl7 > span { font-size: 20px; font-weight: 600; color: #fff; background: #3a3a3a; border-radius: 14px; padding: 0 15px; line-height: 28px; }
 .dl7 > span.on { background: var(--on-green); color: var(--on-green-ink); } /* the same colours as the list toggles */
@@ -843,18 +843,17 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 /* round 9 scenario kit */
 .pg7 * { min-width: 0; }
 /* Every caption pill inside a scenario phone ("Nothing happens", "Locked", "🔊 100%", "Loop 2", ...) is
-   one class with one size: --pill7 is how big its text is on screen, whatever the phone's scale, so
-   changing that one number resizes the pills of every animation. --dsc is the scale the phones are
-   drawn at (set by fitDev), and it eases along with that scale, so a pill keeps its size while the
-   phones turn. */
-@property --dsc { syntax: "<number>"; inherits: true; initial-value: 1.7; }
-:root { --pill7: 15px; }
-.dev .toastin, .dev .badge7 { font-size: calc(var(--pill7) / var(--dsc)); line-height: 1.25; font-weight: 500; color: #fff; background: rgba(0,0,0,.72); border-radius: 999px; }
+   one class with one size: --pill7 is how big its text is on screen, so changing that one number
+   resizes the pills of every animation. --dsc is the scale the pair is first drawn at (fitDev); it stays
+   fixed for the whole story, so when the pair rescales (a phone turning) a pill scales with its phone
+   instead of growing or shrinking on its own. */
+:root { --pill7: 12px; }
+.dev .toastin, .dev .badge7 { font-size: calc(var(--pill7) / var(--dsc, 1.7)); line-height: 1.25; font-weight: 500; color: #fff; background: rgba(0,0,0,.72); border-radius: .75em; }
 .dev .toastin { white-space: normal; width: max-content; max-width: 88%; text-align: center; padding: .28em .8em; }
 .dev .toastin svg, .dev .badge7 svg { width: 1.15em !important; height: 1.15em !important; vertical-align: -.2em; }
 /* the smaller readouts in a corner of a video (Loop 2, 1.5×): one size for all of them too */
 .dev .badge7:empty, .dev .toastin:empty { display: none; }
-.dev .badge7 { position: absolute; font-size: calc(var(--pill7) * .7 / var(--dsc)); padding: .05em .45em; white-space: nowrap; pointer-events: none; z-index: 31; }
+.dev .badge7 { position: absolute; font-size: calc(var(--pill7) * .7 / var(--dsc, 1.7)); padding: .05em .45em; white-space: nowrap; pointer-events: none; z-index: 31; }
 .tgt7 { transition: max-height .45s var(--ease), max-width .45s var(--ease), opacity .3s, margin .45s, padding .45s; max-height: 90px; overflow: hidden; }
 .tgt7.w7 { display: inline-flex; max-width: 90px; vertical-align: bottom; flex: none; white-space: nowrap; }
 .tgt7.gone7 { max-height: 0 !important; opacity: 0; margin-top: 0 !important; margin-bottom: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }
