@@ -310,7 +310,13 @@ function controlFor(k) {
 // so Morphe parses what it always did.
 const isListBox = k => PREF[k].type === "string" && (String(PREF[k].default ?? "").includes("\n") || /strings|phrases|speeds|whitelist|filter/.test(k));
 const listNumeric = k => /speeds/.test(k);
+// Channel whitelists are stored by Morphe as JSON ([{"id":"UC…","name":"Fjord & Timber"}]), not one per line.
+// Their chips show the names and can be removed; channels are added from a video's ⋮ menu (Morphe needs the
+// channel id), so they have no add field. Their format is kept exactly, so Morphe still parses it.
+const listJSON = k => /_channel_whitelist$/.test(k) || /^\s*\[/.test(String(V(k) ?? ""));
+function jsonEntries(v) { try { const a = JSON.parse(String(v || "[]")); return Array.isArray(a) ? a.filter(e => e && typeof e === "object") : []; } catch (e) { return []; } }
 function listItems(k, from = V(k)) {
+  if (listJSON(k)) return jsonEntries(from).map(e => String(e.name || e.id || "")).filter(Boolean);
   const v = String(from ?? "");
   // older or hand-typed values may use spaces or commas; Morphe's own default is one per line
   const parts = v.includes("\n") || !listNumeric(k) ? v.split("\n") : v.split(/[\s,]+/);
@@ -318,7 +324,9 @@ function listItems(k, from = V(k)) {
 }
 function listBox(k, dis) {
   const items = listItems(k), num = listNumeric(k);
-  return `<div class="ctl lst" data-lst="${k}">${items.map((t, i) => `<span class="lchip">${esc(t)}${num ? "×" : ""}<button class="lx" data-lx="${i}" ${dis} aria-label="Remove ${esc(t)}">${I("close")}</button></span>`).join("")}
+  const chips = items.map((t, i) => `<span class="lchip">${esc(t)}${num ? "×" : ""}<button class="lx" data-lx="${i}" ${dis} aria-label="Remove ${esc(t)}">${I("close")}</button></span>`).join("");
+  if (listJSON(k)) return `<div class="ctl lst" data-lst="${k}">${chips}<span class="lhint">${items.length ? "Add more" : "No channels yet. Add one"} from a video's ⋮ menu: Whitelist channel</span></div>`;
+  return `<div class="ctl lst" data-lst="${k}">${chips}
     <span class="ladd"><input class="lin" data-lin="${k}" ${dis} placeholder="${num ? "Add speed" : "Add entry"}" ${num ? 'inputmode="decimal"' : ""} aria-label="Add to ${esc(shownTitle(k))}"><button class="lplus" data-ladd="${k}" ${dis} aria-label="Add">${I("plus")}</button></span></div>`;
 }
 // returns an error to show, or null once the entry is added
@@ -329,7 +337,13 @@ function listAdd(k, raw) {
   else { if (items.includes(t)) return "Already in the list"; items.push(t); }
   listSet(k, items); return null;
 }
-function listSet(k, items) { ensureMod(); touchSel(k); const before = state[k]; state[k] = items.join("\n"); afterChange(k, before); requestAnimationFrame(() => document.querySelector(`[data-lin="${k}"]`)?.focus({ preventScroll: true })); }
+function listRemove(k, i) {
+  if (!listJSON(k)) { const items = listItems(k); items.splice(i, 1); return listSet(k, items); }
+  const es = jsonEntries(V(k)).filter(e => e.name || e.id); es.splice(i, 1);
+  ensureMod(); touchSel(k); const before = state[k]; state[k] = es.length ? JSON.stringify(es) : ""; afterChange(k, before);
+}
+function listSet(k, items) { if (listJSON(k)) { ensureMod(); touchSel(k); const before = state[k]; state[k] = items.length ? JSON.stringify(items.map(n => ({ id: n, name: n }))) : ""; afterChange(k, before); return; }
+  ensureMod(); touchSel(k); const before = state[k]; state[k] = items.join("\n"); afterChange(k, before); requestAnimationFrame(() => document.querySelector(`[data-lin="${k}"]`)?.focus({ preventScroll: true })); }
 const whereOf = x => { const s = sectionOf(x); return s !== section ? ` (${esc(SECTIONS.find(z => z.id === s)?.title || "Miscellaneous")})` : ""; };
 function shortNeed(k) {
   if (!classicParentsOk(k)) { const b = PREF[k].parents.find(x => x.mode === "not" ? !!state[x.key] : !state[x.key]) || PREF[k].parents[0]; return `Parent setting must be ${stateWord(b.key, b.mode !== "not")}`; }
@@ -359,7 +373,9 @@ function rowHTML(k, live) {
   const p = PREF[k]; const a = A[k];
   const dis = !parentsOk(k);
   const isBool = p.type === "boolean";
-  const info = !p.type || p.type === "screen" || p.widget === "NonInteractivePreference" || p.widget === "IntentPreference";
+  // an info row Morphe still stores a value for (a picked file, a channel whitelist) keeps its editor
+  const editInfo = p.widget === "NonInteractivePreference" && p.type === "string" && (/_file$/.test(k) || isListBox(k));
+  const info = !editInfo && (!p.type || p.type === "screen" || p.widget === "NonInteractivePreference" || p.widget === "IntentPreference");
   let right = "", ctl = "";
   const swHTML = () => `<button class="sw" role="switch" data-sw="${k}" aria-checked="${!!V(k)}" aria-label="${esc(shownTitle(k))}"></button>`;
   if (OFF_LIST.has(k)) { right = `<button class="sw" role="switch" data-sw="${k}" aria-checked="${String(V(k)) !== "off"}" aria-label="${esc(shownTitle(k))}"></button>`; ctl = controlFor(k); }
@@ -367,7 +383,7 @@ function rowHTML(k, live) {
   else if (isBool && design === "toggles") right = swHTML();
   else if (live && a.kind !== "scenario") { right = stateChip(k); if (!isBool) ctl = controlFor(k); }
   else if (isBool) right = swHTML();
-  else if (!info || (p.widget === "NonInteractivePreference" && /_file$/.test(k))) ctl = controlFor(k);
+  else if (!info) ctl = controlFor(k);
   // A list setting (speeds, filter words): the chips are the control, so nothing sits on the right and
   // they get the card's full width. Its Reset is a small pill beside the title, greyed out like the
   // screen's Reset until the list differs from Morphe's own (it asks before restoring).
@@ -650,7 +666,8 @@ function syncLocked(k) {
 let optCtx = null;
 // Every pill in a box gets the width of the one with the longest text. When an even row would stretch
 // them far past that (a few long options, one per line), they keep that width instead of filling the line.
-function fitPills(box, pills, textOf, chrome) {
+function fitPills(box, pills, textOf, chrome, tight = false) {
+  box.classList.remove("tight"); box.style.removeProperty("--tight-fs");
   const W = box.clientWidth; if (!W || !pills.length) return;
   const cs = getComputedStyle(pills[0]), gap = parseFloat(getComputedStyle(box).columnGap) || 6;
   optCtx = optCtx || document.createElement("canvas").getContext("2d"); optCtx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
@@ -664,6 +681,16 @@ function fitPills(box, pills, textOf, chrome) {
   if (maxCols < n) {
     const own = pills.map(o => Math.ceil(optCtx.measureText(textOf(o)).width + chrome)), sum = own.reduce((a, b) => a + b, 0) + gap * (n - 1);
     if (sum <= W) { box.style.gridTemplateColumns = own.map(w => `minmax(${w}px, ${w}fr)`).join(" "); box.style.justifyContent = ""; return; }
+    // Short values that only just miss one line (Auto · 2160p · … · 240p) get a smaller text and the
+    // least padding to stay on it, down to 10.5 px text; past that they wrap as usual.
+    if (tight) {
+      const fs = parseFloat(cs.fontSize), texts = pills.map(o => optCtx.measureText(textOf(o)).width), T = texts.reduce((a, b) => a + b, 0), TC = 8;
+      const sc = Math.min(1, (W - TC * n - gap * (n - 1)) / T);
+      if (fs * sc >= 10.5) {
+        box.classList.add("tight"); box.style.setProperty("--tight-fs", (fs * sc).toFixed(2) + "px");
+        box.style.gridTemplateColumns = texts.map(w => { const px = Math.ceil(w * sc + TC); return `minmax(${px}px, ${px}fr)`; }).join(" "); box.style.justifyContent = ""; return;
+      }
+    }
   }
   const even = (W - gap * (cols - 1)) / cols;
   const fill = cols > 1 && even <= need * 1.25;
@@ -671,7 +698,7 @@ function fitPills(box, pills, textOf, chrome) {
   box.style.justifyContent = fill ? "" : "center"; // pills that don't fill the line sit in its middle
 }
 function fitOpts(root = $("list")) {
-  root.querySelectorAll(".ctl.optgrid").forEach(box => fitPills(box, [...box.querySelectorAll(".opt")], o => o.textContent, 2 * OPT_PAD + 2));
+  root.querySelectorAll(".ctl.optgrid").forEach(box => fitPills(box, [...box.querySelectorAll(".opt")], o => o.textContent, 2 * OPT_PAD + 2, true));
   // list chips (speeds, words): text, then the remove button; the add field takes its own line
   root.querySelectorAll(".ctl.lst").forEach(box => fitPills(box, [...box.querySelectorAll(".lchip")], o => o.firstChild ? o.firstChild.textContent : "", LCHIP_CHROME));
 }

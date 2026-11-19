@@ -670,6 +670,25 @@ scen("playback", "video_quality_prioritize", (box, on) => {
   });
   return "";
 });
+// Playback buffer size: one phone cycles through every size by itself, no picking. Morphe multiplies how
+// much video is loaded ahead: Default ×1 (YouTube's own), Low ×2, Medium ×4, Maximum ×8 (memory capped).
+SCN_HOLD.morphe_playback_buffer_size = 10400;
+scen("playback", "playback_buffer_size", (box) => {
+  const steps = [["DEFAULT", 1, "YouTube's own"], ["LOW", 2, "2× more ahead"], ["MEDIUM", 4, "4× more ahead"], ["MAXIMUM", 8, "8× more ahead, fewest stalls"]];
+  const name = v => entryLabel("morphe_playback_buffer_size", v), ahead = m => Math.min(72, 7 * m); // % of the bar
+  box.innerHTML = device("port", pageRows(player7(3, `<span class="bf7 badge7" style="right:3px;top:3px">${name("DEFAULT")}</span>`) + `<b style="font-size:7px">Building a tiny cabin</b>
+    <div style="display:grid;gap:4px;padding:5px;border-radius:5px;background:#1b1b1b;font-size:6px"><div style="display:flex;justify-content:space-between"><span>Loaded ahead</span><b class="bx7 chg7">×1</b></div>
+      <div style="position:relative;height:6px;border-radius:3px;background:#3a3a3a;overflow:hidden"><div class="ba7" style="position:absolute;left:18%;top:0;bottom:0;width:7%;background:#9e9e9e;transition:width .6s var(--ease)"></div><div style="position:absolute;left:0;top:0;bottom:0;width:18%;background:#f03"></div></div>
+      <div class="bt7" style="color:#aaa;transition:opacity .2s">YouTube's own</div>
+      <div class="bp7" style="display:flex;gap:2px">${steps.map(([v]) => `<span data-v="${v}" style="flex:1;text-align:center;padding:1px 0;border-radius:4px;background:#2a2a2a;transition:background .3s">${name(v)}</span>`).join("")}</div></div>`));
+  const dev = box.querySelector(".dev");
+  steps.forEach(([v, m, txt], i) => i && at(i * 2500, () => { // step 0 is the first drawing
+    dev.querySelector(".bf7").textContent = name(v); dev.querySelector(".bx7").textContent = "×" + m;
+    dev.querySelector(".ba7").style.width = ahead(m) + "%"; dev.querySelector(".bt7").textContent = txt;
+    dev.querySelectorAll(".bp7 span").forEach(e => { e.style.background = e.dataset.v === v ? "#1a73e8" : "#2a2a2a"; });
+  }));
+  return "";
+});
 // A comparison told in words instead of an animation: two cards the size of the phones, a heading and
 // up to three short points each, keyed by the setting's value so they sit on the toggle's sides.
 function textScen(sec, key, sit, byVal) {
@@ -708,7 +727,7 @@ scen("playback", "vot_enabled", (box, on) => {
   box.innerHTML = device("port", watch7(`<span class="vo7 chg7" style="position:absolute;left:50%;bottom:4px;transform:translateX(-50%);font-size:6px;background:rgba(0,0,0,.75);padding:0 4px;white-space:nowrap;border-radius:3px">🗣 Привет, друзья!</span>`));
   const dev = box.querySelector(".dev");
   at(800, () => { if (on) dev.querySelector(".vo7").innerHTML = "🎧 Hi, friends! <span style='color:#3ea6ff'>(voice-over)</span>"; });
-  return on ? "A translated voice-over plays over the video" : "Original voice only (stock)";
+  return ""; // the subtitle line in the phones says it
 });
 hidePage("dearrow", "dearrow_connection_toast", "DeArrow can't reach its server", feed7(big7(3, "Building a tiny cabin")) + `<div style="height:20px"></div>` + tgt7(`<div style="padding:3px 5px;border-radius:8px;background:#323232;font-size:6px;text-align:center">DeArrow is temporarily unavailable</div>`), { invert: true, shown: "A toast tells you when DeArrow is down", hidden: "Fails silently" });
 

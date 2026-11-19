@@ -451,6 +451,7 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 /* option pills sit in a grid whose columns fitOpts works out from the labels and the width */
 .ctl.optgrid, .fallback .ctl.optgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); gap: 6px; }
 .ctl.optgrid .opt { padding: 2px 6px; height: auto; min-height: 30px; line-height: 1.15; white-space: normal; overflow-wrap: anywhere; text-align: center; }
+.ctl.optgrid.tight .opt { font-size: var(--tight-fs); padding-left: 3px; padding-right: 3px; white-space: nowrap; overflow-wrap: normal; } /* fitPills: short values kept on one line */
 .ctl .opt[aria-pressed="true"] { background: var(--m-secondary-c); border-color: var(--m-secondary-c); color: #D8E3F8; }
 .ctl input[type=range] { flex: 1; min-width: 120px; accent-color: var(--m-primary); }
 .ctl .val { font-family: var(--mono); font-size: 12px; color: var(--m-on-var); min-width: 44px; text-align: right; }
@@ -484,6 +485,7 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .resetbtn.lreset:hover:not(:disabled) { background: var(--m-c-highest); filter: brightness(1.15); }
 .resetbtn.lreset:disabled { background: var(--m-c-highest); }
 .lerr { grid-column: 1 / -1; flex-basis: 100%; font-size: 11.5px; color: var(--m-error); }
+.lhint { grid-column: 1 / -1; flex-basis: 100%; font-size: 12px; line-height: 1.35; color: var(--m-on-var, #aaa); } /* a list filled from somewhere else (channel whitelists): where to add to it */
 /* option pills always wrap onto new lines and grow with their text, so it never spills past the border */
 .fallback .ctl:has(.opt) { flex-wrap: wrap; }
 .search { margin: 12px 12px 0; display: flex; align-items: center; gap: 8px; background: var(--m-c-high); border-radius: 999px; padding: 0 16px; height: 48px; }

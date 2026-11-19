@@ -978,7 +978,7 @@ def("snackbar", "style", "custom_snackbar_theme custom_snackbar_color_dark custo
 // A short story is slowed down (up to 1.6x) and played again if there is time; a list setting
 // compares its default with the chosen value (or the first other value when it is on the default).
 const SC_TOTAL = 11000;
-const SCN_SELF_DUO = new Set(["morphe_disable_player_popup_panels"]);
+const SCN_SELF_DUO = new Set(["morphe_disable_player_popup_panels", "morphe_playback_buffer_size"]); // one phone that tells all values itself
 const DUO_OTHER = { morphe_speed_tap_and_hold: 4 };
 function duoValues(k, prev) {
   const p = PREF[k];
