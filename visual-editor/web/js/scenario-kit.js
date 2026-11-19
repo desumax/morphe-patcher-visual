@@ -496,20 +496,51 @@ for (const [k, label, icon] of [["hide_ask_gemini_button", "Ask", "spark"], ["hi
 hidePage("playback", "hide_subscribers_community_guidelines", "Before posting in a channel's community", top7("Fjord & Timber", ["more"]) + tgt7(`<div style="padding:3px;border-radius:3px;background:#1b1b1b;font-size:6px">Please follow the community guidelines · Got it</div>`) + cmt7(2, "Love the roof!"));
 hidePage("playback", "hide_tap_and_hold_gradient", "Holding the video for 2× speed", `<div style="position:absolute;inset:0;background:${ART[3]}"></div><div class="tgt7" style="position:absolute;left:0;right:0;top:0;height:40%;background:linear-gradient(rgba(0,0,0,.75),transparent)"></div><div class="toastin" style="top:6px;z-index:2">2× ▶▶</div>`, { dev: "land", raw: true });
 hidePage("playback", "hide_timed_reactions", "Comments under a live replay", player7(3, `<div class="tgt7" style="position:absolute;right:4px;bottom:4px;display:grid;gap:1px;font-size:8px"><span>❤️</span><span>😂</span><span>🔥</span></div>`) + row7(2, "Up next"));
+// Morphe (OnTheGoSheet): the player menu's On-the-go opens Morphe's own panel right under the video:
+// a handle, "On-the-go" and ✕, the thumbnail, title and channel, a time bar, big previous / −10 /
+// play-pause / +10 / next buttons, then audio mode (headset) and speed. Audio mode slides the panel up
+// over the video. Stock: On-the-go is a Premium feature, so the item opens YouTube's Premium offer.
+P.seekb = "M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z";
+P.seekf = "M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z";
+P.headset = "M12 3a9 9 0 0 0-9 9v7a2 2 0 0 0 2 2h3v-8H5v-1a7 7 0 0 1 14 0v1h-3v8h3a2 2 0 0 0 2-2v-7a9 9 0 0 0-9-9z";
+P.copy = "M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z";
+const seek7 = (dir, sz) => `<span style="position:relative;display:grid;place-items:center;width:${sz}px;height:${sz}px">${ico7(dir, sz)}<b style="position:absolute;left:50%;top:58%;transform:translate(-50%,-50%);font-size:${(sz * .3).toFixed(1)}px">10</b></span>`;
+SCN_HOLD.morphe_on_the_go = 5600;
 scen("playback", "on_the_go", (box, on) => {
-  situation("Turning off the screen while a video plays");
-  box.innerHTML = device("port", watch7());
-  const dev = box.querySelector(".dev");
-  at(600, () => { dev.innerHTML = `<div style="position:absolute;inset:0;background:#000"></div><div class="toastin" style="top:40%">${on ? `${ico7("music", 7)} Audio keeps playing` : `${ico7("pause", 7)} Paused`}</div>`; });
-  return on ? "Audio-only mode when the screen goes off" : "The video pauses (stock)";
+  situation("Player menu › On-the-go");
+  box.innerHTML = device("port", watch7(`<span style="position:absolute;right:3px;top:3px">${ico7("gear", 9)}</span>`));
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"), W = dev.clientWidth, H = dev.clientHeight;
+  const menu = `<div class="fm7" style="position:absolute;left:0;right:0;bottom:0;background:#212121;border-radius:6px 6px 0 0;padding:6px 7px;display:grid;gap:6px;font-size:7.5px;z-index:4;animation:sheetup .25s var(--ease)">${item7("tune", "Quality")}${item7("speed", "Playback speed")}${item7("gesture", "On-the-go", "og7")}${item7("cc", "Captions")}</div>`;
+  at(300, () => fingerTo(f, W - 7, 7)); at(600, () => tapF(f));
+  at(800, () => { f.classList.remove("show"); dev.insertAdjacentHTML("beforeend", menu); });
+  at(1150, () => fingerTo(f, 30, H - 33)); at(1450, () => { tapF(f); const o = dev.querySelector(".og7"); if (o) o.style.background = "rgba(255,255,255,.12)"; });
+  if (!on) {
+    at(1700, () => {
+      f.classList.remove("show"); dev.querySelector(".fm7")?.remove();
+      dev.insertAdjacentHTML("beforeend", `<div style="position:absolute;left:0;right:0;bottom:0;background:#212121;border-radius:6px 6px 0 0;padding:8px 7px;display:grid;gap:5px;justify-items:center;text-align:center;z-index:4;animation:sheetup .3s var(--ease)"><b style="font-size:8.5px"><span style="color:#ff0033">▶</span> Premium</b><div style="font-size:7px;color:#ccc">On-the-go is part of YouTube Premium</div><span style="font-size:7px;font-weight:600;background:#3ea6ff;color:#000;border-radius:8px;padding:2px 9px">Try it free</span></div>`);
+    });
+    return "A Premium offer opens instead (stock)";
+  }
+  const pnl = `<div class="og8" style="position:absolute;left:0;right:0;top:46px;bottom:0;background:#212121;border-radius:6px 6px 0 0;padding:3px 7px 6px;display:flex;flex-direction:column;gap:3px;z-index:4;transition:top .4s var(--ease);animation:sheetup .3s var(--ease)">
+    <i style="width:14px;height:2px;border-radius:1px;background:#666;align-self:center"></i>
+    <div style="display:flex;align-items:center"><b style="flex:1;font-size:8.5px">On-the-go</b>${ico7("close", 8)}</div>
+    <i style="height:1px;background:#3a3a3a;margin:0 -7px"></i>
+    <div class="th8" style="height:22px;border-radius:3px;background:${ART[3]};flex:none;transition:height .4s var(--ease)"></div>
+    <div><b style="font-size:7.5px">Building a tiny cabin</b><div style="font-size:6px;color:#aaa">Fjord &amp; Timber</div></div>
+    <div style="margin-top:auto;font-size:6px">3:12 / 18:42</div>
+    <div style="position:relative;height:2px;border-radius:1px;background:#555"><i style="position:absolute;left:0;top:0;bottom:0;width:17%;background:#ff0033"></i><i style="position:absolute;left:17%;top:50%;width:5px;height:5px;border-radius:50%;background:#ff0033;transform:translate(-50%,-50%)"></i></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:3px">${ico7("prev", 9)}${seek7("seekb", 11)}<span class="pp8" style="width:21px;height:21px;border-radius:50%;background:rgba(255,255,255,.12);display:grid;place-items:center">${ico7("pause", 11)}</span>${seek7("seekf", 11)}${ico7("next", 9)}</div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px">${ico7("dl", 8)}<span class="am8">${ico7("headset", 8)}</span><b style="font-size:7px">1×</b>${ico7("queue", 8)}</div>
+  </div>`;
+  at(1700, () => { f.classList.remove("show"); dev.querySelector(".fm7")?.remove(); dev.insertAdjacentHTML("beforeend", pnl); toast7(dev, "Big controls under the video", "6%"); });
+  // the big play button
+  at(2700, () => { dev.querySelectorAll(".t7").forEach(e => e.remove()); fingerTo(f, W / 2, H - 31); }); at(3000, () => { tapF(f); const b = dev.querySelector(".pp8"); if (b) b.innerHTML = ico7("play", 11); });
+  // audio mode: the panel covers the video and the thumbnail takes its place
+  at(3500, () => fingerTo(f, W / 2 - 8, H - 12)); at(3800, () => { tapF(f); const pn = dev.querySelector(".og8"); if (!pn) return; pn.style.top = "0px"; pn.querySelector(".th8").style.height = "46px"; pn.querySelector(".am8").innerHTML = ico7("tv", 8); });
+  at(4100, () => { f.classList.remove("show"); toast7(dev, `${ico7("headset", 7)} Audio mode`, "40%"); });
+  return "Morphe's panel: big controls under the video, and an audio mode";
 });
-scen("playback", "sanitize_video_subtitle", (box, on) => {
-  situation("The line under a video title");
-  box.innerHTML = device("port", pageRows(player7(3) + `<b style="font-size:7px">Building a tiny cabin</b><div class="sb7" style="font-size:5.5px;color:#aaa;transition:opacity .25s">1.2M views · 3 days ago · #diy #cabin #offgrid ...more</div>` + row7(2, "Up next")));
-  const dev = box.querySelector(".dev");
-  at(700, () => { if (!on) return; const s = dev.querySelector(".sb7"); s.style.opacity = 0; later(() => { s.textContent = "1.2M views · 3 days ago"; s.style.opacity = 1; }, 260); });
-  return on ? "Hashtags and extras are removed from the line" : "Hashtags and extras clutter the line (stock)";
-});
+// Sanitize video subtitle: no animation (Max, 2026-11-19)
 for (const [k, icon, text] of [["save_to_watch_later_flyout_button", "clock", "Save to Watch later"], ["feed_download_flyout_button", "dl", "Download with your app"], ["shorts_download_flyout_button", "dl", "Download this Short"]])
   hidePage("playback", k, "The ⋮ menu of a video", feed7(big7(3, "Building a tiny cabin")) + `<div style="background:#212121;border-radius:6px 6px 0 0;padding:4px;display:grid;gap:1px;margin:0 -6px -6px">${item7("plist", "Save to playlist")}${tgt7(item7(icon, text))}${item7("share", "Share")}</div>`, { invert: true, shown: `“${text}” is added to the menu`, hidden: "Not in the menu (stock)" });
 scen("playback", "seek_notification_media_prev_next", (box, on) => {
@@ -524,12 +555,54 @@ scen("playback", "download_force_4k", (box, on) => {
   box.innerHTML = device("port", pageRows(player7(3) + `<div style="background:#212121;border-radius:5px;padding:4px;display:grid;gap:2px;font-size:6.5px"><b>Download quality</b><div>360p</div><div>720p</div><div class="q4" style="color:${on ? "#3ea6ff" : "#555"}">${on ? "2160p (4K)" : "2160p · Premium"}</div></div>`));
   return on ? "4K downloads are offered" : "4K downloads are locked (stock)";
 });
+// Morphe (LiveChatTranslatePatch): a row becomes "author original (translation)" (or the translation
+// only, or the translation first, per the style setting); the translation takes the custom colour
+// (#38BDF8 unless changed) and can be bold; an optional copy icon at the end copies the message.
+// One chat, drawn large, shared by the translation setting and its sub-settings.
+const LC_MSGS = [[1, "yuki", "めっちゃ綺麗", "So beautiful"], [2, "lars", "Så vakkert!", "So pretty!"], [3, "ana", "¡Qué bonito!", "How lovely!"]];
+const cssColor = c => { c = String(c || ""); return /^#[0-9a-f]{8}$/i.test(c) ? "#" + c.slice(3) + c.slice(1, 3) : c; };
+function lcChat(o = {}) {
+  const tr = !!o.tr, bold = o.bold ?? !!V("morphe_live_chat_translate_bold"), copy = o.copy ?? !!V("morphe_live_chat_translate_copy_button");
+  const color = (o.color ?? !!V("morphe_live_chat_translate_use_color")) ? cssColor(V("morphe_live_chat_translate_color") || "#38BDF8") : "";
+  const style = String(V("morphe_live_chat_translate_style") || "ORIGINAL_AND_TRANSLATED");
+  return `<div class="lc7" style="display:grid;gap:6px">${LC_MSGS.map(([c, n, orig, t]) => {
+    const tt = `<span class="lt8" style="${color ? `color:${color};` : ""}${bold ? "font-weight:700;" : ""}">${style === "TRANSLATED_ONLY" ? t : `(${t})`}</span>`;
+    const msg = !tr ? orig : style === "TRANSLATED_ONLY" ? tt : style === "TRANSLATED_AND_ORIGINAL" ? `${tt} ${orig}` : `${orig} ${tt}`;
+    return `<div style="display:flex;gap:4px;font-size:8px;line-height:1.35"><span style="width:10px;height:10px;border-radius:50%;background:${AV[c]};flex:none"></span><span><b style="color:#aaa;font-weight:500">${n}</b> ${msg}${tr && copy ? ` <span class="cp8" style="display:inline-grid;vertical-align:-1px">${ico7("copy", 8, "#aaa")}</span>` : ""}</span></div>`;
+  }).join("")}</div>`;
+}
+const lcPage = chat => device("port", pageRows(player7(5, `<span style="position:absolute;left:3px;top:3px;font-size:5px;background:#f03;padding:0 3px;border-radius:2px">LIVE</span>`) + `<b style="font-size:7.5px">Live chat</b>` + chat));
 scen("playback", "live_chat_translate", (box, on) => {
   situation("Live chat in other languages");
-  box.innerHTML = device("port", pageRows(player7(5) + `<div class="lc7" style="display:grid;gap:3px">${chat7([[1, "yuki", "めっちゃ綺麗"], [2, "lars", "Så vakkert!"], [3, "ana", "¡Qué bonito!"]])}</div>`));
+  box.innerHTML = lcPage(lcChat());
   const dev = box.querySelector(".dev");
-  at(800, () => { if (on) dev.querySelector(".lc7").innerHTML = chat7([[1, "yuki", "So beautiful <i style='color:#3ea6ff'>(ja)</i>"], [2, "lars", "So beautiful! <i style='color:#3ea6ff'>(no)</i>"], [3, "ana", "How pretty! <i style='color:#3ea6ff'>(es)</i>"]]); });
-  return on ? "Chat messages are translated" : "Chat stays in its languages (stock)";
+  at(800, () => { if (!on) return; const c = dev.querySelector(".lc7"); c.outerHTML = lcChat({ tr: true }); dev.querySelector(".lc7").animate([{ opacity: .3 }, { opacity: 1 }], { duration: 300 }); });
+  return on ? "Each message gets its translation" : "Chat stays in its languages (stock)";
+});
+scen("playback", "live_chat_translate_bold", (box, on) => {
+  situation("Translated live chat");
+  box.innerHTML = lcPage(lcChat({ tr: true, bold: false }));
+  const dev = box.querySelector(".dev");
+  at(700, () => { if (on) dev.querySelectorAll(".lt8").forEach(e => { e.style.fontWeight = "700"; e.animate([{ opacity: .4 }, { opacity: 1 }], { duration: 250 }); }); });
+  return on ? "Translations are bold" : "Translations in regular weight";
+});
+scen("playback", "live_chat_translate_use_color", (box, on) => {
+  situation("Translated live chat");
+  box.innerHTML = lcPage(lcChat({ tr: true, color: false }));
+  const dev = box.querySelector(".dev"), col = cssColor(V("morphe_live_chat_translate_color") || "#38BDF8");
+  at(700, () => { if (on) dev.querySelectorAll(".lt8").forEach(e => { e.style.transition = "color .3s"; e.style.color = col; }); });
+  return on ? "Translations in your colour" : "Translations in the chat's text colour";
+});
+scen("playback", "live_chat_translate_copy_button", (box, on) => {
+  situation("Translated live chat");
+  box.innerHTML = lcPage(lcChat({ tr: true, copy: on }));
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger");
+  if (on) {
+    at(500, () => { const c = dev.querySelector(".cp8"), d = dev.getBoundingClientRect(), r = c.getBoundingClientRect(), k = d.width / dev.offsetWidth; fingerTo(f, (r.left + r.width / 2 - d.left) / k, (r.top + r.height / 2 - d.top) / k); });
+    at(900, () => tapF(f));
+    at(1100, () => { f.classList.remove("show"); toast7(dev, `${ico7("copy", 7)} Message copied`, "80%"); });
+  }
+  return on ? "A copy icon after each message copies it" : "No copy icon (stock)";
 });
 scen("playback", "loop_count", (box, on) => {
   situation("A looping video");
@@ -540,11 +613,10 @@ scen("playback", "loop_count", (box, on) => {
 });
 scen("playback", "advanced_video_quality_menu", (box, on) => {
   situation("Tapping Quality");
-  box.innerHTML = device("port", pageRows(player7(3)) + `<div style="position:absolute;left:0;right:0;bottom:0;background:#212121;border-radius:6px 6px 0 0;padding:5px;display:grid;gap:3px;font-size:6.5px;animation:sheetup .25s">${on ? ["1080p60", "720p60", "480p", "360p", "Auto"].map(t => `<div>${t}</div>`).join("") : ["Auto (recommended)", "Higher picture quality", "Data saver", "Advanced ›"].map(t => `<div>${t}</div>`).join("")}</div>`);
+  box.innerHTML = device("port", pageRows(player7(3)) + `<div style="position:absolute;left:0;right:0;bottom:0;background:#212121;border-radius:6px 6px 0 0;padding:7px 7px 8px;display:grid;gap:6px;font-size:8.5px;line-height:1.2;animation:sheetup .25s">${on ? ["1080p60", "720p60", "480p", "360p", "Auto"].map(t => `<div>${t}</div>`).join("") : ["Auto", "Higher quality", "Data saver", "Advanced ›"].map(t => `<div>${t}</div>`).join("")}</div>`);
   return on ? "The full list of resolutions opens directly" : "A simplified menu first (stock)";
 });
 for (const [k, sit, offTxt, onTxt] of [
-  ["disable_drc_audio", "Quiet and loud parts of a video", "Loudness is evened out", "Full dynamic range"],
   ["disable_playback_speed_music", "Music videos at 1.5×", "Music plays at your speed", "Music always plays at 1×"],
   ["force_original_audio", "A video with dubbed audio tracks", "Dubbed track in your language", "Original audio track"],
   ["remember_live_stream_position", "Coming back to a live stream", "Jumps to live", "Resumes where you were"],
@@ -558,6 +630,21 @@ for (const [k, sit, offTxt, onTxt] of [
     return on ? onTxt : offTxt + " (stock)";
   });
 }
+// A comparison told in words instead of an animation: two cards the size of the phones, a heading and
+// up to three short points each, keyed by the setting's value so they sit on the toggle's sides.
+function textScen(sec, key, sit, byVal) {
+  scen(sec, key, (box, v) => {
+    situation(sit);
+    const [head, pts] = byVal[String(!!v)];
+    box.innerHTML = device("port", `<div class="tx7"><b>${head}</b>${pts.map(p => `<div>${p}</div>`).join("")}</div>`).replace('class="dev port"', 'class="dev port card7"');
+    return "";
+  });
+}
+// DRC = dynamic range compression: YouTube can play a compressed audio track that evens out the volume
+textScen("playback", "disable_drc_audio", "What you hear", {
+  false: ["Evened-out sound", ["Quiet parts louder, loud parts softer", "Steady volume in noisy places", "Music and films lose some punch"]],
+  true: ["Original sound", ["The full range of the mix", "Whispers stay quiet, bangs hit hard", "Best with headphones or good speakers"]],
+});
 scen("playback", "hide_premium_video_quality", (box, on) => {
   situation("The quality list");
   box.innerHTML = device("port", pageRows(player7(3)) + `<div style="position:absolute;left:0;right:0;bottom:0;background:#212121;border-radius:6px 6px 0 0;padding:5px;display:grid;gap:3px;font-size:6.5px">${tgt7(`<div>1080p Premium <span style="color:#aaa">· enhanced bitrate</span></div>`)}<div>1080p</div><div>720p</div><div>Auto</div></div>`);
