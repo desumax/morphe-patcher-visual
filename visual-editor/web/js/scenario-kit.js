@@ -208,7 +208,6 @@ scen("look", "native_snackbar", (box, on) => {
 hidePage("look", "override_youtube_music_buttons", "Tapping a YouTube Music link", feed7(big7(6, "Midnight Tapes · Neon Fjord")) + tgt7(`<div style="padding:3px;border-radius:4px;background:#1b1b1b;font-size:6px;display:flex;gap:3px;align-items:center">${ico7("music", 7, "#ff0033")}Opens your patched YouTube Music</div>`), { invert: true, shown: "Music buttons open your chosen YouTube Music app", hidden: "Music buttons open the stock YouTube Music (stock)" });
 hidePage("look", "settings_search_history", "Searching in settings", search7("speed", `<div style="display:grid;gap:3px">${tgt7(item7("clock", "seekbar"))}${tgt7(item7("clock", "captions"))}${item7("gear", "Playback speed")}</div>`), { invert: true, shown: "Your recent settings searches are listed", hidden: "No search history (stock)" });
 scen("look", "show_menu_icons", (box, on) => {
-  situation("The ⋮ menu of a video");
   box.innerHTML = device("port", pageRows(feed7(big7(3, "Building a tiny cabin"))) + `<div style="position:absolute;left:0;right:0;bottom:0;background:#212121;border-radius:6px 6px 0 0;padding:5px;display:grid;gap:3px;font-size:6.5px">${[["clock", "Save to Watch later"], ["plist", "Save to playlist"], ["share", "Share"], ["flag", "Report"]].map(([i, t]) => `<div style="display:flex;gap:5px;align-items:center"><span class="mi7" style="display:inline-flex;transition:width .3s,opacity .3s;overflow:hidden;width:${on ? 0 : 8}px;opacity:${on ? 0 : 1}">${ico7(i)}</span>${t}</div>`).join("")}</div>`);
   const dev = box.querySelector(".dev");
   at(700, () => dev.querySelectorAll(".mi7").forEach(e => { e.style.width = on ? "8px" : "0px"; e.style.opacity = on ? 1 : 0; }));
@@ -277,7 +276,6 @@ for (const [k, sit, html] of [
 }
 hidePage("comments", "hide_comments_section_in_home_feed", "Home feed with inline comments", feed7(big7(3, "Building a tiny cabin") + tgt7(`<div style="padding:3px;border-radius:3px;background:#1b1b1b">${cmt7(2, "Lovely build!")}</div>`) + row7(4, "Night train to Bodø")));
 scen("comments", "minimal_comments_button", (box, on) => {
-  situation("The comments entry under a video");
   box.innerHTML = device("port", pageRows(player7(3) + `<b style="font-size:7px">Building a tiny cabin</b><div class="cb7" style="transition:all .3s;overflow:hidden;border-radius:5px;background:#272727;padding:${on ? "2px 6px" : "4px"};font-size:6px;${on ? "width:max-content" : ""}">${on ? `${ico7("comment", 7)} 341` : `<b>Comments 341</b>${cmt7(2, "Lovely build!")}`}</div>${row7(2, "Up next")}`));
   return on ? "A small comments button instead of the preview card" : "A large comments card with a preview (stock)";
 });
@@ -548,7 +546,6 @@ scen("playback", "on_the_go", (box, on) => {
 for (const [k, icon, text] of [["save_to_watch_later_flyout_button", "clock", "Save to Watch later"], ["feed_download_flyout_button", "dl", "Download with your app"], ["shorts_download_flyout_button", "dl", "Download this Short"]])
   hidePage("playback", k, "The ⋮ menu of a video", feed7(big7(3, "Building a tiny cabin")) + `<div style="background:#212121;border-radius:6px 6px 0 0;padding:4px;display:grid;gap:1px;margin:0 -6px -6px">${item7("plist", "Save to playlist")}${tgt7(item7(icon, text))}${item7("share", "Share")}</div>`, { invert: true, shown: `“${text}” is added to the menu`, hidden: "Not in the menu (stock)" });
 scen("playback", "seek_notification_media_prev_next", (box, on) => {
-  situation("The media notification");
   box.innerHTML = device("port", `<div style="position:absolute;inset:0;background:#1b1b1b"></div><div style="position:absolute;left:4px;right:4px;top:10px;padding:4px;border-radius:6px;background:#2a2a2a;font-size:6px;display:grid;gap:3px"><b>Building a tiny cabin</b><div style="display:flex;justify-content:space-around" class="nb7"></div></div>`);
   const dev = box.querySelector(".dev");
   at(300, () => { dev.querySelector(".nb7").innerHTML = (on ? ["prev", "pause", "next"] : ["prev", "pause", "next"]).map((n, i) => `<span style="display:grid;justify-items:center;font-size:5px">${ico7(n, 9)}${on && i !== 1 ? (i ? "+10 s" : "−10 s") : ""}</span>`).join(""); });
@@ -584,7 +581,6 @@ scen("playback", "live_chat_translate", (box, on) => {
   return on ? "Each message gets its translation" : "Chat stays in its languages (stock)";
 });
 scen("playback", "live_chat_translate_bold", (box, on) => {
-  situation("Translated live chat");
   // drawn with its weight from the first frame (it used to turn bold 0.7 s in, which read as lag)
   box.innerHTML = lcPage(lcChat({ tr: true, bold: on }));
   const dev = box.querySelector(".dev");
@@ -592,14 +588,12 @@ scen("playback", "live_chat_translate_bold", (box, on) => {
   return ""; // the drawn chat says it; no caption
 });
 scen("playback", "live_chat_translate_use_color", (box, on) => {
-  situation("Translated live chat");
   box.innerHTML = lcPage(lcChat({ tr: true, color: on }));
   const dev = box.querySelector(".dev");
   at(150, () => { if (on) dev.querySelectorAll(".lt8").forEach(e => e.animate([{ opacity: .45 }, { opacity: 1 }], { duration: 300 })); });
   return ""; // the drawn chat says it; no caption
 });
 scen("playback", "live_chat_translate_copy_button", (box, on) => {
-  situation("Translated live chat");
   box.innerHTML = lcPage(lcChat({ tr: true, copy: on }));
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger");
   if (on) {
@@ -650,7 +644,6 @@ textScen("playback", "disable_drc_audio", "What you hear", {
   true: ["Original sound", ["The full range of the mix", "Whispers stay quiet, bangs hit hard", "Best with headphones or good speakers"]],
 });
 scen("playback", "hide_premium_video_quality", (box, on) => {
-  situation("The quality list");
   box.innerHTML = device("port", pageRows(player7(3)) + `<div style="position:absolute;left:0;right:0;bottom:0;background:#212121;border-radius:6px 6px 0 0;padding:5px;display:grid;gap:3px;font-size:6.5px">${tgt7(`<div>1080p Premium <span style="color:#aaa">· enhanced bitrate</span></div>`)}<div>1080p</div><div>720p</div><div>Auto</div></div>`);
   const dev = box.querySelector(".dev"), t = dev.querySelector(".tgt7");
   at(400, () => t.classList.add("mark7")); at(1100, () => { if (on) t.classList.add("gone7"); }); at(1700, () => t.classList.remove("mark7"));

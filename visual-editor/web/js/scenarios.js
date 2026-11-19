@@ -321,12 +321,11 @@ scen("player", "fullscreen_video_scale_button_fullscreen_only", (box, on) => {
   box.innerHTML = device("port", playerArea(0, btn));
   const dev = box.querySelector(".dev"), b = box.querySelector(".scb");
   // Start in the new state: with the option on, the portrait player never shows the button.
-  situation("Portrait player");
   b.style.opacity = on ? "0" : "1";
   setFoot(on ? "Portrait: no video scale button" : "Portrait: the button is shown");
-  at(1300, () => { situation("Fullscreen"); rotate(dev, "land"); b.style.opacity = "1"; setFoot("Fullscreen: the button is shown"); });
+  at(1300, () => { rotate(dev, "land"); b.style.opacity = "1"; setFoot("Fullscreen: the button is shown"); });
   // the loop ends as it began: same captions as the first portrait state
-  at(2500, () => { situation("Portrait player"); rotate(dev, "port"); b.style.opacity = on ? "0" : "1"; setFoot(on ? "Portrait: no video scale button" : "Portrait: the button is shown"); });
+  at(2500, () => { rotate(dev, "port"); b.style.opacity = on ? "0" : "1"; setFoot(on ? "Portrait: no video scale button" : "Portrait: the button is shown"); });
   return on ? "Portrait: no video scale button" : "Portrait: the button is shown";
 });
 scen("player", "copy_video_link_with_timestamp_button", (box, on) => {

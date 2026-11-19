@@ -37,17 +37,66 @@ const devMark = id => DEV_DONE.has(id) ? `<span class="devdone" title="Finished 
 const devMarkGroup = g => tabsOf(g).length && tabsOf(g).every(([id]) => DEV_DONE.has(id)) ? devMark(tabsOf(g)[0][0]) : "";
 // Click a title with the mouse to copy it in quotes ("Open advanced quality menu"), for writing feedback
 // faster. Only in the web preview (no MorpheApp bridge) and only for a mouse, so a phone never sees it.
-// To remove before shipping: delete these lines and the .devcopy CSS rule.
-document.addEventListener("click", e => {
-  if (typeof window.MorpheApp !== "undefined" || e.pointerType !== "mouse" || !(e.target instanceof Element)) return;
-  const row = e.target.closest(".row .ttl") && e.target.closest("[data-row]"), res = e.target.closest(".sres .ttl") && e.target.closest("[data-res]");
-  const plain = e.target.closest(".gc-t, .tab7, .pick .pt, .sit, .gtitle");
-  let t = row ? shownTitle(row.dataset.row) : res ? title(res.dataset.res) : plain ? plain.textContent : "";
-  t = t.replace(/✓/g, "").replace(/\s+/g, " ").trim(); if (!t) return;
-  const q = `"${t}"`, done = () => { const n = document.createElement("div"); n.className = "devcopy"; n.textContent = "Copied " + q; n.style.left = e.clientX + "px"; n.style.top = e.clientY + "px"; document.body.appendChild(n); setTimeout(() => n.remove(), 1100); };
-  const old = () => { const ta = document.createElement("textarea"); ta.value = q; ta.style.cssText = "position:fixed;opacity:0"; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); done(); } catch (x) { /* no clipboard */ } ta.remove(); };
+const DEV_WEB = typeof window.MorpheApp === "undefined";
+function devCopy(t, x, y) {
+  t = String(t).replace(/✓/g, "").replace(/\s+/g, " ").trim(); if (!t) return;
+  const q = `"${t}"`, done = () => { const n = document.createElement("div"); n.className = "devcopy"; n.textContent = "Copied " + q; n.style.left = x + "px"; n.style.top = y + "px"; document.body.appendChild(n); setTimeout(() => n.remove(), 1100); };
+  const old = () => { const ta = document.createElement("textarea"); ta.value = q; ta.style.cssText = "position:fixed;opacity:0"; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); done(); } catch (e) { /* no clipboard */ } ta.remove(); };
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(q).then(done, old); else old();
+}
+document.addEventListener("click", e => {
+  if (!DEV_WEB || e.pointerType !== "mouse" || !(e.target instanceof Element) || e.target.closest("#devTour")) return;
+  const row = e.target.closest(".row .ttl") && e.target.closest("[data-row]"), res = e.target.closest(".sres .ttl") && e.target.closest("[data-res]");
+  const plain = e.target.closest(".gc-t, .tab7, .pick .pt, .sit, .gtitle, #canvas .cap");
+  const t = row ? shownTitle(row.dataset.row) : res ? title(res.dataset.res) : plain ? plain.textContent : "";
+  if (t) devCopy(t, e.clientX, e.clientY);
 }, true);
+// Animation tour: step through every setting that has an animation (a two-phone comparison or a live
+// preview animation), tab by tab in menu order, with the buttons, the arrow keys or the mouse wheel over
+// the bar. Each step opens the setting the way a search result does. Click the name to copy it.
+function tourKeys() {
+  const ids = grouped ? GROUPS.flatMap(g => tabsOf(g).map(([t]) => t)) : SECTIONS.map(s => s.id), out = [];
+  for (const id of ids) { const m = MEMBERS[id]; if (m) for (const k of [...m.live, ...m.misc]) if ((SCN[k] || DEMOS[k]) && inVersion(k) && !out.includes(k)) out.push(k); }
+  return out;
+}
+function tourGo(d) {
+  const ks = tourKeys(); if (!ks.length) return;
+  let i = ks.indexOf(selected); i = i < 0 ? (d > 0 ? 0 : ks.length - 1) : (i + d + ks.length) % ks.length;
+  goToSetting(ks[i]); tourLabel(ks[i], i, ks.length);
+}
+function tourLabel(k, i, n) {
+  const b = document.getElementById("devTour"); if (!b) return;
+  const sec = SECTIONS.find(z => z.id === sectionOf(k));
+  b.querySelector(".dt-n").textContent = `${i + 1} / ${n} · ${sec ? sec.title : ""}`;
+  const nm = b.querySelector(".dt-k"); nm.textContent = shownTitle(k); nm.dataset.k = k;
+}
+function tourOpen(open) {
+  let b = document.getElementById("devTour");
+  if (!b) {
+    b = document.createElement("div"); b.id = "devTour";
+    b.innerHTML = `<button class="dt-go" data-d="-1" aria-label="Previous animation">‹</button><div class="dt-mid"><div class="dt-n">Animation tour</div><div class="dt-k" title="Click to copy">Press › to start</div></div><button class="dt-go" data-d="1" aria-label="Next animation">›</button><button class="dt-x" aria-label="Close the tour">×</button>`;
+    document.body.appendChild(b);
+    b.addEventListener("click", e => {
+      const go = e.target.closest(".dt-go"), x = e.target.closest(".dt-x"), nm = e.target.closest(".dt-k");
+      if (go) tourGo(Number(go.dataset.d)); else if (x) tourOpen(false); else if (nm && nm.dataset.k) devCopy(nm.textContent, e.clientX, e.clientY);
+    });
+    let wheelAt = 0;
+    b.addEventListener("wheel", e => { e.preventDefault(); const now = performance.now(); if (now - wheelAt < 350 || !e.deltaY) return; wheelAt = now; tourGo(e.deltaY > 0 ? 1 : -1); }, { passive: false });
+  }
+  b.hidden = !open; document.getElementById("devTourBtn").hidden = open;
+  if (open && selected) { const ks = tourKeys(), i = ks.indexOf(selected); if (i >= 0) tourLabel(selected, i, ks.length); }
+}
+document.addEventListener("keydown", e => {
+  const b = document.getElementById("devTour"); if (!b || b.hidden || e.target.closest?.("input, textarea, [contenteditable]")) return;
+  if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); tourGo(1); }
+  if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); tourGo(-1); }
+});
+if (DEV_WEB) window.addEventListener("load", () => {
+  const t = document.createElement("button"); t.id = "devTourBtn"; t.textContent = "▶ Tour"; t.title = "Step through every animation (development tool)";
+  t.onclick = () => tourOpen(true); document.body.appendChild(t);
+});
+// To remove before shipping: delete everything from "Click a title" to here, and the .devcopy and
+// #devTour CSS rules.
 // ---- end DEV ONLY ---------------------------------------------------------------------------------
 function renderTabs() {
   const box = $("tabs"); if (!box) return;
