@@ -144,11 +144,14 @@ button { font: inherit; color: inherit; }
 html #pickGrid .pg.pgroups.pvis:not(.nx) { flex: none; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: 8px; } /* one height for every card: the tallest one's */
 html #pickGrid .pg.pgroups.pvis:not(.nx) .pick.gcard { --gc-bg: var(--m-c-high, #262626); --gc-tab: var(--m-c-highest, #383838); display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 0; padding: 0; min-height: 0; border-radius: 20px; overflow: hidden; background: var(--gc-bg); text-align: left; color: var(--m-on, #f1f1f1); }
 .theme-yt #pickGrid .pg.pgroups.pvis:not(.nx) .pick.gcard { --gc-bg: #262626; --gc-tab: #3a3a3a; }
-html #pickGrid .pg.pgroups.pvis:not(.nx) .pick.gcard[aria-current="true"] { background: var(--gc-bg); box-shadow: inset 0 0 0 2px var(--m-primary, #3ea6ff); }
+html #pickGrid .pg.pgroups.pvis:not(.nx) .pick.gcard { position: relative; }
+html #pickGrid .pg.pgroups.pvis:not(.nx) .pick.gcard[aria-current="true"] { background: var(--gc-bg); box-shadow: none; }
+/* the current card's outline is drawn over the tabs, not under them */
+.gcard[aria-current="true"]::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 2px var(--m-primary, #3ea6ff); pointer-events: none; z-index: 2; }
 html #pickGrid .pg.pgroups.pvis:not(.nx) .pick.gcard:hover { filter: brightness(1.08); }
 .gcard .gc-h { display: flex; align-items: stretch; justify-content: space-between; gap: 8px; }
-.gcard .gc-t { min-width: 0; display: flex; align-items: center; padding: 0 16px 0 14px; height: 44px; border-radius: 0 16px 16px 0; background: var(--gc-tab); font-size: 17px; font-weight: 600; line-height: 1.1; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-html #pickGrid .pg.pgroups.pvis:not(.nx) .gcard .pi { flex: none; width: 48px; height: 44px; margin: 0; border-radius: 16px; background: var(--gc-tab); display: grid; place-items: center; }
+.gcard .gc-t { min-width: 0; display: flex; align-items: center; padding: 0 16px 0 14px; height: 44px; border-radius: 0 0 16px 0; background: var(--gc-tab); font-size: 17px; font-weight: 600; line-height: 1.1; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html #pickGrid .pg.pgroups.pvis:not(.nx) .gcard .pi { flex: none; width: 48px; height: 44px; margin: 0; border-radius: 0 0 0 16px; background: var(--gc-tab); display: grid; place-items: center; }
 html #pickGrid .pg.pgroups.pvis:not(.nx) .gcard .pi svg { width: 24px; height: 24px; fill: var(--m-on, #f1f1f1); }
 .gcard .gc-tabs { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; gap: 0; padding: 6px 12px 8px 16px; }
 .gcard .gc-tabs span { font-size: 13.5px; line-height: 1.32; color: var(--m-on-var, #aaa); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -533,6 +536,7 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .tut .tdemo.grouped .ttabs { opacity: 1; transform: none; }
 .tut .tseek { position: absolute; left: 12px; right: 12px; bottom: 12px; height: 3px; background: rgba(255,255,255,.3); }
 .tut .tseek > div { width: 30%; height: 3px; background: #ff0033; }
+.tut .tseek { opacity: .4; filter: grayscale(1); } /* like the editor: a part another tab changes is greyed */
 /* stand-ins for other screens: the watch page and its comments */
 .tut .tview { position: absolute; inset: 0; z-index: 3; background: #0f0f0f; opacity: 0; transition: opacity .3s var(--ease); display: flex; flex-direction: column; gap: 5px; pointer-events: none; }
 .tut .tstage[data-view="watch"] .tview[data-v="watch"], .tut .tstage[data-view="comments"] .tview[data-v="comments"] { opacity: 1; }

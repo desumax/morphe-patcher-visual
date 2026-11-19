@@ -371,7 +371,7 @@ function renderList() {
   const closingOld = new Map(), now0 = performance.now();
   if (lastVis.sec !== section) foldingKids.clear();
   foldingKids.forEach((v, grp) => { if (v.until > now0 && !wantOpen.has(grp)) closingOld.set(grp, v.old); else foldingKids.delete(grp); });
-  if (lastVis.sec === section) list.querySelectorAll(".kids.open").forEach(b => { if (!wantOpen.has(b.dataset.kidsOf)) { const old = b.querySelector(".kin").innerHTML; closingOld.set(b.dataset.kidsOf, old); foldingKids.set(b.dataset.kidsOf, { old, until: now0 + 320 }); } });
+  if (lastVis.sec === section) list.querySelectorAll(".kids.open").forEach(b => { if (!wantOpen.has(b.dataset.kidsOf)) { const old = b.querySelector(".kin").innerHTML, btn = list.querySelector(`[data-row="${b.dataset.kidsOf}"] .kidbtn`)?.outerHTML; closingOld.set(b.dataset.kidsOf, old); foldingKids.set(b.dataset.kidsOf, { old, btn, until: now0 + 320 }); } });
   // switches keep their old position for a frame so the change slides instead of snapping
   const swWas = new Map(); list.querySelectorAll("[data-sw]").forEach(x => swWas.set(x.dataset.sw, [x.getAttribute("aria-checked"), x.dataset.at, x.dataset.tone]));
   // groups caught mid-fold by this render: their new box carries on from the height it had
@@ -389,6 +389,13 @@ function renderList() {
     put(was); x.classList.add("still"); void x.offsetWidth; x.classList.remove("still"); requestAnimationFrame(() => put(now));
   });
   closingOld.forEach((old, grp) => {
+    // the parent's sub-options pill keeps its count until the fold is over, then turns into the
+    // lock pill: switching it at once drew the lock mid-fold
+    const fold = foldingKids.get(grp), nb = list.querySelector(`[data-row="${grp}"] .kidbtn`);
+    if (fold && fold.btn && nb && nb.outerHTML !== fold.btn) {
+      const fresh = nb.outerHTML; nb.outerHTML = fold.btn;
+      setTimeout(() => { const cur = list.querySelector(`[data-row="${grp}"] .kidbtn`); if (cur && !list.querySelector(`[data-kids-of="${grp}"]`)?.classList.contains("open")) { cur.outerHTML = fresh; const n = list.querySelector(`[data-row="${grp}"] .kidbtn`); n?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160 }); } }, Math.max(0, fold.until - performance.now()) + 20);
+    }
     const kin = list.querySelector(`[data-kids-of="${grp}"] > .kin`); if (!kin) return;
     const fresh = kin.innerHTML; kin.innerHTML = old;
     kin.querySelectorAll(".row").forEach(r => r.classList.remove("sel", "attn", "nudge"));

@@ -7,7 +7,7 @@
 // and tabs. There is no double-tap anywhere: hold, or the toggle on the card, changes a setting.
 const TUT_PAGES = {
   groups: { cap: "Pick a screen, then a tab", sub: "Six screens in the menu. Tabs under the preview switch it to that part of the app" },
-  tap: { ms: 4800, cap: "Tap the preview or a card", sub: "Tapping something in the preview opens its card. Tapping a card shows its part of the preview" },
+  tap: { ms: 4800, cap: "Tap the preview or a card", sub: "Tapping something in the preview opens its card. Tapping a card shows its part of the preview. Greyed-out parts, like this seekbar, are changed on another tab" },
   change: { cap: "Hold it to change the setting", sub: "The toggle on its card works too. Here the button gets hidden" },
   find: { ms: 5200, cap: "Tap a hidden setting to find it", sub: "An outline shows where it was. Hold it, or use the toggle, to show it or hide it again" },
   tools: { ms: 10400, cap: "Search, reset and compare", sub: "Search finds any setting. Reset undoes your changes. Original shows stock YouTube, Morphe shows yours" },
