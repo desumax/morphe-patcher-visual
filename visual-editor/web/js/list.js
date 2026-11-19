@@ -377,6 +377,9 @@ function renderList() {
   const midFold = new Map(); list.querySelectorAll(".kids:not(.open)").forEach(b => { const h = b.getBoundingClientRect().height; if (h > .5 && foldingKids.has(b.dataset.kidsOf)) midFold.set(b.dataset.kidsOf, h); });
   // descriptions that were unfolded stay unfolded through the redraw, without playing the unfold again
   // (one caught mid-unfold, e.g. by the switch tap that selected its card, carries on from its height)
+  // a sub-option that folds away inside a group that stays open keeps its old look while it folds:
+  // drawn in its new state it showed a lock and its "Needs ..." line, grew, then shrank
+  const oldKidRows = new Map(); list.querySelectorAll(".kids .row:not(.hide)").forEach(r => oldKidRows.set(r.dataset.row, r.outerHTML));
   const wasOpen = new Map([...list.querySelectorAll(".row > .txt > .sum.open")].map(e => [e.closest(".row").dataset.row, e.getBoundingClientRect().height]));
   list.innerHTML = html;
   midFold.forEach((h, grp) => {
@@ -420,6 +423,7 @@ function renderList() {
     if (was && !vis) {
       // keep it on screen while it folds away, then hide it
       r.classList.remove("hide");
+      if (wantOpen.has(grp) && lastOpen.has(grp) && oldKidRows.has(k)) { const t = document.createElement("div"); t.innerHTML = oldKidRows.get(k); const o = t.firstElementChild; o.classList.remove("sel", "attn", "nudge", "unlock"); r.replaceWith(o); r = o; }
       if (wantOpen.has(grp) && lastOpen.has(grp)) { const an = sizeAnim(r, false); const end = () => { r.classList.add("hide"); r.getAnimations().forEach(a => a.cancel()); }; if (an) an.onfinish = end; else end(); }
       else setTimeout(() => r.classList.add("hide"), 300);
     } else if (!was && vis && lastOpen.has(grp) && wantOpen.has(grp)) sizeAnim(r, true);

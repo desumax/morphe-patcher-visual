@@ -160,7 +160,8 @@ function sizeAnim(el, show, ms = SIZE_MS) {
     el.classList.add("sizew");
     if (cs.display === "inline") el.classList.add("sizei");
   }
-  else if (ax === "h") { full = { height: r.height + "px", marginTop: cs.marginTop, marginBottom: cs.marginBottom, opacity: 1 }; zero = { height: "0px", marginTop: "0px", marginBottom: "0px", opacity: 0 }; }
+  // padding and a minimum height would keep a folding card from reaching zero, then it jumped shut at the end
+  else if (ax === "h") { full = { height: r.height + "px", minHeight: "0px", marginTop: cs.marginTop, marginBottom: cs.marginBottom, paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom, opacity: 1 }; zero = { height: "0px", minHeight: "0px", marginTop: "0px", marginBottom: "0px", paddingTop: "0px", paddingBottom: "0px", borderTopWidth: "0px", opacity: 0 }; }
   else { full = { opacity: 1, transform: cs.transform === "none" ? "scale(1)" : cs.transform }; zero = { opacity: 0, transform: (cs.transform === "none" ? "" : cs.transform + " ") + "scale(.8)" }; }
   if (!r.width && !r.height && ax !== "none") return null;
   el.classList.add("sizing");
