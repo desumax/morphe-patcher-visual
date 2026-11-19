@@ -355,7 +355,7 @@ final class VisualEditorDialog extends Dialog {
         list.addView(note);
         for (Map.Entry<String, List<String>> e : map.unmapped().entrySet()) {
             PreferenceTree.Node screen = tree.node(e.getKey());
-            String title = screen == null ? "Misc" : liveTitle(screen.key, screen.title);
+            String title = screen == null ? "Miscellaneous" : liveTitle(screen.key, screen.title);
             TextView h = text(14, accent, true);
             h.setText(title);
             h.setPadding(dp(12), dp(14), dp(12), dp(4));
