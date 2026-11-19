@@ -20,12 +20,14 @@ function applyAppColors() {
   ph.style.setProperty("--m-bg", bg); ph.style.setProperty("--m-surface", bg); ph.style.setProperty("--m-c", bg);
   ph.style.setProperty("--m-c-high", lift(bg, .13)); ph.style.setProperty("--m-c-highest", lift(bg, .22));
 }
-// Sections whose preview is a 16:9 player: on a portrait tablet they sit on top, list below in two columns.
-const WIDE = new Set(["player", "endscreen", "seekbar", "fullscreen", "captions", "sponsorblock", "danmaku"]);
+// Portrait tablet: the preview sits on top and the settings fill two columns below it, on every tab.
+// (This used to be limited to tabs with a 16:9 player, so Playback, Player menu, Home and the others
+// fell back to one narrow column beside the preview. Every preview is at most ~420px tall, so all fit.)
 function applyLayout() {
   const ed = document.querySelector(".editor"); if (!ed) return;
-  const st = ed.clientWidth >= 600 && ed.clientHeight >= ed.clientWidth * 0.95 && WIDE.has(section);
+  const st = ed.clientWidth >= 600 && ed.clientHeight >= ed.clientWidth * 0.95;
   $("content").classList.toggle("stacked", st);
+  fitOpts(); // column widths change with the layout, so the pills are fitted again
 }
 window.addEventListener("resize", applyLayout);
 
@@ -46,7 +48,7 @@ function applyDevice() {
   const s = Math.min(1, avail / d.w, Math.max(.45, availH / d.h));
   ph.style.transform = s < 1 ? `scale(${s})` : "";
   $("devwrap").style.width = d.w * s + "px"; $("devwrap").style.height = d.h * s + "px";
-  applyLayout();
+  applyLayout(); if (barStays()) $("app").classList.remove("barhidden");
   $("devBtns").innerHTML = DEVICES.map(x => `<button class="btn" data-dev="${x.id}" aria-pressed="${x.id === device_}">${x.label}</button>`).join("");
 }
 $("devBtns").addEventListener("click", e => { const b = e.target.closest("[data-dev]"); if (!b) return; device_ = b.dataset.dev; applyDevice(); store.save(); });

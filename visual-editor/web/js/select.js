@@ -175,6 +175,9 @@ function sizeAnim(el, show, ms = SIZE_MS) {
 // above changing height, the list redrawn), the scroll follows it, and if the card itself grows or
 // shrinks (a list gaining a line of chips) it does so smoothly instead of jumping.
 function holdRow(k) {
+  // Rebuilding the list can clamp or nudge the scroll position for a moment. That must not read as
+  // the user scrolling, or the hidden top bar slides back in and pushes the whole list down.
+  progScrollUntil = Math.max(progScrollUntil, performance.now() + 950);
   const row = document.querySelector(`#list [data-row="${k}"]`), sc = $("scroller"); if (!row || !sc || searching) return () => {};
   const top = row.getBoundingClientRect().top, h = row.offsetHeight;
   return () => {

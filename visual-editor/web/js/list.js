@@ -306,8 +306,11 @@ function rowHTML(k, live) {
   else if (live && a.kind !== "scenario") { right = stateChip(k); if (!isBool) ctl = controlFor(k); }
   else if (isBool) right = swHTML();
   else if (!info || (p.widget === "NonInteractivePreference" && /_file$/.test(k))) ctl = controlFor(k);
-  // a list setting (speeds, filter words) gets a reset on the right that brings back Morphe's own list
-  if (!info && isListBox(k)) { const same = String(V(k) ?? "") === String(defaults[k] ?? ""); right = `<button class="lreset" data-lreset="${k}" ${same || dis ? "disabled" : ""} title="Restore the default list" aria-label="Restore the default list">${I("reset")}</button>`; }
+  // A list setting (speeds, filter words): the chips are the control, so nothing sits on the right and
+  // they get the card's full width. Its Reset is a small pill beside the title, greyed out like the
+  // screen's Reset until the list differs from Morphe's own (it asks before restoring).
+  let lreset = "";
+  if (!info && isListBox(k)) { const same = String(V(k) ?? "") === String(defaults[k] ?? ""); right = ""; lreset = `<button class="resetbtn lreset" data-lreset="${k}" ${same || dis ? "disabled" : ""} title="Restore the default list" aria-label="Restore the default list">${I("reset")}Reset</button>`; }
   const cls = ["row", live ? "live" : "fallback"];
   if (selected === k) cls.push("sel");
   if (dis) cls.push("dis");
@@ -327,7 +330,7 @@ function rowHTML(k, live) {
     : KIDS[k] ? `<span class="kidbtn kidoff" title="Sub-settings hidden while this is off" aria-label="${KIDS[k].length} sub-settings, hidden">${KIDS[k].length}${I("lock")}</span>` : ""; // same footprint as the open/close button, so the card never changes width
   const over = /^(hide|show) in /i.test(title(k)) && p.subScreenTitle ? `<div class="over">${esc(p.subScreenTitle)}</div>` : "";
   return `<div class="${cls.join(" ")}" data-row="${k}" data-k="${k}" tabindex="0">
-    <div class="txt">${over}<div class="ttl">${ttlHTML(shownTitle(k), (dis ? I("lock", "lk") : "") + tags + kidbtn)}</div>
+    <div class="txt">${over}${lreset ? '<div class="ttlrow">' : ""}<div class="ttl">${ttlHTML(shownTitle(k), (dis ? I("lock", "lk") : "") + tags + kidbtn)}</div>${lreset ? lreset + "</div>" : ""}
       ${sum ? `<div class="sum">${esc(sum)}</div>` : ""}${ctl}</div>${right || goto || need ? `<div class="side">${right}${need}${goto}</div>` : ""}</div>`;
 }
 // The last word of a title and the badges after it never wrap apart, so a sub-options pill can't end up alone on a line.
@@ -569,18 +572,25 @@ function syncLocked(k) {
 // out (6 speeds a row, 5 qualities, all pitches on one line when they fit), worked out again whenever
 // the list is drawn or the window changes size. Nothing is fixed per setting.
 let optCtx = null;
+// Every pill in a box gets the width of the one with the longest text. When an even row would stretch
+// them far past that (a few long options, one per line), they keep that width instead of filling the line.
+function fitPills(box, pills, textOf, chrome) {
+  const W = box.clientWidth; if (!W || !pills.length) return;
+  const cs = getComputedStyle(pills[0]), gap = parseFloat(getComputedStyle(box).columnGap) || 6;
+  optCtx = optCtx || document.createElement("canvas").getContext("2d"); optCtx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+  const need = Math.ceil(Math.max(...pills.map(o => optCtx.measureText(textOf(o)).width)) + chrome);
+  const maxCols = Math.max(1, Math.floor((W + gap) / (need + gap)));
+  const n = pills.length, rows = Math.ceil(n / Math.min(n, maxCols)), cols = Math.ceil(n / rows);
+  const even = (W - gap * (cols - 1)) / cols;
+  box.style.gridTemplateColumns = even <= need * 1.5 ? `repeat(${cols}, minmax(0, 1fr))` : `repeat(${cols}, minmax(0, ${need}px))`;
+}
 function fitOpts(root = $("list")) {
-  root.querySelectorAll(".ctl.optgrid").forEach(box => {
-    const W = box.clientWidth, opts = [...box.querySelectorAll(".opt")]; if (!W || !opts.length) return;
-    const cs = getComputedStyle(opts[0]), gap = parseFloat(getComputedStyle(box).columnGap) || 6;
-    optCtx = optCtx || document.createElement("canvas").getContext("2d"); optCtx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
-    const need = Math.max(...opts.map(o => optCtx.measureText(o.textContent).width)) + 2 * OPT_PAD + 2;
-    const maxCols = Math.max(1, Math.floor((W + gap) / (need + gap)));
-    const n = opts.length, rows = Math.ceil(n / Math.min(n, maxCols)), cols = Math.ceil(n / rows);
-    box.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
-  });
+  root.querySelectorAll(".ctl.optgrid").forEach(box => fitPills(box, [...box.querySelectorAll(".opt")], o => o.textContent, 2 * OPT_PAD + 2));
+  // list chips (speeds, words): text, then the remove button; the add field takes its own line
+  root.querySelectorAll(".ctl.lst").forEach(box => fitPills(box, [...box.querySelectorAll(".lchip")], o => o.firstChild ? o.firstChild.textContent : "", LCHIP_CHROME));
 }
 const OPT_PAD = 6; // the least room beside a pill's text
+const LCHIP_CHROME = 11 + 2 + 26 + 2 + 8; // left padding, gap, remove button, right padding, breathing room
 addEventListener("resize", () => { clearTimeout(fitOpts._t); fitOpts._t = setTimeout(() => fitOpts(), 120); });
 function hideLocked(list) {
   const gone = new Set();
@@ -824,11 +834,15 @@ $("btnReset").onclick = () => {
 };
 // hide the top bar while scrolling down, show it again on the way up
 var progScrollUntil = 0;
+// Tablets and desktops have room to spare, so there the bar always stays (phone portrait and
+// landscape still hide it). Based on the app's own size, so the in-app WebView follows the device.
+const barStays = () => { const a = $("app"); return a.clientWidth >= 600 && a.clientHeight >= 600; };
+window.addEventListener("resize", () => { if (barStays()) $("app").classList.remove("barhidden"); });
 {
   let lastY = 0, acc = 0, barMoveUntil = 0;
   $("scroller").addEventListener("scroll", () => {
     const sc = $("scroller"), y = sc.scrollTop, app = $("app"), d = y - lastY; lastY = y;
-    if (app.classList.contains("searching") || pickerOpen) { app.classList.remove("barhidden"); acc = 0; return; }
+    if (app.classList.contains("searching") || pickerOpen || barStays()) { app.classList.remove("barhidden"); acc = 0; return; }
     // only your own scrolling moves the bar: jumps to a setting (and holds) leave it where it is
     if (performance.now() < progScrollUntil || press) { acc = 0; return; }
     // Showing or hiding the bar resizes the scroller. Near the end of the list that moves the scroll

@@ -92,7 +92,15 @@ $("list").addEventListener("keydown", e => {
 const listMsg = (k, msg) => { const box = document.querySelector(`[data-lst="${k}"]`); if (!box) return; box.querySelector(".lerr")?.remove(); if (msg) box.insertAdjacentHTML("beforeend", `<span class="lerr">${esc(msg)}</span>`); };
 $("list").addEventListener("click", e => {
   const x = e.target.closest(".lx"); if (x) { const k = x.closest("[data-lst]").dataset.lst, items = listItems(k); items.splice(Number(x.dataset.lx), 1); listSet(k, items); return; }
-  const rs = e.target.closest("[data-lreset]"); if (rs) { const k = rs.dataset.lreset; listSet(k, listItems.call(null, k, defaults[k])); return; }
+  // restoring the default list asks first, so a stray tap can't wipe a list someone built up
+  const rs = e.target.closest("[data-lreset]"); if (rs) {
+    const k = rs.dataset.lreset, def = listItems(k, defaults[k]), num = listNumeric(k);
+    openDialog(`<div class="di">${I("reset")}</div><h2 id="dlgTitle">Restore the default list?</h2><p>${esc(title(k))} goes back to Morphe's own list${def.length ? ":" : "."}</p>${def.length ? `<p class="t2">${def.map(t => esc(t) + (num ? "×" : "")).join(", ")}</p>` : ""}<div class="acts"><button class="dbtn tonal" data-dlg-cancel>Cancel</button><button class="dbtn primary" data-dlg-ok>Restore</button></div>`);
+    $("dlgBox").onclick = null;
+    $("dlgBox").querySelector("[data-dlg-cancel]").onclick = closeDialog;
+    $("dlgBox").querySelector("[data-dlg-ok]").onclick = () => { closeDialog(); listSet(k, def); };
+    return;
+  }
   const add = e.target.closest("[data-ladd]"); if (add) { const k = add.dataset.ladd, inp = document.querySelector(`[data-lin="${k}"]`); listMsg(k, listAdd(k, inp ? inp.value : "")); }
 });
 $("list").addEventListener("keydown", e => { const inp = e.target.closest("[data-lin]"); if (inp && e.key === "Enter") { e.preventDefault(); listMsg(inp.dataset.lin, listAdd(inp.dataset.lin, inp.value)); } });

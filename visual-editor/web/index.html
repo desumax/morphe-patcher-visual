@@ -453,21 +453,24 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .ctl textarea { min-height: 54px; resize: vertical; font-family: var(--mono); font-size: 12px; }
 .fallback .ctl { flex-wrap: nowrap; }
 /* the shared list editor (speeds, filter words, whitelists): chips plus an add field */
-.ctl.lst, .fallback .ctl.lst { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.lchip { display: inline-flex; align-items: center; gap: 2px; height: 30px; padding: 0 2px 0 11px; border-radius: 15px; background: var(--m-c-highest); color: var(--m-on); font-size: 13px; font-variant-numeric: tabular-nums; }
+.ctl.lst, .fallback .ctl.lst { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 6px; align-items: center; }
+/* every chip is as wide as the widest one (fitPills sets the columns); text centred, remove button at the end */
+.lchip { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px; min-width: 0; height: 30px; padding: 0 2px 0 11px; border-radius: 15px; background: var(--m-c-highest); color: var(--m-on); font-size: 13px; font-variant-numeric: tabular-nums; text-align: center; white-space: nowrap; overflow: hidden; }
 .lchip .lx { width: 26px; height: 26px; border: 0; border-radius: 50%; background: transparent; display: grid; place-items: center; cursor: pointer; padding: 0; }
 .lchip .lx svg { width: 14px; height: 14px; fill: var(--m-on-var); }
 .lchip .lx:hover { background: rgba(255,255,255,.08); }
-.ladd { display: inline-flex; align-items: center; height: 30px; border-radius: 15px; border: 1px dashed var(--m-outline); padding: 0 2px 0 11px; }
+.ladd { grid-column: 1 / -1; justify-self: start; display: inline-flex; align-items: center; height: 30px; border-radius: 15px; border: 1px dashed var(--m-outline); padding: 0 2px 0 11px; }
 .ctl .ladd input.lin { width: 92px; border: 0; background: transparent; padding: 0; height: 28px; font-size: 13px; color: var(--m-on); outline: none; }
 .ladd .lplus { width: 26px; height: 26px; border: 0; border-radius: 50%; background: var(--m-secondary-c); display: grid; place-items: center; cursor: pointer; padding: 0; }
 .ladd .lplus svg { width: 16px; height: 16px; fill: #D8E3F8; }
 .lst button:disabled, .lst input:disabled { opacity: .5; cursor: default; }
-.lreset { width: 34px; height: 34px; border: 0; border-radius: 50%; background: transparent; display: grid; place-items: center; cursor: pointer; padding: 0; flex: none; }
-.lreset svg { width: 20px; height: 20px; fill: var(--m-primary); }
-.lreset:hover:not(:disabled) { background: rgba(255,255,255,.08); }
-.lreset:disabled { opacity: .3; cursor: default; }
-.lerr { flex-basis: 100%; font-size: 11.5px; color: var(--m-error); }
+/* a list card's Reset: the screen Reset's look (.resetbtn) in a pill, beside the title, never adding height */
+.ttlrow { display: flex; align-items: flex-start; gap: 8px; }
+.ttlrow > .ttl { flex: 1; min-width: 0; }
+.resetbtn.lreset { flex: none; height: 26px; margin: -3px 0; padding: 0 10px 0 7px; background: var(--m-c-highest); }
+.resetbtn.lreset:hover:not(:disabled) { background: var(--m-c-highest); filter: brightness(1.15); }
+.resetbtn.lreset:disabled { background: var(--m-c-highest); }
+.lerr { grid-column: 1 / -1; flex-basis: 100%; font-size: 11.5px; color: var(--m-error); }
 /* option pills always wrap onto new lines and grow with their text, so it never spills past the border */
 .fallback .ctl:has(.opt) { flex-wrap: wrap; }
 .search { margin: 12px 12px 0; display: flex; align-items: center; gap: 8px; background: var(--m-c-high); border-radius: 999px; padding: 0 16px; height: 48px; }
@@ -838,6 +841,8 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   .content.stacked .stick { border-radius: 0; margin-top: 0; top: 0; }
   .content.stacked .group { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 12px; }
   .content.stacked .group { align-items: start; }
+  /* captions and the wide preview-linked blocks span both columns instead of taking one cell */
+  .content.stacked .group > .subhead, .content.stacked .group > .zgrid { grid-column: 1 / -1; }
   .content.stacked .row + .row, .content.stacked .unit + .row, .content.stacked .unit + .unit > .row:first-child, .content.stacked .row + .unit > .row:first-child { border-top: 0; }
 }
 
