@@ -166,7 +166,9 @@ function setFoot(text) {
 const BUZZ_MS = 120; // the drawn tremble and the phone's own vibration last the same and start together
 function buzz(dev, on) {
   // the real vibration first, so it lands on the same frame as the tremble below
-  if (on) try { navigator.vibrate && navigator.vibrate(BUZZ_MS); } catch { /* not supported */ }
+  // the phone itself vibrates only while haptics are on for the setting (its toggle on On); the
+  // drawn tremble still shows on the side that vibrates
+  if (on && !(selected && /haptic/.test(selected) && V(selected))) try { navigator.vibrate && navigator.vibrate(BUZZ_MS); } catch { /* not supported */ }
   const host = dev;
   host.querySelectorAll(".vib7").forEach(e => e.remove());
   host.insertAdjacentHTML("beforeend", `<div class="vib7 ${on ? "on" : "off"}">${I(on ? "vibration" : "phone7")}</div>`);

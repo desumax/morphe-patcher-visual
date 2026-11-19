@@ -382,6 +382,7 @@ function renderList() {
   const oldKidRows = new Map(); list.querySelectorAll(".kids .row:not(.hide)").forEach(r => oldKidRows.set(r.dataset.row, r.outerHTML));
   const wasOpen = new Map([...list.querySelectorAll(".row > .txt > .sum.open")].map(e => [e.closest(".row").dataset.row, e.getBoundingClientRect().height]));
   list.innerHTML = html;
+  mergeZonePreview(list);
   midFold.forEach((h, grp) => {
     const box = list.querySelector(`[data-kids-of="${grp}"]`), left = (foldingKids.get(grp)?.until ?? 0) - performance.now(); if (!box || left < 30) return;
     box.classList.remove("open");
@@ -438,6 +439,17 @@ function renderList() {
   const dis = new Set([...list.querySelectorAll(".row[data-row]")].map(r => r.dataset.row).filter(k => PREF[k] && !parentsOk(k)));
   if (lastDis.sec === section) lastDis.keys.forEach(k => { if (!dis.has(k)) { const r = list.querySelector(`[data-row="${k}"]`); if (r && !r.classList.contains("hide")) unlockFx(r); } });
   lastDis = { sec: section, keys: dis };
+}
+// "Swipe zone preview" is one column on the right of the left, right and top zone rows, its title
+// running vertically, since it previews all three
+function mergeZonePreview(list) {
+  const pv = list.querySelector('.row[data-row="morphe_swipe_zone_preview"]'); if (!pv) return;
+  const zs = ["left", "right", "top"].map(s => list.querySelector(`.row[data-row="morphe_swipe_${s}_zone"]`)).filter(Boolean)
+    .map(r => r.parentElement.classList.contains("unit") ? r.parentElement : r).filter(e => e.parentElement === pv.parentElement);
+  if (zs.length < 2) return;
+  const g = document.createElement("div"); g.className = "zgrid";
+  const col = document.createElement("div"); col.className = "zcol";
+  zs[0].before(g); zs.forEach(e => col.appendChild(e)); g.append(col, pv); pv.classList.add("zprev");
 }
 function unlockFx(row) {
   row.classList.remove("unlock"); void row.offsetWidth; row.classList.add("unlock");

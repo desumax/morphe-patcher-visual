@@ -130,7 +130,9 @@ SCENES.watch = () => {
 
 SCENES.fullscreen = () => {
   const scale = V("morphe_fullscreen_video_scale");
-  const vstyle = scale === "STRETCH" ? "left:0;right:0;top:0;bottom:0" : scale === "ZOOM" ? "left:-12%;right:-12%;top:-12%;bottom:-12%" : "left:9%;right:9%;top:0;bottom:0";
+  // the video keeps its 16:9 frame (fit, black bars at the sides); stretch widens it to the screen and
+  // squashes the picture, zoom scales it evenly so the top and bottom are cropped
+  const vstyle = "left:9%;right:9%;top:0;bottom:0;transition:transform .35s var(--ease);transform:" + (scale === "STRETCH" ? "scaleX(1.22)" : scale === "ZOOM" ? "scale(1.22)" : "none");
   const q = (k, ic, label) => C(k, `<div class="chip" style="height:26px;font-size:11px;padding:0 9px;background:rgba(255,255,255,.14)">${I(ic)}${label}</div>`);
   return `<div class="video" style="background:#000">
     <div class="frame" style="${vstyle};position:absolute;background:${ART[6]}"></div>

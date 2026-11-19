@@ -136,7 +136,8 @@ $("list").addEventListener("input", e => {
     if (!("before" in t.dataset)) t.dataset.before = JSON.stringify(state[k] ?? null);
     state[k] = t.type === "color" ? fromColor(k, t.value) : Number(t.value);
     const lab = document.querySelector(`[data-val-of="${k}"]`); if (lab) lab.textContent = t.value;
-    selected = k; renderStage(); highlight(k);
+    // redrawn without the selection pop: it flashed the preview on every step of the slider
+    selected = k; renderStage(); highlight(k, false);
     if (LIVE_HUD[k]) LIVE_HUD[k]();
   }
 });

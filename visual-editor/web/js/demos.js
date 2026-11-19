@@ -174,6 +174,13 @@ function swipeZones(ms = 900, labels = false) {
   const z = document.createElement("div"); z.className = "zones" + (labels ? " lab" : "");
   z.innerHTML = `<i class="${act("left") === "OFF" ? "zoff" : ""}" style="left:0;width:${zw}%">${lab("left")}</i><i class="${act("right") === "OFF" ? "zoff" : ""}" style="right:0;width:${zw}%">${lab("right")}</i>${top || labels ? `<i class="${top ? "" : "zoff"}" style="left:${zw}%;right:${zw}%;top:0;bottom:auto;height:${th}%">${lab("top")}</i>` : ""}`;
   st.appendChild(z);
+  // a live change (dragging a zone slider) slides the zones from their last size instead of snapping
+  const prev = swipeZones.last; swipeZones.last = { zw, th };
+  if (!ms && prev && (prev.zw !== zw || prev.th !== th)) {
+    const [l, r, t] = z.querySelectorAll(":scope > i");
+    const set = (w, h) => { if (l) l.style.width = w + "%"; if (r) r.style.width = w + "%"; if (t) { t.style.left = t.style.right = w + "%"; t.style.height = h + "%"; } };
+    set(prev.zw, prev.th); void z.offsetWidth; z.classList.add("slide"); set(zw, th);
+  }
   if (ms) { dT(() => z.classList.add("out"), ms); dT(() => z.remove(), ms + 400); }
 }
 // still: the overlay stays up, half full and without a finger, so a slider for its look (opacity,
@@ -199,8 +206,8 @@ function swipeDemo(side, action, prefix = "", still = false) {
     const txt = `<span class="hv" style="font-size:${ts}px;font-weight:600;color:#fff;font-variant-numeric:tabular-nums">${action === "SPEED" ? "1.0x" : "20"}</span>`;
     let inner;
     if (circ) inner = `<div style="width:64px;height:64px;border-radius:50%;background:conic-gradient(${col} var(--p,0%),rgba(255,255,255,.25) 0);display:grid;place-items:center"><div style="width:52px;height:52px;border-radius:50%;background:rgba(0,0,0,${bgA});display:grid;place-items:center">${I(ic)}${txt}</div></div>`;
-    else if (vert) inner = `<div style="display:grid;justify-items:center;gap:6px;background:${min ? "transparent" : `rgba(0,0,0,${bgA})`};padding:8px;border-radius:14px">${I(ic)}<div style="width:6px;height:80px;background:rgba(255,255,255,.25);border-radius:3px;position:relative"><div style="position:absolute;bottom:0;left:0;right:0;height:var(--p,0%);background:${col};border-radius:3px"></div></div>${txt}</div>`;
-    else inner = `<div style="display:flex;align-items:center;gap:8px;background:${min ? "transparent" : `rgba(0,0,0,${bgA})`};padding:8px 12px;border-radius:18px">${I(ic)}<div style="width:110px;height:5px;background:rgba(255,255,255,.25);border-radius:3px;position:relative"><div style="position:absolute;left:0;top:0;bottom:0;width:var(--p,0%);background:${col};border-radius:3px"></div></div>${txt}</div>`;
+    else if (vert) inner = `<div style="display:grid;justify-items:center;gap:6px;background:rgba(0,0,0,${bgA});padding:8px;border-radius:14px">${I(ic)}<div style="width:6px;height:80px;background:rgba(255,255,255,.25);border-radius:3px;position:relative"><div style="position:absolute;bottom:0;left:0;right:0;height:var(--p,0%);background:${col};border-radius:3px"></div></div>${txt}</div>`;
+    else inner = `<div style="display:flex;align-items:center;gap:8px;background:rgba(0,0,0,${bgA});padding:8px 12px;border-radius:18px">${I(ic)}<div style="width:110px;height:5px;background:rgba(255,255,255,.25);border-radius:3px;position:relative"><div style="position:absolute;left:0;top:0;bottom:0;width:var(--p,0%);background:${col};border-radius:3px"></div></div>${txt}</div>`;
     hud.innerHTML = inner; hud.style.display = "block";
     if (style === "HORIZONTAL_MINIMAL_TOP") { hud.style.left = "50%"; hud.style.right = "auto"; hud.style.top = "12px"; hud.style.transform = "translateX(-50%)"; }
     else if (vert) { hud.style.left = side === "left" ? "auto" : "14px"; hud.style.right = side === "left" ? "14px" : "auto"; hud.style.top = "50%"; hud.style.transform = "translateY(-50%)"; }
