@@ -445,11 +445,24 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .sw::after { content: ""; position: absolute; left: 4px; top: 4px; width: 20px; height: 20px; border-radius: 50%; background: var(--m-outline) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23333537' d='M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z'/%3E%3C/svg%3E") center/14px no-repeat; transition: left var(--dur) var(--ease), width var(--dur) var(--ease), background-color var(--dur) var(--ease); }
 .sw[aria-checked="true"] { background: var(--on-green); border-color: var(--on-green); }
 .sw[aria-checked="true"]::after { left: 22px; top: 2px; width: 24px; height: 24px; background: var(--on-green-ink) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%232b5c34' d='M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E") center/16px no-repeat; }
-.fallback select, .fallback input[type=text], .fallback input[type=number], .fallback textarea, .live select {
+/* one look for every box in a setting card, with or without a live preview */
+.ctl select, .ctl input[type=text], .ctl input[type=number], .ctl textarea {
   background: var(--m-c-highest); color: var(--m-on); border: 1px solid var(--m-outline-var); border-radius: var(--r-s); padding: 7px 10px; font: inherit; font-size: 13px; width: 100%; max-width: 100%;
 }
-.fallback textarea { min-height: 54px; resize: vertical; font-family: var(--mono); font-size: 12px; }
+.ctl textarea { min-height: 54px; resize: vertical; font-family: var(--mono); font-size: 12px; }
 .fallback .ctl { flex-wrap: nowrap; }
+/* the shared list editor (speeds, filter words, whitelists): chips plus an add field */
+.ctl.lst, .fallback .ctl.lst { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.lchip { display: inline-flex; align-items: center; gap: 2px; height: 30px; padding: 0 2px 0 11px; border-radius: 15px; background: var(--m-c-highest); color: var(--m-on); font-size: 13px; font-variant-numeric: tabular-nums; }
+.lchip .lx { width: 26px; height: 26px; border: 0; border-radius: 50%; background: transparent; display: grid; place-items: center; cursor: pointer; padding: 0; }
+.lchip .lx svg { width: 14px; height: 14px; fill: var(--m-on-var); }
+.lchip .lx:hover { background: rgba(255,255,255,.08); }
+.ladd { display: inline-flex; align-items: center; height: 30px; border-radius: 15px; border: 1px dashed var(--m-outline); padding: 0 2px 0 11px; }
+.ctl .ladd input.lin { width: 92px; border: 0; background: transparent; padding: 0; height: 28px; font-size: 13px; color: var(--m-on); outline: none; }
+.ladd .lplus { width: 26px; height: 26px; border: 0; border-radius: 50%; background: var(--m-secondary-c); display: grid; place-items: center; cursor: pointer; padding: 0; }
+.ladd .lplus svg { width: 16px; height: 16px; fill: #D8E3F8; }
+.lst button:disabled, .lst input:disabled { opacity: .5; cursor: default; }
+.lerr { flex-basis: 100%; font-size: 11.5px; color: var(--m-error); }
 /* option pills always wrap onto new lines and grow with their text, so it never spills past the border */
 .fallback .ctl:has(.opt) { flex-wrap: wrap; }
 .search { margin: 12px 12px 0; display: flex; align-items: center; gap: 8px; background: var(--m-c-high); border-radius: 999px; padding: 0 16px; height: 48px; }

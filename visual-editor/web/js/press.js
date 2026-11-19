@@ -20,7 +20,7 @@ function down(e) {
   if (e.pointerType === "mouse" && e.target.closest("#stage")) drag = { x: e.clientX, y: e.clientY, t: e.target, on: false };
   // tapping a switch flips it straight away (the row itself keeps tap = select, hold = switch)
   if (e.target.closest(".sw,.lt7")) return;
-  if (e.target.closest("input,select,textarea,button.opt,.filepick,.goto,.kidbtn,.replay,[data-tray]")) return;
+  if (e.target.closest("input,select,textarea,button.opt,.lst,.filepick,.goto,.kidbtn,.replay,[data-tray]")) return;
   const el = e.target.closest("[data-k]"); if (!el) return;
   const k = el.dataset.k; const from = el.closest("#stage") ? "stage" : "list";
   // holding only does something for settings it can switch (on/off, or a short list it can step
@@ -88,6 +88,13 @@ $("list").addEventListener("keydown", e => {
   if (e.key === "Enter") { select(row.dataset.row, "list"); e.preventDefault(); }
   if (e.key === " ") { toggle(row.dataset.row); e.preventDefault(); }
 });
+// the shared list editor: remove a chip, add an entry with + or Enter
+const listMsg = (k, msg) => { const box = document.querySelector(`[data-lst="${k}"]`); if (!box) return; box.querySelector(".lerr")?.remove(); if (msg) box.insertAdjacentHTML("beforeend", `<span class="lerr">${esc(msg)}</span>`); };
+$("list").addEventListener("click", e => {
+  const x = e.target.closest(".lx"); if (x) { const k = x.closest("[data-lst]").dataset.lst, items = listItems(k); items.splice(Number(x.dataset.lx), 1); listSet(k, items); return; }
+  const add = e.target.closest("[data-ladd]"); if (add) { const k = add.dataset.ladd, inp = document.querySelector(`[data-lin="${k}"]`); listMsg(k, listAdd(k, inp ? inp.value : "")); }
+});
+$("list").addEventListener("keydown", e => { const inp = e.target.closest("[data-lin]"); if (inp && e.key === "Enter") { e.preventDefault(); listMsg(inp.dataset.lin, listAdd(inp.dataset.lin, inp.value)); } });
 $("list").addEventListener("click", e => {
   const res = e.target.closest("[data-res]");
   if (res) { openResult(res.dataset.res); return; }

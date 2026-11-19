@@ -237,11 +237,37 @@ function controlFor(k) {
     // Morphe opens the system file picker for these; the preview does the same and draws the image
     if (p.widget === "NonInteractivePreference" && /_file$/.test(k)) return `<div class="ctl"><label class="opt filepick" ${dis ? 'aria-disabled="true"' : ""}>${I("image")}${v ? "Change image" : "Choose image"}<input type="file" accept="image/*" data-file="${k}" ${dis} hidden></label>${v ? `<span class="val">${esc(v)}</span>` : ""}</div>`;
     if (/color/.test(k) && /^#/.test(String(v))) return `<div class="ctl side"><input type="color" value="#${String(v).slice(-6)}" data-set="${k}" ${dis} aria-label="${esc(title(k))}"><span class="val">${esc(v)}</span></div>`;
-    if (String(p.default ?? "").includes("\n") || /strings|phrases|speeds|whitelist|filter/.test(k)) return `<div class="ctl"><textarea data-set="${k}" ${dis} aria-label="${esc(title(k))}">${esc(v)}</textarea></div>`;
+    if (isListBox(k)) return listBox(k, dis);
     return `<div class="ctl"><input type="text" value="${esc(v)}" data-set="${k}" ${dis} aria-label="${esc(title(k))}"></div>`;
   }
   return "";
 }
+// Settings that hold a list as text, one entry per line (speeds, filter words, channel whitelists):
+// one shared editor for all of them. Each entry is a chip with a remove button, and a field at the end
+// adds one (Enter or +). It reads and writes exactly Morphe's format, the entries joined by new lines,
+// so Morphe parses what it always did.
+const isListBox = k => PREF[k].type === "string" && (String(PREF[k].default ?? "").includes("\n") || /strings|phrases|speeds|whitelist|filter/.test(k));
+const listNumeric = k => /speeds/.test(k);
+function listItems(k) {
+  const v = String(V(k) ?? "");
+  // older or hand-typed values may use spaces or commas; Morphe's own default is one per line
+  const parts = v.includes("\n") || !listNumeric(k) ? v.split("\n") : v.split(/[\s,]+/);
+  return parts.map(x => x.trim()).filter(Boolean);
+}
+function listBox(k, dis) {
+  const items = listItems(k), num = listNumeric(k);
+  return `<div class="ctl lst" data-lst="${k}">${items.map((t, i) => `<span class="lchip">${esc(t)}${num ? "×" : ""}<button class="lx" data-lx="${i}" ${dis} aria-label="Remove ${esc(t)}">${I("close")}</button></span>`).join("")}
+    <span class="ladd"><input class="lin" data-lin="${k}" ${dis} placeholder="${num ? "Add speed" : "Add entry"}" ${num ? 'inputmode="decimal"' : ""} aria-label="Add to ${esc(title(k))}"><button class="lplus" data-ladd="${k}" ${dis} aria-label="Add">${I("plus")}</button></span></div>`;
+}
+// returns an error to show, or null once the entry is added
+function listAdd(k, raw) {
+  const t = String(raw).trim(); if (!t) return null;
+  const items = listItems(k);
+  if (listNumeric(k)) { const n = Number(t.replace(",", ".")); if (!(n > 0 && n <= 8)) return "Enter a speed between 0.05 and 8"; if (items.some(x => Number(x) === n)) return "Already in the list"; items.push(String(n).includes(".") ? String(n) : n.toFixed(1)); if (!/cycle/.test(k)) items.sort((a, b) => a - b); } // a cycle keeps its order: it is the order taps go through
+  else { if (items.includes(t)) return "Already in the list"; items.push(t); }
+  listSet(k, items); return null;
+}
+function listSet(k, items) { ensureMod(); touchSel(k); const before = state[k]; state[k] = items.join("\n"); afterChange(k, before); requestAnimationFrame(() => document.querySelector(`[data-lin="${k}"]`)?.focus()); }
 const whereOf = x => { const s = sectionOf(x); return s !== section ? ` (${esc(SECTIONS.find(z => z.id === s)?.title || "Miscellaneous")})` : ""; };
 function shortNeed(k) {
   if (!classicParentsOk(k)) return PREF[k].parents.some(x => x.mode === "not" && !!state[x.key]) ? "Parent setting must be disabled" : "Parent setting must be enabled";
@@ -342,7 +368,16 @@ function byPosition(keys) {
   const at = k => pos[k] !== undefined ? pos[k] : null;
   const placed = keys.filter(k => at(k) !== null).sort((a, b) => at(a) - at(b) || idx.get(a) - idx.get(b));
   const rest = placeDependents([placed], keys.filter(k => at(k) === null));
-  return [...placed, ...rest];
+  return keepTogether([...placed, ...rest]);
+}
+// settings that belong right after another one wherever their own parts sit
+const NEXT_TO = { morphe_custom_speed_menu: "morphe_playback_speed_default" };
+function keepTogether(list) {
+  for (const [k, after] of Object.entries(NEXT_TO)) {
+    const i = list.indexOf(k); if (i < 0 || !list.includes(after)) continue;
+    list.splice(i, 1); list.splice(list.indexOf(after) + 1, 0, k);
+  }
+  return list;
 }
 // A setting that only matters once another one is set up (Speed step needs a Speed swipe zone) and has
 // nothing of its own in the preview goes right after the related settings: after the one that unlocks
