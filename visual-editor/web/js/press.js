@@ -22,7 +22,6 @@ function down(e) {
   if (e.target.closest(".sw,.lt7")) return;
   if (e.target.closest("input,select,textarea,button.opt,.filepick,.goto,.kidbtn,.replay,[data-tray]")) return;
   const el = e.target.closest("[data-k]"); if (!el) return;
-  foldKeep = null; // a tap on the card itself unfolds a long description
   const k = el.dataset.k; const from = el.closest("#stage") ? "stage" : "list";
   // holding only does something for settings it can switch (on/off, or a short list it can step
   // through); for a slider, colour or text field the hold ring would charge up to nothing
@@ -32,7 +31,7 @@ function down(e) {
   press = { el, k, from, x: e.clientX, y: e.clientY, long: false };
   // holding a preview element brings its setting into view while the hold is still charging
   if (from === "stage") press.peek = setTimeout(() => { if (!press || press.k !== k) return; document.querySelectorAll(".row.sel").forEach(r => r.classList.remove("sel")); document.querySelector(`[data-row="${k}"]`)?.classList.add("sel"); const o = openFor(k); setTimeout(() => scrollRowIntoView(k, true), o ? 300 : 0); }, 160);
-  press.t = setTimeout(() => { if (!press) return; press.long = true; foldKeep = k; el.classList.remove("pressing"); if (from === "stage" && selected !== k) { if (ghosts.has(selected)) unghost(selected); selected = k; highlight(k, false); renderInspector(); } toggle(k); if (from === "stage") setTimeout(() => scrollRowIntoView(k, true), 30); }, LONG);
+  press.t = setTimeout(() => { if (!press) return; press.long = true; el.classList.remove("pressing"); touchSel(k); toggle(k); if (from === "stage") setTimeout(() => scrollRowIntoView(k, true), 30); }, LONG);
 }
 function cancelPress() { if (press) { clearTimeout(press.t); clearTimeout(press.peek); press.el.classList.remove("pressing", "charging"); press = null; } }
 function move(e) {
@@ -124,9 +123,9 @@ $("list").addEventListener("click", e => {
   }
   const rp = e.target.closest("[data-replay]");
   const sw = e.target.closest("[data-sw]");
-  if (sw) { const k = sw.dataset.sw; foldKeep = k; if (A[k]) toggle(k); else { select(k); toggle(k); } return; }
+  if (sw) { const k = sw.dataset.sw; if (A[k]) { touchSel(k); toggle(k); } else { select(k); toggle(k); } return; }
   const opt = e.target.closest("button.opt[data-set]");
-  if (opt) { ensureMod(); const k = opt.dataset.set; const before = state[k]; state[k] = coerce(k, opt.dataset.val); afterChange(k, before); }
+  if (opt) { ensureMod(); const k = opt.dataset.set; touchSel(k); const before = state[k]; state[k] = coerce(k, opt.dataset.val); afterChange(k, before); }
 });
 $("list").addEventListener("input", e => {
   const t = e.target; const k = t.dataset && t.dataset.set; if (!k || t.tagName === "SELECT") return;
@@ -222,5 +221,5 @@ function setMode(m) {
   $("btnOrig").setAttribute("aria-pressed", String(m === "orig")); $("btnMod").setAttribute("aria-pressed", String(m === "mod"));
   commit(); if (selected) select(selected);
 }
-$("btnOrig").onclick = () => setMode("orig");
-$("btnMod").onclick = () => setMode("mod");
+// a two-way toggle: a tap anywhere on it switches between Original and Morphe
+document.querySelector(".appbar .seg").onclick = () => setMode(mode === "orig" ? "mod" : "orig");

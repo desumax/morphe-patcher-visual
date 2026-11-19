@@ -401,6 +401,9 @@ let searching = false, query = "";
 function setSearch(on) {
   if (on === searching) return;
   searching = on;
+  // the bar grows out of the search button to both sides, and shrinks back into it
+  { const bar = $("searchBar"), b = bar.getBoundingClientRect(), r = $("btnSearch").getBoundingClientRect();
+    if (b.width && r.width) { bar.style.setProperty("--cl", Math.max(0, r.left - b.left) + "px"); bar.style.setProperty("--cr", Math.max(0, b.right - r.right) + "px"); } }
   $("app").classList.toggle("searching", on);
   $("btnSearch").setAttribute("aria-expanded", String(on));
   $("q").tabIndex = on ? 0 : -1; $("qClose").tabIndex = on ? 0 : -1;

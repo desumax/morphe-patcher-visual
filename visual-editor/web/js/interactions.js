@@ -22,22 +22,22 @@ function proxyEls(k) {
   for (let p = PROXY_K[k] || PARENT_OF[k]; p && !seen.has(p); p = PROXY_K[p] || PARENT_OF[p]) { seen.add(p); const e = q(p); if (e.length) return e; }
   return [];
 }
-// Switching a setting (tapping its switch or holding its card) selects it without unfolding its
-// description, so the card never changes size under the finger; a tap on the card unfolds it.
-let foldKeep = null;
+// Any interaction with a card (tap, hold, its toggle or options, or its element in the preview)
+// selects it, and a selected card always shows its whole description.
+function touchSel(k) { if (selected === k) return; if (ghosts.has(selected)) unghost(selected); selected = k; highlight(k, false); renderInspector(); }
 // Descriptions show two lines; a longer one is cut (with a fade) and unfolds when its setting is
 // selected, folding back when another one is. Every card keeps the same size whatever its state.
 function fitSums(root = $("list")) {
   root.querySelectorAll(".row > .txt > .sum:not(.need)").forEach(el => {
     const lh = parseFloat(getComputedStyle(el).lineHeight) || 17.5, full = el.scrollHeight;
     el.classList.toggle("long", full > lh * 2 + 3); el.style.setProperty("--full", full + "px");
-    el.classList.toggle("open", el.classList.contains("long") && !!el.closest(".row.sel") && el.closest(".row").dataset.row !== foldKeep);
+    el.classList.toggle("open", el.classList.contains("long") && !!el.closest(".row.sel"));
   });
 }
 function highlight(k, flash = true, reveal = false) {
   document.querySelectorAll(".sel").forEach(e => e.classList.remove("sel", "selin"));
   document.querySelectorAll(`[data-k="${k}"], [data-row="${k}"], [data-also="${k}"]`).forEach(e => e.classList.add("sel"));
-  document.querySelectorAll("#list .sum.open").forEach(e => { if (!e.closest(".row.sel")) e.classList.remove("open"); }); if (k !== foldKeep) document.querySelectorAll(`#list [data-row="${k}"] > .txt > .sum.long`).forEach(e => e.classList.add("open"));
+  document.querySelectorAll("#list .sum.open").forEach(e => { if (!e.closest(".row.sel")) e.classList.remove("open"); }); document.querySelectorAll(`#list [data-row="${k}"] > .txt > .sum.long`).forEach(e => e.classList.add("open"));
   const els = [...document.querySelectorAll(`#stage [data-k="${k}"], #stage [data-also="${k}"]`)];
   const proxy = els.length ? [] : proxyEls(k);
   const finish = () => { els.forEach(e => {

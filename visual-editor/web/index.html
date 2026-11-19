@@ -86,7 +86,8 @@ button { font: inherit; color: inherit; }
 .secpill:hover { background: var(--m-c-highest); }
 .secpill:active { transform: scale(.96); }
 .secpill svg { width: 20px; height: 20px; fill: var(--m-primary); flex: none; }
-.secpill .lbl { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.secpill { flex: none; }
+.secpill .lbl { display: none; font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .secpill .chev { fill: var(--m-on-var); transition: transform var(--dur) var(--ease); }
 .secpill[aria-expanded="true"] .chev { transform: rotate(180deg); }
 .grow { flex: 1; min-width: 4px; }
@@ -94,10 +95,15 @@ button { font: inherit; color: inherit; }
 .rchip.show { display: flex; animation: pop var(--dur) var(--ease); }
 .rchip svg { width: 16px; height: 16px; fill: currentColor; }
 @keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
-.seg { margin-left: auto; display: flex; background: var(--m-c-high); border-radius: 999px; padding: 3px; flex: none; }
-.seg button { border: 0; background: transparent; height: 30px; padding: 0 9px; border-radius: 999px; font-size: 12.5px; font-weight: 500; color: var(--m-on-var); cursor: pointer; transition: background var(--dur) var(--ease), color var(--dur) var(--ease); }
-.seg button[aria-pressed="true"] { background: var(--m-primary); color: var(--m-on-primary); }
-.seg #btnOrig[aria-pressed="true"] { background: var(--yt-red); color: #fff; }
+/* Original / Morphe: a two-way toggle. The thumb slides to the chosen side: YouTube red on
+   Original, the project's blue on Morphe. A tap anywhere on it switches. */
+.seg { --seg-on: var(--m-primary); --seg-on-ink: var(--m-on-primary); margin-left: auto; position: relative; display: grid; grid-template-columns: 1fr 1fr; background: var(--m-c-highest, #303134); border-radius: 999px; padding: 2px; flex: none; cursor: pointer; isolation: isolate; }
+.theme-yt .seg { --seg-on: var(--yt-blue); --seg-on-ink: #0f0f0f; background: #303134; }
+.seg::before { content: ""; position: absolute; z-index: -1; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 2px); border-radius: 999px; background: var(--seg-on); transform: translateX(100%); transition: transform 300ms var(--ease), background-color 300ms var(--ease); }
+.seg:has(#btnOrig[aria-pressed="true"])::before { transform: none; background: var(--yt-red); }
+.seg button { border: 0; background: transparent; height: 28px; padding: 0 10px; border-radius: 999px; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--m-on-var); cursor: pointer; transition: color 300ms var(--ease); }
+.seg #btnMod[aria-pressed="true"] { color: var(--seg-on-ink); }
+.seg #btnOrig[aria-pressed="true"] { color: #fff; }
 
 /* section picker */
 .picker { position: absolute; left: 8px; right: 8px; top: 54px; z-index: 40; background: var(--m-c-high); border-radius: var(--r-li); padding: var(--sp-s); box-shadow: 0 12px 36px rgba(0,0,0,.55);
@@ -397,7 +403,7 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .row .ctl.side input[type=color]::-webkit-color-swatch { border: 1px solid rgba(255,255,255,.25); border-radius: 999px; }
 .row .ctl.side input[type=color]::-moz-color-swatch { border: 1px solid rgba(255,255,255,.25); border-radius: 999px; }
 .row .ctl.side .val { min-width: 0; text-align: center; font-size: 9.5px; line-height: 1.1; }
-.ctl .opt { border: 1px solid var(--m-outline-var); background: transparent; border-radius: 999px; height: 30px; padding: 0 12px; font-size: 12px; cursor: pointer; color: var(--m-on); transition: background var(--dur) var(--ease); }
+.ctl .opt { border: 1px solid var(--m-outline-var); background: transparent; border-radius: 999px; height: auto; min-height: 30px; max-width: 100%; padding: 5px 12px; line-height: 1.2; overflow-wrap: anywhere; text-align: center; font-size: 12px; cursor: pointer; color: var(--m-on); transition: background var(--dur) var(--ease); }
 .ctl.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .ctl.grid3 .opt { padding: 2px 4px; height: auto; min-height: 34px; line-height: 1.15; white-space: normal; overflow-wrap: anywhere; text-align: center; }
 .ctl .opt[aria-pressed="true"] { background: var(--m-secondary-c); border-color: var(--m-secondary-c); color: #D8E3F8; }
@@ -413,6 +419,8 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 }
 .fallback textarea { min-height: 54px; resize: vertical; font-family: var(--mono); font-size: 12px; }
 .fallback .ctl { flex-wrap: nowrap; }
+/* option pills always wrap onto new lines and grow with their text, so it never spills past the border */
+.fallback .ctl:has(.opt) { flex-wrap: wrap; }
 .search { margin: 12px 12px 0; display: flex; align-items: center; gap: 8px; background: var(--m-c-high); border-radius: 999px; padding: 0 16px; height: 48px; }
 .search svg { width: 20px; height: 20px; fill: var(--m-on-var); flex: none; }
 .search input { flex: 1; min-width: 0; background: transparent; border: 0; color: var(--m-on); font: inherit; font-size: 14px; outline: none; }
@@ -487,13 +495,14 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .tut .tsp { flex: 1; }
 .tut .tic { display: grid; place-items: center; width: 26px; height: 26px; }
 .tut .tic svg { width: 18px; height: 18px; fill: var(--m-on); }
-.tut .tseg { display: flex; border-radius: 999px; overflow: hidden; border: 1px solid var(--m-outline); }
-.tut .tseg b { font-size: 10.5px; font-weight: 500; padding: 3px 7px; color: var(--m-on-var); transition: background var(--dur), color var(--dur); }
-.tut .tseg b.on { background: var(--m-secondary-c); color: var(--m-on); }
-.tut .tseg #tOrig.on { background: var(--yt-red); color: #fff; }
-.tut .tseg #tMorphe.on { background: var(--yt-blue); color: #0f0f0f; }
-.tut .tq { position: absolute; inset: 3px 3px 3px 3px; border-radius: 8px; background: var(--m-c-highest); color: var(--m-on); font-size: 13px; display: flex; align-items: center; padding: 0 10px; opacity: 0; pointer-events: none; transition: opacity 200ms; }
-.tut .tq.show { opacity: 1; }
+.tut .tseg { position: relative; display: grid; grid-template-columns: 1fr 1fr; border-radius: 999px; padding: 2px; background: #303134; isolation: isolate; }
+.tut .tseg::before { content: ""; position: absolute; z-index: -1; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 2px); border-radius: 999px; background: var(--yt-blue); transform: translateX(100%); transition: transform 300ms var(--ease), background-color 300ms var(--ease); }
+.tut .tseg:has(#tOrig.on)::before { transform: none; background: var(--yt-red); }
+.tut .tseg b { font-size: 10px; font-weight: 600; padding: 3px 7px; text-align: center; border-radius: 999px; color: var(--m-on-var); transition: color 300ms var(--ease); }
+.tut .tseg #tOrig.on { color: #fff; }
+.tut .tseg #tMorphe.on { color: #0f0f0f; }
+.tut .tq { position: absolute; inset: 3px 3px 3px 3px; border-radius: 14px; background: var(--m-c-highest); color: var(--m-on); font-size: 13px; display: flex; align-items: center; padding: 0 10px; opacity: 0; pointer-events: none; clip-path: inset(0 var(--cr, 0px) 0 var(--cl, 50%) round 14px); transition: clip-path 300ms var(--ease), opacity 120ms linear 180ms; }
+.tut .tq.show { opacity: 1; clip-path: inset(0 round 14px); transition: clip-path 300ms var(--ease), opacity 80ms linear; }
 .tut .tq span { white-space: pre; overflow: hidden; }
 .tut .tq::after { content: ""; width: 1px; height: 14px; background: var(--m-primary); margin-left: 1px; animation: blink 1s steps(1) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
@@ -582,7 +591,7 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 /* search */
 .appbar { position: relative; }
 .searchbar { position: absolute; left: 48px; right: 10px; top: 6px; height: 40px; display: flex; align-items: center; gap: 4px; padding-left: 14px; border-radius: 999px; background: var(--m-c-high); z-index: 2;
-  clip-path: inset(0 0 0 calc(100% - 40px) round 20px); opacity: 0; pointer-events: none; transition: clip-path 300ms var(--ease), opacity 120ms linear 180ms; }
+  clip-path: inset(0 var(--cr, 0px) 0 var(--cl, calc(100% - 40px)) round 20px); opacity: 0; pointer-events: none; transition: clip-path 300ms var(--ease), opacity 120ms linear 180ms; }
 .searchbar svg { width: 20px; height: 20px; fill: var(--m-on-var); flex: none; }
 .searchbar input { flex: 1; min-width: 0; background: transparent; border: 0; color: var(--m-on); font: inherit; font-size: 15px; outline: none; }
 .searchbar input::-webkit-search-cancel-button { display: none; }
@@ -724,11 +733,6 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 .theme-yt .secpill:hover { background: rgba(255,255,255,.08); }
 .theme-yt .secpill .lbl { font-size: 18px; font-weight: 500; }
 .theme-yt .secpill svg:not(.chev) { display: none; }
-.theme-yt .seg { background: transparent; gap: 6px; padding: 0; }
-.theme-yt .seg button { height: 30px; padding: 0 10px; border-radius: 8px; background: #272727; color: #f1f1f1; font-size: 13px; }
-.theme-yt .seg button[aria-pressed="true"] { background: #f1f1f1; color: #0f0f0f; }
-.theme-yt .seg #btnOrig[aria-pressed="true"] { background: var(--yt-red); color: #fff; }
-.theme-yt .seg #btnMod[aria-pressed="true"] { background: var(--yt-blue); color: #0f0f0f; }
 .theme-yt .picker { background: var(--m-c-high, #212121); border-radius: 12px; }
 .theme-yt .pick { border-radius: 8px; }
 .theme-yt .pick .pi { background: transparent; width: 28px; }
@@ -885,7 +889,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
       <div class="app" id="app">
         <div class="appbar">
           <button class="iconbtn" id="btnBack" aria-label="Leave visual settings"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
-          <button class="secpill" id="secPill" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" id="secIcon"><path d=""/></svg><span class="lbl" id="secLabel">Player controls</span><svg class="chev" viewBox="0 0 24 24"><path d="M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z"/></svg></button>
+          <button class="secpill" id="secPill" aria-haspopup="true" aria-expanded="false" aria-label="Screens"><svg viewBox="0 0 24 24" id="secIcon"><path d=""/></svg><span class="lbl" id="secLabel">Player controls</span><svg class="chev" viewBox="0 0 24 24"><path d="M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z"/></svg></button>
           <button class="iconbtn" id="btnSearch" aria-label="Search settings" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></button>
           <button class="iconbtn" id="btnReset" aria-label="Reset settings"><svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg></button>
           <div class="searchbar" id="searchBar" role="search"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><input id="q" type="search" placeholder="Search all settings" aria-label="Search all settings" autocomplete="off" tabindex="-1"><button class="iconbtn" id="qClose" aria-label="Close search" tabindex="-1"><svg viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button></div>

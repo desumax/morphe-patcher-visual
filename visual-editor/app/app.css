@@ -6,10 +6,9 @@ html.inapp #inspector, html.inapp #devBtns, html.inapp .devonly { display: none 
 html.inapp #phone > .status { display: none !important; }
 html.inapp .bench { padding: 0 !important; margin: 0 !important; min-height: 0 !important; height: 100% !important; }
 html.inapp .devdone { display: none !important; } /* development markers stay in the web preview only */
-/* In the app the screen menu is a page of its own: it fills the space under the top bar, and the
-   top bar shows the screen title without the dropdown arrow (a screen is left with Back). */
-html.inapp .secpill { pointer-events: none; }
-html.inapp .secpill .chev { display: none; }
+/* In the app the screen menu is a page of its own: it fills the space under the top bar. A screen
+   has no title or menu button in the top bar (it is left with Back). */
+html.inapp .secpill { display: none !important; }
 html.inapp .menutitle { display: none; flex: 1; min-width: 0; padding-left: 4px; font-size: 18px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 html.inapp.menupage .menutitle { display: block; }
 html.inapp.menupage .secpill, html.inapp.menupage #btnReset, html.inapp.menupage .appbar .seg { display: none !important; }

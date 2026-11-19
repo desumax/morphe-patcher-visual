@@ -36,7 +36,7 @@ function runTutorial(startAt) {
   t.innerHTML = `<h2>Visual settings</h2><p class="tsub">See what each Morphe setting changes</p>
     <div class="tcap" id="tcap"></div>
     <div class="tdemo">
-      <div class="tbar7" id="tBar"><span class="tpill" id="tPill">Player ${I("expand")}</span><span class="tsp"></span><span class="tic" id="tSearch">${I("search")}</span><span class="tic" id="tReset">${I("reset")}</span><span class="tseg"><b id="tOrig">Original</b><b id="tMorphe" class="on">Morphe</b></span><div class="tq" id="tQ"><span id="tQt"></span></div></div>
+      <div class="tbar7" id="tBar"><span class="tpill" id="tPill"></span><span class="tsp"></span><span class="tic" id="tSearch">${I("search")}</span><span class="tic" id="tReset">${I("reset")}</span><span class="tseg"><b id="tOrig">Original</b><b id="tMorphe" class="on">Morphe</b></span><div class="tq" id="tQ"><span id="tQt"></span></div></div>
       <div class="tstage" id="tStage" style="background:${ART[0]}"><div class="tbtns"><div class="tb" id="tbCC">${I("cc")}</div><div class="tb" id="tbCast">${I("cast")}<div class="tring" id="tring"></div></div><div class="tb">${I("gear")}</div></div>
         <div class="tseek"><div></div></div>${TUT_VIEWS}
         <div class="tpick" id="tPick"><div class="tpg" id="tPg">${pickGroups}</div>
@@ -81,6 +81,8 @@ function runTutorial(startAt) {
   // where a finger taps to show or hide the setting from its card
   const showTarget = () => rowDesign === "clean" ? sw.lastElementChild : sw;
   const hideTarget = () => rowDesign === "clean" ? sw.children[1] : sw;
+  // the top bar has no screen title: the menu button shows the screen's icon and an arrow
+  const setPill = g => { $("tPill").innerHTML = I(g.icon) + I("expand"); };
   const setView = v => { stage.dataset.view = v || ""; };
   const setTabs = (names, on) => t.querySelectorAll("#tTabs span").forEach((s, i) => { s.textContent = names[i] || ""; s.style.display = names[i] ? "" : "none"; s.classList.toggle("on", i === on); });
   const setGrouped = g => { $("tGsw").setAttribute("aria-checked", String(g)); demo.classList.toggle("grouped", g); $("tPg").innerHTML = g ? pickGroups : pickScreens; $("tPg").classList.toggle("many", !g); };
@@ -105,7 +107,7 @@ function runTutorial(startAt) {
     ["tPick", "tMenu", "tQ"].forEach(x => $(x).classList.remove("show")); $("tQt").textContent = "";
     demo.classList.remove("searching", "found"); $("tSres").classList.remove("hit");
     setMode(false);
-    setTabs(playerTabs, 0); $("tPill").firstChild.textContent = "Player "; setView("");
+    setTabs(playerTabs, 0); setPill(GROUPS[0]); setView("");
     setGrouped(grouped); setRowDesign(design);
     t.querySelectorAll("#tPick span, .tseg3 b, .tprow, .tch span, #tCancel").forEach(s => s.classList.remove("hit"));
     // the card only exists once something was tapped (page 2 makes it appear)
@@ -116,7 +118,7 @@ function runTutorial(startAt) {
       at2(650, () => { tap(); $("tPick").classList.add("show"); });
       at2(1250, () => move(t.querySelector('#tPick [data-g="g_watch"]'), 450));
       at2(1800, () => { tap(); t.querySelector('#tPick [data-g="g_watch"]').classList.add("hit"); });
-      at2(2100, () => { $("tPick").classList.remove("show"); $("tPill").firstChild.textContent = "Watch page "; setTabs(watchTabs, 0); setView("watch"); });
+      at2(2100, () => { $("tPick").classList.remove("show"); setPill(GROUPS.find(g => g.id === "g_watch")); setTabs(watchTabs, 0); setView("watch"); });
       at2(2600, () => move(t.querySelectorAll("#tTabs span")[2], 450));
       at2(3150, () => { tap(); setTabs(watchTabs, 2); setView("comments"); });
       at2(3900, () => f.classList.remove("show"));
@@ -155,6 +157,9 @@ function runTutorial(startAt) {
       $("tSttl").innerHTML = rowDesign === "clean" ? "<mark>Cast button</mark>" : "Hide <mark>Cast button</mark>";
       at2(60, () => move($("tSearch"), 560));
       // as in the app: the search bar opens over the top bar, and the preview and the cards make way for results
+      { // the bar grows out of the search icon to both sides, as in the app
+        const q = $("tQ").getBoundingClientRect(), r = $("tSearch").getBoundingClientRect();
+        $("tQ").style.setProperty("--cl", Math.max(0, r.left - q.left) + "px"); $("tQ").style.setProperty("--cr", Math.max(0, q.right - r.right) + "px"); }
       at2(700, () => { tap(); $("tQ").classList.add("show"); demo.classList.add("searching"); });
       [...TUT_QUERY].forEach((c, i) => at2(1000 + i * 110, () => { $("tQt").textContent += c; if (i === 3) demo.classList.add("found"); }));
       at2(2300, () => move($("tSres"), 450));
