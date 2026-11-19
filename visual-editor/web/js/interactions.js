@@ -107,8 +107,10 @@ function scrollBoxes(el) {
     const cs = getComputedStyle(p);
     // a sideways strip stays sideways even while a flashing (slightly scaled up) child makes it a
     // few pixels taller than its box; reading it as a vertical scroller sent the selection off screen
-    const sx = !p.classList.contains("inner-scroll") && p.scrollWidth > p.clientWidth + 1 && /auto|scroll|hidden/.test(cs.overflowX);
-    const sy = p.scrollHeight > p.clientHeight + (sx ? 12 : 1) && /auto|scroll|hidden/.test(cs.overflowY);
+    // only real scrollers move: a clipped screen (overflow hidden) never scrolls, or selecting a part at
+    // its edge (the fullscreen action bar) shifted the whole preview up
+    const sx = !p.classList.contains("inner-scroll") && p.scrollWidth > p.clientWidth + 1 && /auto|scroll/.test(cs.overflowX);
+    const sy = p.scrollHeight > p.clientHeight + (sx ? 12 : 1) && /auto|scroll/.test(cs.overflowY);
     if (sx || sy) out.push([p, sx, sy]);
   }
   return out;

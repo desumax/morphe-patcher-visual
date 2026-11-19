@@ -497,7 +497,16 @@ def("playback", "behaviour", "remember_playback_speed_last_selected_toast rememb
     .replace(/(<\/div>\s*<\/div>\s*)$/, `${C("hide_comments_gift_animation_and_cards", `<div style="margin:6px 12px;padding:10px 12px;border-radius:12px;background:linear-gradient(90deg,#3b2a12,#2a2a2a);display:flex;gap:10px;align-items:center">${I("gift", "ico", 'style="fill:#ffb74d"')}<div><b style="font-size:12.5px">@carpenter_jo sent 5 gifts</b><div class="t2">Gifted memberships to the community</div></div></div>`, { blk: 1 })}
       <div style="display:flex;gap:10px;padding:10px 12px">${av(7, 28)}<div style="flex:1"><div class="t2">@slowrails · 5h ${I("heart", "ico", 'style="width:12px;height:12px;fill:#ff4e45;vertical-align:-2px"')}</div><div style="font-size:13.5px;margin-top:2px">Which stove model is that?</div></div></div>$1`); }
 def("comments", "vis", "hide_comments_contexts hide_comments_gift_animation_and_cards");
-{ const base = SCENES.player; SCENES.player = () => base().replace(/^\s*<div/, `<div data-icons="${esc(V("morphe_player_icon_style") || "AUTO")}"`); }
+// "Player icon style": the player buttons draw the real icons of the chosen set, from the patch's own drawables
+const styledIcons = (html, style) => {
+  const set = typeof ICON_STYLES !== "undefined" && ICON_STYLES[style];
+  if (!set) return html;
+  return html.replace(/(<div class="pbtn[^"]*"[^>]*>\s*)<svg class="ico" viewBox="0 0 24 24"\s*><path d="([^"]*)"\/><\/svg>/g, (m, open, d) => {
+    const name = Object.keys(set).find(k => P[k] === d);
+    return name ? `${open}<svg class="ico sty" viewBox="${set[name][0]}">${set[name][1]}</svg>` : m;
+  });
+};
+{ const base = SCENES.player; SCENES.player = () => { const st = V("morphe_player_icon_style") || "AUTO"; return styledIcons(base(), st).replace(/^\s*<div/, `<div data-icons="${esc(st)}"`); }; }
 scen("shorts", "shorts_player_type", (box, v) => {
   situation("Tapping a Short in the Home feed");
   const shelf = `<div class="dv-feed" style="position:absolute;inset:0;background:#0f0f0f;padding:6px;display:grid;grid-template-columns:1fr 1fr;gap:4px;align-content:start;transition:opacity .25s">
