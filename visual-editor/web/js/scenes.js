@@ -135,7 +135,7 @@ SCENES.fullscreen = () => {
   const vstyle = "left:9%;right:9%;top:0;bottom:0;transition:transform .35s var(--ease);transform:" + (scale === "STRETCH" ? "scaleX(1.22)" : scale === "ZOOM" ? "scale(1.22)" : "none");
   const q = (k, ic, label) => C(k, `<div class="chip" style="height:26px;font-size:11px;padding:0 9px;background:rgba(255,255,255,.14)">${I(ic)}${label}</div>`);
   return `<div class="video" style="background:#000">
-    <div class="frame" style="${vstyle};position:absolute;background:${ART[6]}"></div>
+    <div class="frame" style="${vstyle};position:absolute;background:${ART[0]}"></div>
     <div class="scrim" style="opacity:.4"></div>
     ${C("hide_video_title", `<div style="font-size:13px;font-weight:500;max-width:240px;line-height:1.25">${esc(VIDEOS[2].t)}</div>`, { style: "position:absolute;left:12px;top:10px" })}
     <div style="position:absolute;right:8px;top:4px;display:flex">${C("hide_captions_button", I("cc", "ico", 'style="margin:8px 6px"'))}${C("hide_settings_button", I("gear", "ico", 'style="margin:8px 6px"'))}</div>

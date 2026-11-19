@@ -459,6 +459,23 @@ function renderList() {
 // A locked setting (its parent is off) isn't listed until the parent is on; one reached by search or
 // "Take me there" stays while it is selected, with its lock and the way to unlock it.
 let lastGone = { sec: null, keys: new Set() };
+// selecting a locked setting (from search) unfolds it; selecting something else folds it away again
+function syncLocked(k) {
+  const list = $("list"); if (!list || searching) return;
+  list.querySelectorAll(".gunit").forEach(box => {
+    const row = box.classList.contains("row") ? box : box.querySelector(":scope > .row"); if (!row) return;
+    const want = row.dataset.row === k || !row.classList.contains("dis"), gone = box.classList.contains("gone");
+    if (want && gone) {
+      box.classList.remove("gone"); lastGone.keys.delete(row.dataset.row);
+      for (let h = box.previousElementSibling; h; h = h.previousElementSibling) if (h.classList.contains("subhead")) { h.classList.remove("gone"); break; }
+      box.closest(".group")?.classList.remove("gone");
+      sizeAnim(box, true);
+    } else if (!want && !gone) {
+      lastGone.keys.add(row.dataset.row);
+      const an = sizeAnim(box, false); const end = () => { box.classList.add("gone"); box.getAnimations().forEach(a => a.cancel()); }; if (an) an.onfinish = end; else end();
+    }
+  });
+}
 function hideLocked(list) {
   const gone = new Set();
   list.querySelectorAll(".row.dis[data-row]").forEach(r => {

@@ -375,7 +375,7 @@ html #pickGrid .pg.pgroups.pvis:not(.nx) .gcard .pi svg { width: 24px; height: 2
 .gtitle svg { width: 14px; height: 14px; fill: currentColor; }
 .row { display: flex; gap: 14px; align-items: center; padding: 12px 16px; cursor: pointer; position: relative; user-select: none; -webkit-user-select: none; min-height: 52px; transition: background var(--dur) var(--ease), opacity 600ms var(--ease); }
 .zgrid > .row.zprev { writing-mode: vertical-rl; transform: rotate(180deg); min-height: 0; width: 52px; padding: 12px 0; justify-content: center; align-items: center; border-left: 1px solid rgba(67,71,78,.55); }
-.zgrid > .row.zprev .txt { display: flex; align-items: center; } .zgrid > .row.zprev .sum { display: none; }
+.zgrid > .row.zprev .txt { flex: 1; display: flex; align-items: center; justify-content: center; text-align: center; } .zgrid > .row.zprev .ttl { text-align: center; } .zgrid > .row.zprev .sum { display: none; }
 .zgrid { display: grid; grid-template-columns: minmax(0, 1fr) auto; } .zgrid > .zcol { min-width: 0; }
 .group > * + .zgrid, .zgrid + * { border-top: 1px solid rgba(67,71,78,.55); }
 .row + .row, .unit + .row, .unit + .unit > .row:first-child, .row + .unit > .row:first-child { border-top: 1px solid rgba(67,71,78,.55); }

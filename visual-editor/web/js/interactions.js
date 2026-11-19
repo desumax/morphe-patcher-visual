@@ -40,7 +40,7 @@ function fitSums(root = $("list"), keep = new Set()) {
   });
 }
 function highlight(k, flash = true, reveal = false) {
-  document.querySelectorAll(".sel").forEach(e => e.classList.remove("sel", "selx")); wakeRings();
+  document.querySelectorAll(".sel").forEach(e => e.classList.remove("sel", "selx")); wakeRings(); syncLocked(k);
   document.querySelectorAll(`[data-k="${k}"], [data-row="${k}"], [data-also="${k}"]`).forEach(e => e.classList.add("sel"));
   document.querySelectorAll("#list .sum.open").forEach(e => { if (!e.closest(".row.sel")) e.classList.remove("open"); }); document.querySelectorAll(`#list [data-row="${k}"] > .txt > .sum.long:not(.open)`).forEach(unfold);
   const els = [...document.querySelectorAll(`#stage [data-k="${k}"], #stage [data-also="${k}"]`)];

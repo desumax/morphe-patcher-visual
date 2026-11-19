@@ -137,8 +137,10 @@ $("list").addEventListener("input", e => {
     state[k] = t.type === "color" ? fromColor(k, t.value) : Number(t.value);
     const lab = document.querySelector(`[data-val-of="${k}"]`); if (lab) lab.textContent = t.value;
     // redrawn without the selection pop: it flashed the preview on every step of the slider
-    selected = k; renderStage(); highlight(k, false);
-    if (LIVE_HUD[k]) LIVE_HUD[k]();
+    // a slider with a live overlay (swipe overlay look, zone sizes) redraws only that overlay: redrawing
+    // the whole preview on every step flashed parts of it
+    if (LIVE_HUD[k] && selected === k) LIVE_HUD[k]();
+    else { selected = k; renderStage(); highlight(k, false); if (LIVE_HUD[k]) LIVE_HUD[k](); }
   }
 });
 $("list").addEventListener("change", e => {

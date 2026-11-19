@@ -312,7 +312,7 @@ function classicParentsOk(k) {
   return okRest && okAny;
 }
 // Morphe leaves a few titles blank because the row is a drawing of its own
-const TITLE_FALLBACK = { morphe_swipe_zone_preview: "Swipe zone preview" };
+const TITLE_FALLBACK = { morphe_swipe_zone_preview: "Press for Swipe zone preview" };
 const title = k => {
   const p = PREF[k]; if (!p) return k;
   return (p.title && p.title.trim()) || TITLE_FALLBACK[k] || k.replace(/^morphe_/, "").replace(/_/g, " ");
