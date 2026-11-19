@@ -68,7 +68,7 @@ import app.morphe.extension.shared.settings.preference.AbstractPreferenceFragmen
  *
  * Interaction, same rules as the web prototype:
  *   tap a card            select it (its description unfolds)
- *   hold or double-tap    change it: switches flip, lists move to their next entry
+ *   hold                  change it: switches flip, lists move to their next entry
  *   tap a switch / toggle change it straight away
  *   tap a list value      pick from its entries
  * Sub-options sit indented under their parent and show only while the parent lets them.
@@ -78,7 +78,6 @@ import app.morphe.extension.shared.settings.preference.AbstractPreferenceFragmen
 final class VisualEditorDialog extends Dialog {
 
     private static final String MORE = "__more";
-    private static final long DOUBLE_TAP_MS = 300;
 
     private final Activity activity;
     private final SettingsBridge bridge = new SettingsBridge();
@@ -97,8 +96,6 @@ final class VisualEditorDialog extends Dialog {
     private String screenId;
     @Nullable private String selected;
     @Nullable private String query; // non-null while searching
-    @Nullable private String lastTapKey;
-    private long lastTapTime;
 
     private TextView titleView;
     private EditText searchField;
@@ -458,17 +455,7 @@ final class VisualEditorDialog extends Dialog {
         }
         title.setAlpha(available ? 1f : 0.45f);
 
-        card.setOnClickListener(v -> {
-            long now = System.currentTimeMillis();
-            if (key.equals(lastTapKey) && now - lastTapTime < DOUBLE_TAP_MS) {
-                lastTapKey = null;
-                change(v, key);
-                return;
-            }
-            lastTapKey = key;
-            lastTapTime = now;
-            select(key);
-        });
+        card.setOnClickListener(v -> select(key));
         card.setOnLongClickListener(v -> {
             change(v, key);
             return true;
@@ -556,7 +543,7 @@ final class VisualEditorDialog extends Dialog {
         renderList();
     }
 
-    /** Hold, double-tap, or a tap on the control: flip a switch, or move a list to its next entry. */
+    /** Hold, or a tap on the control: flip a switch, or move a list to its next entry. */
     private void change(View v, String key) {
         if (!SettingsBridge.isAvailable(key)) {
             Setting<?> b = blockerOf(SettingsBridge.setting(key));

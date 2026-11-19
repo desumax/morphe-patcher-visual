@@ -97,6 +97,7 @@ button { font: inherit; color: inherit; }
 .seg { margin-left: auto; display: flex; background: var(--m-c-high); border-radius: 999px; padding: 3px; flex: none; }
 .seg button { border: 0; background: transparent; height: 30px; padding: 0 9px; border-radius: 999px; font-size: 12.5px; font-weight: 500; color: var(--m-on-var); cursor: pointer; transition: background var(--dur) var(--ease), color var(--dur) var(--ease); }
 .seg button[aria-pressed="true"] { background: var(--m-primary); color: var(--m-on-primary); }
+.seg #btnOrig[aria-pressed="true"] { background: var(--yt-red); color: #fff; }
 
 /* section picker */
 .picker { position: absolute; left: 8px; right: 8px; top: 54px; z-index: 40; background: var(--m-c-high); border-radius: var(--r-li); padding: var(--sp-s); box-shadow: 0 12px 36px rgba(0,0,0,.55);
@@ -466,7 +467,6 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .tut .steps button:hover i { background: rgba(164,201,255,.7); }
 .tut .tlist { position: relative; width: 300px; max-width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: var(--r-l); background: #2a2c31; overflow: hidden; transition: background var(--dur) var(--ease); }
 .tut .tlist.sel { background: var(--m-secondary-c); }
-.tut .tmenu span.hit { background: rgba(255,255,255,.14); }
 .tut .tlist .state { font-size: 12px; font-weight: 500; padding: 3px 8px; border-radius: 6px; background: rgba(144,216,137,.16); color: var(--m-success); }
 .tut .tlist .state.off { background: rgba(255,180,171,.14); color: var(--m-error); }
 .tut .tlist .lt7 { pointer-events: none; height: 26px; font-size: 11px; }
@@ -490,18 +490,19 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .tut .tseg { display: flex; border-radius: 999px; overflow: hidden; border: 1px solid var(--m-outline); }
 .tut .tseg b { font-size: 10.5px; font-weight: 500; padding: 3px 7px; color: var(--m-on-var); transition: background var(--dur), color var(--dur); }
 .tut .tseg b.on { background: var(--m-secondary-c); color: var(--m-on); }
+.tut .tseg #tOrig.on { background: var(--yt-red); color: #fff; }
+.tut .tseg #tMorphe.on { background: var(--yt-blue); color: #0f0f0f; }
 .tut .tq { position: absolute; inset: 3px 3px 3px 3px; border-radius: 8px; background: var(--m-c-highest); color: var(--m-on); font-size: 13px; display: flex; align-items: center; padding: 0 10px; opacity: 0; pointer-events: none; transition: opacity 200ms; }
 .tut .tq.show { opacity: 1; }
+.tut .tq span { white-space: pre; overflow: hidden; }
 .tut .tq::after { content: ""; width: 1px; height: 14px; background: var(--m-primary); margin-left: 1px; animation: blink 1s steps(1) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
-.tut .tpick, .tut .tmenu { position: absolute; inset: 8px; border-radius: 10px; background: rgba(28,30,34,.96); opacity: 0; transform: scale(.96); transition: opacity 200ms, transform 200ms; pointer-events: none; z-index: 5; }
+.tut .tpick { position: absolute; inset: 8px; border-radius: 10px; background: rgba(28,30,34,.96); opacity: 0; transform: scale(.96); transition: opacity 200ms, transform 200ms; pointer-events: none; z-index: 5; }
 .tut .tpick { display: grid; grid-template-columns: 1fr 1fr; align-content: start; gap: 3px; padding: 6px; background: #212121; }
 .tut .tpg span { display: flex; align-items: center; gap: 6px; padding: 5px 6px; font-size: 10.5px; font-weight: 500; color: #f1f1f1; border-radius: 6px; }
 .tut .tpg span svg { width: 14px; height: 14px; fill: #f1f1f1; flex: none; }
 .tut .tpg span.hit { background: rgba(255,255,255,.14); }
-.tut .tmenu { display: flex; flex-direction: column; justify-content: center; gap: 6px; padding: 12px 16px; font-size: 12px; color: var(--m-on); }
-.tut .tmenu span { padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,.07); }
-.tut .tpick.show, .tut .tmenu.show { opacity: 1; transform: none; }
+.tut .tpick.show { opacity: 1; transform: none; }
 .tut .tstage.stock { filter: saturate(.7); }
 /* the tabs keep their space when switched off, so nothing on the page moves */
 .tut .ttabs { display: flex; gap: 4px; width: 100%; overflow: hidden; opacity: 0; transform: translateY(-6px); transition: opacity .3s var(--ease), transform .3s var(--ease); }
@@ -536,10 +537,6 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .tut .tlist.pre { opacity: 0; transform: translateY(10px) scale(.96); }
 .tut .tlist.morph > * { animation: tmorph .35s var(--ease); }
 @keyframes tmorph { from { opacity: 0; transform: translateY(4px); } }
-/* double-tap: a "2x" badge pops by the finger */
-.tut .tx2 { position: absolute; left: 14px; top: -30px; font-size: 12px; font-weight: 700; color: #0f0f0f; background: #fff; border-radius: 8px; padding: 1px 6px; opacity: 0; transform: scale(.6); transition: opacity .15s, transform .25s cubic-bezier(.3,1.6,.5,1); }
-.tut .tfinger.x2 .tx2 { opacity: 1; transform: none; }
-.tut .tfinger.x2.tap::before { animation-duration: .28s; }
 .tut .ttabs span { flex: none; font-size: 11px; font-weight: 500; padding: 5px 9px; border-radius: 6px; background: #272727; color: #f1f1f1; transition: background var(--dur), color var(--dur); }
 .tut .ttabs span.on { background: #f1f1f1; color: #0f0f0f; }
 .tut .tlist { flex-wrap: wrap; }
@@ -730,6 +727,8 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 .theme-yt .seg { background: transparent; gap: 6px; padding: 0; }
 .theme-yt .seg button { height: 30px; padding: 0 10px; border-radius: 8px; background: #272727; color: #f1f1f1; font-size: 13px; }
 .theme-yt .seg button[aria-pressed="true"] { background: #f1f1f1; color: #0f0f0f; }
+.theme-yt .seg #btnOrig[aria-pressed="true"] { background: var(--yt-red); color: #fff; }
+.theme-yt .seg #btnMod[aria-pressed="true"] { background: var(--yt-blue); color: #0f0f0f; }
 .theme-yt .picker { background: var(--m-c-high, #212121); border-radius: 12px; }
 .theme-yt .pick { border-radius: 8px; }
 .theme-yt .pick .pi { background: transparent; width: 28px; }
@@ -843,6 +842,40 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .knob[data-img][data-thumb="big"]::after { width: 28px; height: 28px; }
 .filepick { display: inline-flex; align-items: center; gap: 6px; }
 .filepick svg { width: 16px; height: 16px; fill: currentColor; }
+
+/* reset prompt: the app's dialog in small, over a dimmed demo */
+.tut .tdemo { position: relative; }
+.tut .tmenu { position: absolute; inset: -6px; z-index: 6; border-radius: 14px; background: rgba(0,0,0,.55); display: grid; place-items: center; opacity: 0; pointer-events: none; transition: opacity 200ms var(--ease); }
+.tut .tmenu.show { opacity: 1; }
+.tut .tdlg { width: 240px; background: #212121; border-radius: 12px; padding: 14px 14px 6px; box-shadow: 0 8px 28px rgba(0,0,0,.6); transform: scale(.94); transition: transform 220ms var(--ease); text-align: left; }
+.tut .tmenu.show .tdlg { transform: none; }
+.tut .tdlg b { display: block; font-size: 14px; font-weight: 500; color: #f1f1f1; }
+.tut .tdlg p { margin: 4px 0 8px; font-size: 11.5px; color: #aaa; line-height: 1.35; }
+.tut .tch { display: grid; gap: 1px; margin: 0 -6px; }
+.tut .tch span { display: flex; justify-content: space-between; align-items: center; padding: 7px 6px; border-radius: 6px; font-size: 12px; color: #f1f1f1; transition: background 150ms; }
+.tut .tch small { font-size: 10.5px; color: #aaa; }
+.tut .tacts { display: flex; justify-content: flex-end; margin: 4px -6px 0 0; }
+.tut .tacts span { padding: 6px 10px; border-radius: 14px; font-size: 12px; font-weight: 500; color: var(--yt-blue); transition: background 150ms; }
+.tut .tch span.hit, .tut .tacts span.hit { background: rgba(255,255,255,.1); }
+/* search: as in the app, the preview, tabs and card fold away and the results take their place */
+.tut .tstage { max-height: 200px; transition: max-height .35s var(--ease), opacity .25s var(--ease); }
+.tut .tlist { max-height: 90px; transition: background var(--dur) var(--ease), opacity .35s var(--ease), transform .45s cubic-bezier(.3,1.35,.45,1), max-height .35s var(--ease), padding .35s var(--ease), margin .35s var(--ease); }
+.tut .tdemo.searching .tstage, .tut .tdemo.searching .ttabs, .tut .tdemo.searching .tlist { max-height: 0; opacity: 0; margin-top: -8px; padding-top: 0; padding-bottom: 0; }
+.tut .ttabs { max-height: 30px; transition: opacity .3s var(--ease), transform .3s var(--ease), max-height .35s var(--ease), margin .35s var(--ease); }
+.tut .tres { width: 100%; max-height: 0; opacity: 0; overflow: hidden; border-radius: 12px; background: #2a2c31; transition: max-height .35s var(--ease), opacity .25s var(--ease); margin-top: -8px; }
+.tut .tdemo.searching .tres { max-height: 140px; opacity: 1; margin-top: 0; }
+.tut .tres-hint { padding: 12px 14px; font-size: 12px; color: var(--m-on-var); }
+.tut .tres-n, .tut .tsres { display: none; }
+.tut .tdemo.found .tres-hint { display: none; }
+.tut .tdemo.found .tres-n { display: block; padding: 8px 14px 2px; font-size: 11px; color: var(--m-on-var); }
+.tut .tdemo.found .tsres { display: flex; flex-direction: column; gap: 1px; padding: 8px 14px 10px; animation: tmorph .3s var(--ease); transition: background 150ms; }
+.tut .tsres .ttl { font-size: 14px; color: var(--m-on); }
+.tut .tsres .ttl mark { background: rgba(164,201,255,.22); color: inherit; border-radius: 3px; }
+.tut .tsres .where { font-size: 11px; color: var(--m-primary); }
+.tut .tsres.hit { background: rgba(255,255,255,.08); }
+/* tapping the card flashes the part of the preview it belongs to */
+.tut .tb.flash { animation: tflash .9s var(--ease); }
+@keyframes tflash { 0%, 50%, 100% { outline-color: var(--yt-blue); } 25%, 75% { outline-color: transparent; } }
 </style>
 
 <div class="bench">
@@ -892,7 +925,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
       <h2>How it works</h2>
       <div class="howto">
         <div><b>Tap</b> a component to select it. Animated settings play their demo.</div>
-        <div><b>Hold</b> or <b>double-tap</b> it to switch the setting. Do it again to switch it back.</div>
+        <div><b>Hold</b> it to switch the setting. Do it again to switch it back.</div>
         <div><b>Hidden components</b> collapse, as they do in the real app. Tap a hidden setting's row to see it for a moment without changing it.</div>
         <div><b>Sub-options</b> sit under the setting they depend on and appear only while it is on. The arrow next to its title folds them away.</div>
         <div><b>Search</b> (top bar) finds any setting and takes you to it, even a sub-option that is still locked.</div>

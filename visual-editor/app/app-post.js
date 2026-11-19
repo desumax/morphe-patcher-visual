@@ -68,7 +68,7 @@ if (INAPP) {
   // The phone's Back key: close what is open first, then go back like the arrow.
   window.morpheBack = () => {
     if ($("dlg").classList.contains("open")) { closeDialog(); return; }
-    if ($("tut") && $("tut").classList.contains("on")) { $("tutOk") && $("tutOk").click(); return; }
+    if ($("tut") && $("tut").classList.contains("on")) { $("tut").closeTutorial ? $("tut").closeTutorial() : $("tutOk") && $("tutOk").click(); return; }
     if (searching) { $("qClose").click(); return; }
     $("btnBack").click();
   };

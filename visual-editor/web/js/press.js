@@ -1,8 +1,8 @@
 "use strict";
-// Pointer handling (tap, double-tap, hold, drag), list controls, tabs and the menus.
+// Pointer handling (tap, hold, drag), list controls, tabs and the menus.
 
 // press handling (tap vs hold), shared by stage and list
-let press = null, lastTap = null;
+let press = null;
 const LONG = 480;
 // Mouse drag scrolls the preview's feeds and strips, like a finger would on the phone.
 let drag = null;
@@ -50,9 +50,6 @@ function up() {
   clearTimeout(press.t); clearTimeout(press.peek); press.el.classList.remove("pressing", "charging");
   const { k, from, long } = press; press = null;
   if (long) return;
-  const now = performance.now();
-  if (lastTap && lastTap.k === k && now - lastTap.t < 330) { lastTap = null; toggle(k); return; }
-  lastTap = { k, t: now };
   const a = A[k];
   if (mode === "mod" && a && (a.kind === "vis" || a.kind === "overlay") && !shown(k)) {
     if (from === "stage") ghost(k, false);
