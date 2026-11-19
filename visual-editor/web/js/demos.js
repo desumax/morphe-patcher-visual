@@ -17,10 +17,10 @@ let demoStep = 0;
 // Comparisons (Off / On side by side) are not demos: they live in scenarios.js (scen()).
 const DEMO_TYPES = {
   transient: "hide_player_gesture_hints seekbar_thumbnail_preview sb_create_new_segment sb_create_new_segment_step sb_voting_button",
-  gesture: "tap_to_seek slide_to_seek disable_precise_seeking_gesture swipe_seek disable_shorts_double_tap_to_like swap_save_and_queue_actions",
+  gesture: "tap_to_seek slide_to_seek disable_precise_seeking_gesture swipe_seek swipe_seek_sensitivity disable_shorts_double_tap_to_like swap_save_and_queue_actions",
   toast: "remember_playback_speed_last_selected_toast remember_video_quality_last_selected_toast skip_silence",
   motion: "autoplay_mode disable_like_subscribe_glow stable_caption_blocks niconico_comments narrow_navigation_buttons",
-  overlay: "swipe_left_zone swipe_right_zone swipe_top_zone swipe_overlay_style swipe_overlay_background_opacity swipe_text_overlay_size swipe_overlay_progress_volume_color swipe_overlay_progress_brightness_color swipe_overlay_progress_speed_color swipe_zone_width swipe_overlay_timeout swipe_speed_step swipe_speed_sensitivity swipe_zone_preview swipe_speed_zone_height",
+  overlay: "swipe_left_zone swipe_right_zone swipe_top_zone swipe_overlay_style swipe_overlay_background_opacity swipe_text_overlay_size swipe_overlay_progress_volume_color swipe_overlay_progress_brightness_color swipe_overlay_progress_speed_color swipe_zone_width swipe_overlay_timeout swipe_speed_step swipe_speed_sensitivity swipe_threshold swipe_brightness_sensitivity swipe_volume_distance swipe_volume_steps swipe_zone_preview swipe_speed_zone_height",
 };
 const DEMO_TYPE = {};
 Object.entries(DEMO_TYPES).forEach(([t, ks]) => ks.split(" ").forEach(k => { DEMO_TYPE["morphe_" + k] = t; }));
@@ -136,6 +136,12 @@ const DEMOS = {
   },
   morphe_swipe_speed_step() { swipeDemo(speedSide(), "SPEED"); dT(() => label(`Speed changes in ${(SPEED_STEPS[V("morphe_swipe_speed_step")] || .05).toFixed(2)}x steps`), 1000); },
   morphe_swipe_speed_sensitivity() { swipeDemo(speedSide(), "SPEED"); dT(() => label(`Sensitivity ${V("morphe_swipe_speed_sensitivity")}: this swipe reaches ${speedAt(1)}`), 1000); },
+  // the tuning settings play the swipe they tune, on the zone that uses them, and say what changed
+  morphe_swipe_threshold() { const side = activeSide(); swipeDemo(side, zoneAction(side)); dT(() => label(`Nothing changes for the first ${Number(V("morphe_swipe_threshold")) || 0} px of a swipe`), 1000); },
+  morphe_swipe_brightness_sensitivity() { swipeDemo(sideFor("BRIGHTNESS", "left"), "BRIGHTNESS"); dT(() => label(`Sensitivity ${V("morphe_swipe_brightness_sensitivity")}: this swipe reaches ${brightAt(1)[1]}`), 1000); },
+  morphe_swipe_volume_distance() { swipeDemo(sideFor("VOLUME", "right"), "VOLUME"); dT(() => label(`Sensitivity ${V("morphe_swipe_volume_distance")}: this swipe reaches ${volAt(1)[1]}`), 1000); },
+  morphe_swipe_volume_steps() { swipeDemo(sideFor("VOLUME", "right"), "VOLUME"); dT(() => label(`Volume moves in ${volSteps()} steps`), 1000); },
+  morphe_swipe_seek_sensitivity() { DEMOS.morphe_swipe_seek(true); },
   morphe_swipe_overlay_background_opacity() { stillHud(); },
   morphe_swipe_text_overlay_size() { stillHud(); },
   morphe_swipe_overlay_progress_volume_color() { swipeDemo("right", "VOLUME"); },
@@ -145,7 +151,7 @@ const DEMOS = {
   morphe_swipe_seek(on) {
     const f = finger(); if (!f) return; const W = $("stage").clientWidth;
     place(f, W * .35, 80); dT(() => place(f, W * .7, 80, 650), 150);
-    if (on) { label("Swipe sideways in fullscreen: +1:30, release to seek"); showPill("+1:30  ▸▸"); } else label("Swipe sideways: does nothing (stock)", true);
+    if (on) { { const t = seekJump(); label(`Swipe sideways in fullscreen: +${t}, release to seek`); showPill(`+${t}  ▸▸`); } } else label("Swipe sideways: does nothing (stock)", true);
     hideF(f, 1100);
   },
   morphe_disable_shorts_double_tap_to_like(disabled) {
@@ -229,9 +235,12 @@ function swipeDemo(side, action, prefix = "", still = false, hold = 100) {
     // the bar follows the finger frame by frame: it reads where the finger actually is on its way,
     // so the fill and the number move exactly with it instead of stepping on a timer of their own
     const hv = hud.querySelector(".hv"), a0 = side === "top" ? W * .35 : H * .75, a1 = side === "top" ? W * .65 : H * .25;
-    const show = fr => {
-      const p = 20 + 70 * fr; hud.style.setProperty("--p", p.toFixed(2) + "%");
-      if (hv) hv.textContent = action === "SPEED" ? speedAt(fr) : String(Math.round(p));
+    const show = fr0 => {
+      // the threshold: the first stretch of the swipe changes nothing
+      const dead = swipeDead(), fr = Math.max(0, (fr0 - dead) / (1 - dead));
+      const [frac, txt] = action === "VOLUME" ? volAt(fr) : action === "BRIGHTNESS" ? brightAt(fr) : [.2 + .7 * fr, speedAt(fr)];
+      hud.style.setProperty("--p", (frac * 100).toFixed(2) + "%");
+      if (hv) hv.textContent = txt;
     };
     if (still) { show(.6); hud.style.transition = "none"; hud.style.opacity = "1"; return; }
     show(0);
@@ -256,6 +265,22 @@ function speedAt(fr) {
   const n = Math.floor(fr * 10 * (10 / sens) + 1e-6); // ticks this swipe covers
   return Math.min(8, 1 + n * step).toFixed(2).replace(/0$/, "") + "x";
 }
+// Volume and brightness follow their settings the same way: "Volume steps" splits the bar into that
+// many steps, a higher volume or brightness sensitivity needs more swiping per step, and "Swipe magnitude
+// threshold" is a dead stretch at the start of every swipe. Each returns [bar fill 0-1, shown value].
+const VOL_STEPS = { STEPS_5: 5, STEPS_10: 10, STEPS_15: 15, STEPS_20: 20, STEPS_30: 30, STEPS_50: 50 };
+const volSteps = () => VOL_STEPS[V("morphe_swipe_volume_steps")] || 15; // device default: 15 on most phones
+function volAt(fr) {
+  const steps = volSteps(), dist = Math.max(1, Number(V("morphe_swipe_volume_distance")) || 10), start = Math.round(steps * .2);
+  const n = Math.min(steps, start + Math.floor(fr * (steps - start) * (10 / dist) + 1e-6)); return [n / steps, `${n} / ${steps}`];
+}
+function brightAt(fr) { const sens = Math.max(1, Number(V("morphe_swipe_brightness_sensitivity")) || 1), p = Math.min(100, Math.round(20 + 80 * fr / sens)); return [p / 100, p + "%"]; }
+const swipeDead = () => Math.max(0, Math.min(.6, (Number(V("morphe_swipe_threshold")) || 0) / 300));
+// "Seek swipe sensitivity" (100 by default) scales how far a sideways swipe seeks
+const seekJump = () => { const s = Math.max(0, Math.round(90 * (Number(V("morphe_swipe_seek_sensitivity")) || 100) / 100)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
+const activeSide = () => ["left", "right", "top"].find(x => { const v = V("morphe_swipe_" + x + "_zone"); return v && v !== "OFF"; }) || "left";
+const zoneAction = side => { const v = V("morphe_swipe_" + side + "_zone"); return v && v !== "OFF" ? v : "BRIGHTNESS"; };
+const sideFor = (action, fallback) => ["left", "right", "top"].find(x => V("morphe_swipe_" + x + "_zone") === action) || fallback;
 const speedSide = () => ["left", "right", "top"].find(x => V("morphe_swipe_" + x + "_zone") === "SPEED") || "right";
 // the overlay's look, held still on the first zone that has a gesture; dragging its slider redraws it live
 function stillHud() {
