@@ -175,9 +175,13 @@ function fitDev(orient) {
   }
   const duo = box && box.querySelector(".duo7"), dev = duo || (box && box.querySelector(".dev")); if (!dev) return;
   const o = duo ? "duo" : orient || (dev.classList.contains("land") ? "land" : "port"), [w, h] = DEV_SIZE[o];
-  const sc = fitScale(w, h);
-  dev.style.scale = sc.toFixed(3); if (!dev.style.getPropertyValue("--dsc")) dev.style.setProperty("--dsc", sc.toFixed(3));
+  const sc = fitScale(w, h), first = !dev.style.getPropertyValue("--dsc");
+  // a phone or a hand-built pair appears at its size; only later changes animate (the popup panels pair
+  // used to zoom in from its unscaled size because .duo7 transitions its scale)
+  if (first) { dev.style.transition = "none"; box.style.transition = "none"; }
+  dev.style.scale = sc.toFixed(3); if (first) dev.style.setProperty("--dsc", sc.toFixed(3));
   box.style.width = Math.round((w + 6) * sc) + "px"; box.style.height = Math.round((h + 6) * sc) + "px";
+  if (first) { void dev.offsetWidth; dev.style.transition = ""; box.style.transition = ""; }
 }
 const devScale = dev => (dev.getBoundingClientRect().width / (dev.offsetWidth || 1)) || 1;
 // Scenarios are drawn twice, Off and On side by side. scSide is the side being drawn (null for a

@@ -362,7 +362,7 @@ scen("playback", "autoplay_control", (box, on) => {
   situation("A video ends");
   box.innerHTML = device("port", watch7(`<div class="ap7" style="position:absolute;right:3px;top:3px;display:flex;gap:2px;align-items:center;font-size:5.5px">${on ? `<span style="padding:0 3px;border-radius:5px;background:rgba(0,0,0,.6)">${ico7("play", 6)} Auto</span>` : ""}</div>`));
   const dev = box.querySelector(".dev");
-  toast7(dev, on ? "Autoplay follows your rule: next in playlist only" : "Next video starts automatically", "60%");
+  toast7(dev, on ? "Autoplay follows your rule: next in playlist only" : "Next video starts automatically", "86%");
   return on ? "A player button and a rule decide what plays next" : "YouTube decides (stock)";
 });
 scen("playback", "disable_playlist_autoplay", (box, on) => {

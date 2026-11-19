@@ -289,8 +289,11 @@ function controlFor(k) {
   if (ents.length) return `<div class="ctl"><select data-set="${k}" ${dis} aria-label="${esc(shownTitle(k))}">${ents.map(e => `<option value="${esc(e.value)}" ${sameVal(e.value, v) ? "selected" : ""}>${esc(e.label)}</option>`).join("")}</select></div>`;
   if (p.type === "integer" || p.type === "float" || p.type === "long") {
     const r = Object.entries(RANGES).find(([n]) => k.includes(n));
-    if (r || /opacity|scale|strength|display_area/.test(k)) {
-      const [min, max] = r ? r[1] : [0, 100];
+    // a range Morphe states in the description ("0-5000 ms", "(5-75)") makes a slider too, so a new
+    // setting with one needs no entry here
+    const sr = /\(?(\d+)\s*[-–]\s*(\d+)\s*(ms|dp|sp|%)?\)/.exec(String(p.summary || ""));
+    if (r || sr || /opacity|scale|strength|display_area/.test(k)) {
+      const [min, max] = r ? r[1] : sr ? [Number(sr[1]), Number(sr[2])] : [0, 100];
       return `<div class="ctl"><input type="range" min="${min}" max="${max}" step="1" value="${v}" data-set="${k}" ${dis} aria-label="${esc(shownTitle(k))}"><span class="val" data-val-of="${k}">${v}</span></div>`;
     }
     return `<div class="ctl side"><input type="number" value="${v}" data-set="${k}" ${dis} aria-label="${esc(shownTitle(k))}" step="${p.type === "float" ? "0.05" : "1"}"></div>`;
@@ -369,12 +372,18 @@ const dependsOn = (k, parent) => PREF[k].parents.some(x => x.key === parent) || 
 // The setting on another screen that k was unlocked through (via the popup): k then offers "More" to reach it again.
 const borrowedParent = k => [...PREF[k].parents.map(x => x.key), ...availKeys(k)].find(x => borrowed[section] && borrowed[section].has(x) && sectionOf(x) !== section);
 
+// An info row Morphe opens a website from ("Tap here to open OpenRouter.ai"): the same link as a button
+function linkFor(k) {
+  const m = /Tap here to open ([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+)/.exec(String(PREF[k].summary || "")); if (!m) return "";
+  return `<div class="ctl"><a class="opt linkbtn" href="https://${esc(m[1])}" target="_blank" rel="noopener noreferrer">${I("link")}Open ${esc(m[1])}</a></div>`;
+}
 function rowHTML(k, live) {
   const p = PREF[k]; const a = A[k];
   const dis = !parentsOk(k);
   const isBool = p.type === "boolean";
   // an info row Morphe still stores a value for (a picked file, a channel whitelist) keeps its editor
-  const editInfo = p.widget === "NonInteractivePreference" && p.type === "string" && (/_file$/.test(k) || isListBox(k));
+  // (Morphe draws these with its own slider, picker or list dialog; any one with a value type has an editor here)
+  const editInfo = p.widget === "NonInteractivePreference" && !!p.type && p.type !== "screen";
   const info = !editInfo && (!p.type || p.type === "screen" || p.widget === "NonInteractivePreference" || p.widget === "IntentPreference");
   let right = "", ctl = "";
   const swHTML = () => `<button class="sw" role="switch" data-sw="${k}" aria-checked="${!!V(k)}" aria-label="${esc(shownTitle(k))}"></button>`;
@@ -384,6 +393,7 @@ function rowHTML(k, live) {
   else if (live && a.kind !== "scenario") { right = stateChip(k); if (!isBool) ctl = controlFor(k); }
   else if (isBool) right = swHTML();
   else if (!info) ctl = controlFor(k);
+  else ctl = linkFor(k);
   // A list setting (speeds, filter words): the chips are the control, so nothing sits on the right and
   // they get the card's full width. Its Reset is a small pill beside the title, greyed out like the
   // screen's Reset until the list differs from Morphe's own (it asks before restoring).
@@ -394,7 +404,7 @@ function rowHTML(k, live) {
   if (dis) cls.push("dis");
   if (PARENT_OF[k]) { if (k === peekKid) cls.push("peek"); else if (!kidVisible(k)) cls.push("hide"); }
   if (live && (a.kind === "vis" || a.kind === "overlay") && !shown(k)) cls.push("offstate");
-  const sum = info ? (p.summary || (p.type === "screen" ? "Opens a sub-screen in Morphe settings" : "Information")) : summaryFor(k);
+  const sum = info ? (String(p.summary || "").replace(/\s*Tap here to open \S+\s*$/, "") || (p.type === "screen" ? "Opens a sub-screen in Morphe settings" : "Information")) : summaryFor(k); // the link has its own button (linkFor)
   const blk = dis ? blockerOf(k) : null;
   const bp = dis ? null : borrowedParent(k);
   const goto = blk ? `<button class="goto" data-goto="${k}">${sectionOf(blk) !== section ? "Change it here" : "Take me there"} ${I("arrow")}</button>`
