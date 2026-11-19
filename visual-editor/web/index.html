@@ -139,6 +139,20 @@ button { font: inherit; color: inherit; }
 .theme-yt .tab7 { background: #272727; color: #f1f1f1; }
 .theme-yt .tab7[aria-selected="true"] { background: #f1f1f1; color: #0f0f0f; }
 .pgroups .pick .ps + .ps { opacity: .7; }
+/* Group cards (screen menu, tabs layout): name tab top left, icon top right, a line per tab, count
+   tab bottom left. "html #pickGrid" outranks the in-app card rules, so the app shows the same card. */
+html #pickGrid .pg.pgroups { grid-template-columns: 1fr 1fr; gap: 8px; }
+html #pickGrid .pg.pgroups .pick.gcard { --gc-bg: var(--m-c-high, #262626); --gc-tab: var(--m-c-highest, #383838); display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 0; padding: 0; min-height: 0; border-radius: 20px; overflow: hidden; background: var(--gc-bg); text-align: left; color: var(--m-on, #f1f1f1); }
+.theme-yt #pickGrid .pg.pgroups .pick.gcard { --gc-bg: #262626; --gc-tab: #3a3a3a; }
+html #pickGrid .pg.pgroups .pick.gcard[aria-current="true"] { background: var(--gc-bg); box-shadow: inset 0 0 0 2px var(--m-primary, #3ea6ff); }
+html #pickGrid .pg.pgroups .pick.gcard:hover { filter: brightness(1.08); }
+.gcard .gc-h { display: flex; align-items: stretch; justify-content: space-between; gap: 8px; }
+.gcard .gc-t { min-width: 0; display: flex; align-items: center; padding: 0 16px 0 14px; height: 44px; border-radius: 0 16px 16px 0; background: var(--gc-tab); font-size: 17px; font-weight: 600; line-height: 1.1; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html #pickGrid .pg.pgroups .gcard .pi { flex: none; width: 48px; height: 44px; margin: 0; border-radius: 16px; background: var(--gc-tab); display: grid; place-items: center; }
+html #pickGrid .pg.pgroups .gcard .pi svg { width: 24px; height: 24px; fill: var(--m-on, #f1f1f1); }
+.gcard .gc-tabs { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 8px 12px 8px 18px; }
+.gcard .gc-tabs span { font-size: 13.5px; line-height: 1.3; color: var(--m-on-var, #aaa); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gcard .gc-n { align-self: flex-start; padding: 6px 14px 7px 14px; border-radius: 0 14px 0 0; background: var(--gc-tab); font-size: 12px; color: var(--m-on-var, #aaa); }
 .stagebox { position: relative; margin: 8px 5px 6px; border: 1.5px solid var(--m-outline, #5f6368); border-radius: 14px; overflow: hidden; overflow: clip; box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 4px 14px rgba(0,0,0,.45); transition: border-color .25s; }
 .stagebox.changed { animation: framepulse .7s var(--ease); }
 @keyframes framepulse { 0% { border-color: var(--ring-on); box-shadow: 0 0 0 3px rgba(76,199,100,.35), 0 4px 14px rgba(0,0,0,.45); } 100% { } }
