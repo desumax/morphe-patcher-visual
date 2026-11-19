@@ -61,9 +61,11 @@ function runTutorial(startAt) {
   let rowDesign = design, sw = $("tlSw");
   const setRowDesign = d => { if (d === rowDesign) return; const h = sw.getAttribute("aria-checked") === "true"; rowDesign = d; row.innerHTML = tutRowHTML(d); sw = $("tlSw"); setHidden(h, true); row.classList.remove("morph"); void row.offsetWidth; row.classList.add("morph"); t.querySelectorAll(".tseg3 b").forEach(b => b.classList.toggle("on", b.dataset.d === d)); };
   const box = t.getBoundingClientRect.bind(t);
-  const at2 = (ms, fn) => clock.after("tutPage", ms, fn);
+  // pages 1 and 5 play 30% slower (Max: they were rushed); every step and move on them stretches evenly
+  let tk = 1;
+  const at2 = (ms, fn) => clock.after("tutPage", ms * tk, fn);
   const centerOf = el => { const r = el.getBoundingClientRect(), b = box(); return [r.left - b.left + r.width / 2, r.top - b.top + r.height / 2]; };
-  const move = (el, ms, dx = 0, dy = 0) => { const [x, y] = centerOf(el); f.style.transition = ms ? `left ${ms}ms var(--ease), top ${ms}ms var(--ease), opacity 160ms` : "opacity 160ms"; f.style.left = (x + dx) + "px"; f.style.top = (y + dy) + "px"; f.classList.add("show"); };
+  const move = (el, ms, dx = 0, dy = 0) => { ms *= tk; const [x, y] = centerOf(el); f.style.transition = ms ? `left ${ms}ms var(--ease), top ${ms}ms var(--ease), opacity 160ms` : "opacity 160ms"; f.style.left = (x + dx) + "px"; f.style.top = (y + dy) + "px"; f.classList.add("show"); };
   const tap = () => { f.classList.remove("tap"); void f.offsetWidth; f.classList.add("tap"); };
   // a hold charges for as long as the app's (480 ms): the ring fills on the button, the bar on the card
   const hold = (onCast, fn) => {
@@ -93,9 +95,10 @@ function runTutorial(startAt) {
   { const cap = $("tcap"); let hMax = 0; pages.forEach((id, n) => { cap.innerHTML = `<b>${n + 1}</b>${TUT_PAGES[id].cap}<small>${pageSub(id)}</small>`; hMax = Math.max(hMax, cap.offsetHeight); }); cap.style.minHeight = hMax + "px"; }
   // the demo keeps its height while search folds the preview and the card away
   demo.style.minHeight = demo.offsetHeight + "px";
-  const pageMs = () => TUT_PAGES[pages[step]].ms || TUT_STEP_MS;
+  const pageMs = () => TUT_PAGES[pages[step]].ms || TUT_STEP_MS; // at2 stretches it on pages 1 and 5
   const show = () => {
     clock.start("tutPage");
+    tk = step === 0 || step === 4 ? 1.3 : 1;
     seen.add(step);
     const id = pages[step];
     t.querySelectorAll(".steps button").forEach((b, n) => { b.classList.toggle("on", n === step); b.setAttribute("aria-selected", String(n === step)); b.classList.toggle("done", seen.has(n)); });

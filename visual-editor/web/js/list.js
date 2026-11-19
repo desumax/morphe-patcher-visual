@@ -130,7 +130,10 @@ function renderStage() {
   st.className = "stage" + (mode === "orig" ? " original" : "");
   // a custom seekbar colour shows on every seekbar, not only on its own screen
   st.style.setProperty("--seek-1", V("morphe_seekbar_custom_color") ? String(V("morphe_seekbar_custom_color_primary") || "") : "");
+  // the Player menu: switching between the menu and one of its sheets plays like a user opening it
+  const flyFrom = same && section === "flyout" ? { sub: st.dataset.flysub || "", html: st.querySelector(".inner-scroll")?.outerHTML, top: st.querySelector(".inner-scroll")?.scrollTop || 0 } : null;
   st.innerHTML = scene().replace(/background:#0f0f0f/g, "background:var(--app-bg,#0f0f0f)");
+  if (section === "flyout") { st.dataset.flysub = flySub || ""; if (flyFrom && flyFrom.html && flyFrom.sub !== (flySub || "")) flyTransition(st, flyFrom, flySub || ""); }
   st.querySelectorAll(".finger").forEach(f => { if (!f.firstChild) f.innerHTML = I("gesture"); });
   st.querySelectorAll(".inner-scroll").forEach((e, i) => { if (scrollers[i]) e.scrollTop = scrollers[i]; });
   st.querySelectorAll('[style*="overflow-x:auto"]').forEach((e, i) => { e.dataset.hs = ""; if (hscroll[i]) e.scrollLeft = hscroll[i]; });
@@ -138,6 +141,25 @@ function renderStage() {
   markFixed(st);
   st.querySelectorAll(".c").forEach(fitRing);
   const sel = st.querySelector(".c.sel"); if (sel) watchRing(sel); wakeRings();
+}
+// Opening a sheet: the menu row is tapped, the menu slides down and the sheet slides up, as in the
+// app. Going back to the menu plays it the other way. The old sheet is a copy without settings on it.
+const FLY_ROW = { quality: "morphe_hide_player_flyout_quality", captions: "morphe_hide_player_flyout_captions", audio: "morphe_hide_player_flyout_audio_track" };
+function flyTransition(st, from, to) {
+  const sheet = st.querySelector(".inner-scroll"); if (!sheet) return;
+  const t = document.createElement("div"); t.innerHTML = from.html; const old = t.firstElementChild; if (!old) return;
+  old.classList.remove("inner-scroll"); old.style.pointerEvents = "none"; old.style.zIndex = "6";
+  const tapRow = to && old.querySelector(`[data-k="${FLY_ROW[to]}"]`);
+  old.querySelectorAll("[data-k], [data-also]").forEach(e => { e.removeAttribute("data-k"); e.removeAttribute("data-also"); e.classList.remove("sel", "flash", "selx"); });
+  sheet.after(old); old.scrollTop = from.top;
+  const ease = "cubic-bezier(.2,0,0,1)", wait = tapRow ? 260 : 0;
+  if (tapRow) { tapRow.style.transition = "background .18s"; requestAnimationFrame(() => { tapRow.style.background = "rgba(255,255,255,.14)"; }); }
+  sheet.style.transform = "translateY(100%)";
+  old.animate([{ transform: "none" }, { transform: "translateY(100%)" }], { duration: 240, delay: wait, easing: "cubic-bezier(.3,0,1,1)", fill: "forwards" }).onfinish = () => old.remove();
+  const a = sheet.animate([{ transform: "translateY(100%)" }, { transform: "none" }], { duration: 320, delay: wait + 200, easing: ease, fill: "backwards" });
+  sheet.style.transform = "";
+  const ring = () => { try { wakeRings(); } catch { /* not loaded */ } };
+  [0, wait + 200, wait + 520].forEach(ms => setTimeout(ring, ms)); a.onfinish = ring;
 }
 // Parts of the preview that no setting on this screen changes are greyed out: plain controls (the
 // play button, the time, a seekbar that belongs to another tab) and components of other screens.
@@ -609,6 +631,9 @@ function restartDialog() {
   $("dStay").onclick = closeDialog;
 }
 function storeBaseline() { try { localStorage.setItem(LS + "-baseline", JSON.stringify(baseline)); } catch { /* storage unavailable */ } }
+// with the search bar open, the back arrow closes search (like its cross), it doesn't leave the editor;
+// this runs before any other handler of the arrow, the in-app one too
+$("btnBack").addEventListener("click", e => { if (searching) { e.stopImmediatePropagation(); e.preventDefault(); $("qClose").click(); } }, true);
 $("btnBack").onclick = () => {
   if (pendingRestart().length) return restartDialog();
   const app = $("app"); app.classList.remove("exitflash"); void app.offsetWidth; app.classList.add("exitflash");
