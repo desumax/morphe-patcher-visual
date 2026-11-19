@@ -200,6 +200,18 @@ $("pickGrid").addEventListener("click", e => {
   const gb = e.target.closest("[data-group]");
   if (gb) { const g = GROUPS.find(x => x.id === gb.dataset.group), tabs = tabsOf(g); setPicker(false); returnTo = null; switchSection(lastTab[g.id] && tabs.some(([t]) => t === lastTab[g.id]) ? lastTab[g.id] : tabs[0][0]); return; }
   if (e.target.closest("[data-theme-toggle]")) { theme = theme === "m3" ? "yt" : "m3"; applyTheme(); renderBar(); store.save(); return; }
+  // leaves the new design for Morphe's own settings screen; in the app the patch's switch at the top
+  // of Morphe's settings turns it back on
+  if (e.target.closest("[data-editor-off]")) {
+    openDialog(`<div class="di">${I("power")}</div><h2 id="dlgTitle">Disable the new design?</h2><p>Morphe's settings open in their original look. You can turn the new design back on from the top of Morphe's settings. Your settings are not changed.</p><div class="acts"><button class="dbtn primary" data-dlg-ok>Disable</button><button class="dbtn tonal" data-dlg-cancel>Cancel</button></div>`);
+    $("dlgBox").querySelector("[data-dlg-cancel]").onclick = closeDialog;
+    $("dlgBox").querySelector("[data-dlg-ok]").onclick = () => {
+      closeDialog();
+      if (typeof window.MorpheApp !== "undefined" && window.MorpheApp.disableEditor) { try { window.MorpheApp.disableEditor(); } catch (err) { /* ignore */ } }
+      else snack("In the app this switches back to Morphe's original settings");
+    };
+    return;
+  }
   if (e.target.closest("[data-order-reset]")) {
     openDialog(`<div class="di">${I("reset")}</div><h2 id="dlgTitle">Reset screen order?</h2><p>The screens go back to Morphe's own order. Your settings are not changed.</p><div class="acts"><button class="dbtn primary" data-dlg-ok>Reset</button><button class="dbtn tonal" data-dlg-cancel>Cancel</button></div>`);
     $("dlgBox").querySelector("[data-dlg-cancel]").onclick = closeDialog;
