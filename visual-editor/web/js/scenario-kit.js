@@ -615,19 +615,61 @@ scen("playback", "advanced_video_quality_menu", (box, on) => {
   box.innerHTML = device("port", pageRows(player7(3)) + `<div style="position:absolute;left:0;right:0;bottom:0;background:#212121;border-radius:6px 6px 0 0;padding:7px 7px 8px;display:grid;gap:6px;font-size:8.5px;line-height:1.2;animation:sheetup .25s">${on ? ["1080p60", "720p60", "480p", "360p", "Auto"].map(t => `<div>${t}</div>`).join("") : ["Auto", "Higher quality", "Data saver", "Advanced ›"].map(t => `<div>${t}</div>`).join("")}</div>`);
   return on ? "All resolutions open directly" : "A simplified menu first (stock)";
 });
-for (const [k, sit, offTxt, onTxt] of [
-  ["force_original_audio", "A video with dubbed audio tracks", "Dubbed track in your language", "Original audio track"],
-  ["remember_live_stream_position", "Coming back to a live stream", "Jumps to live", "Resumes where you were"],
-  ["video_delay_bluetooth_only", "Audio delay correction", "Applied always", "Only with Bluetooth audio"],
-  ["video_quality_prioritize", "Choosing quality on a slow network", "Lowers quality when needed", "Holds your quality, buffers instead"]]) {
-  scen("playback", k, (box, on) => {
-    situation(sit);
-    box.innerHTML = device("port", watch7(`<div class="wave7" style="position:absolute;left:6px;right:6px;bottom:6px;height:12px;display:flex;gap:1px;align-items:center">${Array.from({ length: 22 }, (_, i) => `<i style="flex:1;background:#fff;opacity:.85;height:${on && k === "disable_drc_audio" ? 20 + (i * 37 % 80) : 45 + (i * 13 % 20)}%;transition:height .4s"></i>`).join("")}</div>`));
-    const dev = box.querySelector(".dev");
-    toast7(dev, on ? onTxt : offTxt, "78%");
-    return on ? onTxt : offTxt + " (stock)";
+// Four settings that each tell their own short story on the watch page (they used to share one
+// waveform drawing, so moving between them looked like the animation had frozen).
+const prog7 = (pct, color = "#f03") => `<div class="sk7" style="position:absolute;left:0;right:0;bottom:0;height:2px;background:rgba(255,255,255,.3)"><div class="skp7" style="height:100%;width:${pct}%;background:${color};transition:width .5s"></div></div>`;
+const ring7 = () => `<span class="rg7" style="position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;border:2px solid #fff;border-top-color:transparent;animation:clock7 .7s linear infinite"></span>`;
+// Force original audio language: speech, not music. A Spanish creator's video; stock picks the AI-dubbed
+// track in your language, on keeps the creator's own voice.
+scen("playback", "force_original_audio", (box, on) => {
+  situation("A Spanish video with a dubbed track");
+  const line = on ? "¡Hola a todos!" : "Hi everyone!", track = on ? "Español · original" : "English · dubbed";
+  box.innerHTML = device("port", watch7(`<span class="badge7" style="right:3px;top:3px">${ico7("translate", 6)} ${track}</span><span class="sp7" style="position:absolute;left:50%;bottom:6px;transform:translateX(-50%);font-size:6px;background:rgba(0,0,0,.75);padding:1px 5px;border-radius:6px;white-space:nowrap;opacity:0;transition:opacity .3s">🗣 ${line}</span>` + prog7(20)));
+  const dev = box.querySelector(".dev");
+  toast7(dev, on ? "The creator's own voice" : "An AI-dubbed voice in your language", "78%");
+  at(300, () => { dev.querySelector(".sp7").style.opacity = 1; });
+  return "";
+});
+// Remember live stream position: you went back in a live stream, left, and come back to it.
+scen("playback", "remember_live_stream_position", (box, on) => {
+  situation("Coming back to a live stream you rewound");
+  const live = `<span class="lv7 badge7" style="left:3px;top:3px;background:#555">LIVE</span><span class="lag7 badge7" style="right:3px;top:3px">−12:40</span>`;
+  box.innerHTML = device("port", watch7(live + prog7(62)));
+  const dev = box.querySelector(".dev"), pg = dev.querySelector(".pg7");
+  toast7(dev, on ? "Back where you were" : "Jumps to the live edge", "78%");
+  at(500, () => { pg.style.transition = "opacity .25s"; pg.style.opacity = .15; }); // leaving for a moment
+  at(1100, () => {
+    pg.style.opacity = 1;
+    if (on) return;
+    dev.querySelector(".skp7").style.width = "100%"; dev.querySelector(".lv7").style.background = "#f03"; dev.querySelector(".lag7").remove();
   });
-}
+  return "";
+});
+// Only delay with Bluetooth audio: the audio delay correction, with headphones and then the phone speaker.
+scen("playback", "video_delay_bluetooth_only", (box, on) => {
+  situation("Bluetooth headphones, then the phone speaker");
+  box.innerHTML = device("port", watch7(`<span class="out7 badge7" style="left:3px;top:3px">${ico7("headset", 6)} Bluetooth</span><span class="dl8 badge7" style="right:3px;top:3px">Delay 200 ms</span>` + prog7(35)));
+  const dev = box.querySelector(".dev");
+  toast7(dev, on ? "Delay only with Bluetooth" : "Delay even on the speaker", "78%");
+  at(1000, () => {
+    dev.querySelector(".out7").innerHTML = `${ico7("vol", 6)} Speaker`;
+    const d = dev.querySelector(".dl8"); d.textContent = on ? "No delay" : "Delay 200 ms"; d.animate([{ opacity: .3 }, { opacity: 1 }], { duration: 300 });
+  });
+  return "";
+});
+// Prioritize video quality: the network gets slow.
+scen("playback", "video_quality_prioritize", (box, on) => {
+  situation("The network gets slow");
+  box.innerHTML = device("port", watch7(`<span class="nt7 badge7" style="left:3px;top:3px">${ico7("wifi", 6)} Fast</span><span class="q7 badge7" style="right:3px;top:3px">1080p</span>` + prog7(40)));
+  const dev = box.querySelector(".dev"), pv = dev.querySelector(".pg7 > div");
+  toast7(dev, on ? "Keeps 1080p, waits to load" : "Drops quality, keeps playing", "78%");
+  at(600, () => {
+    dev.querySelector(".nt7").innerHTML = `${ico7("wifi", 6, "#ff6b6b")} Slow`;
+    if (on) { pv.style.filter = "brightness(.55)"; pv.insertAdjacentHTML("beforeend", ring7()); }
+    else { dev.querySelector(".q7").textContent = "360p"; pv.style.transition = "filter .4s"; pv.style.filter = "blur(1.2px)"; }
+  });
+  return "";
+});
 // A comparison told in words instead of an animation: two cards the size of the phones, a heading and
 // up to three short points each, keyed by the setting's value so they sit on the toggle's sides.
 function textScen(sec, key, sit, byVal) {
