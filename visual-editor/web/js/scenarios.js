@@ -136,6 +136,9 @@ function fitDev(orient) {
     // where everything was drawn before this change (a turning phone measures it before it reshapes)
     const turning = gen._turn, wasParts = first ? null : gen._was || pairSnap(gen); gen._turn = false; gen._was = null;
     if (first) gen.style.transition = "none"; // a new pair appears at its size; only later changes animate
+    // the Off / On labels are sized for the screen (divided by --dsc), so a new pair is measured once,
+    // given its scale, and measured again with its labels at their real size
+    if (first) { const m = measurePair(gen), f = (wh) => wh ? fitScale(wh[0], wh[1]) : 0; gen.style.setProperty("--dsc", Math.max(f(m.rowWH), f(m.colWH), f(m.sideWH)).toFixed(3)); }
     const { rowWH, colWH, sideWH } = measurePair(gen);
     const row = fitScale(rowWH[0], rowWH[1]), col = fitScale(colWH[0], colWH[1]), side = sideWH ? fitScale(sideWH[0], sideWH[1]) : 0;
     const S = { side, row, column: col }, WH = { side: sideWH, row: rowWH, column: colWH };

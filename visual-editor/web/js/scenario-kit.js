@@ -167,8 +167,8 @@ scen("feed", "restore_original_titles", (box, on) => {
   situation("A video with a translated title");
   box.innerHTML = device("port", pageRows(feed7(`${big7(3, "")}<div class="tt7" style="font-size:7px;font-weight:600;transition:opacity .25s">Ich habe eine winzige Hütte gebaut</div>${row7(4, "Nachtzug nach Bodø")}`)));
   const dev = box.querySelector(".dev"), t = dev.querySelector(".tt7");
-  if (!on) toast7(dev, "Auto-translated title (stock)", "84%");
-  at(700, () => { if (!on) return; t.style.opacity = 0; toast7(dev, "The creator's original title", "84%"); later(() => { t.textContent = "I built a tiny cabin"; t.style.opacity = 1; }, 260); });
+  toast7(dev, on ? "The creator's original title" : "Auto-translated title (stock)", "84%");
+  at(300, () => { if (!on) return; t.style.opacity = 0; later(() => { t.textContent = "I built a tiny cabin"; t.style.opacity = 1; }, 260); });
   return on ? "Titles show as the creator wrote them" : "Titles are auto-translated to your language (stock)";
 });
 hidePage("feed", "playlist_hide_removal_snackbar", "Removing a video from a playlist", top7("Road trip mix", ["search", "more"]) + row7(1, "Night train to Bodø") + row7(2, "Lo-fi beats") + `<div style="height:40px"></div>` + tgt7(`<div style="display:flex;justify-content:space-between;align-items:center;gap:4px;padding:3px 5px;border-radius:3px;background:#f1f1f1;color:#000;font-size:6px"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Removed from Road trip mix</span><b style="color:#065fd4;flex:none">UNDO</b></div>`), { hidden: "No “Removed” snackbar after each removal" });
@@ -218,7 +218,8 @@ scen("look", "spoof_app_version", (box, on) => {
   situation("Pretending to be an older YouTube");
   box.innerHTML = device("port", pageRows(top7("Settings", ["search"]) + `<div style="display:grid;gap:3px;font-size:6.5px"><div>About</div><div style="color:#aaa">App version</div><b class="v7" style="font-size:8px;transition:opacity .25s">20.44.38</b></div>` + feed7(big7(3, ""))));
   const dev = box.querySelector(".dev"), v = dev.querySelector(".v7");
-  at(700, () => { if (!on) return; v.style.opacity = 0; later(() => { v.textContent = V("morphe_spoof_app_version_target") || "19.01.34"; v.style.opacity = 1; toast7(dev, "Old layout comes back", "82%"); }, 260); });
+  if (on) toast7(dev, "Old layout comes back", "82%");
+  at(300, () => { if (!on) return; v.style.opacity = 0; later(() => { v.textContent = V("morphe_spoof_app_version_target") || "19.01.34"; v.style.opacity = 1; }, 260); });
   return on ? "YouTube serves the layout of the chosen version" : "YouTube sees the real version (stock)";
 });
 // Morphe: "Use the theme color for text and icons". Stock keeps text and icons white; on, they take the theme colour.
@@ -228,8 +229,8 @@ scen("look", "theme_color_change_foreground", (box, on) => {
   box.innerHTML = device("port", pageRows(top7("You", ["cast", "search", "gear"]) + `<div style="display:grid;gap:3px">${items.map(([i, t]) => `<div class="fg7" style="display:flex;gap:5px;align-items:center;font-size:7px;color:#f1f1f1;fill:#f1f1f1;transition:color .4s,fill .4s">${I(i, "ico", 'style="width:9px;height:9px;fill:inherit;transition:fill .4s"')}<span>${t}</span></div>`).join("")}</div><div style="height:10px;border-radius:5px;background:#26a69a;width:60%"></div>`));
   const dev = box.querySelector(".dev");
   dev.querySelectorAll(".pg7 > div:first-child svg").forEach(e => { e.style.transition = "fill .4s"; });
-  at(800, () => { if (!on) return; dev.querySelectorAll(".fg7").forEach(e => { e.style.color = "#4db6ac"; e.style.fill = "#4db6ac"; }); dev.querySelectorAll(".pg7 > div:first-child svg").forEach(e => { e.style.fill = "#4db6ac"; }); toast7(dev, "Text and icons take the theme colour", "78%"); });
-  if (!on) toast7(dev, "Text and icons stay white", "78%");
+  toast7(dev, on ? "Text and icons take the theme colour" : "Text and icons stay white", "78%");
+  at(300, () => { if (!on) return; dev.querySelectorAll(".fg7").forEach(e => { e.style.color = "#4db6ac"; e.style.fill = "#4db6ac"; }); dev.querySelectorAll(".pg7 > div:first-child svg").forEach(e => { e.style.fill = "#4db6ac"; }); });
   return on ? "Text and icons use your theme colour" : "Text and icons stay white (stock)";
 });
 scen("look", "custom_filter", (box, on) => {
@@ -247,7 +248,8 @@ scen("ambient", "disable_fullscreen_ambient_mode", (box, on) => {
   situation("Ambient glow in fullscreen");
   box.innerHTML = device("land", `<div class="am7" style="position:absolute;inset:0;background:radial-gradient(circle at 50% 50%, ${ART[5].match(/#[0-9a-f]{6}/i)?.[0] || "#345"}aa, #000 70%);transition:opacity .5s"></div><div style="position:absolute;left:28%;right:28%;top:14%;bottom:14%;background:${ART[5]};border-radius:2px"></div>`);
   const dev = box.querySelector(".dev");
-  at(700, () => { if (on) dev.querySelector(".am7").style.opacity = 0; toast7(dev, on ? "Plain black around the video" : "Colours glow around the video", "86%"); });
+  toast7(dev, on ? "Plain black around the video" : "Colours glow around the video", "86%");
+  at(300, () => { if (on) dev.querySelector(".am7").style.opacity = 0; });
   return on ? "No ambient glow in fullscreen" : "Ambient glow in fullscreen too (stock)";
 });
 scen("captions", "auto_translate_additional_languages", (box, on) => {
@@ -659,7 +661,8 @@ for (const [k, what, val] of [["remember_playback_speed_last_selected", "speed",
     situation(`Picking a ${what}, then opening another video`);
     box.innerHTML = device("port", watch7(`<span class="rv7 badge7" style="right:3px;top:3px">${val}</span>`));
     const dev = box.querySelector(".dev");
-    at(800, () => { dev.querySelector(".pg7 > div").style.background = ART[6]; dev.querySelector(".rv7").textContent = on ? val : (what === "speed" ? "1×" : "Auto"); toast7(dev, on ? `Your ${what} is kept` : `Back to the default ${what}`, "80%"); });
+    toast7(dev, on ? `Your ${what} is kept` : `Back to the default ${what}`, "80%");
+    at(300, () => { dev.querySelector(".pg7 > div").style.background = ART[6]; dev.querySelector(".rv7").textContent = on ? val : (what === "speed" ? "1×" : "Auto"); });
     return on ? `The last ${what} you picked becomes the default` : `Each video starts at the default ${what} (stock)`;
   });
 }

@@ -317,10 +317,12 @@ html #pickGrid .pg.pgroups.pvis:not(.nx) .gcard .pi svg { width: 24px; height: 2
 .scbox > .duo7.gen { top: 0; translate: -50% 0; transform-origin: 50% 0; }
 .duo7 { width: 206px; height: 186px; display: flex; gap: 10px; transition: scale .5s var(--ease); }
 .dl7 { display: grid; gap: 3px; justify-items: center; align-content: start; }
-.dl7 > span { font-size: 20px; font-weight: 600; color: #fff; background: #3a3a3a; border-radius: 14px; padding: 0 15px; line-height: 28px; }
+/* the Off / On labels over a pair: one size on screen for every comparison (--duopill), whatever the pair's
+   scale (--dsc), so a pair without captions grows its phones, not its labels */
+:root { --duopill: 12px; }
+.dl7 > span { font-size: calc(var(--duopill) / var(--dsc, 1.7)); font-weight: 600; color: #fff; background: #3a3a3a; border-radius: .7em; padding: 0 .75em; line-height: 1.55; }
 .dl7 > span.on { background: var(--on-green); color: var(--on-green-ink); } /* the same colours as the list toggles */
 .dl7 > span.neg { background: #5c2b2b; color: #ffd9d6; }
-.duo7:not(.gen) .dl7 > span { font-size: 8px; line-height: 11px; border-radius: 6px; padding: 0 6px; } /* drawn much larger by its own scale */
 /* the invisible copy fitDev measures: final sizes, no transitions, never painted */
 .duo7.gen.probe7 { position: absolute !important; left: 0 !important; top: 0 !important; translate: none !important; scale: 1 !important; visibility: hidden; pointer-events: none; }
 .probe7, .probe7 * { transition: none !important; animation: none !important; }
@@ -344,9 +346,9 @@ html #pickGrid .pg.pgroups.pvis:not(.nx) .gcard .pi svg { width: 24px; height: 2
 .duo7.gen.capside .dl7 > .side { grid-area: dev; }
 .duo7.gen.capside .dl7 > .sf7 { grid-area: cap; }
 .duo7.gen.capside .dl7 > .sf7 { text-align: center; } /* centred like below, so moving between them doesn't jump */
-.duo7.gen .dl7 > span.long { font-size: 15px; padding: 0 11px; }
-.duo7.gen .dl7 > span.xlong { font-size: 12px; padding: 0 9px; }
-.duo7.gen .dl7 > span.ask { font-size: 14px; line-height: 28px; white-space: nowrap; overflow: visible; max-width: none; background: #1a73e8; }
+.duo7.gen .dl7 > span.long { font-size: calc(var(--duopill) * .9 / var(--dsc, 1.7)); }
+.duo7.gen .dl7 > span.xlong { font-size: calc(var(--duopill) * .8 / var(--dsc, 1.7)); }
+.duo7.gen .dl7 > span.ask { font-size: calc(var(--duopill) * .9 / var(--dsc, 1.7)); line-height: 1.55; white-space: nowrap; overflow: visible; max-width: none; background: #1a73e8; }
 .ask7 { box-sizing: border-box; border-radius: 12px; border: 2px dashed #555; background: rgba(255,255,255,.03); }
 .ctl .opt.nudge7 { animation: nudge7 .9s var(--ease) 2; }
 @keyframes nudge7 { 50% { border-color: var(--m-primary, #3ea6ff); box-shadow: 0 0 0 2px rgba(62,166,255,.35); } }
