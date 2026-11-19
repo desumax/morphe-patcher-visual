@@ -619,7 +619,7 @@ function keepPillIn(t) {
 new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => {
   if (n.nodeType !== 1) return;
   [...(n.matches(".toastin") ? [n] : []), ...n.querySelectorAll(".toastin")].forEach(t => requestAnimationFrame(() => keepPillIn(t)));
-}))).observe($("canvas"), { childList: true, subtree: true });
+}))).observe(document.getElementById("canvas"), { childList: true, subtree: true }); // $() is defined later, in list.js
 // swap what the device shows (fullscreen video vs portrait watch page) as it turns
 // The new screen goes in underneath, fully drawn, and the old one fades off the top of it. (Both used to
 // fade at once, old out and new in a little later, so the screen dipped to black in between: the flicker
