@@ -57,7 +57,8 @@ import app.morphe.extension.shared.settings.Setting;
  *                  its live type, default, availability, title, summaries and list entries (meta)
  *   available()    the current availability of every setting (also pushed after each set)
  *   set(key, json) save one value through the Setting API (with Morphe's own confirmations)
- *   close()        leave the editor
+ *   close()        leave the editor (and Morphe settings while the new design is on)
+ *   disableEditor() turn the new design off and show the regular Morphe list
  *   restart()      restart YouTube to apply settings that need it
  *   vibrate(ms)    haptics for the demos
  * The pages are served from the editor's own extension (WebAssets) under a private https origin;
@@ -275,9 +276,26 @@ final class WebEditorDialog extends Dialog {
             Utils.runOnMainThread(WebEditorDialog.this::reveal);
         }
 
+        /**
+         * Leave the editor. While the new design is on, the old Morphe list must never show, so
+         * leaving goes straight back to YouTube's settings (the editor already asked for any restart).
+         */
         @JavascriptInterface
         public void close() {
-            Utils.runOnMainThread(WebEditorDialog.this::dismiss);
+            Utils.runOnMainThread(() -> {
+                if (VisualEditorSettings.ENABLED.get()) leaveSettings();
+                else dismiss();
+            });
+        }
+
+        /** "Disable new design": switch the editor off and show the regular Morphe list. */
+        @JavascriptInterface
+        public void disableEditor() {
+            Utils.runOnMainThread(() -> {
+                VisualEditorSettings.ENABLED.save(false);
+                VisualEditorEntry.syncRows();
+                dismiss();
+            });
         }
 
         @JavascriptInterface
@@ -353,11 +371,25 @@ final class WebEditorDialog extends Dialog {
     @Override
     public void onBackPressed() {
         web.evaluateJavascript("window.morpheBack ? (morpheBack(), 'ok') : 'none'", r -> {
-            if (r == null || r.contains("none")) dismiss();
+            if (r == null || r.contains("none")) {
+                if (VisualEditorSettings.ENABLED.get()) leaveSettings();
+                else dismiss();
+            }
         });
     }
 
     private boolean destroyed;
+
+    /** Closes the editor together with the Morphe settings screen, without showing the list. */
+    private void leaveSettings() {
+        hiddenList = null; // stays hidden: the activity is finishing
+        dismiss();
+        try {
+            if (!activity.isFinishing()) activity.finish();
+        } catch (Throwable ex) {
+            Logger.printException(() -> "Visual editor: could not close settings", ex);
+        }
+    }
 
     @Override
     public void dismiss() {

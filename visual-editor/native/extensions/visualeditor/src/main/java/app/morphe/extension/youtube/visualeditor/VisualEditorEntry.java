@@ -173,6 +173,21 @@ public final class VisualEditorEntry {
         }
     }
 
+    /** Updates the switch and the "Open" row after the editor changed its own on setting. */
+    static void syncRows() {
+        try {
+            PreferenceScreen root = liveRoot.get();
+            if (root == null) return;
+            boolean on = VisualEditorSettings.ENABLED.get();
+            Preference sw = root.findPreference(KEY_SWITCH);
+            if (sw instanceof SwitchPreference toggle) toggle.setChecked(on);
+            Preference open = root.findPreference(KEY_OPEN);
+            if (open != null) open.setEnabled(on);
+        } catch (Throwable ex) {
+            Logger.printException(() -> "Visual editor: could not update its rows", ex);
+        }
+    }
+
     static void show(@Nullable Activity activity) {
         if (activity == null || activity.isFinishing()) return;
         // Fail safe: if anything in the editor goes wrong on this YouTube or Morphe build, the
