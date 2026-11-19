@@ -219,7 +219,6 @@ const borrowedParent = k => [...PREF[k].parents.map(x => x.key), ...availKeys(k)
 
 function rowHTML(k, live) {
   const p = PREF[k]; const a = A[k];
-  const chg = mode === "mod" && JSON.stringify(state[k]) !== JSON.stringify(defaults[k]);
   const dis = !parentsOk(k);
   const isBool = p.type === "boolean";
   const info = !p.type || p.type === "screen" || p.widget === "NonInteractivePreference" || p.widget === "IntentPreference";
@@ -248,7 +247,7 @@ function rowHTML(k, live) {
     : KIDS[k] ? `<span class="kidbtn kidoff" title="Sub-settings hidden while this is off" aria-label="${KIDS[k].length} sub-settings, hidden">${KIDS[k].length}${I("lock")}</span>` : ""; // same footprint as the open/close button, so the card never changes width
   const over = /^(hide|show) in /i.test(title(k)) && p.subScreenTitle ? `<div class="over">${esc(p.subScreenTitle)}</div>` : "";
   return `<div class="${cls.join(" ")}" data-row="${k}" data-k="${k}" tabindex="0">
-    <div class="txt">${over}<div class="ttl">${ttlHTML(shownTitle(k), (dis ? I("lock", "lk") : "") + (chg ? '<span class="changed-dot" title="Changed from default"></span>' : '<span class="changed-dot no"></span>') + tags + kidbtn)}</div>
+    <div class="txt">${over}<div class="ttl">${ttlHTML(shownTitle(k), (dis ? I("lock", "lk") : "") + tags + kidbtn)}</div>
       ${sum ? `<div class="sum">${esc(sum)}</div>` : ""}${need}${ctl}</div>${right || goto ? `<div class="side">${right}${goto}</div>` : ""}</div>`;
 }
 // The last word of a title and the badges after it never wrap apart, so a sub-options pill can't end up alone on a line.

@@ -38,6 +38,8 @@
   --disabled: .38;
   /* YouTube preview */
   --yt-bg: #0f0f0f; --yt-raised: #212121; --yt-chip: #272727; --yt-red: #ff0033; --yt-blue: #3ea6ff;
+  /* Show / On: a dark green, the twin of the dark red Hide / Off; the ring on a shown, selected element uses its bright tone */
+  --on-green: #2b5c34; --on-green-ink: #d6f5d9; --ring-on: #4cc764;
   /* workbench */
   --page: #0b0c10; --panel: #17191E; --line: #2a2d33; --ink: #E3E2E6; --ink-2: #A9ADB5; --ink-3: #70747c;
   --font: "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -97,8 +99,8 @@ button { font: inherit; color: inherit; }
 @keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
 /* Original / Morphe: a two-way toggle. The thumb slides to the chosen side: YouTube red on
    Original, the project's blue on Morphe. A tap anywhere on it switches. */
-.seg { --seg-on: var(--m-primary); --seg-on-ink: var(--m-on-primary); margin-left: auto; position: relative; display: grid; grid-template-columns: 1fr 1fr; background: var(--m-c-highest, #303134); border-radius: 999px; padding: 2px; flex: none; cursor: pointer; isolation: isolate; }
-.theme-yt .seg { --seg-on: var(--yt-blue); --seg-on-ink: #0f0f0f; background: #303134; }
+.seg { --seg-on: var(--m-brand-1); --seg-on-ink: #fff; margin-left: auto; position: relative; display: grid; grid-template-columns: 1fr 1fr; background: var(--m-c-highest, #303134); border-radius: 999px; padding: 2px; flex: none; cursor: pointer; isolation: isolate; }
+.theme-yt .seg { background: #303134; }
 .seg::before { content: ""; position: absolute; z-index: -1; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 2px); border-radius: 999px; background: var(--seg-on); transform: translateX(100%); transition: transform 300ms var(--ease), background-color 300ms var(--ease); }
 .seg:has(#btnOrig[aria-pressed="true"])::before { transform: none; background: var(--yt-red); }
 .seg button { border: 0; background: transparent; height: 28px; padding: 0 10px; border-radius: 999px; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--m-on-var); cursor: pointer; transition: color 300ms var(--ease); }
@@ -139,7 +141,7 @@ button { font: inherit; color: inherit; }
 .pgroups .pick .ps + .ps { opacity: .7; }
 .stagebox { position: relative; margin: 8px 5px 6px; border: 1.5px solid var(--m-outline, #5f6368); border-radius: 14px; overflow: hidden; overflow: clip; box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 4px 14px rgba(0,0,0,.45); transition: border-color .25s; }
 .stagebox.changed { animation: framepulse .7s var(--ease); }
-@keyframes framepulse { 0% { border-color: var(--yt-blue); box-shadow: 0 0 0 3px rgba(62,166,255,.35), 0 4px 14px rgba(0,0,0,.45); } 100% { } }
+@keyframes framepulse { 0% { border-color: var(--ring-on); box-shadow: 0 0 0 3px rgba(76,199,100,.35), 0 4px 14px rgba(0,0,0,.45); } 100% { } }
 .stick { box-shadow: 0 1px 0 var(--m-outline, #444), 0 6px 10px -6px rgba(0,0,0,.6); }
 .ptools { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 14px; font-size: 12px; color: var(--m-on-var); }
 .ptools .hint { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -159,7 +161,7 @@ button { font: inherit; color: inherit; }
 .stage { position: relative; overflow: hidden; overflow: clip; background: #000; user-select: none; -webkit-user-select: none; touch-action: manipulation; color: #f1f1f1; }
 .stage.original::after { content: "Original YouTube"; position: absolute; left: 50%; top: 6px; transform: translateX(-50%); background: rgba(0,0,0,.75); color: #fff; font-size: 11px; padding: 3px 7px; border-radius: 4px; z-index: 40; pointer-events: none; }
 .c { position: relative; cursor: pointer; transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease); pointer-events: auto; }
-.c.sel { outline: 2px solid var(--yt-blue); outline-offset: 2px; border-radius: 6px; z-index: 20; }
+.c.sel { outline: 2px solid var(--ring-on); outline-offset: 2px; border-radius: 6px; z-index: 20; }
 .c.selin.sel { outline-offset: -2px; }
 .c.selin.flash::after { inset: 0; }
 .c.shade.sel { outline-offset: -3px; border-radius: 0; z-index: 0; }
@@ -195,7 +197,7 @@ button { font: inherit; color: inherit; }
 .c.flash { animation: flash .5s var(--ease); }
 /* the ring hugs what the element draws (see fitRing) */
 .c.fit.sel, .c.fit.ghost { outline: none !important; }
-.c.fit.sel::before, .c.fit.ghost::before { content: ""; position: absolute; left: var(--fl); top: var(--ft); right: var(--fr); bottom: var(--fb); outline: 2px solid var(--yt-blue); outline-offset: 2px; border-radius: 6px; pointer-events: none; z-index: 21; }
+.c.fit.sel::before, .c.fit.ghost::before { content: ""; position: absolute; left: var(--fl); top: var(--ft); right: var(--fr); bottom: var(--fb); outline: 2px solid var(--ring-on); outline-offset: 2px; border-radius: 6px; pointer-events: none; z-index: 21; }
 .c.fit.ghost::before { outline: 1.5px dashed var(--yt-red); outline-offset: 1px; }
 .stage .c.fit.ghost.sel { animation: none; }
 .stage .c.fit.ghost.sel:not(.leaving):not(.charging):not(.flash)::before { animation: ghostpulse 1.8s ease-in-out .5s infinite; }
@@ -286,7 +288,7 @@ button { font: inherit; color: inherit; }
 .duo7 { width: 206px; height: 186px; display: flex; gap: 10px; transition: scale .5s var(--ease); }
 .dl7 { display: grid; gap: 3px; justify-items: center; align-content: start; }
 .dl7 > span { font-size: 20px; font-weight: 600; color: #fff; background: #3a3a3a; border-radius: 14px; padding: 0 15px; line-height: 28px; }
-.dl7 > span.on { background: var(--m-primary, #3ea6ff); color: var(--m-on-primary, #062e6f); } /* the same colours as the list toggles */
+.dl7 > span.on { background: var(--on-green); color: var(--on-green-ink); } /* the same colours as the list toggles */
 .dl7 > span.neg { background: #5c2b2b; color: #ffd9d6; }
 .duo7:not(.gen) .dl7 > span { font-size: 8px; line-height: 11px; border-radius: 6px; padding: 0 6px; } /* drawn much larger by its own scale */
 /* the invisible copy fitDev measures: final sizes, no transitions, never painted */
@@ -385,8 +387,6 @@ button { font: inherit; color: inherit; }
 .row .state.off { background: rgba(255,180,171,.14); color: var(--m-error); }
 .replay { width: 32px; height: 32px; border-radius: 50%; border: 0; background: var(--m-c-highest); display: grid; place-items: center; cursor: pointer; flex: none; }
 .replay svg { width: 18px; height: 18px; fill: var(--m-primary); }
-.changed-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--m-primary); margin-left: 6px; vertical-align: middle; }
-.changed-dot.no { visibility: hidden; } /* keeps its room, so a changed setting's title never rewraps */
 .ctl { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 /* a number or colour box sits on the right of the card, where a toggle would be: no extra line */
 .row .txt:has(> .ctl.side) { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; align-items: center; }
@@ -412,8 +412,8 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 /* Material 3 switch with check/close icon in the thumb (Manager ToggleSwitch) */
 .sw { width: 52px; height: 32px; border-radius: 16px; background: var(--m-c-highest); border: 2px solid var(--m-outline); position: relative; flex: none; cursor: pointer; padding: 0; transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease); }
 .sw::after { content: ""; position: absolute; left: 4px; top: 4px; width: 20px; height: 20px; border-radius: 50%; background: var(--m-outline) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23333537' d='M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z'/%3E%3C/svg%3E") center/14px no-repeat; transition: left var(--dur) var(--ease), width var(--dur) var(--ease), background-color var(--dur) var(--ease); }
-.sw[aria-checked="true"] { background: var(--m-primary); border-color: var(--m-primary); }
-.sw[aria-checked="true"]::after { left: 22px; top: 2px; width: 24px; height: 24px; background: var(--m-on-primary) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23A4C9FF' d='M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E") center/16px no-repeat; }
+.sw[aria-checked="true"] { background: var(--on-green); border-color: var(--on-green); }
+.sw[aria-checked="true"]::after { left: 22px; top: 2px; width: 24px; height: 24px; background: var(--on-green-ink) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%232b5c34' d='M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E") center/16px no-repeat; }
 .fallback select, .fallback input[type=text], .fallback input[type=number], .fallback textarea, .live select {
   background: var(--m-c-highest); color: var(--m-on); border: 1px solid var(--m-outline-var); border-radius: var(--r-s); padding: 7px 10px; font: inherit; font-size: 13px; width: 100%; max-width: 100%;
 }
@@ -462,7 +462,7 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .tut .tbtns { position: absolute; top: 10px; right: 10px; display: flex; }
 .tut .tb { width: 40px; height: 40px; margin-left: 6px; border-radius: 50%; display: grid; place-items: center; background: rgba(0,0,0,.35); transition: opacity 280ms var(--ease), width 280ms var(--ease), margin 280ms var(--ease), outline-color 200ms; outline: 2px solid transparent; outline-offset: 2px; position: relative; }
 .tut .tb svg { width: 24px; height: 24px; fill: #fff; }
-.tut .tb.sel { outline-color: var(--yt-blue); }
+.tut .tb.sel { outline-color: var(--ring-on); }
 .tut .tb.off { opacity: 0; width: 0; margin-left: 0; outline-color: transparent; }
 .tut .tb.ghost { opacity: .6; outline: 1.5px dashed var(--yt-red); }
 .tut .tring { position: absolute; inset: -5px; border-radius: 50%; border: 2px solid var(--yt-red); clip-path: inset(0 100% 0 0); }
@@ -496,11 +496,11 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .tut .tic { display: grid; place-items: center; width: 26px; height: 26px; }
 .tut .tic svg { width: 18px; height: 18px; fill: var(--m-on); }
 .tut .tseg { position: relative; display: grid; grid-template-columns: 1fr 1fr; border-radius: 999px; padding: 2px; background: #303134; isolation: isolate; }
-.tut .tseg::before { content: ""; position: absolute; z-index: -1; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 2px); border-radius: 999px; background: var(--yt-blue); transform: translateX(100%); transition: transform 300ms var(--ease), background-color 300ms var(--ease); }
+.tut .tseg::before { content: ""; position: absolute; z-index: -1; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 2px); border-radius: 999px; background: var(--m-brand-1); transform: translateX(100%); transition: transform 300ms var(--ease), background-color 300ms var(--ease); }
 .tut .tseg:has(#tOrig.on)::before { transform: none; background: var(--yt-red); }
 .tut .tseg b { font-size: 10px; font-weight: 600; padding: 3px 7px; text-align: center; border-radius: 999px; color: var(--m-on-var); transition: color 300ms var(--ease); }
 .tut .tseg #tOrig.on { color: #fff; }
-.tut .tseg #tMorphe.on { color: #0f0f0f; }
+.tut .tseg #tMorphe.on { color: #fff; }
 .tut .tq { position: absolute; inset: 3px 3px 3px 3px; border-radius: 14px; background: var(--m-c-highest); color: var(--m-on); font-size: 13px; display: flex; align-items: center; padding: 0 10px; opacity: 0; pointer-events: none; clip-path: inset(0 var(--cr, 0px) 0 var(--cl, 50%) round 14px); transition: clip-path 300ms var(--ease), opacity 120ms linear 180ms; }
 .tut .tq.show { opacity: 1; clip-path: inset(0 round 14px); transition: clip-path 300ms var(--ease), opacity 80ms linear; }
 .tut .tq span { white-space: pre; overflow: hidden; }
@@ -647,12 +647,12 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 .lt7:active > i { width: calc(50% + 4px); } /* the thumb stretches a little under the finger */
 .lt7[data-at="r"]:active > i { transform: translateX(calc(100% - 12px)); }
 .lt7 > span { display: grid; place-items: center; min-width: 0; padding: 0 4px; border-radius: 999px; color: var(--m-on-var, #aaa); transition: color .3s var(--ease); }
-.lt7[data-at="l"] > span:first-of-type, .lt7[data-at="r"] > span:last-of-type { color: var(--m-on-primary, #062e6f); }
+.lt7[data-at="l"] > span:first-of-type, .lt7[data-at="r"] > span:last-of-type { color: var(--on-green-ink); }
 .lt7[data-tone="neg"][data-at="l"] > span:first-of-type, .lt7[data-tone="neg"][data-at="r"] > span:last-of-type { color: #ffd9d6; }
 .lt7.still > i, .lt7.still > span, .sw.still, .sw.still::after { transition: none; }
 .theme-yt .lt7 { background: #272727; }
-.theme-yt .lt7[data-tone="pos"] > i { background: #3ea6ff; }
-.theme-yt .lt7[data-tone="pos"][data-at="l"] > span:first-of-type, .theme-yt .lt7[data-tone="pos"][data-at="r"] > span:last-of-type { color: #0f0f0f; }
+.lt7[data-tone="pos"] > i, .theme-yt .lt7[data-tone="pos"] > i { background: var(--on-green); }
+.theme-yt .lt7[data-tone="pos"][data-at="l"] > span:first-of-type, .theme-yt .lt7[data-tone="pos"][data-at="r"] > span:last-of-type { color: var(--on-green-ink); }
 .row.dis .lt7 { opacity: var(--disabled, .38); }
 .designrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .designrow .dsg { display: flex; align-items: center; gap: 10px; }
@@ -761,8 +761,8 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 /* YouTube-style switch */
 .theme-yt .sw { width: 36px; height: 20px; border: 0; border-radius: 10px; background: #717171; margin: 6px 4px; overflow: visible; }
 .theme-yt .sw::after { left: -4px; top: -2px; width: 24px; height: 24px; background: #ececec none; box-shadow: 0 1px 3px rgba(0,0,0,.5); }
-.theme-yt .sw[aria-checked="true"] { background: rgba(62,166,255,.5); }
-.theme-yt .sw[aria-checked="true"]::after { left: 16px; top: -2px; width: 24px; height: 24px; background: #3ea6ff none; }
+.theme-yt .sw[aria-checked="true"] { background: rgba(76,199,100,.45); }
+.theme-yt .sw[aria-checked="true"]::after { left: 16px; top: -2px; width: 24px; height: 24px; background: var(--ring-on) none; }
 /* menu toggle for the experimental design */
 .themerow { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin-top: 4px; border-top: 1px solid rgba(255,255,255,.1); cursor: pointer; border-radius: 0 0 8px 8px; }
 .themerow .tt { flex: 1; font-size: 14px; font-weight: 500; }
@@ -781,7 +781,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 }
 
 /* round 6 */
-.c.flash::after { content: ""; position: absolute; inset: -2px; border-radius: 6px; background: rgba(62,166,255,.55); pointer-events: none; animation: cflash 480ms var(--ease) forwards; z-index: 21; }
+.c.flash::after { content: ""; position: absolute; inset: -2px; border-radius: 6px; background: rgba(76,199,100,.5); pointer-events: none; animation: cflash 480ms var(--ease) forwards; z-index: 21; }
 .c.flash.twice::after { animation-iteration-count: 2; animation-fill-mode: none; opacity: 0; }
 .c.off.flash::after, .c.ghost.flash::after { background: rgba(255,0,51,.5); }
 @keyframes cflash { from { opacity: 1; } to { opacity: 0; } }
@@ -879,7 +879,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .tut .tsres.hit { background: rgba(255,255,255,.08); }
 /* tapping the card flashes the part of the preview it belongs to */
 .tut .tb.flash { animation: tflash .9s var(--ease); }
-@keyframes tflash { 0%, 50%, 100% { outline-color: var(--yt-blue); } 25%, 75% { outline-color: transparent; } }
+@keyframes tflash { 0%, 50%, 100% { outline-color: var(--ring-on); } 25%, 75% { outline-color: transparent; } }
 </style>
 
 <div class="bench">

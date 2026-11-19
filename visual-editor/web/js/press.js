@@ -191,8 +191,8 @@ $("pickScrim").onclick = () => setPicker(false);
 $("pickGrid").addEventListener("click", e => {
   if (pickSuppress) return;
   const dz = e.target.closest("[data-design]");
-  if (dz) { design = dz.dataset.design; renderBar(); renderList(); store.save(); snack(design === "clean" ? "Clean titles: each setting names both of its states" : design === "toggles" ? "Every on/off setting is a switch" : "Morphe's own titles and labels"); return; }
-  if (e.target.closest("[data-group-toggle]")) { grouped = !grouped; renderBar(); renderStage(); store.save(); if (grouped) tutOnce("groups"); snack(grouped ? "Screens are grouped. Switch tabs right under the preview" : "Every screen is listed on its own again"); return; }
+  if (dz) { design = dz.dataset.design; renderBar(); renderList(); store.save(); return; }
+  if (e.target.closest("[data-group-toggle]")) { grouped = !grouped; renderBar(); renderStage(); store.save(); if (grouped) tutOnce("groups"); return; }
   const gb = e.target.closest("[data-group]");
   if (gb) { const g = GROUPS.find(x => x.id === gb.dataset.group), tabs = tabsOf(g); setPicker(false); returnTo = null; switchSection(lastTab[g.id] && tabs.some(([t]) => t === lastTab[g.id]) ? lastTab[g.id] : tabs[0][0]); return; }
   if (e.target.closest("[data-theme-toggle]")) { theme = theme === "m3" ? "yt" : "m3"; applyTheme(); renderBar(); store.save(); return; }
