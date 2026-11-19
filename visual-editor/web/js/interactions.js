@@ -27,17 +27,22 @@ function proxyEls(k) {
 function touchSel(k) { if (selected === k) return; if (ghosts.has(selected)) unghost(selected); selected = k; highlight(k, false); renderInspector(); }
 // Descriptions show two lines; a longer one is cut (with a fade) and unfolds when its setting is
 // selected, folding back when another one is. Every card keeps the same size whatever its state.
-function fitSums(root = $("list")) {
+// An unfold starts two frames later, after the work that selected the card (a redraw, the preview,
+// the demo) is done, so it never begins in a busy frame and stutters.
+const afterBusy = fn => requestAnimationFrame(() => requestAnimationFrame(fn));
+function unfold(el) { afterBusy(() => { if (el.isConnected && el.classList.contains("long") && el.closest(".row.sel")) el.classList.add("open"); }); }
+function fitSums(root = $("list"), keep = new Set()) {
   root.querySelectorAll(".row > .txt > .sum:not(.need)").forEach(el => {
     const lh = parseFloat(getComputedStyle(el).lineHeight) || 17.5, full = el.scrollHeight;
     el.classList.toggle("long", full > lh * 2 + 3); el.style.setProperty("--full", full + "px");
-    el.classList.toggle("open", el.classList.contains("long") && !!el.closest(".row.sel"));
+    const want = el.classList.contains("long") && !!el.closest(".row.sel");
+    if (!want) el.classList.remove("open"); else if (keep.has(el)) el.classList.add("open"); else if (!el.classList.contains("open")) unfold(el);
   });
 }
 function highlight(k, flash = true, reveal = false) {
-  document.querySelectorAll(".sel").forEach(e => e.classList.remove("sel", "selin"));
+  document.querySelectorAll(".sel").forEach(e => e.classList.remove("sel", "selin", "selcorner"));
   document.querySelectorAll(`[data-k="${k}"], [data-row="${k}"], [data-also="${k}"]`).forEach(e => e.classList.add("sel"));
-  document.querySelectorAll("#list .sum.open").forEach(e => { if (!e.closest(".row.sel")) e.classList.remove("open"); }); document.querySelectorAll(`#list [data-row="${k}"] > .txt > .sum.long`).forEach(e => e.classList.add("open"));
+  document.querySelectorAll("#list .sum.open").forEach(e => { if (!e.closest(".row.sel")) e.classList.remove("open"); }); document.querySelectorAll(`#list [data-row="${k}"] > .txt > .sum.long:not(.open)`).forEach(unfold);
   const els = [...document.querySelectorAll(`#stage [data-k="${k}"], #stage [data-also="${k}"]`)];
   const proxy = els.length ? [] : proxyEls(k);
   const finish = () => { els.forEach(e => {
@@ -185,8 +190,12 @@ function clipOf(el) {
 function fitOutline(el) {
   fitRing(el); watchRing(el);
   if (el.classList.contains("fit")) { el.classList.remove("selin"); return; }
+  // a ring that would run past the edge of the preview is drawn just inside instead (all four
+  // edges); one that reaches a corner follows the preview's rounded corner
   const r = el.getBoundingClientRect(), b = clipOf(el).getBoundingClientRect();
-  el.classList.toggle("selin", r.left < b.left + 4 || r.right > b.right - 4 || r.top < b.top + 4);
+  const L = r.left < b.left + 4, R = r.right > b.right - 4, T = r.top < b.top + 4, B = r.bottom > b.bottom - 4;
+  el.classList.toggle("selin", L || R || T || B);
+  el.classList.toggle("selcorner", (L || R) && (T || B));
 }
 function scrollRowIntoView(k, center, tries = 2) {
   const row = document.querySelector(`[data-row="${k}"]`); if (!row) return;

@@ -409,8 +409,10 @@ function renderList() {
   });
   const keepOpen = [...list.querySelectorAll(".row > .txt > .sum")].filter(e => wasOpen.has(e.closest(".row").dataset.row));
   keepOpen.forEach(e => { e.style.transition = "none"; e.style.maxHeight = wasOpen.get(e.closest(".row").dataset.row) + "px"; });
-  fitSums(list);
-  if (keepOpen.length) { void list.offsetHeight; keepOpen.forEach(e => { e.style.transition = ""; e.style.maxHeight = ""; }); }
+  fitSums(list, new Set(keepOpen));
+  // the unfold carries on once the redraw and everything after it is done (two frames on), so it
+  // doesn't start inside that busy stretch and skip its first frames
+  if (keepOpen.length) { void list.offsetHeight; afterBusy(() => keepOpen.forEach(e => { e.style.transition = ""; e.style.maxHeight = ""; })); }
   // animate sub-option groups and rows from their previous state to the new one
   void list.offsetHeight;
   const sameSec = lastVis.sec === section;
@@ -440,6 +442,9 @@ function unlockFx(row) {
   row.querySelectorAll(".ulk").forEach(e => e.remove());
   const u = document.createElement("div"); u.className = "ulk";
   u.innerHTML = `<svg viewBox="0 0 24 24"><path class="sh" d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0" fill="none" stroke="var(--m-success)" stroke-width="2.2" stroke-linecap="round"/><rect x="6" y="10.5" width="12" height="9.5" rx="2.2"/></svg>`;
+  // it pops up right on the card's control (the middle of a Hide / Show toggle, a switch, a box)
+  const ctl = row.querySelector(".side .lt7, .side .sw, .side .state, .ctl.side, .side > *");
+  if (ctl) { const rr = row.getBoundingClientRect(), cr = ctl.getBoundingClientRect(); Object.assign(u.style, { left: (cr.left - rr.left + cr.width / 2) + "px", top: (cr.top - rr.top + cr.height / 2) + "px", right: "auto", margin: "-20px 0 0 -20px" }); }
   row.appendChild(u); setTimeout(() => { u.remove(); row.classList.remove("unlock"); }, 950);
 }
 
