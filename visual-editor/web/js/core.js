@@ -166,7 +166,7 @@ const GROUPS = [
   { id: "g_watch", icon: "like", title: "Watch page", tabs: [["watch", "Actions"], ["description", "Description"], ["comments", "Comments"], ["danmaku", "Flying comments"], ["ambient", "Ambient mode"]] },
   { id: "g_feed", icon: "home", title: "Feed", tabs: [["feed", "Home"], ["shorts", "Shorts"], ["ads", "Ads"], ["dearrow", "DeArrow"]] },
   { id: "g_browse", icon: "layout", title: "Browsing", tabs: [["channel", "Channel page"], ["explore", "Explore menu"], ["nav", "Navigation"]] },
-  { id: "g_app", icon: "palette", title: "App", tabs: [["look", "App look"], ["snackbar", "Snackbar"], ["misc", "Other"]] },
+  { id: "g_app", icon: "palette", title: "App", tabs: [["look", "App look"], ["snackbar", "Snackbar"], ["misc", "Misc"]] },
 ];
 let grouped = true; // tabs are the default layout; the menu toggle switches back to 24 screens
 const lastTab = {};

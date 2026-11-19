@@ -354,7 +354,6 @@ function renderList() {
     if (live) html += `<div class="group">${live}</div>`;
     if (rest.length) html += `${ordered.length ? `<div class="sechead">More settings<span class="nolive">No live preview or animation</span></div>` : ""}<div class="group">${rest.map(withKids).join("")}</div>`;
   } else {
-    html += `<div class="secnote" style="padding-top:12px">Settings that no screen above shows yet, grouped by their Morphe settings screen. They work exactly as in Morphe.</div>`;
     const groups = {};
     for (const k of m.misc) {
       if (PARENT_OF[k]) continue;
@@ -376,6 +375,8 @@ function renderList() {
   const swWas = new Map(); list.querySelectorAll("[data-sw]").forEach(x => swWas.set(x.dataset.sw, [x.getAttribute("aria-checked"), x.dataset.at, x.dataset.tone]));
   // groups caught mid-fold by this render: their new box carries on from the height it had
   const midFold = new Map(); list.querySelectorAll(".kids:not(.open)").forEach(b => { const h = b.getBoundingClientRect().height; if (h > .5 && foldingKids.has(b.dataset.kidsOf)) midFold.set(b.dataset.kidsOf, h); });
+  // descriptions that were unfolded stay unfolded through the redraw, without playing the unfold again
+  const wasOpen = new Set([...list.querySelectorAll(".row > .txt > .sum.open")].map(e => e.closest(".row").dataset.row));
   list.innerHTML = html;
   midFold.forEach((h, grp) => {
     const box = list.querySelector(`[data-kids-of="${grp}"]`), left = (foldingKids.get(grp)?.until ?? 0) - performance.now(); if (!box || left < 30) return;
@@ -402,7 +403,10 @@ function renderList() {
     const left = Math.max(0, (foldingKids.get(grp)?.until ?? now0) - performance.now());
     setTimeout(() => { if (kin.isConnected && !kin.parentElement.classList.contains("open")) kin.innerHTML = fresh; }, left + 20);
   });
+  const keepOpen = [...list.querySelectorAll(".row > .txt > .sum")].filter(e => wasOpen.has(e.closest(".row").dataset.row));
+  keepOpen.forEach(e => { e.style.transition = "none"; });
   fitSums(list);
+  if (keepOpen.length) { void list.offsetHeight; keepOpen.forEach(e => { e.style.transition = ""; }); }
   // animate sub-option groups and rows from their previous state to the new one
   void list.offsetHeight;
   const sameSec = lastVis.sec === section;
