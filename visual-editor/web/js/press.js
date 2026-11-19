@@ -95,7 +95,7 @@ $("list").addEventListener("click", e => {
   // restoring the default list asks first, so a stray tap can't wipe a list someone built up
   const rs = e.target.closest("[data-lreset]"); if (rs) {
     const k = rs.dataset.lreset, def = listItems(k, defaults[k]), num = listNumeric(k);
-    openDialog(`<div class="di">${I("reset")}</div><h2 id="dlgTitle">Restore the default list?</h2><p>${esc(title(k))} goes back to Morphe's own list${def.length ? ":" : "."}</p>${def.length ? `<p class="t2">${def.map(t => esc(t) + (num ? "×" : "")).join(", ")}</p>` : ""}<div class="acts"><button class="dbtn tonal" data-dlg-cancel>Cancel</button><button class="dbtn primary" data-dlg-ok>Restore</button></div>`);
+    openDialog(`<div class="di">${I("reset")}</div><h2 id="dlgTitle">Restore the default list?</h2><p>${esc(shownTitle(k))} goes back to Morphe's own list${def.length ? ":" : "."}</p>${def.length ? `<p class="t2">${def.map(t => esc(t) + (num ? "×" : "")).join(", ")}</p>` : ""}<div class="acts"><button class="dbtn tonal" data-dlg-cancel>Cancel</button><button class="dbtn primary" data-dlg-ok>Restore</button></div>`);
     $("dlgBox").onclick = null;
     $("dlgBox").querySelector("[data-dlg-cancel]").onclick = closeDialog;
     $("dlgBox").querySelector("[data-dlg-ok]").onclick = () => { closeDialog(); listSet(k, def); };
@@ -128,13 +128,13 @@ $("list").addEventListener("click", e => {
     const av = String(PREF[k].availability || ""), any = av.includes("||") ? availKeys(k).filter(x => PREF[x] && inVersion(x) && sectionOf(x) === section) : [];
     if (any.length > 1) {
       goToSetting(target, () => any.forEach(x => document.querySelectorAll(`#list [data-row="${x}"]`).forEach(flashRow)));
-      const val = (av.match(/===\s*"([^"]+)"/) || [])[1], names = any.map(x => `<b>${esc(title(x))}</b>`);
+      const val = (av.match(/===\s*"([^"]+)"/) || [])[1], names = any.map(x => `<b>${esc(shownTitle(x))}</b>`);
       const list = names.slice(0, -1).join(", ") + " or " + names[names.length - 1];
       snack(val ? `Set ${list} to <b>${esc(entryLabel(any[0], val) || val)}</b>, and you'll be brought back` : `Change ${list}, and you'll be brought back`);
       return;
     }
     goToSetting(target);
-    snack(PREF[target].type === "boolean" ? `Switch <b>${esc(title(target))}</b> by holding it, and you'll be brought back` : `Change <b>${esc(title(target))}</b>, and you'll be brought back`);
+    snack(PREF[target].type === "boolean" ? `Switch <b>${esc(shownTitle(target))}</b> by holding it, and you'll be brought back` : `Change <b>${esc(shownTitle(target))}</b>, and you'll be brought back`);
     return;
   }
   const rp = e.target.closest("[data-replay]");

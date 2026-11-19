@@ -224,21 +224,21 @@ function controlFor(k) {
   // up to 8 choices: a row of pills; 9 to 16 (icon styles, theme colours, qualities): a 3-column grid
   // of pills built from the same entries, so it follows whatever list Morphe ships; more: a dropdown
   if (ents.length && ents.length <= 16) return `<div class="ctl optgrid">${ents.map(e => `<button class="opt" data-set="${k}" data-val="${esc(e.value)}" aria-pressed="${sameVal(e.value, v)}" ${dis}>${esc(e.label)}</button>`).join("")}</div>`;
-  if (ents.length) return `<div class="ctl"><select data-set="${k}" ${dis} aria-label="${esc(title(k))}">${ents.map(e => `<option value="${esc(e.value)}" ${sameVal(e.value, v) ? "selected" : ""}>${esc(e.label)}</option>`).join("")}</select></div>`;
+  if (ents.length) return `<div class="ctl"><select data-set="${k}" ${dis} aria-label="${esc(shownTitle(k))}">${ents.map(e => `<option value="${esc(e.value)}" ${sameVal(e.value, v) ? "selected" : ""}>${esc(e.label)}</option>`).join("")}</select></div>`;
   if (p.type === "integer" || p.type === "float" || p.type === "long") {
     const r = Object.entries(RANGES).find(([n]) => k.includes(n));
     if (r || /opacity|scale|strength|display_area/.test(k)) {
       const [min, max] = r ? r[1] : [0, 100];
-      return `<div class="ctl"><input type="range" min="${min}" max="${max}" step="1" value="${v}" data-set="${k}" ${dis} aria-label="${esc(title(k))}"><span class="val" data-val-of="${k}">${v}</span></div>`;
+      return `<div class="ctl"><input type="range" min="${min}" max="${max}" step="1" value="${v}" data-set="${k}" ${dis} aria-label="${esc(shownTitle(k))}"><span class="val" data-val-of="${k}">${v}</span></div>`;
     }
-    return `<div class="ctl side"><input type="number" value="${v}" data-set="${k}" ${dis} aria-label="${esc(title(k))}" step="${p.type === "float" ? "0.05" : "1"}"></div>`;
+    return `<div class="ctl side"><input type="number" value="${v}" data-set="${k}" ${dis} aria-label="${esc(shownTitle(k))}" step="${p.type === "float" ? "0.05" : "1"}"></div>`;
   }
   if (p.type === "string") {
     // Morphe opens the system file picker for these; the preview does the same and draws the image
     if (p.widget === "NonInteractivePreference" && /_file$/.test(k)) return `<div class="ctl"><label class="opt filepick" ${dis ? 'aria-disabled="true"' : ""}>${I("image")}${v ? "Change image" : "Choose image"}<input type="file" accept="image/*" data-file="${k}" ${dis} hidden></label>${v ? `<span class="val">${esc(v)}</span>` : ""}</div>`;
-    if (/color/.test(k) && /^#/.test(String(v))) return `<div class="ctl side"><input type="color" value="#${String(v).slice(-6)}" data-set="${k}" ${dis} aria-label="${esc(title(k))}"><span class="val">${esc(v)}</span></div>`;
+    if (/color/.test(k) && /^#/.test(String(v))) return `<div class="ctl side"><input type="color" value="#${String(v).slice(-6)}" data-set="${k}" ${dis} aria-label="${esc(shownTitle(k))}"><span class="val">${esc(v)}</span></div>`;
     if (isListBox(k)) return listBox(k, dis);
-    return `<div class="ctl"><input type="text" value="${esc(v)}" data-set="${k}" ${dis} aria-label="${esc(title(k))}"></div>`;
+    return `<div class="ctl"><input type="text" value="${esc(v)}" data-set="${k}" ${dis} aria-label="${esc(shownTitle(k))}"></div>`;
   }
   return "";
 }
@@ -257,7 +257,7 @@ function listItems(k, from = V(k)) {
 function listBox(k, dis) {
   const items = listItems(k), num = listNumeric(k);
   return `<div class="ctl lst" data-lst="${k}">${items.map((t, i) => `<span class="lchip">${esc(t)}${num ? "×" : ""}<button class="lx" data-lx="${i}" ${dis} aria-label="Remove ${esc(t)}">${I("close")}</button></span>`).join("")}
-    <span class="ladd"><input class="lin" data-lin="${k}" ${dis} placeholder="${num ? "Add speed" : "Add entry"}" ${num ? 'inputmode="decimal"' : ""} aria-label="Add to ${esc(title(k))}"><button class="lplus" data-ladd="${k}" ${dis} aria-label="Add">${I("plus")}</button></span></div>`;
+    <span class="ladd"><input class="lin" data-lin="${k}" ${dis} placeholder="${num ? "Add speed" : "Add entry"}" ${num ? 'inputmode="decimal"' : ""} aria-label="Add to ${esc(shownTitle(k))}"><button class="lplus" data-ladd="${k}" ${dis} aria-label="Add">${I("plus")}</button></span></div>`;
 }
 // returns an error to show, or null once the entry is added
 function listAdd(k, raw) {
@@ -270,15 +270,15 @@ function listAdd(k, raw) {
 function listSet(k, items) { ensureMod(); touchSel(k); const before = state[k]; state[k] = items.join("\n"); afterChange(k, before); requestAnimationFrame(() => document.querySelector(`[data-lin="${k}"]`)?.focus({ preventScroll: true })); }
 const whereOf = x => { const s = sectionOf(x); return s !== section ? ` (${esc(SECTIONS.find(z => z.id === s)?.title || "Miscellaneous")})` : ""; };
 function shortNeed(k) {
-  if (!classicParentsOk(k)) return PREF[k].parents.some(x => x.mode === "not" && !!state[x.key]) ? "Parent setting must be disabled" : "Parent setting must be enabled";
+  if (!classicParentsOk(k)) { const b = PREF[k].parents.find(x => x.mode === "not" ? !!state[x.key] : !state[x.key]) || PREF[k].parents[0]; return `Parent setting must be ${stateWord(b.key, b.mode !== "not")}`; }
   return /S\("/.test(String(PREF[k].availability || "")) ? "Parent setting must be enabled" : "Not available with the current settings";
 }
 function needText(k) {
-  if (!classicParentsOk(k)) return "Needs " + PREF[k].parents.map(x => `“${esc(title(x.key))}” ${x.mode === "not" ? "off" : "on"}${whereOf(x.key)}`).join(", ");
+  if (!classicParentsOk(k)) return "Needs " + PREF[k].parents.map(x => `“${esc(shownTitle(x.key))}” set to ${stateWord(x.key, x.mode !== "not")}${whereOf(x.key)}`).join(", ");
   const av = String(PREF[k].availability || ""), sk = [...new Set([...av.matchAll(/S\("([^"]+)"\)/g)].map(m => m[1]))].filter(x => PREF[x] && inVersion(x));
-  if (sk.length > 1 && av.includes("||")) return `Available once any of these is on: ${sk.map(x => `“${esc(title(x))}”${whereOf(x)}`).join(", ")}`;
+  if (sk.length > 1 && av.includes("||")) return `Available once one of these is set: ${sk.map(x => `“${esc(shownTitle(x))}”${PREF[x].type === "boolean" ? " " + stateWord(x, true) : ""}${whereOf(x)}`).join(", ")}`;
   const ap = (PREF[k].availabilityParents || []).filter(x => PREF[x]);
-  return ap.length ? `Not available with the current ${ap.map(x => `“${esc(title(x))}”`).join(", ")}` : "Not available here";
+  return ap.length ? `Not available with the current ${ap.map(x => `“${esc(shownTitle(x))}”`).join(", ")}` : "Not available here";
 }
 // The setting to visit so that k becomes available.
 function blockerOf(k) {
@@ -299,8 +299,8 @@ function rowHTML(k, live) {
   const isBool = p.type === "boolean";
   const info = !p.type || p.type === "screen" || p.widget === "NonInteractivePreference" || p.widget === "IntentPreference";
   let right = "", ctl = "";
-  const swHTML = () => `<button class="sw" role="switch" data-sw="${k}" aria-checked="${!!V(k)}" aria-label="${esc(title(k))}"></button>`;
-  if (OFF_LIST.has(k)) { right = `<button class="sw" role="switch" data-sw="${k}" aria-checked="${String(V(k)) !== "off"}" aria-label="${esc(title(k))}"></button>`; ctl = controlFor(k); }
+  const swHTML = () => `<button class="sw" role="switch" data-sw="${k}" aria-checked="${!!V(k)}" aria-label="${esc(shownTitle(k))}"></button>`;
+  if (OFF_LIST.has(k)) { right = `<button class="sw" role="switch" data-sw="${k}" aria-checked="${String(V(k)) !== "off"}" aria-label="${esc(shownTitle(k))}"></button>`; ctl = controlFor(k); }
   else if (isBool && design === "clean" && cleanOf(k)) right = toggleHTML(k);
   else if (isBool && design === "toggles") right = swHTML();
   else if (live && a.kind !== "scenario") { right = stateChip(k); if (!isBool) ctl = controlFor(k); }
@@ -320,7 +320,7 @@ function rowHTML(k, live) {
   const blk = dis ? blockerOf(k) : null;
   const bp = dis ? null : borrowedParent(k);
   const goto = blk ? `<button class="goto" data-goto="${k}">${sectionOf(blk) !== section ? "Change it here" : "Take me there"} ${I("arrow")}</button>`
-    : bp ? `<button class="goto more" data-more="${k}" data-target="${bp}" title="${esc(title(bp))}">More ${I("arrow")}</button>` : "";
+    : bp ? `<button class="goto more" data-more="${k}" data-target="${bp}" title="${esc(shownTitle(bp))}">More ${I("arrow")}</button>` : "";
   // locked: a short line beside "Take me there" (the full reason is its tooltip), so the card keeps
   // the height of an unlocked one
   const need = dis ? `<div class="need3" title="${esc(needText(k).replace(/<[^>]*>/g, ""))}">${shortNeed(k)}</div>` : "";
@@ -331,7 +331,14 @@ function rowHTML(k, live) {
   const over = /^(hide|show) in /i.test(title(k)) && p.subScreenTitle ? `<div class="over">${esc(p.subScreenTitle)}</div>` : "";
   return `<div class="${cls.join(" ")}" data-row="${k}" data-k="${k}" tabindex="0">
     <div class="txt">${over}${lreset ? '<div class="ttlrow">' : ""}<div class="ttl">${ttlHTML(shownTitle(k), (dis ? I("lock", "lk") : "") + tags + kidbtn)}</div>${lreset ? lreset + "</div>" : ""}
-      ${sum ? `<div class="sum">${esc(sum)}</div>` : ""}${ctl}</div>${right || goto || need ? `<div class="side">${right}${need}${goto}</div>` : ""}</div>`;
+      ${sum ? `<div class="sum">${sumTag(k)}${esc(sum)}</div>` : ""}${ctl}</div>${right || goto || need ? `<div class="side">${right}${need}${goto}</div>` : ""}</div>`;
+}
+// Morphe writes a "Disable X" setting's description for the switch turned on ("Disables X..."). The clean
+// design shows that card as "X" with Off | On, where the description's state is Off, so the description
+// says so ("When Off: Disables..."), read live from Morphe's text, for every such setting.
+function sumTag(k) {
+  const p = PREF[k], c = design === "clean" && cleanOf(k);
+  return c && c.labels[0] === "On" && !(p.summaryOn || p.summaryOff) ? `<b class="when">When ${c.labels[1]}:</b> ` : "";
 }
 // The last word of a title and the badges after it never wrap apart, so a sub-options pill can't end up alone on a line.
 function ttlHTML(t, after) { if (!after) return esc(t); const i = t.lastIndexOf(" "); return `${esc(t.slice(0, i + 1))}<span class="nw">${esc(t.slice(i + 1))}${after}</span>`; }
@@ -504,7 +511,7 @@ function renderList() {
       setTimeout(() => { const cur = list.querySelector(`[data-row="${grp}"] .kidbtn`); if (cur && !list.querySelector(`[data-kids-of="${grp}"]`)?.classList.contains("open")) { cur.outerHTML = fresh; const n = list.querySelector(`[data-row="${grp}"] .kidbtn`); n?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160 }); } }, Math.max(0, fold.until - performance.now()) + 20);
     }
     const kin = list.querySelector(`[data-kids-of="${grp}"] > .kin`); if (!kin) return;
-    const fresh = kin.innerHTML; kin.innerHTML = old;
+    const fresh = kin.innerHTML; kin.innerHTML = old; stripUnlock(kin);
     kin.querySelectorAll(".row").forEach(r => r.classList.remove("sel", "attn", "nudge"));
     const left = Math.max(0, (foldingKids.get(grp)?.until ?? now0) - performance.now());
     setTimeout(() => { if (kin.isConnected && !kin.parentElement.classList.contains("open")) kin.innerHTML = fresh; }, left + 20);
@@ -527,7 +534,7 @@ function renderList() {
     if (was && !vis) {
       // keep it on screen while it folds away, then hide it
       r.classList.remove("hide");
-      if (wantOpen.has(grp) && lastOpen.has(grp) && oldKidRows.has(k)) { const t = document.createElement("div"); t.innerHTML = oldKidRows.get(k); const o = t.firstElementChild; o.classList.remove("sel", "attn", "nudge", "unlock"); r.replaceWith(o); r = o; }
+      if (wantOpen.has(grp) && lastOpen.has(grp) && oldKidRows.has(k)) { const t = document.createElement("div"); t.innerHTML = oldKidRows.get(k); const o = t.firstElementChild; o.classList.remove("sel", "attn", "nudge"); stripUnlock(o); r.replaceWith(o); r = o; }
       if (wantOpen.has(grp) && lastOpen.has(grp)) { const an = sizeAnim(r, false); const end = () => { r.classList.add("hide"); r.getAnimations().forEach(a => a.cancel()); }; if (an) an.onfinish = end; else end(); }
       else setTimeout(() => r.classList.add("hide"), 300);
     } else if (!was && vis && lastOpen.has(grp) && wantOpen.has(grp)) sizeAnim(r, true);
@@ -549,7 +556,8 @@ function renderList() {
   // read from the settings, not the drawn rows: a sub-option folding away keeps its unlocked look
   // while it folds, and read from the DOM it never counted as locked, so it unlocked only once
   const dis = new Set([...list.querySelectorAll(".row[data-row]")].map(r => r.dataset.row).filter(k => PREF[k] && !parentsOk(k)));
-  if (lastDis.sec === section) lastDis.keys.forEach(k => { if (!dis.has(k)) { const r = list.querySelector(`[data-row="${k}"]`); if (r && !r.classList.contains("hide")) unlockFx(r); } });
+  if (lastDis.sec === section) { carryUnlocks(list); lastDis.keys.forEach(k => { if (!dis.has(k)) { const r = list.querySelector(`[data-row="${k}"]`); if (r && !r.dataset.ulk && !r.classList.contains("hide")) unlockFx(r); } }); }
+  else unlocking.clear();
   lastDis = { sec: section, keys: dis };
 }
 // "Swipe zone preview" is one column on the right of the left, right and top zone rows, its title
@@ -655,29 +663,54 @@ function mergeZonePreview(list) {
   const col = document.createElement("div"); col.className = "zcol";
   zs[0].before(g); zs.forEach(e => col.appendChild(e)); g.append(col, pv); pv.classList.add("zprev");
 }
-function unlockFx(row) {
+// One unlock animation per setting, on one clock. Every tap redraws the list, which threw the running
+// badge away with the old rows (it vanished, or a stale copy of the row brought it back from the start:
+// the flicker on a quick second tap). Now a redraw picks the animation up where it was instead.
+const ULK_MS = 950, unlocking = new Map(); // setting -> when its unlock animation started
+function unlockFx(row, out = false) {
+  const k = row.dataset.row, t0 = unlocking.get(k), resume = t0 !== undefined && performance.now() - t0 < ULK_MS;
+  if (!resume) unlocking.set(k, performance.now());
+  row.dataset.ulk = "1";
   // A row that just appeared (a sub-option unfolding) is still growing from zero height with its
   // overflow clipped: measuring it then put the badge in the wrong place, clipped, between two cards.
-  // So the badge waits until the row and its sub-option group have finished moving, and it is placed
+  // So a new badge waits until the row and its sub-option group have finished moving, and it is placed
   // inside the control's own box (centred by CSS), so it can't drift from it whatever the layout does.
-  const moving = [row, row.closest(".kids")].filter(Boolean).flatMap(e => e.getAnimations())
+  const moving = resume ? [] : [row, row.closest(".kids")].filter(Boolean).flatMap(e => e.getAnimations())
     .filter(a => { const t = a.effect && a.effect.getComputedTiming(); return t && isFinite(t.endTime); });
   const go = () => {
     if (!row.isConnected) return;
-    row.classList.remove("unlock"); void row.offsetWidth; row.classList.add("unlock");
+    const el = performance.now() - unlocking.get(k); if (el >= ULK_MS) return;
     row.querySelectorAll(".ulk").forEach(e => e.remove());
+    row.classList.add("unlock");
+    row.getAnimations().filter(a => /^unlock/.test(a.animationName || "")).forEach(a => { a.currentTime = el; });
     const u = document.createElement("div"); u.className = "ulk";
     u.innerHTML = `<svg viewBox="0 0 24 24"><path class="sh" d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0" fill="none" stroke="var(--m-success)" stroke-width="2.2" stroke-linecap="round"/><rect x="6" y="10.5" width="12" height="9.5" rx="2.2"/></svg>`;
     // it pops up right on the card's control (the middle of a Hide / Show toggle, a switch, a box)
     const ctl = row.querySelector(".side .lt7, .side .sw, .side .state, .ctl.side, .side > *");
     const host = ctl ? (ctl.closest(".side") || ctl) : row;
     if (ctl) { if (getComputedStyle(host).position === "static") host.style.position = "relative"; u.classList.add("onctl"); }
-    host.appendChild(u); setTimeout(() => { u.remove(); row.classList.remove("unlock"); }, 950);
+    host.appendChild(u);
+    u.getAnimations({ subtree: true }).forEach(a => { a.currentTime = el; });
+    // locked again mid-animation (the parent tapped off): the badge fades from where it is, no jump
+    if (out) { unlocking.delete(k); u.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150, fill: "forwards" }).onfinish = () => { u.remove(); row.classList.remove("unlock"); }; return; }
+    setTimeout(() => { u.remove(); row.classList.remove("unlock"); }, ULK_MS - el);
   };
   if (!moving.length) return go();
   let done = false; const once = () => { if (!done) { done = true; go(); } };
   Promise.all(moving.map(a => a.finished.catch(() => {}))).then(once); setTimeout(once, 700);
 }
+// after a redraw: running unlocks carry on on the new rows (only while the setting is still unlocked)
+function carryUnlocks(list) {
+  const now = performance.now();
+  unlocking.forEach((t, k) => {
+    if (now - t >= ULK_MS) return unlocking.delete(k);
+    const r = list.querySelector(`.row[data-row="${k}"]`);
+    if (!r || r.dataset.ulk || r.classList.contains("hide")) return;
+    unlockFx(r, r.classList.contains("dis") || !parentsOk(k));
+  });
+}
+// copies of old rows (kept on screen while they fold away) must not bring a finished or running badge back
+const stripUnlock = root => { root.querySelectorAll(".ulk").forEach(e => e.remove()); (root.matches?.(".row") ? [root] : []).concat([...root.querySelectorAll(".row")]).forEach(r => { r.classList.remove("unlock"); delete r.dataset.ulk; }); };
 
 // ------------------------------------------------------------------ search
 let searching = false, query = "";
@@ -729,7 +762,7 @@ function renderInspector() {
   else {
     const a = A[k];
     const src = p.sourceFile ? `<a href="https://github.com/MorpheApp/morphe-patches/blob/main/${esc(p.sourceFile)}" target="_blank" rel="noopener">${esc(p.sourceFile.split("/").pop())}</a>` : "–";
-    $("selCard").innerHTML = `<h2>Selected</h2><h3>${esc(title(k))}</h3><p>${esc(p.summary || summaryFor(k) || "")}</p>
+    $("selCard").innerHTML = `<h2>Selected</h2><h3>${esc(shownTitle(k))}</h3><p>${esc(p.summary || summaryFor(k) || "")}</p>
       <dl class="kv">
         <dt>Key</dt><dd>${esc(k)}</dd>
         <dt>Adapter</dt><dd><span class="pill">${a ? (a.kind === "scenario" ? "ScenarioAnimation" : KIND_NAME[a.kind]) : KIND_NAME.fallback}</span></dd>
@@ -765,7 +798,7 @@ function renderInspector() {
     <div class="covkey"><span><i class="anim"></i><b>${all.anim}</b> animated</span><span><i class="shown"></i><b>${all.shown}</b> shown, not animated</span><span><i class="ok"></i><b>${all.ok}</b> no preview, approved</span><span><i class="none"></i><b>${all.none}</b> no preview</span></div>
     <div class="covhelp">Animated: plays a demo or an Off / On comparison. Shown: drawn in the preview, or lights up the part of it it changes, without an animation. Approved: no preview, and fine that way. No preview: a plain setting row, under its tab's "More settings" (or in Miscellaneous when it has no tab). Tap a tab to see its settings without a preview.</div>
     <div class="cov">${tabs.map(({ s, keys, c }) => `<details class="r3" data-s="${s.id}"${openTabs.has(s.id) ? " open" : ""}><summary><span>${esc(s.title)}</span>${bar(c, keys.length)}<span class="num">${c.anim}<i>·</i>${c.shown}<i>·</i>${c.ok}<i>·</i>${c.none}</span></summary>
-      <div class="covmiss">${c.none || c.ok ? keys.filter(k => /none|ok/.test(kindOf(k))).map(k => `<div>${esc(title(k))}${kindOf(k) === "ok" ? " <i>(approved)</i>" : ""}</div>`).join("") : "Every setting here has a preview."}</div></details>`).join("")}</div>
+      <div class="covmiss">${c.none || c.ok ? keys.filter(k => /none|ok/.test(kindOf(k))).map(k => `<div>${esc(shownTitle(k))}${kindOf(k) === "ok" ? " <i>(approved)</i>" : ""}</div>`).join("") : "Every setting here has a preview."}</div></details>`).join("")}</div>
     <div class="covhelp">Numbers per tab: animated · shown · approved without preview · no preview. ${miscN ? `Miscellaneous holds ${miscN} more with no tab of their own.` : ""}</div>
     <p style="margin-top:12px;font-size:12px">Source: <span style="font-family:var(--mono)">${esc(CAT.source)}</span></p>`;
   const ch = changedOnly(); const n = Object.keys(ch).length;
@@ -790,7 +823,7 @@ function restartDialog() {
   const keys = pendingRestart();
   openDialog(`<div class="di">${I("restart")}</div><h2 id="dlgTitle">Restart to apply</h2>
     <p>${keys.length} setting${keys.length > 1 ? "s" : ""} only take${keys.length > 1 ? "" : "s"} effect after YouTube restarts.</p>
-    <ul>${keys.map(k => `<li>${esc(title(k))}</li>`).join("")}</ul>
+    <ul>${keys.map(k => `<li>${esc(shownTitle(k))}</li>`).join("")}</ul>
     <div class="acts"><button class="dbtn primary" id="dRestart">Restart now</button><button class="dbtn tonal" id="dStay">Keep editing</button></div>`);
   $("dRestart").onclick = () => { closeDialog(); $("restarting").classList.add("on"); setTimeout(() => { baseline = { ...state }; storeBaseline(); renderBar(); $("restarting").classList.remove("on"); snack("YouTube restarted. All changes are applied."); }, 1400); };
   $("dStay").onclick = closeDialog;
@@ -809,8 +842,8 @@ const borrowed = {};
 function borrowPopup(k, target) {
   const sec = SECTIONS.find(z => z.id === sectionOf(target)), p = PREF[target];
   const where = [p.screenTitle, p.subScreenTitle].filter(Boolean).join(" › ");
-  openDialog(`<h2 id="dlgTitle">${esc(title(target))}</h2>
-    <p class="dlgwhere">Lives on the <b>${esc(sec ? sec.title : "Miscellaneous")}</b> screen${where ? ` · in Morphe: ${esc(where)}` : ""}. “${esc(title(k))}” needs it.</p>
+  openDialog(`<h2 id="dlgTitle">${esc(shownTitle(target))}</h2>
+    <p class="dlgwhere">Lives on the <b>${esc(sec ? sec.title : "Miscellaneous")}</b> screen${where ? ` · in Morphe: ${esc(where)}` : ""}. “${esc(shownTitle(k))}” needs it.</p>
     <div class="dlglist">${rowHTML(target, false).replace('class="row', 'class="row inpop')}</div>
     <div class="acts"><button class="dbtn tonal" id="dDone">Done</button></div>`);
   const box = $("dlgBox");

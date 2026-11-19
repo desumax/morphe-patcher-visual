@@ -351,6 +351,9 @@ function cleanOf(k) {
   return { title: nice, labels };
 }
 const shownTitle = k => (design === "clean" && cleanOf(k)?.title) || title(k);
+// The word a setting's own toggle shows for a value (Hide/Show, Off/On, or On/Off for a "Disable X"
+// turned into "X"). Every place that names a setting's state uses it, so the words always match the card.
+const stateWord = (k, on) => { const c = design === "clean" && cleanOf(k); return c ? c.labels[on ? 1 : 0] : on ? "On" : "Off"; };
 const cleanBroken = k => design === "clean" && PREF[k] && PREF[k].type === "boolean" && !OFF_LIST.has(k) && !cleanOf(k);
 // Hide / Off always sit on the left and Show / On on the right; a thumb slides to the current one
 const NEG_WORD = new Set(["Hide", "Off"]);

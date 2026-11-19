@@ -411,7 +411,7 @@ scen("playback", "disable_player_popup_panels", (box) => {
   const [left, right] = box.querySelectorAll(".dev");
   story(left, sides[0][0]); story(right, sides[1][0]);
   at(4400, () => situation("2 · Then you open a live stream"));
-  return "Stock panels jump open; with the setting on they wait for your tap";
+  return `Stock panels jump open; set to ${sides.find(x => x[0] === true)[1]} they wait for your tap`;
 });
 // A long session with nobody touching the phone, shown as a run of videos with a clock.
 SCN_HOLD.morphe_continue_watching_prompt = 5200;

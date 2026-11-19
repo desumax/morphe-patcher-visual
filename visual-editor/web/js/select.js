@@ -210,7 +210,7 @@ function afterChange(k, before) {
     setTimeout(() => goToSetting(back.key, () => {
       const row = document.querySelector(`[data-row="${back.key}"]`);
       if (row) unlockFx(row);
-      snack(`<b>${esc(title(back.key))}</b> is unlocked`);
+      snack(`<b>${esc(shownTitle(back.key))}</b> is unlocked`);
     }), 650);
   }
 }

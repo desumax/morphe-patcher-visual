@@ -952,7 +952,7 @@ function playScenario(k, prevValue) {
   const wasHidden = stick.hidden || stick.classList.contains("noscene");
   if (wasHidden) { stick.hidden = false; stick.classList.remove("noscene"); $("stage").innerHTML = `<div style="height:320px"></div>`; }
   // the comparison draws inside the preview as it is: the preview area never grows for it
-  canvas.innerHTML = `<div class="cap"><b>${esc(title(k))}</b></div><div class="sit"></div><div class="scbox" style="display:grid;place-items:center"></div><div class="foot"></div><div class="prog"></div>`;
+  canvas.innerHTML = `<div class="cap"><b>${esc(shownTitle(k))}</b></div><div class="sit"></div><div class="scbox" style="display:grid;place-items:center"></div><div class="foot"></div><div class="prog"></div>`;
   canvas.classList.add("show");
   const box = canvas.querySelector(".scbox"), self = SCN_SELF_DUO.has(k);
   // two columns: no title line, the phones get that height (the selected card already names it)
