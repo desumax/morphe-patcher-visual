@@ -165,7 +165,7 @@ scen("feed", "native_queue_fetch_on_scroll", (box, on) => {
 });
 scen("feed", "restore_original_titles", (box, on) => {
   situation("A video with a translated title");
-  box.innerHTML = device("port", pageRows(feed7(`${big7(3, "")}<div class="tt7" style="font-size:7px;font-weight:600;transition:opacity .25s">Ich habe eine winzige Hütte gebaut</div>${row7(4, "Nachtzug nach Bodø")}`)));
+  box.innerHTML = device("port", pageRows(feed7(`${big7(3, "")}<div class="tt7 chg7" style="font-size:7px;font-weight:600;transition:opacity .25s">Ich habe eine winzige Hütte gebaut</div>${row7(4, "Nachtzug nach Bodø")}`)));
   const dev = box.querySelector(".dev"), t = dev.querySelector(".tt7");
   toast7(dev, on ? "The creator's original title" : "Auto-translated title (stock)", "84%");
   at(300, () => { if (!on) return; t.style.opacity = 0; later(() => { t.textContent = "I built a tiny cabin"; t.style.opacity = 1; }, 260); });
@@ -215,7 +215,7 @@ scen("look", "show_menu_icons", (box, on) => {
 });
 scen("look", "spoof_app_version", (box, on) => {
   situation("Pretending to be an older YouTube");
-  box.innerHTML = device("port", pageRows(top7("Settings", ["search"]) + `<div style="display:grid;gap:3px;font-size:6.5px"><div>About</div><div style="color:#aaa">App version</div><b class="v7" style="font-size:8px;transition:opacity .25s">20.44.38</b></div>` + feed7(big7(3, ""))));
+  box.innerHTML = device("port", pageRows(top7("Settings", ["search"]) + `<div style="display:grid;gap:3px;font-size:6.5px"><div>About</div><div style="color:#aaa">App version</div><b class="v7 chg7" style="font-size:8px;transition:opacity .25s">20.44.38</b></div>` + feed7(big7(3, ""))));
   const dev = box.querySelector(".dev"), v = dev.querySelector(".v7");
   if (on) toast7(dev, "Old layout comes back", "82%");
   at(300, () => { if (!on) return; v.style.opacity = 0; later(() => { v.textContent = V("morphe_spoof_app_version_target") || "19.01.34"; v.style.opacity = 1; }, 260); });
@@ -281,7 +281,7 @@ scen("comments", "minimal_comments_button", (box, on) => {
 });
 scen("comments", "sanitize_comments_highlighted_search_links", (box, on) => {
   situation("A comment with a highlighted word");
-  box.innerHTML = device("port", pageRows(top7("Comments", ["sort", "close"]) + cmt7(2, `Which <span class="hl7" style="color:#3ea6ff;white-space:nowrap">${I("search", "ico", 'style="width:6px;height:6px;fill:#3ea6ff;display:inline-block;vertical-align:-1px;margin-right:1px"')}wood stove</span> is that?`) + cmt7(3, "Subscribed for part 2")));
+  box.innerHTML = device("port", pageRows(top7("Comments", ["sort", "close"]) + cmt7(2, `Which <span class="hl7 chg7" style="color:#3ea6ff;white-space:nowrap">${I("search", "ico", 'style="width:6px;height:6px;fill:#3ea6ff;display:inline-block;vertical-align:-1px;margin-right:1px"')}wood stove</span> is that?`) + cmt7(3, "Subscribed for part 2")));
   const dev = box.querySelector(".dev");
   at(700, () => { if (!on) return; const h = dev.querySelector(".hl7"); h.innerHTML = "wood stove"; h.style.color = "inherit"; });
   return on ? "Words in comments are plain text, not search links" : "YouTube turns some words into search links (stock)";
@@ -319,7 +319,7 @@ scen("shorts", "shorts_disable_background_playback", (box, on) => {
 });
 scen("shorts", "shorts_remember_playback_speed", (box, on) => {
   situation("Changing speed on a Short, then swiping");
-  box.innerHTML = device("port", `<div class="sv7" style="position:absolute;inset:0;background:${ART[5]};transition:transform .4s var(--ease)"></div><div class="sp7 toastin" style="top:8px">1.5×</div>`);
+  box.innerHTML = device("port", `<div class="sv7" style="position:absolute;inset:0;background:${ART[5]};transition:transform .4s var(--ease)"></div><div class="sp7 toastin chg7" style="top:8px">1.5×</div>`);
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
   at(500, () => fingerTo(f, W * .5, H * .7)); at(700, () => { fingerTo(f, W * .5, H * .25, 400); dev.querySelector(".sv7").style.transform = "translateY(-100%)"; });
   at(1200, () => { f.classList.remove("show"); dev.querySelector(".sv7").style.cssText += `;transition:none;transform:none;background:${ART[6]}`; dev.querySelector(".sp7").textContent = on ? "1.5×" : "1×"; });
@@ -532,7 +532,7 @@ scen("playback", "on_the_go", (box, on) => {
     <div style="margin-top:auto;font-size:6px">3:12 / 18:42</div>
     <div style="position:relative;height:2px;border-radius:1px;background:#555"><i style="position:absolute;left:0;top:0;bottom:0;width:17%;background:#ff0033"></i><i style="position:absolute;left:17%;top:50%;width:5px;height:5px;border-radius:50%;background:#ff0033;transform:translate(-50%,-50%)"></i></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:3px">${ico7("prev", 9)}${seek7("seekb", 11)}<span class="pp8" style="width:21px;height:21px;border-radius:50%;background:rgba(255,255,255,.12);display:grid;place-items:center">${ico7("pause", 11)}</span>${seek7("seekf", 11)}${ico7("next", 9)}</div>
-    <div style="display:flex;align-items:center;justify-content:center;gap:12px">${ico7("dl", 8)}<span class="am8">${ico7("headset", 8)}</span><b style="font-size:7px">1×</b>${ico7("queue", 8)}</div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px">${ico7("dl", 8)}<span class="am8 chg7">${ico7("headset", 8)}</span><b style="font-size:7px">1×</b>${ico7("queue", 8)}</div>
   </div>`;
   at(1700, () => { f.classList.remove("show"); dev.querySelector(".fm7")?.remove(); dev.insertAdjacentHTML("beforeend", pnl); toast7(dev, "Big controls under the video", "6%"); });
   // the big play button
@@ -689,21 +689,23 @@ scen("playback", "hide_premium_video_quality", (box, on) => {
   box.innerHTML = device("port", pageRows(player7(3)) + `<div style="position:absolute;left:0;right:0;bottom:0;background:#212121;border-radius:6px 6px 0 0;padding:5px;display:grid;gap:3px;font-size:6.5px">${tgt7(`<div>1080p Premium <span style="color:#aaa">· enhanced bitrate</span></div>`)}<div>1080p</div><div>720p</div><div>Auto</div></div>`);
   const dev = box.querySelector(".dev"), t = dev.querySelector(".tgt7");
   at(400, () => t.classList.add("mark7")); at(1100, () => { if (on) t.classList.add("gone7"); }); at(1700, () => t.classList.remove("mark7"));
-  return on ? "Premium-only qualities are removed from the list" : "Premium qualities you can't use are listed (stock)";
+  return ""; // the list in the phones says it
 });
 for (const [k, what, val] of [["remember_playback_speed_last_selected", "speed", "1.5×"], ["remember_shorts_quality_last_selected", "Shorts quality", "720p"], ["remember_video_quality_last_selected", "quality", "1080p"]]) {
   scen("playback", k, (box, on) => {
     situation(`Picking a ${what}, then opening another video`);
-    box.innerHTML = device("port", watch7(`<span class="rv7 badge7" style="right:3px;top:3px">${val}</span>`));
+    // Shorts quality on a Short (full-height video), the others on the watch page
+    const rv = `<span class="rv7 badge7" style="right:3px;top:3px">${what === "speed" ? ico7("speed", 6) + " " : ""}${val}</span>`;
+    box.innerHTML = device("port", what === "Shorts quality" ? `<div class="pg7" style="position:absolute;inset:0"><div style="position:absolute;inset:0;background:${ART[5]};transition:background .3s"></div>${rv}<b style="position:absolute;left:5px;bottom:12px;font-size:6.5px">@fjordtimber · Tiny cabin tour</b></div>` : watch7(rv));
     const dev = box.querySelector(".dev");
     toast7(dev, on ? `Your ${what} is kept` : `Back to the default ${what}`, "80%");
-    at(300, () => { dev.querySelector(".pg7 > div").style.background = ART[6]; dev.querySelector(".rv7").textContent = on ? val : (what === "speed" ? "1×" : "Auto"); });
+    at(300, () => { dev.querySelector(".pg7 > div").style.background = ART[6]; dev.querySelector(".rv7").innerHTML = (what === "speed" ? ico7("speed", 6) + " " : "") + (on ? val : (what === "speed" ? "1×" : "Auto")); });
     return on ? `The last ${what} you picked becomes the default` : `Each video starts at the default ${what} (stock)`;
   });
 }
 scen("playback", "vot_enabled", (box, on) => {
   situation("A video in a language you don't speak");
-  box.innerHTML = device("port", watch7(`<span class="vo7" style="position:absolute;left:50%;bottom:4px;transform:translateX(-50%);font-size:6px;background:rgba(0,0,0,.75);padding:0 4px;white-space:nowrap;border-radius:3px">🗣 Привет, друзья!</span>`));
+  box.innerHTML = device("port", watch7(`<span class="vo7 chg7" style="position:absolute;left:50%;bottom:4px;transform:translateX(-50%);font-size:6px;background:rgba(0,0,0,.75);padding:0 4px;white-space:nowrap;border-radius:3px">🗣 Привет, друзья!</span>`));
   const dev = box.querySelector(".dev");
   at(800, () => { if (on) dev.querySelector(".vo7").innerHTML = "🎧 Hi, friends! <span style='color:#3ea6ff'>(voice-over)</span>"; });
   return on ? "A translated voice-over plays over the video" : "Original voice only (stock)";

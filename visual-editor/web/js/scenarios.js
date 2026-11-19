@@ -628,10 +628,30 @@ function keepPillIn(t) {
   const bottom = t.offsetTop + (mid ? h / 2 : h);
   if (bottom > H - 3) { t.style.top = Math.max(2, t.offsetTop - (bottom - (H - 3))) + "px"; t.style.bottom = "auto"; }
 }
-new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => {
-  if (n.nodeType !== 1) return;
-  [...(n.matches(".toastin") ? [n] : []), ...n.querySelectorAll(".toastin")].forEach(t => requestAnimationFrame(() => keepPillIn(t)));
-}))).observe(document.getElementById("canvas"), { childList: true, subtree: true }); // $() is defined later, in list.js
+// A small part of a scenario that changes (a corner readout such as "1.5×" or "720p", or anything marked
+// .chg7) flashes twice so the eye finds it: one shared rule for every animation, run from the observer
+// below, so a scenario only has to change the text. The first drawing of a phone never flashes.
+const CHG_SEL = ".badge7, .chg7";
+function flash7(el) {
+  if (!el.isConnected || el._flashAt && performance.now() - el._flashAt < 300) return;
+  el._flashAt = performance.now();
+  el.animate([{ scale: 1, boxShadow: "0 0 0 0 rgba(62,166,255,0)" }, { scale: 1.3, boxShadow: "0 0 0 .2em rgba(62,166,255,.95)", offset: .25 },
+    { scale: 1, boxShadow: "0 0 0 .1em rgba(62,166,255,.5)", offset: .5 }, { scale: 1.3, boxShadow: "0 0 0 .2em rgba(62,166,255,.95)", offset: .75 },
+    { scale: 1, boxShadow: "0 0 0 0 rgba(62,166,255,0)" }], { duration: 900, easing: "ease-in-out" });
+}
+new MutationObserver(ms => {
+  const hit = new Set();
+  ms.forEach(m => {
+    const t = m.target.nodeType === 1 ? m.target : m.target.parentElement, own = t && t.closest && t.closest(CHG_SEL);
+    if (own && own.closest(".dev")) hit.add(own); // its text or content changed
+    m.addedNodes.forEach(n => {
+      if (n.nodeType !== 1) return;
+      [...(n.matches(".toastin") ? [n] : []), ...n.querySelectorAll(".toastin")].forEach(t => requestAnimationFrame(() => keepPillIn(t)));
+      if (n.matches(CHG_SEL) && m.target.closest && m.target.closest(".dev")) hit.add(n); // a readout appearing later
+    });
+  });
+  hit.forEach(flash7);
+}).observe(document.getElementById("canvas"), { childList: true, subtree: true, characterData: true }); // $() is defined later, in list.js
 // swap what the device shows (fullscreen video vs portrait watch page) as it turns
 // The new screen goes in underneath, fully drawn, and the old one fades off the top of it. (Both used to
 // fade at once, old out and new in a little later, so the screen dipped to black in between: the flicker
@@ -761,7 +781,7 @@ scen("fullscreen", "swipe_press_to_engage", (box, on) => {
 });
 scen("fullscreen", "volume_boost", (box, on) => {
   situation("Swiping up at full volume");
-  box.innerHTML = device("land", `${miniVideo(6)}<div class="vb toastin" style="top:40%;translate:0 -50%">🔊 100%</div>`);
+  box.innerHTML = device("land", `${miniVideo(6)}<div class="vb chg7 toastin" style="top:40%;translate:0 -50%">🔊 100%</div>`);
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"), vb = box.querySelector(".vb"); const W = dev.clientWidth, H = dev.clientHeight;
   at(100, () => fingerTo(f, W * .82, H * .7)); at(350, () => fingerTo(f, W * .82, H * .15, 900));
   at(900, () => { vb.textContent = on ? "🔊 Boost 130%" : "🔊 100% (max)"; if (on) vb.style.color = "#ffb74d"; });
