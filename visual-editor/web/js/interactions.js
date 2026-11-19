@@ -283,17 +283,36 @@ function popOrigin(e) {
   const L = r.left - A.l < gx, R = A.r - r.right < gx, T = r.top - A.t < gy, B = A.b - r.bottom < gy;
   e.style.setProperty("--pop", `${L === R ? "center" : L ? "left" : "right"} ${T === B ? "center" : T ? "top" : "bottom"}`);
 }
-function scrollRowIntoView(k, center, tries = 2) {
+// A scroll that follows its target while it moves: the row's place is read again on every frame, so a
+// preview, top bar or description changing size mid-scroll bends the path instead of ending off target
+// and needing a second scroll. Touching the list takes over at once.
+let rowGlide = null;
+["wheel", "touchstart", "pointerdown", "keydown"].forEach(t => document.addEventListener(t, e => { if (rowGlide && $("scroller")?.contains(e.target)) rowGlide = null; }, { capture: true, passive: true }));
+function glideScrollTo(sc, targetOf, ms = 620) {
+  const id = {}, t0 = performance.now(), y0 = sc.scrollTop; rowGlide = id;
+  progScrollUntil = t0 + ms + 400;
+  const step = now => {
+    if (rowGlide !== id) return;
+    const raw = targetOf(); if (Number.isNaN(raw)) { rowGlide = null; return; }
+    const t = Math.min(1, (now - t0) / ms), y1 = Math.max(0, Math.min(sc.scrollHeight - sc.clientHeight, raw));
+    sc.scrollTop = y0 + (y1 - y0) * moveEase(t);
+    // after the move, hold the row in place a little longer while late layout changes settle
+    if (now - t0 < ms + 350) requestAnimationFrame(step); else rowGlide = null;
+  };
+  requestAnimationFrame(step);
+}
+function scrollRowIntoView(k, center) {
   const row = document.querySelector(`[data-row="${k}"]`); if (!row) return;
-  // a long smooth scroll can be cut short (the list or the preview changes height while it runs),
-  // so check where the row ended up and finish the job if it is still away from the target
-  if (center && tries) fT(() => {
-    const r = document.querySelector(`[data-row="${k}"]`); if (!r || selected !== k) return;
-    const sc = $("scroller"), sr = sc.getBoundingClientRect(), rr = r.getBoundingClientRect(), stickH = $("stick").offsetHeight;
-    const mid = sr.top + stickH + (sc.clientHeight - stickH) / 2, rmid = rr.top + rr.height / 2;
-    const atEnd = sc.scrollTop + sc.clientHeight >= sc.scrollHeight - 2 || sc.scrollTop <= 0;
-    if (Math.abs(rmid - mid) > 60 && !(atEnd && rr.top >= sr.top + stickH && rr.bottom <= sr.bottom)) scrollRowIntoView(k, true, tries - 1);
-  }, 750);
+  if (center) { // centred: one continuous move that tracks the row (see glideScrollTo)
+    const sc = $("scroller");
+    glideScrollTo(sc, () => {
+      const r = document.querySelector(`[data-row="${k}"]`); if (!r || selected !== k) return NaN;
+      const two = $("content").offsetWidth >= 600 && !$("content").classList.contains("stacked"), stickH = two ? 0 : $("stick").offsetHeight;
+      const top = r.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop;
+      return top - stickH - (sc.clientHeight - stickH) / 2 + r.offsetHeight / 2;
+    });
+    return;
+  }
   const sc = $("scroller"), two = $("content").offsetWidth >= 600 && !$("content").classList.contains("stacked"), stickH = two ? 0 : $("stick").offsetHeight;
   const top = row.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop;
   const target = center ? top - stickH - (sc.clientHeight - stickH) / 2 + row.offsetHeight / 2 : top - stickH - 8;

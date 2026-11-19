@@ -35,6 +35,19 @@ const DEV_DONE = new Set(["player", "seekbar", "fullscreen", "flyout"]); // sect
 const NO_PREVIEW_OK = new Set(["fullscreen", "player", "morphe_custom_seekbar_thumb_file", "morphe_swipe_seek_sensitivity"]);
 const devMark = id => DEV_DONE.has(id) ? `<span class="devdone" title="Finished (development marker)">✓</span>` : "";
 const devMarkGroup = g => tabsOf(g).length && tabsOf(g).every(([id]) => DEV_DONE.has(id)) ? devMark(tabsOf(g)[0][0]) : "";
+// Click a title with the mouse to copy it in quotes ("Open advanced quality menu"), for writing feedback
+// faster. Only in the web preview (no MorpheApp bridge) and only for a mouse, so a phone never sees it.
+// To remove before shipping: delete these lines and the .devcopy CSS rule.
+document.addEventListener("click", e => {
+  if (typeof window.MorpheApp !== "undefined" || e.pointerType !== "mouse" || !(e.target instanceof Element)) return;
+  const row = e.target.closest(".row .ttl") && e.target.closest("[data-row]"), res = e.target.closest(".sres .ttl") && e.target.closest("[data-res]");
+  const plain = e.target.closest(".gc-t, .tab7, .pick .pt, .sit, .gtitle");
+  let t = row ? shownTitle(row.dataset.row) : res ? title(res.dataset.res) : plain ? plain.textContent : "";
+  t = t.replace(/✓/g, "").replace(/\s+/g, " ").trim(); if (!t) return;
+  const q = `"${t}"`, done = () => { const n = document.createElement("div"); n.className = "devcopy"; n.textContent = "Copied " + q; n.style.left = e.clientX + "px"; n.style.top = e.clientY + "px"; document.body.appendChild(n); setTimeout(() => n.remove(), 1100); };
+  const old = () => { const ta = document.createElement("textarea"); ta.value = q; ta.style.cssText = "position:fixed;opacity:0"; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); done(); } catch (x) { /* no clipboard */ } ta.remove(); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(q).then(done, old); else old();
+}, true);
 // ---- end DEV ONLY ---------------------------------------------------------------------------------
 function renderTabs() {
   const box = $("tabs"); if (!box) return;
