@@ -108,7 +108,7 @@ function runTutorial(startAt) {
     demo.dataset.page = id;
     f.classList.remove("tap", "hold"); ring.classList.remove("go"); row.classList.remove("sel", "morph"); cast.classList.remove("charging");
     ["tPick", "tMenu", "tQ"].forEach(x => $(x).classList.remove("show")); $("tQt").textContent = "";
-    demo.classList.remove("searching", "found"); $("tSres").classList.remove("hit");
+    demo.classList.remove("searching", "found"); $("tSres").classList.remove("hit"); demoMorphReset(demo);
     setMode(false);
     setTabs(playerTabs, 0); setPill(GROUPS[0]); setView("");
     setGrouped(grouped); setRowDesign(design);
@@ -163,12 +163,12 @@ function runTutorial(startAt) {
       { // the bar grows out of the search icon to both sides, as in the app
         const q = $("tQ").getBoundingClientRect(), r = $("tSearch").getBoundingClientRect();
         $("tQ").style.setProperty("--cl", Math.max(0, r.left - q.left) + "px"); $("tQ").style.setProperty("--cr", Math.max(0, q.right - r.right) + "px"); }
-      at2(700, () => { tap(); $("tQ").classList.add("show"); demo.classList.add("searching"); });
-      [...TUT_QUERY].forEach((c, i) => at2(1000 + i * 110, () => { $("tQt").textContent += c; if (i === 3) demo.classList.add("found"); }));
+      at2(700, () => { tap(); $("tQ").classList.add("show"); demoMorph(demo, () => demo.classList.add("searching")); });
+      [...TUT_QUERY].forEach((c, i) => at2(1000 + i * 110, () => { $("tQt").textContent += c; if (i === 3) demoMorph(demo, () => demo.classList.add("found")); }));
       at2(2300, () => move($("tSres"), 450));
       at2(2850, () => { tap(); $("tSres").classList.add("hit"); });
       // the result opens the Cast button's card, as at the start of the tutorial: hidden, so the outline shows where it is
-      at2(3100, () => { $("tQ").classList.remove("show"); $("tQt").textContent = ""; demo.classList.remove("searching", "found"); row.classList.add("sel"); cast.className = "tb ghost"; });
+      at2(3100, () => { $("tQ").classList.remove("show"); $("tQt").textContent = ""; demoMorph(demo, () => demo.classList.remove("searching", "found"), true); row.classList.add("sel"); cast.className = "tb ghost"; });
       at2(3700, () => move($("tReset"), 500));
       at2(4250, () => { tap(); $("tMenu").classList.add("show"); });
       at2(4600, () => move($("tChScreen"), 450, 40));
@@ -213,3 +213,31 @@ $("replayTut").onclick = () => runTutorial();
 function tutOnce(id) { let done = false; try { done = localStorage.getItem(LS + "-tut-" + id) === "1"; localStorage.setItem(LS + "-tut-" + id, "1"); } catch { /* storage unavailable */ } if (!done) setTimeout(() => runTutorial(id), 400); }
 
 function tick() { const d = new Date(); $("clock").textContent = `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`; }
+
+// The parts of a tutorial demo that fold away or unfold (search: the preview, the tabs and the card
+// make way for the results) change by their real heights, measured before and after, in one motion,
+// inside a demo that keeps its height, so nothing around it (the page text, the buttons, the other
+// animations) moves. max-height guesses started late, stopped short, and the results replacing the
+// hint jumped, which shook the whole page each time search opened or closed.
+const MORPH_SEL = ".tstage, .ttabs, .tlist, .tres";
+function demoMorph(demo, change, last = false, ms = 350) {
+  const els = [...demo.querySelectorAll(MORPH_SEL)];
+  const snap = () => els.map(e => { const cs = getComputedStyle(e); return { height: e.getBoundingClientRect().height + "px", marginTop: cs.marginTop, paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom, opacity: cs.opacity }; });
+  const from = snap(); // read mid-motion too, so a change during the last one carries on from where it is
+  els.forEach(e => e.getAnimations().filter(a => a.id === "morph").forEach(a => a.cancel()));
+  if (!demo.style.minHeight) demo.style.minHeight = demo.getBoundingClientRect().height + "px";
+  change();
+  els.forEach(e => { e.style.transition = "none"; });
+  const to = snap();
+  els.forEach((e, i) => {
+    if (JSON.stringify(from[i]) === JSON.stringify(to[i])) { e.style.transition = ""; return; }
+    const an = e.animate([{ ...from[i], overflow: "hidden" }, { ...to[i], overflow: "hidden" }], { id: "morph", duration: ms, easing: "cubic-bezier(.4,0,.2,1)" });
+    an.onfinish = () => { e.style.transition = ""; };
+  });
+  clearTimeout(demo._morphT);
+  if (last) demo._morphT = setTimeout(() => { demo.style.minHeight = ""; }, ms + 20);
+}
+function demoMorphReset(demo) {
+  clearTimeout(demo._morphT); demo.style.minHeight = "";
+  demo.querySelectorAll(MORPH_SEL).forEach(e => { e.getAnimations().filter(a => a.id === "morph").forEach(a => a.cancel()); e.style.transition = ""; });
+}

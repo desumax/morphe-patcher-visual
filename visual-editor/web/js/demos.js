@@ -342,7 +342,7 @@ scen("seekbar", "live_stream_dvr", (box, on) => {
   box.innerHTML = device("land", liveDev(on ? 0 : 96));
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"), mp = dev.querySelector(".mp"); const W = dev.clientWidth, H = dev.clientHeight;
   at(150, () => fingerTo(f, W * .9, H * .84)); at(450, () => { fingerTo(f, W * .35, H * .84, 900); if (on) mp.style.width = "35%"; });
-  at(1400, () => dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px;font-size:9px">${on ? "−1:12:40 · rewinding" : "This stream can't be rewound"}</div>`));
+  at(1400, () => dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px">${on ? "−1:12:40 · rewinding" : "This stream can't be rewound"}</div>`));
   return on ? "You can drag back on any live stream" : "Rewinding is blocked on this stream (stock)";
 });
 scen("seekbar", "expand_live_stream_dvr_duration", (box, on) => {
@@ -350,7 +350,7 @@ scen("seekbar", "expand_live_stream_dvr_duration", (box, on) => {
   box.innerHTML = device("land", liveDev(on ? 0 : 70));
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"), mp = dev.querySelector(".mp"); const W = dev.clientWidth, H = dev.clientHeight;
   at(150, () => fingerTo(f, W * .9, H * .84)); at(450, () => { fingerTo(f, W * .1, H * .84, 1000); mp.style.width = on ? "3%" : "70%"; });
-  at(1500, () => dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px;font-size:9px">${on ? "−3 days · stream start" : "Stops at −4:00:00"}</div>`));
+  at(1500, () => dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px">${on ? "−3 days · stream start" : "Stops at −4:00:00"}</div>`));
   return on ? "Rewind up to 7 days back" : "Rewind stops after a few hours (stock)";
 });
 // ------------------------------------------------------------------ section membership
@@ -380,8 +380,9 @@ Object.assign(DEMOS, {
 const pageRows = (rows) => `<div class="pg7" style="position:absolute;inset:0;background:#0f0f0f;padding:6px;display:grid;grid-template-columns:minmax(0,1fr);grid-auto-rows:max-content;gap:5px;align-content:start;font-size:7px;color:#ddd">${rows}</div>`;
 const bar7 = (w = 100, c = "#2a2a2a", h = 6) => `<i style="display:block;height:${h}px;width:${w}%;border-radius:3px;background:${c}"></i>`;
 const cmt7 = (i, txt) => `<div class="cm7" style="display:flex;gap:4px;align-items:flex-start;padding:3px;border-radius:4px;transition:background .2s"><span style="width:12px;height:12px;border-radius:50%;background:${AV[i % AV.length]};flex:none"></span><span style="line-height:1.3">${txt}</span></div>`;
-function toast7(dev, text, top = "78%") { dev.querySelectorAll(".t7").forEach(n => n.remove()); dev.insertAdjacentHTML("beforeend", `<div class="toastin t7" style="top:${top};font-size:8px;padding:3px 8px">${text}</div>`); }
-function sheet7(dev, rows) { dev.insertAdjacentHTML("beforeend", `<div class="sh7" style="position:absolute;left:0;right:0;bottom:0;background:#212121;border-radius:8px 8px 0 0;padding:6px;display:grid;gap:4px;font-size:7.5px;animation:sheetup .25s var(--ease);z-index:5">${rows}</div>`); }
+function toast7(dev, text, top = "78%") { dev.querySelectorAll(".t7").forEach(n => n.remove()); dev.insertAdjacentHTML("beforeend", `<div class="toastin t7" style="top:${top}">${text}</div>`); }
+// a sheet in a scenario phone dims what it opens over, like the player menu sheets in the preview
+function sheet7(dev, rows) { dev.insertAdjacentHTML("beforeend", `<div class="shs7" style="position:absolute;inset:0;background:rgba(0,0,0,.5);animation:ghostin .25s var(--ease);z-index:5"></div><div class="sh7" style="position:absolute;left:0;right:0;bottom:0;background:#212121;border-radius:8px 8px 0 0;padding:6px;display:grid;gap:4px;font-size:7.5px;animation:sheetup .25s var(--ease);z-index:5">${rows}</div>`); }
 function holdAt(f, x, y) { fingerTo(f, x, y); f.classList.add("hold"); }
 
 scen("comments", "copy_comments", (box, on) => {
@@ -433,7 +434,7 @@ scen("description", "copy_select_text", (box, on) => {
   box.innerHTML = device("port", pageRows(`<b style="font-size:8px">Description</b><span class="d7" style="line-height:1.35">Two weeks, one 12 m² cabin and a lot of <span class="w7">reclaimed pine</span>.</span>${bar7(90)}${bar7(70)}`));
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
   at(200, () => holdAt(f, W * .45, H * .13));
-  at(900, () => { f.classList.remove("hold", "show"); if (!on) { toast7(dev, "Nothing happens", "60%"); return; } const w = dev.querySelector(".w7"); w.style.background = "rgba(62,166,255,.45)"; w.style.borderRadius = "2px"; dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:6%;font-size:7.5px;padding:3px 8px;background:#333">Copy · Select all · Share</div>`); });
+  at(900, () => { f.classList.remove("hold", "show"); if (!on) { toast7(dev, "Nothing happens", "60%"); return; } const w = dev.querySelector(".w7"); w.style.background = "rgba(62,166,255,.45)"; w.style.borderRadius = "2px"; dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:6%;background:#333">Copy · Select all · Share</div>`); });
   return on ? "Hold the description: select any part and copy it" : "Hold the description: nothing to select (stock)";
 });
 scen("watch", "copy_video_title", (box, on) => {

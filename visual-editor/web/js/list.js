@@ -145,6 +145,8 @@ function renderStage() {
 // Opening a sheet: the menu row is tapped, the menu slides down and the sheet slides up, as in the
 // app. Going back to the menu plays it the other way. The old sheet is a copy without settings on it.
 const FLY_ROW = { quality: "morphe_hide_player_flyout_quality", captions: "morphe_hide_player_flyout_captions", audio: "morphe_hide_player_flyout_audio_track" };
+// the menu row lighting up, the old sheet sliding down, the pause before the new one, its slide up (ms)
+const FLY_MS = { tap: 182, out: 168, gap: 140, in: 224 };
 function flyTransition(st, from, to) {
   const sheet = st.querySelector(".inner-scroll"); if (!sheet) return;
   const t = document.createElement("div"); t.innerHTML = from.html; const old = t.firstElementChild; if (!old) return;
@@ -152,14 +154,14 @@ function flyTransition(st, from, to) {
   const tapRow = to && old.querySelector(`[data-k="${FLY_ROW[to]}"]`);
   old.querySelectorAll("[data-k], [data-also]").forEach(e => { e.removeAttribute("data-k"); e.removeAttribute("data-also"); e.classList.remove("sel", "flash", "selx"); });
   sheet.after(old); old.scrollTop = from.top;
-  const ease = "cubic-bezier(.2,0,0,1)", wait = tapRow ? 260 : 0;
-  if (tapRow) { tapRow.style.transition = "background .18s"; requestAnimationFrame(() => { tapRow.style.background = "rgba(255,255,255,.14)"; }); }
+  const T = FLY_MS, ease = "cubic-bezier(.2,0,0,1)", wait = tapRow ? T.tap : 0;
+  if (tapRow) { tapRow.style.transition = `background ${T.tap * .7}ms`; requestAnimationFrame(() => { tapRow.style.background = "rgba(255,255,255,.14)"; }); }
   sheet.style.transform = "translateY(100%)";
-  old.animate([{ transform: "none" }, { transform: "translateY(100%)" }], { duration: 240, delay: wait, easing: "cubic-bezier(.3,0,1,1)", fill: "forwards" }).onfinish = () => old.remove();
-  const a = sheet.animate([{ transform: "translateY(100%)" }, { transform: "none" }], { duration: 320, delay: wait + 200, easing: ease, fill: "backwards" });
+  old.animate([{ transform: "none" }, { transform: "translateY(100%)" }], { duration: T.out, delay: wait, easing: "cubic-bezier(.3,0,1,1)", fill: "forwards" }).onfinish = () => old.remove();
+  const a = sheet.animate([{ transform: "translateY(100%)" }, { transform: "none" }], { duration: T.in, delay: wait + T.gap, easing: ease, fill: "backwards" });
   sheet.style.transform = "";
   const ring = () => { try { wakeRings(); } catch { /* not loaded */ } };
-  [0, wait + 200, wait + 520].forEach(ms => setTimeout(ring, ms)); a.onfinish = ring;
+  [0, wait + T.gap, wait + T.gap + T.in].forEach(ms => setTimeout(ring, ms)); a.onfinish = ring;
 }
 // Parts of the preview that no setting on this screen changes are greyed out: plain controls (the
 // play button, the time, a seekbar that belongs to another tab) and components of other screens.
@@ -337,7 +339,26 @@ function byPosition(keys) {
   const pos = stagePositions(), idx = new Map(keys.map((k, i) => [k, i]));
   const at = k => pos[k] !== undefined ? pos[k] : null;
   const placed = keys.filter(k => at(k) !== null).sort((a, b) => at(a) - at(b) || idx.get(a) - idx.get(b));
-  return [...placed, ...keys.filter(k => at(k) === null)];
+  const rest = placeDependents([placed], keys.filter(k => at(k) === null));
+  return [...placed, ...rest];
+}
+// A setting that only matters once another one is set up (Speed step needs a Speed swipe zone) and has
+// nothing of its own in the preview goes right after the related settings: after the one that unlocks
+// under the same condition and is most alike by name (Overlay timeout after the overlay settings), else
+// after the setting it depends on. Not at the top or the bottom of the screen. One rule for every tab,
+// the captioned ones and sub-options included.
+// lists: the arrays the rows are placed into (changed in place); returns the rows with nothing related.
+const condOf = k => String(PREF[k].availability || "") + "|" + (PREF[k].parents || []).map(x => x.key + x.mode).join(",");
+const alike = (a, b) => { let n = 0; while (n < a.length && a[n] === b[n]) n++; return n; };
+function placeDependents(lists, movable) {
+  const rest = [];
+  for (const k of movable) {
+    const c = condOf(k); let at = null, best = -1;
+    if (c !== "|") lists.forEach(l => l.forEach((x, i) => { if (x !== k && condOf(x) === c && alike(x, k) >= best) { best = alike(x, k); at = [l, i]; } }));
+    if (!at) { const deps = new Set([...(PREF[k].parents || []).map(x => x.key), ...availKeys(k)]); lists.forEach(l => l.forEach((x, i) => { if (deps.has(x)) at = [l, i]; })); }
+    if (at) at[0].splice(at[1] + 1, 0, k); else rest.push(k);
+  }
+  return rest;
 }
 let lastVis = { sec: null, keys: new Set() };
 const pickedFiles = {}; // images chosen with a file picker, kept for this visit only
@@ -370,17 +391,18 @@ function renderList() {
     const lay = LAYOUT[section];
     if (lay) {
       // screens with a lot of related settings get small captions so it is clear what belongs together
-      const used = new Set();
-      for (const [cap, ks] of lay) {
-        const inSec = ks.map(x => "morphe_" + x).filter(x => ordered.includes(x)); inSec.forEach(x => used.add(x));
+      const used = new Set(), caps = lay.map(([cap, ks]) => [cap, ks.map(x => "morphe_" + x).filter(x => ordered.includes(x))]);
+      caps.forEach(([, inSec]) => inSec.forEach(x => used.add(x)));
+      // settings not in a caption join the related ones (see placeDependents); only the rest go first
+      const left = placeDependents(caps.map(c => c[1]), ordered.filter(x => !used.has(x))).map(withKids).join("");
+      for (const [cap, inSec] of caps) {
         const body = inSec.map(withKids).join("");
-        if (body) live += `<div class="subhead">${esc(cap)}</div>${body}`;
+        if (body) live += `<div class="subhead" data-h="${esc(cap)}">${esc(cap)}</div>${body}`;
       }
-      const left = ordered.filter(x => !used.has(x)).map(withKids).join("");
       if (left) live = left + live;
     } else live = ordered.map(withKids).join("");
     if (live) html += `<div class="group">${live}</div>`;
-    if (rest.length) html += `${ordered.length ? `<div class="sechead">More settings<span class="nolive">No live preview or animation</span></div>` : ""}<div class="group">${rest.map(withKids).join("")}</div>`;
+    if (rest.length) html += `${ordered.length ? `<div class="sechead" data-h="more">More settings<span class="nolive">No live preview or animation</span></div>` : ""}<div class="group">${rest.map(withKids).join("")}</div>`;
   } else {
     const groups = {};
     for (const k of m.misc) {
@@ -389,7 +411,7 @@ function renderList() {
       const g = (p.screenTitle || "Unplaced") + (p.subScreenTitle ? " › " + p.subScreenTitle : "");
       (groups[g] = groups[g] || []).push(k);
     }
-    for (const g of Object.keys(groups).sort()) html += `<div class="gtitle">${esc(g)} · ${groups[g].length}</div><div class="group">${groups[g].map(withKids).join("")}</div>`;
+    for (const g of Object.keys(groups).sort()) html += `<div class="gtitle" data-h="${esc(g)}">${esc(g)} · <span class="gn">${groups[g].length}</span></div><div class="group">${groups[g].map(withKids).join("")}</div>`;
   }
   const list = $("list");
   // sub-options that are about to fold away keep their old look (no locks popping in) while they
@@ -409,7 +431,8 @@ function renderList() {
   // drawn in its new state it showed a lock and its "Needs ..." line, grew, then shrank
   const oldKidRows = new Map(); list.querySelectorAll(".kids .row:not(.hide)").forEach(r => oldKidRows.set(r.dataset.row, r.outerHTML));
   const wasOpen = new Map([...list.querySelectorAll(".row > .txt > .sum.open")].map(e => [e.closest(".row").dataset.row, e.getBoundingClientRect().height]));
-  list.innerHTML = html;
+  const headsWere = list.dataset.view === section ? shownHeads(list) : null;
+  list.innerHTML = html; list.dataset.view = section;
   mergeZonePreview(list);
   const goneNow = hideLocked(list);
   midFold.forEach((h, grp) => {
@@ -463,11 +486,15 @@ function renderList() {
   list.querySelectorAll(".kids").forEach(e => e.classList.toggle("open", wantOpen.has(e.dataset.kidsOf)));
   lastOpen = wantOpen; lastVis = { sec: section, keys: nowVis };
   // locked settings that came or went fold in and out like sub-options
-  if (lastGone.sec === section) list.querySelectorAll(".row[data-row]").forEach(r => {
-    const k = r.dataset.row, box = r.closest(".gunit") || r;
-    if (lastGone.keys.has(k) && !goneNow.has(k)) sizeAnim(box, true);
-    else if (!lastGone.keys.has(k) && goneNow.has(k)) { box.classList.remove("gone"); const an = sizeAnim(box, false); const end = () => { box.classList.add("gone"); box.getAnimations().forEach(a => a.cancel()); }; if (an) an.onfinish = end; else end(); }
-  });
+  if (lastGone.sec === section) {
+    list.querySelectorAll(".row[data-row]").forEach(r => {
+      const k = r.dataset.row, box = r.closest(".gunit") || r;
+      if (lastGone.keys.has(k) && !goneNow.has(k)) sizeAnim(box, true);
+      else if (!lastGone.keys.has(k) && goneNow.has(k)) { box.classList.add("going"); foldAway(box, () => syncGroups(list)); }
+    });
+    syncGroups(list);
+    syncHeads(list, headsWere);
+  }
   lastGone = { sec: section, keys: goneNow };
   // rows that just became available on this screen get the unlock animation
   // read from the settings, not the drawn rows: a sub-option folding away keeps its unlocked look
@@ -484,19 +511,19 @@ let lastGone = { sec: null, keys: new Set() };
 // selecting a locked setting (from search) unfolds it; selecting something else folds it away again
 function syncLocked(k) {
   const list = $("list"); if (!list || searching) return;
+  const before = shownHeads(list); let changed = false;
   list.querySelectorAll(".gunit").forEach(box => {
     const row = box.classList.contains("row") ? box : box.querySelector(":scope > .row"); if (!row) return;
-    const want = row.dataset.row === k || !row.classList.contains("dis"), gone = box.classList.contains("gone");
-    if (want && gone) {
-      box.classList.remove("gone"); lastGone.keys.delete(row.dataset.row);
-      for (let h = box.previousElementSibling; h; h = h.previousElementSibling) if (h.classList.contains("subhead")) { h.classList.remove("gone"); break; }
-      box.closest(".group")?.classList.remove("gone");
-      sizeAnim(box, true);
-    } else if (!want && !gone) {
-      lastGone.keys.add(row.dataset.row);
-      const an = sizeAnim(box, false); const end = () => { box.classList.add("gone"); box.getAnimations().forEach(a => a.cancel()); }; if (an) an.onfinish = end; else end();
+    const want = row.dataset.row === k || !row.classList.contains("dis"), out = isOut(box);
+    if (want && out) {
+      box.getAnimations().forEach(a => a.cancel()); box.classList.remove("gone", "going"); lastGone.keys.delete(row.dataset.row); changed = true;
+      syncGroups(list); sizeAnim(box, true);
+    } else if (!want && !out) {
+      lastGone.keys.add(row.dataset.row); changed = true;
+      foldAway(box, () => syncGroups(list));
     }
   });
+  if (changed) syncHeads(list, before);
 }
 function hideLocked(list) {
   const gone = new Set();
@@ -505,13 +532,42 @@ function hideLocked(list) {
     const unit = r.parentElement.classList.contains("unit") && r.parentElement.firstElementChild === r ? r.parentElement : r;
     unit.classList.add("gone", "gunit"); gone.add(k);
   });
-  // a caption with nothing left under it goes too
-  list.querySelectorAll(".subhead").forEach(h => {
-    let any = false; for (let n = h.nextElementSibling; n && !n.classList.contains("subhead"); n = n.nextElementSibling) if (!n.classList.contains("gone")) { any = true; break; }
-    h.classList.toggle("gone", !any);
-  });
-  list.querySelectorAll(".group").forEach(g => g.classList.toggle("gone", ![...g.children].some(n => !n.classList.contains("gone") && !n.classList.contains("subhead"))));
+  syncHeads(list, null);
   return gone;
+}
+// Captions and headings ("Swipe zones", "More settings", a Miscellaneous group) only show while
+// something under them does, in every tab and list design: worked out from the rows, never fixed in
+// the markup. A row folding away ("going") already counts as gone, so its heading folds with it.
+// before: the headings shown before the change (headId), to fold the ones that came or went; null
+// just sets them.
+const HEADS = ".subhead, .sechead, .gtitle";
+const isOut = n => n.classList.contains("gone") || n.classList.contains("going");
+const headId = h => h.dataset.h || h.textContent;
+const shownHeads = list => new Set([...list.querySelectorAll(HEADS)].filter(h => !isOut(h)).map(headId));
+function headBody(h) {
+  if (h.classList.contains("subhead")) { const out = []; for (let n = h.nextElementSibling; n && !n.matches(HEADS); n = n.nextElementSibling) out.push(n); return out; }
+  const g = h.nextElementSibling; return g && g.classList.contains("group") ? [...g.children].filter(n => !n.matches(HEADS)) : [];
+}
+function syncHeads(list, before) {
+  list.querySelectorAll(HEADS).forEach(h => {
+    const items = headBody(h).filter(n => !isOut(n)), show = items.length > 0, going = h.classList.contains("going");
+    const gn = h.querySelector(".gn"); if (gn && show) gn.textContent = items.length;
+    const was = before ? before.has(headId(h)) : show;
+    if (was === show && !(going && show)) { if (!going) h.classList.toggle("gone", !show); return; }
+    h.getAnimations().forEach(a => a.cancel()); h.classList.remove("going", "gone", "sizing", "sizew", "sizei");
+    if (show) sizeAnim(h, true);
+    else foldAway(h);
+  });
+  syncGroups(list);
+}
+// a card group stays while a row in it is still folding away
+const syncGroups = list => list.querySelectorAll(".group").forEach(g => g.classList.toggle("gone", ![...g.children].some(n => !n.matches(HEADS) && !n.classList.contains("gone"))));
+// folds a row or heading away, then hides it for good
+function foldAway(el, then) {
+  el.classList.remove("gone"); el.classList.add("going");
+  const an = sizeAnim(el, false);
+  const end = () => { el.classList.remove("going"); el.classList.add("gone"); el.getAnimations().forEach(a => a.cancel()); if (then) then(); };
+  if (an) an.onfinish = end; else end();
 }
 function mergeZonePreview(list) {
   const pv = list.querySelector('.row[data-row="morphe_swipe_zone_preview"]'); if (!pv) return;
@@ -548,6 +604,7 @@ function setSearch(on) {
   else { $("q").blur(); renderStage(); renderList(); }
 }
 function renderSearch() {
+  $("list").dataset.view = "search";
   const q = query.trim().toLowerCase();
   const all = CAT.preferences.filter(p => inVersion(p.key));
   if (!q) { $("list").innerHTML = `<div class="shint">Type to search all ${all.length} settings.</div>`; return; }

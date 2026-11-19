@@ -291,10 +291,19 @@ SCENES.comments = () => {
   </div>`;
 };
 
+// What a bottom sheet (the player menu, its Quality, Captions and Audio track sheets) opens over: the
+// watch page, dimmed, as in the app. Whenever a sheet slides away or in, this is what shows behind it,
+// never an empty black screen.
+const sheetBackdrop = (i = 4) => `<div class="shbg" style="position:absolute;inset:0;pointer-events:none">
+    <div style="aspect-ratio:16/9;position:relative">${videoFrame(i)}</div>
+    <div style="padding:10px 12px 4px"><div class="t1" style="font-size:15px">${esc(VIDEOS[i].t)}</div><div class="t2">${VIDEOS[i].c} · ${VIDEOS[i].v}</div></div>
+    <div style="display:flex;gap:10px;align-items:center;padding:6px 12px">${av(i, 30)}<span style="flex:1;font-size:13px">${VIDEOS[i].c}</span><span style="padding:6px 12px;border-radius:16px;background:#f1f1f1;color:#0f0f0f;font-size:12.5px;font-weight:500">Subscribe</span></div>
+    <div style="padding:8px 12px;display:grid;gap:10px">${[1, 2].map(j => `<div style="display:flex;gap:10px">${thumb(j, "width:140px;flex:none")}<div style="min-width:0"><div class="t1">${esc(VIDEOS[j].t)}</div><div class="t2">${VIDEOS[j].c}</div></div></div>`).join("")}</div>
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,.6)"></div></div>`;
 SCENES.flyout = () => {
   const row = (k, icon, t, val = "") => C(k, `<div style="display:flex;align-items:center;gap:16px;padding:11px 18px">${I(icon)}<span style="flex:1;font-size:14px">${t}</span><span class="t2">${val}</span></div>`, { blk: 1 });
   return `<div style="background:#0f0f0f;height:350px;position:relative;overflow:hidden">
-    <div style="height:100px;position:relative">${videoFrame(4)}<div class="scrim" style="opacity:.6"></div></div>
+    ${sheetBackdrop(4)}
     <div class="inner-scroll" style="position:absolute;left:0;right:0;top:56px;bottom:0;background:#212121;border-radius:14px 14px 0 0;overflow-y:auto;scrollbar-width:thin;padding-bottom:8px">
       <div style="width:36px;height:4px;border-radius:2px;background:#555;margin:8px auto 4px"></div>
       ${row("hide_player_flyout_quality", "tune", "Quality", "Auto (1080p)")}${row("hide_player_flyout_captions", "cc", "Captions", "Off")}
@@ -575,7 +584,7 @@ let flySub = null;
     flySub = FLY_SUB[selected] || null;
     if (!flySub) return base();
     return `<div style="background:#0f0f0f;height:350px;position:relative;overflow:hidden">
-      <div style="height:100px;position:relative">${videoFrame(4)}<div class="scrim" style="opacity:.6"></div></div>
+      ${sheetBackdrop(4)}
       <div style="position:absolute;left:0;right:0;top:56px;bottom:0;background:#212121;border-radius:14px 14px 0 0;overflow-y:auto;scrollbar-width:thin" class="inner-scroll">
         <div style="width:36px;height:4px;border-radius:2px;background:#555;margin:8px auto 6px"></div>
         ${SHEETS[flySub]()}

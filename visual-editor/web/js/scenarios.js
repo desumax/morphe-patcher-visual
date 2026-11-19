@@ -20,7 +20,9 @@ function device(orient, inner, extra = "") {
   return `<div class="dev ${orient}" style="width:${w}px;height:${h}px;${extra}"><div class="waves l"></div><div class="waves r"></div>${inner}<div class="finger" id="scFinger">${I("gesture")}</div></div>`;
 }
 const playerArea = (i, overlay = "") => `<div class="dv-video" style="background:${ART[i]}">${overlay}</div><div class="dv-below"><i></i><i></i><i></i></div>`;
-function rotate(dev, orient) { const [w, h] = DEV_SIZE[orient]; dev.classList.remove("port", "land"); dev.classList.add(orient); dev.style.width = w + "px"; dev.style.height = h + "px"; fitDev(orient); }
+function setOrient(dev, orient) { const [w, h] = DEV_SIZE[orient]; dev.classList.remove("port", "land"); dev.classList.add(orient); dev.style.width = w + "px"; dev.style.height = h + "px"; }
+// in a pair, a phone changing shape re-lays out the pair, and everything glides there (see fitDev)
+function rotate(dev, orient) { const g = dev.closest(".duo7.gen"); if (g) { g._turn = true; g._was = g._was || pairSnap(g); } setOrient(dev, orient); fitDev(orient); }
 // The phone in a scenario is drawn at a fixed small size (so all coordinates stay simple) and then
 // scaled up to fill the space the canvas has, between the caption line and the footer.
 function fitScale(w, h) {
@@ -93,12 +95,45 @@ function glideCap(gen, cap, from, to) {
   step(t0);
   requestAnimationFrame(step);
 }
+// The labels and phone slots of a pair, and where each one's centre is drawn right now, in the pair's
+// own (unscaled) pixels measured from its top centre, whatever its scale or a running glide.
+const pairParts = gen => [...gen.querySelectorAll(":scope > .dl7 > span, :scope > .dl7 > .side")];
+function pairSnap(gen) {
+  const G = gen.getBoundingClientRect(), k = G.width / (gen.offsetWidth || 1) || 1;
+  return pairParts(gen).map(el => { const r = el.getBoundingClientRect(); return [el, (r.left + r.width / 2 - (G.left + G.width / 2)) / k, (r.top + r.height / 2 - G.top) / k]; });
+}
+// Whenever the pair re-lays out (a phone turning, a caption growing), its final layout lands at once
+// and every label and phone glides from where it was drawn to its new place, on the pair's own curve
+// and clock (MOVE_MS, --ease), while the pair rescales: one continuous motion, nothing snapping across
+// halfway or at the end.
+// where each part's centre sits in the new layout, in the same coordinates; offsets ignore transforms,
+// so a glide still running doesn't count
+const absOff = el => { let x = 0, y = 0; for (let e = el; e; e = e.offsetParent) { x += e.offsetLeft; y += e.offsetTop; } return [x, y]; };
+function pairTargets(gen) {
+  const [gx, gy] = absOff(gen), gw = gen.offsetWidth;
+  return new Map(pairParts(gen).map(el => { const [x, y] = absOff(el); return [el, [x - gx + el.offsetWidth / 2 - gw / 2, y - gy + el.offsetHeight / 2]]; }));
+}
+function pairGlide(gen, was) {
+  if (!was) return;
+  const to = pairTargets(gen);
+  was.forEach(([el, x, y]) => {
+    const n = to.get(el); if (!n) return;
+    const run = el.getAnimations().filter(a => a.id === "pairglide" && a.playState === "running");
+    // already on its way to the same place: let it carry on rather than starting over
+    if (run.length && el._at && Math.abs(el._at[0] - n[0]) < .5 && Math.abs(el._at[1] - n[1]) < .5) return;
+    run.forEach(a => a.cancel()); el._at = n;
+    const dx = x - n[0], dy = y - n[1]; if (Math.abs(dx) < .5 && Math.abs(dy) < .5) return;
+    el.animate([{ translate: `${dx}px ${dy}px` }, { translate: "0px 0px" }], { id: "pairglide", duration: MOVE_MS, easing: "cubic-bezier(.4,0,.2,1)" });
+  });
+}
 function fitDev(orient) {
   const canvas = $("canvas"), box = canvas.querySelector(".scbox"), gen = box && box.querySelector(".duo7.gen");
   if (gen) { // the two phones sit side by side or stacked, whichever lets them be drawn larger
     // the pair's first moments (its own setup calls, the first caption) settle without animating
     if (!gen.dataset.fit) gen.dataset.fit = String(performance.now());
     const first = performance.now() - Number(gen.dataset.fit) < 250;
+    // where everything was drawn before this change (a turning phone measures it before it reshapes)
+    const turning = gen._turn, wasParts = first ? null : gen._was || pairSnap(gen); gen._turn = false; gen._was = null;
     if (first) gen.style.transition = "none"; // a new pair appears at its size; only later changes animate
     const { rowWH, colWH, sideWH } = measurePair(gen);
     const row = fitScale(rowWH[0], rowWH[1]), col = fitScale(colWH[0], colWH[1]), side = sideWH ? fitScale(sideWH[0], sideWH[1]) : 0;
@@ -115,21 +150,17 @@ function fitDev(orient) {
     // while its box, font and line breaks morph into the new shape, in step with the phones resizing.
     // Positions are read in the pair's own (unscaled) coordinates, so the pair's scale animation and the
     // caption's move add up to one smooth path.
-    const caps = [...gen.querySelectorAll(".sf7")], was = gen.dataset.lay, moved = !first && was && was !== pick;
+    const caps = [...gen.querySelectorAll(":scope > .dl7 > .sf7")], was = gen.dataset.lay, moved = !first && was && (was !== pick || turning);
     const snap = c => inPair(gen, c);
     // where each caption was last drawn (a phone may already have turned before this call)
     const before = moved ? caps.map(c => c._pos || snap(c)) : null;
     gen.dataset.lay = pick;
-    // A layout move (a phone turning): while the phones turn, the captions leave the flow (their gliding
-    // copies show them) so nothing pushes the phones around: no landscape-wide phones squeezed beside
-    // the captions, no phones pushed apart by a caption under them. The final layout lands at the end.
-    const finish = () => { gen.classList.remove("capgo"); gen.classList.toggle("capside", gen.dataset.lay === "side"); gen.style.flexDirection = gen.dataset.lay === "column" ? "column" : "row"; };
-    if (gen.classList.contains("capgo")) { gen.style.flexDirection = pick === "column" ? "column" : "row"; } // already moving: it lands when the move ends
-    else if (moved) {
-      gen.classList.remove("capside"); gen.classList.add("capgo"); gen.style.flexDirection = pick === "column" ? "column" : "row";
-      clearTimeout(gen._sideT); gen._sideT = setTimeout(finish, MOVE_MS - 30);
-    } else { clearTimeout(gen._sideT); finish(); }
-    gen.style.scale = sc.toFixed(3);
+    // The final layout lands at once, captions in their final places (hidden while their gliding copies
+    // move); the phones and labels glide there (pairGlide). Taking the captions out of the flow until
+    // the end of the move made everything jump into place when they came back.
+    gen.classList.remove("capgo"); gen.classList.toggle("capside", pick === "side"); gen.style.flexDirection = pick === "column" ? "column" : "row";
+    gen.style.scale = sc.toFixed(3); gen.style.setProperty("--dsc", sc.toFixed(3));
+    pairGlide(gen, wasParts);
     if (before) { const ends = finalCapPlaces(gen); caps.forEach((c, i) => glideCap(gen, c, before[i], ends[i])); }
     // the other phone turning a moment later changes where the captions end: retarget them
     else if (caps.some(c => c._gliding)) { const ends = finalCapPlaces(gen); caps.forEach((c, i) => { if (c._gliding) c._gliding._to = ends[i]; }); }
@@ -141,7 +172,7 @@ function fitDev(orient) {
   const duo = box && box.querySelector(".duo7"), dev = duo || (box && box.querySelector(".dev")); if (!dev) return;
   const o = duo ? "duo" : orient || (dev.classList.contains("land") ? "land" : "port"), [w, h] = DEV_SIZE[o];
   const sc = fitScale(w, h);
-  dev.style.scale = sc.toFixed(3);
+  dev.style.scale = sc.toFixed(3); dev.style.setProperty("--dsc", sc.toFixed(3));
   box.style.width = Math.round((w + 6) * sc) + "px"; box.style.height = Math.round((h + 6) * sc) + "px";
 }
 const devScale = dev => (dev.getBoundingClientRect().width / (dev.offsetWidth || 1)) || 1;
@@ -156,6 +187,7 @@ function setFoot(text) {
     // a caption already on screen is swapped in one beat (out, new text and layout, in); the first one just appears
     // new words fade up in place (no gap); if the layout changes with them, fitDev flows it to its new place
     const shown = gen && f.textContent && gen.dataset.fit && performance.now() - Number(gen.dataset.fit) > 250;
+    if (gen) gen._was = gen._was || pairSnap(gen); // the phones glide if the new words change the layout
     f.textContent = text; if (gen) fitDev();
     if (shown && !f._gliding) f.animate([{ opacity: .35 }, { opacity: 1 }], { duration: 260, easing: "ease-out" });
     return;
@@ -225,11 +257,11 @@ scen("seekbar", "disable_haptic_feedback_precise_seeking", haptic("Entering prec
 scen("seekbar", "disable_haptic_feedback_seek_undo", haptic("Release to cancel", { run(dev, f, b) {
   const W = dev.clientWidth, H = dev.clientHeight;
   at(100, () => fingerTo(f, W * .3, H * .84)); at(300, () => { fingerTo(f, W * .7, H * .84, 700); dev.querySelector(".mp").style.width = "70%"; });
-  at(1100, () => fingerTo(f, W * .7, H * .2, 500)); at(1600, () => { b(); dev.querySelector(".mp").style.width = "30%"; dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px;font-size:9px">Release to cancel</div>`); });
+  at(1100, () => fingerTo(f, W * .7, H * .2, 500)); at(1600, () => { b(); dev.querySelector(".mp").style.width = "30%"; dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px">Release to cancel</div>`); });
 } }));
 scen("seekbar", "disable_haptic_feedback_tap_and_hold", haptic("Tap and hold for 2x", { run(dev, f, b) {
   const W = dev.clientWidth, H = dev.clientHeight;
-  at(150, () => { fingerTo(f, W * .55, H * .45); f.classList.add("hold"); }); at(800, () => { b(); dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px;font-size:9px">2x ▸▸</div>`); });
+  at(150, () => { fingerTo(f, W * .55, H * .45); f.classList.add("hold"); }); at(800, () => { b(); dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px">2x ▸▸</div>`); });
   at(2000, () => f.classList.remove("hold"));
 } }));
 scen("seekbar", "disable_haptic_feedback_zoom", haptic("Pinch to zoom snaps to fill", { letterbox: true, run(dev, f, b) {
@@ -240,7 +272,7 @@ scen("seekbar", "disable_haptic_feedback_zoom", haptic("Pinch to zoom snaps to f
   at(400, () => { fingerTo(f, W * .3, H * .3, 600 * scStretch); fingerTo(f2, W * .7, H * .7, 600 * scStretch); v.style.transition = `left ${600 * scStretch}ms, right ${600 * scStretch}ms, top ${600 * scStretch}ms, bottom ${600 * scStretch}ms`; v.style.left = v.style.right = "6%"; v.style.top = v.style.bottom = "-5%"; });
   // the snap: the last stretch jumps to the edges quickly
   at(1050, () => { fingerTo(f, W * .24, H * .24, 160); fingerTo(f2, W * .76, H * .76, 160); v.style.transition = "left 160ms cubic-bezier(.3,1.4,.5,1), right 160ms cubic-bezier(.3,1.4,.5,1), top 160ms, bottom 160ms"; v.style.left = v.style.right = "0"; v.style.top = v.style.bottom = "-12%"; });
-  at(1210, () => { b(); dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px;font-size:9px">Zoomed to fill</div>`); });
+  at(1210, () => { b(); dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px">Zoomed to fill</div>`); });
   at(2000, () => { f.classList.remove("show"); f2.classList.remove("show"); });
 } }));
 
@@ -284,7 +316,7 @@ scen("player", "copy_video_link_with_timestamp_button", (box, on) => {
   box.innerHTML = device("land", `${miniVideo(0)}<div class="cpb" style="${at_(fx, fy, 22)};display:grid;place-items:center;border-radius:50%;background:rgba(0,0,0,.45);transition:transform .2s,background .2s">${I("link", "ico", 'style="width:14px;height:14px"')}</div>${miniSeek(17)}<div style="position:absolute;left:6px;bottom:12px;font-size:8px;color:#ddd">3:12 / 18:42</div>`);
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"), btn = dev.querySelector(".cpb"); const W = dev.clientWidth, H = dev.clientHeight;
   const plain = "youtu.be/cAb1n", timed = "youtu.be/cAb1n?t=192";
-  const toast = link => { dev.querySelectorAll(".toastin").forEach(e => e.remove()); dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:42%;font-size:9px">Link copied<br><b style="font-weight:500;color:#9cd1ff">${link}</b><br><span style="color:#bbb">${link === timed ? "opens at 3:12" : "opens at the start"}</span></div>`); };
+  const toast = link => { dev.querySelectorAll(".toastin").forEach(e => e.remove()); dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:42%">Link copied<br><b style="font-weight:500;color:#9cd1ff">${link}</b><br><span style="color:#bbb">${link === timed ? "opens at 3:12" : "opens at the start"}</span></div>`); };
   const press = on => { btn.style.transform = on ? "scale(.88)" : ""; btn.style.background = on ? "rgba(62,166,255,.55)" : "rgba(0,0,0,.45)"; };
   const fade = () => dev.querySelectorAll(".toastin").forEach(e => { e.style.transition = "opacity .3s"; e.style.opacity = 0; });
   situation("Tap the Copy link button");
@@ -305,7 +337,7 @@ scen("player", "loop_video", (box, on) => {
   situation("The video reaches its end");
   at(100, () => { mp.style.transition = `width ${1000 * scStretch}ms linear`; mp.style.width = "100%"; runClock(23, 42, 1000); });
   at(1150, () => {
-    if (on) { mp.style.transition = "none"; mp.style.width = "0%"; t.textContent = "0:00 / 0:42"; dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:30%;font-size:10px">⟲ Replaying</div>`); }
+    if (on) { mp.style.transition = "none"; mp.style.width = "0%"; t.textContent = "0:00 / 0:42"; dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:30%">⟲ Replaying</div>`); }
     else dev.insertAdjacentHTML("beforeend", `<div style="position:absolute;inset:0;background:rgba(0,0,0,.65);display:grid;place-content:center;gap:4px;justify-items:center;font-size:10px"><span style="color:#aaa;font-size:8px">Up next in 3</span><b style="font-weight:500">Night train to Bodø</b></div>`);
   });
   // with the option on, the same video really plays again from the start
@@ -318,14 +350,14 @@ scen("shorts", "shorts_autoplay", (box, on) => {
   box.innerHTML = device("port", `<div class="sh" style="position:absolute;left:0;right:0;top:0;height:200%;transition:transform .5s var(--ease)"><div style="height:50%;background:${ART[5]}"></div><div style="height:50%;background:${ART[7]}"></div></div>${miniSeek(70)}`);
   const dev = box.querySelector(".dev"); const mp = dev.querySelector(".mp");
   at(100, () => { mp.style.width = "100%"; });
-  at(1100, () => { mp.style.transition = "none"; mp.style.width = "0%"; if (on) dev.querySelector(".sh").style.transform = "translateY(-50%)"; else dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:40%;font-size:9px">⟲ Repeats</div>`); });
+  at(1100, () => { mp.style.transition = "none"; mp.style.width = "0%"; if (on) dev.querySelector(".sh").style.transform = "translateY(-50%)"; else dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:40%">⟲ Repeats</div>`); });
   return on ? "When a Short ends, the next one starts" : "When a Short ends, it repeats";
 });
 scen("seekbar", "disable_chapter_skip_double_tap", (box, disabled) => {
   box.innerHTML = device("land", `${miniVideo(3)}${miniSeek(30, [45, 70])}`);
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
   at(100, () => fingerTo(f, W * .8, H * .45)); at(350, () => tapF(f)); at(550, () => tapF(f));
-  at(700, () => { dev.querySelector(".mp").style.width = disabled ? "35%" : "45%"; dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px;font-size:9px">${disabled ? "+10 seconds" : "Next chapter ▸"}</div>`); });
+  at(700, () => { dev.querySelector(".mp").style.width = disabled ? "35%" : "45%"; dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px">${disabled ? "+10 seconds" : "Next chapter ▸"}</div>`); });
   return disabled ? "Double-tap skips 10 seconds" : "Double-tap can jump to the next chapter (stock)";
 });
 scen("seekbar", "speed_tap_and_hold", (box, v) => {
@@ -333,7 +365,7 @@ scen("seekbar", "speed_tap_and_hold", (box, v) => {
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
   at(150, () => { fingerTo(f, W * .5, H * .45); f.classList.add("hold"); });
   // both sides hold for the same time, so the faster speed covers proportionally more of the video
-  at(600, () => { dev.querySelector(".mp").style.transition = `width ${1.4 * scStretch}s linear`; dev.querySelector(".mp").style.width = Math.min(95, 30 + 11 * v) + "%"; dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px;font-size:9px">${v}x ▸▸</div>`); });
+  at(600, () => { dev.querySelector(".mp").style.transition = `width ${1.4 * scStretch}s linear`; dev.querySelector(".mp").style.width = Math.min(95, 30 + 11 * v) + "%"; dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px">${v}x ▸▸</div>`); });
   at(2000, () => f.classList.remove("hold"));
   return `Hold the video: plays at ${v}x`;
 });
@@ -543,7 +575,7 @@ scen("sponsorblock", "sb_toast_on_skip", (box, on) => {
   box.innerHTML = device("land", `${miniVideo(2)}<div class="msk" style="position:absolute;left:8%;right:8%;bottom:16%;height:3px;background:rgba(255,255,255,.3)"><i style="position:absolute;left:30%;width:25%;top:0;bottom:0;background:#00d400"></i><div class="mp" style="position:absolute;left:0;top:0;bottom:0;width:20%;background:#ff0033;transition:width .9s linear"></div></div>`);
   const dev = box.querySelector(".dev"), mp = dev.querySelector(".mp");
   at(200, () => { mp.style.width = "30%"; });
-  at(1100, () => { mp.style.transition = "width .15s"; mp.style.width = "55%"; if (on) dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="bottom:8px;top:auto;font-size:9px">Skipped sponsor</div>`); });
+  at(1100, () => { mp.style.transition = "width .15s"; mp.style.width = "55%"; if (on) dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="bottom:8px;top:auto">Skipped sponsor</div>`); });
   return on ? "The segment is skipped and a notice appears" : "The segment is skipped silently";
 });
 scen("sponsorblock", "sb_auto_hide_skip_button", (box, on) => {
@@ -561,7 +593,7 @@ const gestureScen = (key, orient, from, to, label, result) => scen("fullscreen",
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
   at(100, () => fingerTo(f, W * from[0], H * from[1])); at(350, () => fingerTo(f, W * to[0], H * to[1], 700));
   at(1100, () => {
-    if (disabled) { dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:40%;font-size:9px">Nothing happens</div>`); return; }
+    if (disabled) { dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:40%">Nothing happens</div>`); return; }
     result(dev);
   });
   return disabled ? `${label}: ignored` : `${label}: ${result.text}`;
@@ -577,6 +609,7 @@ function devContent(dev, html) {
 function turn(dev, orient, then) {
   const cur = dev.classList.contains("land") ? "land" : "port";
   if (cur === orient) { if (then) then(); return; }
+  const gen = dev.closest(".duo7.gen"); if (gen) return turnInPair(gen, dev, cur, orient, then);
   // while it turns, the phone is scaled so its rotated outline still fits the preview
   const [w, h] = DEV_SIZE[cur];
   dev.querySelectorAll(".finger").forEach(f => f.classList.remove("show"));
@@ -596,6 +629,30 @@ function turn(dev, orient, then) {
     if (then) then();
   }, 520);
 }
+// In a pair everything moves as one, on the same .5 s curve, started on the same frame: the phone turns
+// with its screen while its slot takes the new shape at once, so the pair re-lays out and rescales, and
+// the other phone, the labels and the captions glide to their new places (fitDev) as it turns. It ends
+// exactly in the box of the new orientation, where it is re-laid out for it and nothing jumps.
+function turnInPair(gen, dev, cur, orient, then) {
+  const slot = dev.parentElement, [w0, h0] = DEV_SIZE[cur], [w1, h1] = DEV_SIZE[orient];
+  dev.querySelectorAll(".finger").forEach(f => f.classList.remove("show"));
+  gen.querySelectorAll(":scope > .dl7 > .sf7").forEach(c => { if (!c._gliding) c._pos = inPair(gen, c); });
+  gen._was = pairSnap(gen); gen._turn = true;
+  dev.getAnimations().filter(a => a.id === "turn").forEach(a => a.cancel());
+  slot.style.width = w1 + "px"; slot.style.height = h1 + "px";
+  Object.assign(dev.style, { position: "absolute", left: "50%", top: "50%", translate: "-50% -50%", scale: "", transform: "" });
+  fitDev(orient);
+  // turned a quarter, the old phone's width becomes the new height and its height the new width
+  const R = orient === "land" ? -90 : 90, a = h1 / w0, b = w1 / h0;
+  dev.animate([{ transform: "none" }, { transform: `rotate(${R}deg) scale(${a.toFixed(4)}, ${b.toFixed(4)})` }], { id: "turn", duration: MOVE_MS, easing: "cubic-bezier(.4,0,.2,1)", fill: "forwards" });
+  later(() => {
+    dev.style.transition = "none";
+    dev.getAnimations().filter(x => x.id === "turn").forEach(x => x.cancel());
+    Object.assign(dev.style, { position: "", left: "", top: "", translate: "" }); slot.style.width = slot.style.height = "";
+    setOrient(dev, orient); void dev.offsetWidth; dev.style.transition = "";
+    if (then) then();
+  }, MOVE_MS);
+}
 const r1 = dev => turn(dev, "port", () => devContent(dev, playerArea(6))); r1.text = "leaves fullscreen";
 gestureScen("disable_fullscreen_dragged_down_gesture", "land", [.5, .25], [.5, .85], "Swipe down in fullscreen", r1);
 const r2 = dev => turn(dev, "land", () => devContent(dev, miniVideo(6))); r2.text = "enters fullscreen";
@@ -612,7 +669,7 @@ scen("fullscreen", "disable_fullscreen_zoom_gesture", (box, disabled) => {
   at(150, () => { fingerTo(f1, W * .44, H * .55); fingerTo(f2, W * .56, H * .45); });
   at(420, () => { fingerTo(f1, W * .2, H * .85, 600); fingerTo(f2, W * .8, H * .15, 600); });
   at(800, () => { if (!disabled) { zv.style.left = "0"; zv.style.right = "0"; zv.style.transform = "scale(1.1)"; } });
-  at(1150, () => { f1.classList.remove("show"); f2.classList.remove("show"); if (disabled) dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:40%;font-size:9px">Nothing happens</div>`); });
+  at(1150, () => { f1.classList.remove("show"); f2.classList.remove("show"); if (disabled) dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:40%">Nothing happens</div>`); });
   return disabled ? "Pinch does nothing: the video stays fitted" : "Pinch: the video zooms to fill the screen";
 });
 
@@ -620,7 +677,7 @@ scen("fullscreen", "restore_pinch_to_zoom", (box, on) => {
   situation("Fullscreen, two fingers spread, then pinch back a little");
   // Morphe's restore scales the video with the fingers, smoothly, anywhere from 1x up to 8x; without it
   // (YouTube 21.36+) a pinch only snaps between fitted and filled
-  box.innerHTML = device("land", `<div class="zv" style="position:absolute;left:10%;right:10%;top:0;bottom:0;background:${ART[0]};transform-origin:50% 50%"></div><div class="zr7 toastin" style="top:8px;font-size:9px;padding:3px 8px;opacity:0;transition:opacity .2s">1.0x</div>`);
+  box.innerHTML = device("land", `<div class="zv" style="position:absolute;left:10%;right:10%;top:0;bottom:0;background:${ART[0]};transform-origin:50% 50%"></div><div class="zr7 toastin" style="top:8px;opacity:0;transition:opacity .2s">1.0x</div>`);
   const dev = box.querySelector(".dev"), f1 = box.querySelector("#scFinger"), zv = box.querySelector(".zv"), zr = box.querySelector(".zr7"); const W = dev.clientWidth, H = dev.clientHeight;
   const f2 = f1.cloneNode(true); f2.id = ""; dev.appendChild(f2);
   const spread = (d, ms) => { fingerTo(f1, W * (.5 - d), H * (.5 + d * .55), ms); fingerTo(f2, W * (.5 + d), H * (.5 - d * .55), ms); };
@@ -645,7 +702,7 @@ scen("fullscreen", "swipe_change_video", (box, on) => {
   box.innerHTML = device("land", `<div class="sv" style="position:absolute;inset:0;display:flex;width:200%;transition:transform .45s var(--ease)"><div style="flex:1;background:${ART[6]}"></div><div style="flex:1;background:${ART[2]}"></div></div>`);
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
   at(100, () => fingerTo(f, W * .8, H * .5)); at(350, () => fingerTo(f, W * .2, H * .5, 500));
-  at(800, () => { if (on) box.querySelector(".sv").style.transform = "translateX(-50%)"; else dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:40%;font-size:9px">Nothing happens</div>`); });
+  at(800, () => { if (on) box.querySelector(".sv").style.transform = "translateX(-50%)"; else dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:40%">Nothing happens</div>`); });
   return on ? "Swipe sideways: next video" : "Swipe sideways: nothing (stock)";
 });
 scen("fullscreen", "swipe_press_to_engage", (box, on) => {
@@ -653,12 +710,12 @@ scen("fullscreen", "swipe_press_to_engage", (box, on) => {
   box.innerHTML = device("land", miniVideo(6));
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
   at(100, () => { fingerTo(f, W * .82, H * .8); if (on) f.classList.add("hold"); });
-  at(on ? 900 : 300, () => { f.classList.remove("hold"); fingerTo(f, W * .82, H * .2, 800); dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:40%;font-size:9px">🔊 Volume</div>`); });
+  at(on ? 900 : 300, () => { f.classList.remove("hold"); fingerTo(f, W * .82, H * .2, 800); dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:40%">🔊 Volume</div>`); });
   return on ? "Hold first, then swipe: avoids accidental changes" : "Any swipe on the edge changes volume";
 });
 scen("fullscreen", "volume_boost", (box, on) => {
   situation("Swiping up at full volume");
-  box.innerHTML = device("land", `${miniVideo(6)}<div class="vb" style="position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);font-size:9px;background:rgba(0,0,0,.7);border-radius:8px;padding:3px 8px">🔊 100%</div>`);
+  box.innerHTML = device("land", `${miniVideo(6)}<div class="vb toastin" style="top:40%;translate:0 -50%">🔊 100%</div>`);
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"), vb = box.querySelector(".vb"); const W = dev.clientWidth, H = dev.clientHeight;
   at(100, () => fingerTo(f, W * .82, H * .7)); at(350, () => fingerTo(f, W * .82, H * .15, 900));
   at(900, () => { vb.textContent = on ? "🔊 Boost 130%" : "🔊 100% (max)"; if (on) vb.style.color = "#ffb74d"; });
@@ -731,7 +788,7 @@ scen("miniplayer", "miniplayer_disable_drag_and_drop", (box, disabled) => {
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"), m = box.querySelector(".mp2"); const W = dev.clientWidth, H = dev.clientHeight;
   at(150, () => { fingerTo(f, W - 26, H - 31); f.classList.add("hold"); });
   at(500, () => { fingerTo(f, 26, H * .45, 700); if (!disabled) { m.style.right = (W - 46) + "px"; m.style.bottom = (H * .55 - 11) + "px"; } });
-  at(1300, () => { f.classList.remove("hold"); if (disabled) dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:20%;font-size:8px">Stays put</div>`); });
+  at(1300, () => { f.classList.remove("hold"); if (disabled) dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:20%">Stays put</div>`); });
   return disabled ? "The miniplayer stays in its corner" : "Drag it to any corner";
 });
 scen("miniplayer", "miniplayer_disable_horizontal_drag", (box, disabled) => {
@@ -739,7 +796,7 @@ scen("miniplayer", "miniplayer_disable_horizontal_drag", (box, disabled) => {
   box.innerHTML = device("port", miniDev());
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"), m = box.querySelector(".mp2"); const W = dev.clientWidth, H = dev.clientHeight;
   at(150, () => fingerTo(f, W - 26, H - 31)); at(400, () => { fingerTo(f, W + 10, H - 31, 400); if (!disabled) { m.style.right = "-60px"; m.style.opacity = "0"; } });
-  at(1000, () => { if (disabled) dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:20%;font-size:8px">Stays open</div>`); else dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:20%;font-size:8px">Closed</div>`); });
+  at(1000, () => { if (disabled) dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:20%">Stays open</div>`); else dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:20%">Closed</div>`); });
   return disabled ? "A sideways fling does not close it" : "A sideways fling closes it (stock)";
 });
 scen("miniplayer", "miniplayer_swipe_up_expand", (box, on) => {

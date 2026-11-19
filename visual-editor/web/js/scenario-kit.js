@@ -141,7 +141,7 @@ scen("feed", "post_image_download", (box, on) => {
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
   at(250, () => holdAt(f, W * .5, H * .45));
   at(1000, () => { f.classList.remove("hold", "show"); if (on) sheet7(dev, sheetRows([["dl", "Download image"], ["link", "Copy image link"]])); else toast7(dev, "Nothing happens", "60%"); });
-  at(1700, () => { if (on) { dev.querySelector(".sh7")?.remove(); toast7(dev, "Saved to Pictures"); } });
+  at(1700, () => { if (on) { dev.querySelectorAll(".sh7, .shs7").forEach(e => e.remove()); toast7(dev, "Saved to Pictures"); } });
   return on ? "Hold an image: download it" : "Images in posts can't be saved (stock)";
 });
 scen("feed", "post_translate", (box, on) => {
@@ -200,7 +200,7 @@ scen("look", "native_snackbar", (box, on) => {
   situation("Saving a video to a playlist");
   box.innerHTML = device("port", pageRows(feed7(big7(3, "Building a tiny cabin") + row7(4, "Night train to Bodø"))) + nav7());
   const dev = box.querySelector(".dev");
-  at(600, () => dev.insertAdjacentHTML("beforeend", on ? `<div class="toastin" style="bottom:24px;top:auto;font-size:7px;padding:3px 8px;border-radius:4px;background:#323232">Saved to Watch later</div>` : `<div style="position:absolute;left:4px;right:4px;bottom:20px;display:flex;justify-content:space-between;padding:4px 6px;border-radius:8px;background:#f1f1f1;color:#000;font-size:6.5px;animation:sheetup .25s">Saved to Watch later<b style="color:#065fd4">Change</b></div>`));
+  at(600, () => dev.insertAdjacentHTML("beforeend", on ? `<div class="toastin" style="bottom:24px;top:auto;border-radius:4px;background:#323232">Saved to Watch later</div>` : `<div style="position:absolute;left:4px;right:4px;bottom:20px;display:flex;justify-content:space-between;padding:4px 6px;border-radius:8px;background:#f1f1f1;color:#000;font-size:6.5px;animation:sheetup .25s">Saved to Watch later<b style="color:#065fd4">Change</b></div>`));
   return on ? "Android's own snackbar style" : "YouTube's own snackbar (stock)";
 });
 hidePage("look", "override_youtube_music_buttons", "Tapping a YouTube Music link", feed7(big7(6, "Midnight Tapes · Neon Fjord")) + tgt7(`<div style="padding:3px;border-radius:4px;background:#1b1b1b;font-size:6px;display:flex;gap:3px;align-items:center">${ico7("music", 7, "#ff0033")}Opens your patched YouTube Music</div>`), { invert: true, shown: "Music buttons open your chosen YouTube Music app", hidden: "Music buttons open the stock YouTube Music (stock)" });
@@ -303,7 +303,7 @@ hidePage("shorts", "hide_shorts_live_preview", "Shorts feed", `<div style="posit
 hidePage("shorts", "hide_shorts_search_suggestions", "A Short", `<div style="position:absolute;inset:0;background:${ART[5]}"></div><div class="tgt7" style="position:absolute;left:5px;right:5px;top:12px;padding:2px 4px;border-radius:6px;background:rgba(0,0,0,.6);font-size:6px;display:flex;gap:3px;align-items:center">${ico7("search", 7)}Search “cabin roof”</div>`, { raw: true });
 scen("shorts", "shorts_autoplay_background", (box, on) => {
   situation("A Short ends while the app is in the background");
-  box.innerHTML = device("port", `<div style="position:absolute;inset:0;background:#222;display:grid;place-items:center;font-size:6.5px;color:#aaa">Other app</div><div class="toastin" style="top:6px;font-size:6px;padding:2px 6px">${ico7("music", 7)} Playing: Short 1</div>`);
+  box.innerHTML = device("port", `<div style="position:absolute;inset:0;background:#222;display:grid;place-items:center;font-size:6.5px;color:#aaa">Other app</div><div class="toastin" style="top:6px">${ico7("music", 7)} Playing: Short 1</div>`);
   const dev = box.querySelector(".dev");
   at(1000, () => { dev.querySelector(".toastin").innerHTML = on ? `${ico7("music", 7)} Playing: Short 2` : `${ico7("pause", 7)} Short 1 · ended`; });
   return on ? "The next Short plays in the background" : "Playback stops at the end of the Short (stock)";
@@ -312,12 +312,12 @@ scen("shorts", "shorts_disable_background_playback", (box, on) => {
   situation("Leaving the app during a Short");
   box.innerHTML = device("port", `<div style="position:absolute;inset:0;background:${ART[5]}"></div>`);
   const dev = box.querySelector(".dev");
-  at(600, () => { dev.innerHTML = `<div style="position:absolute;inset:0;background:#222;display:grid;place-items:center;font-size:6.5px;color:#aaa">Home screen</div><div class="toastin" style="top:6px;font-size:6px;padding:2px 6px">${on ? `${ico7("pause", 7)} Short paused` : `${ico7("music", 7)} Short keeps playing`}</div>`; });
+  at(600, () => { dev.innerHTML = `<div style="position:absolute;inset:0;background:#222;display:grid;place-items:center;font-size:6.5px;color:#aaa">Home screen</div><div class="toastin" style="top:6px">${on ? `${ico7("pause", 7)} Short paused` : `${ico7("music", 7)} Short keeps playing`}</div>`; });
   return on ? "Shorts stop when you leave the app" : "Shorts keep playing in the background like videos (patched default)";
 });
 scen("shorts", "shorts_remember_playback_speed", (box, on) => {
   situation("Changing speed on a Short, then swiping");
-  box.innerHTML = device("port", `<div class="sv7" style="position:absolute;inset:0;background:${ART[5]};transition:transform .4s var(--ease)"></div><div class="sp7 toastin" style="top:8px;font-size:7px;padding:2px 6px">1.5×</div>`);
+  box.innerHTML = device("port", `<div class="sv7" style="position:absolute;inset:0;background:${ART[5]};transition:transform .4s var(--ease)"></div><div class="sp7 toastin" style="top:8px">1.5×</div>`);
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
   at(500, () => fingerTo(f, W * .5, H * .7)); at(700, () => { fingerTo(f, W * .5, H * .25, 400); dev.querySelector(".sv7").style.transform = "translateY(-100%)"; });
   at(1200, () => { f.classList.remove("show"); dev.querySelector(".sv7").style.cssText += `;transition:none;transform:none;background:${ART[6]}`; dev.querySelector(".sp7").textContent = on ? "1.5×" : "1×"; });
@@ -333,10 +333,10 @@ scen("shorts", "skip_live_shorts", (box, on) => {
 });
 scen("fullscreen", "swipe_ignore_when_locked", (box, on) => {
   situation("Swiping while the screen is locked");
-  box.innerHTML = device("land", `<div style="position:absolute;inset:0;background:${ART[3]}"></div><div style="position:absolute;left:50%;top:6px;transform:translateX(-50%);font-size:8.5px;background:rgba(0,0,0,.7);padding:2px 7px;border-radius:7px;display:flex;align-items:center;gap:3px">${ico7("lock", 9)}Locked</div>`);
+  box.innerHTML = device("land", `<div style="position:absolute;inset:0;background:${ART[3]}"></div><div class="toastin" style="top:6px">${ico7("lock", 9)} Locked</div>`);
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
   at(300, () => fingerTo(f, W * .82, H * .7)); at(500, () => fingerTo(f, W * .82, H * .3, 500));
-  at(1100, () => { f.classList.remove("show"); if (on) { toast7(dev, "Ignored while locked", "50%"); const t = dev.querySelector(".t7"); if (t) { t.style.fontSize = "10px"; t.style.padding = "4px 10px"; } } else dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:40%;font-size:10px;padding:4px 10px;display:flex;align-items:center;gap:4px">${ico7("vol", 11)} 80%</div>`); });
+  at(1100, () => { f.classList.remove("show"); if (on) { toast7(dev, "Ignored while locked", "50%"); } else dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:40%">${ico7("vol", 11)} 80%</div>`); });
   return on ? "Swipe gestures do nothing while locked" : "Swipes still change volume when locked (stock)";
 });
 scen("fullscreen", "swipe_lowest_value_enable_auto_brightness", (box, on) => {
@@ -344,7 +344,7 @@ scen("fullscreen", "swipe_lowest_value_enable_auto_brightness", (box, on) => {
   box.innerHTML = device("land", `<div class="br7" style="position:absolute;inset:0;background:${ART[3]};transition:filter .6s"></div>`);
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
   at(300, () => fingerTo(f, W * .18, H * .3)); at(500, () => { fingerTo(f, W * .18, H * .85, 700); dev.querySelector(".br7").style.filter = "brightness(.35)"; });
-  at(1300, () => { f.classList.remove("show"); dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:40%;font-size:7px">${ico7("bright", 8)} ${on ? "Auto" : "0%"}</div>`); if (on) dev.querySelector(".br7").style.filter = "brightness(.8)"; });
+  at(1300, () => { f.classList.remove("show"); dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:40%">${ico7("bright", 8)} ${on ? "Auto" : "0%"}</div>`); if (on) dev.querySelector(".br7").style.filter = "brightness(.8)"; });
   return on ? "Below the lowest level, brightness switches to automatic" : "It stays at the lowest level (stock)";
 });
 scen("fullscreen", "swipe_save_and_restore_brightness", (box, on) => {
@@ -365,7 +365,7 @@ scen("playback", "autoplay_control", (box, on) => {
 });
 scen("playback", "disable_playlist_autoplay", (box, on) => {
   situation("End of a video in a playlist");
-  box.innerHTML = device("port", pageRows(player7(3, `<span class="cd7" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:7px;background:rgba(0,0,0,.6);padding:1px 5px;border-radius:5px;white-space:nowrap;display:flex;gap:2px;align-items:center">Next in 5</span>`) + `<b style="font-size:6.5px">Road trip mix · 2 / 12</b>` + row7(2, "Night train") + row7(4, "Lo-fi beats")));
+  box.innerHTML = device("port", pageRows(player7(3, `<span class="cd7 toastin" style="top:50%;translate:0 -50%;white-space:nowrap">Next in 5</span>`) + `<b style="font-size:6.5px">Road trip mix · 2 / 12</b>` + row7(2, "Night train") + row7(4, "Lo-fi beats")));
   const dev = box.querySelector(".dev"), cd = dev.querySelector(".cd7");
   [4, 3, 2].forEach((n, i) => at(400 + i * 300, () => { cd.textContent = "Next in " + n; }));
   at(1400, () => { cd.innerHTML = on ? `${ico7("pause", 7)} Stopped` : `${ico7("play", 7)} Playing 3 / 12`; });
@@ -474,7 +474,7 @@ scen("playback", "on_the_go", (box, on) => {
   situation("Turning off the screen while a video plays");
   box.innerHTML = device("port", watch7());
   const dev = box.querySelector(".dev");
-  at(600, () => { dev.innerHTML = `<div style="position:absolute;inset:0;background:#000"></div><div class="toastin" style="top:40%;font-size:6.5px;padding:2px 6px">${on ? `${ico7("music", 7)} Audio keeps playing` : `${ico7("pause", 7)} Paused`}</div>`; });
+  at(600, () => { dev.innerHTML = `<div style="position:absolute;inset:0;background:#000"></div><div class="toastin" style="top:40%">${on ? `${ico7("music", 7)} Audio keeps playing` : `${ico7("pause", 7)} Paused`}</div>`; });
   return on ? "Audio-only mode when the screen goes off" : "The video pauses (stock)";
 });
 scen("playback", "sanitize_video_subtitle", (box, on) => {
@@ -507,7 +507,7 @@ scen("playback", "live_chat_translate", (box, on) => {
 });
 scen("playback", "loop_count", (box, on) => {
   situation("A looping video");
-  box.innerHTML = device("port", watch7(`<span class="lc8" style="position:absolute;right:3px;top:3px;font-size:6px;background:rgba(0,0,0,.6);padding:0 3px;border-radius:4px">${on ? "Loop 1" : ""}</span>`));
+  box.innerHTML = device("port", watch7(`<span class="lc8 badge7" style="right:3px;top:3px">${on ? "Loop 1" : ""}</span>`));
   const dev = box.querySelector(".dev");
   [2, 3, 4].forEach((n, i) => at(500 + i * 450, () => { if (on) dev.querySelector(".lc8").textContent = "Loop " + n; }));
   return on ? "A counter shows how many times it looped" : "No loop counter (stock)";
@@ -542,7 +542,7 @@ scen("playback", "hide_premium_video_quality", (box, on) => {
 for (const [k, what, val] of [["remember_playback_speed_last_selected", "speed", "1.5×"], ["remember_shorts_quality_last_selected", "Shorts quality", "720p"], ["remember_video_quality_last_selected", "quality", "1080p"]]) {
   scen("playback", k, (box, on) => {
     situation(`Picking a ${what}, then opening another video`);
-    box.innerHTML = device("port", watch7(`<span class="rv7" style="position:absolute;right:3px;top:3px;font-size:6px;background:rgba(0,0,0,.6);padding:0 3px;border-radius:4px">${val}</span>`));
+    box.innerHTML = device("port", watch7(`<span class="rv7 badge7" style="right:3px;top:3px">${val}</span>`));
     const dev = box.querySelector(".dev");
     at(800, () => { dev.querySelector(".pg7 > div").style.background = ART[6]; dev.querySelector(".rv7").textContent = on ? val : (what === "speed" ? "1×" : "Auto"); toast7(dev, on ? `Your ${what} is kept` : `Back to the default ${what}`, "80%"); });
     return on ? `The last ${what} you picked becomes the default` : `Each video starts at the default ${what} (stock)`;
