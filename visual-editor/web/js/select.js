@@ -51,7 +51,7 @@ function select(k, from, arrive = false) {
   if (section === "captions" && (k === "morphe_secondary_caption_language" || prevSel === "morphe_secondary_caption_language")) renderStage();
   // a hidden setting stays revealed while it is selected; it collapses once you move to another one
   // (unless the new selection needs it, such as the hidden seekbar for Tap to seek)
-  if (dropGhost && lentTo(k, dropGhost)) { ghosts.delete(dropGhost); stageEls(dropGhost).forEach(e => e.classList.remove("sel", "selin")); }
+  if (dropGhost && lentTo(k, dropGhost)) { ghosts.delete(dropGhost); stageEls(dropGhost).forEach(e => e.classList.remove("sel", "selx")); wakeRings(); }
   else if (dropGhost) { if (renders === renderCount) unghost(dropGhost); else { clearGhost(dropGhost); renderStage(); } }
   lend(prevSel, k);
   focusSetting(k, { from, arrive });
@@ -95,7 +95,7 @@ function ghost(k, grow = true) {
 function unghost(k) {
   (ghostTimers.get(k) || []).forEach(clearTimeout);
   ghosts.delete(k); fading.add(k);
-  stageEls(k).forEach(e => { e.classList.remove("sel", "selin", "flash"); if (e.classList.contains("intray")) e.classList.add("ghost-out"); else { e.classList.add("leaving"); sizeAnim(e, false, 420); } });
+  stageEls(k).forEach(e => { e.classList.remove("sel", "selx", "flash"); if (e.classList.contains("intray")) e.classList.add("ghost-out"); else { e.classList.add("leaving"); sizeAnim(e, false, 420); } }); wakeRings();
   const t2 = setTimeout(() => { fading.delete(k); ghostTimers.delete(k); stageEls(k).forEach(e => { e.classList.remove("ghost", "ghost-out", "leaving", "sizing", "sizew", "sizei"); e.getAnimations().forEach(a => a.cancel()); }); }, 440);
   ghostTimers.set(k, [t2]);
 }

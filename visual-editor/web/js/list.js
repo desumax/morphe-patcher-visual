@@ -137,7 +137,7 @@ function renderStage() {
   hugComponents(st);
   markFixed(st);
   st.querySelectorAll(".c").forEach(fitRing);
-  const sel = st.querySelector(".c.sel"); if (sel) watchRing(sel);
+  const sel = st.querySelector(".c.sel"); if (sel) watchRing(sel); wakeRings();
 }
 // Parts of the preview that no setting on this screen changes are greyed out: plain controls (the
 // play button, the time, a seekbar that belongs to another tab) and components of other screens.

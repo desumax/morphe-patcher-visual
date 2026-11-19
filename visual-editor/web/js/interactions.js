@@ -40,7 +40,7 @@ function fitSums(root = $("list"), keep = new Set()) {
   });
 }
 function highlight(k, flash = true, reveal = false) {
-  document.querySelectorAll(".sel").forEach(e => e.classList.remove("sel", "selin", "selcorner"));
+  document.querySelectorAll(".sel").forEach(e => e.classList.remove("sel", "selx")); wakeRings();
   document.querySelectorAll(`[data-k="${k}"], [data-row="${k}"], [data-also="${k}"]`).forEach(e => e.classList.add("sel"));
   document.querySelectorAll("#list .sum.open").forEach(e => { if (!e.closest(".row.sel")) e.classList.remove("open"); }); document.querySelectorAll(`#list [data-row="${k}"] > .txt > .sum.long:not(.open)`).forEach(unfold);
   const els = [...document.querySelectorAll(`#stage [data-k="${k}"], #stage [data-also="${k}"]`)];
@@ -71,7 +71,8 @@ function flashStage(e, times = 1) {
   if (times === 1 && Date.now() < quietFlashUntil) return;
   const big = e.offsetWidth > $("stage").clientWidth * .5 || e.offsetHeight > 80; // big components only glow
   clearTimeout(e._flashT); e.classList.remove("flash", "flat", "twice"); void e.offsetWidth;
-  e.classList.add("flash"); e.classList.toggle("flat", big); e.classList.toggle("twice", times > 1);
+  if (!big) popOrigin(e);
+  e.classList.add("flash"); e.classList.toggle("flat", big); e.classList.toggle("twice", times > 1); wakeRings();
   e._flashT = setTimeout(() => e.classList.remove("flash", "flat", "twice"), FLASH_MS * times + 40);
 }
 function flashRow(el) { clearTimeout(el._attnT); el.classList.remove("attn"); void el.offsetWidth; el.classList.add("attn"); el._attnT = setTimeout(() => el.classList.remove("attn"), FLASH_MS * 2 + 40); }
@@ -170,9 +171,12 @@ function fitRing(el) {
   const P = 3; // breathing room between the content and the ring
   const g = [u.l - box.left, u.t - box.top, box.right - u.r, box.bottom - u.b].map(x => Math.max(0, Math.round(x - P)));
   if (Math.max(...g) < 8) { el.classList.remove("fit"); return; }
-  // a ring that would run into the edge of what clips it stays just inside instead
-  const c = clipOf(el).getBoundingClientRect(), edge = [box.left - c.left, box.top - c.top, c.right - box.right, c.bottom - box.bottom];
-  g.forEach((x, i) => { if (edge[i] > -3 && edge[i] + x < 4) g[i] = Math.max(x, 4 - Math.max(0, edge[i])); });
+  // an unselected ghost's ring that would run into the edge of what clips it stays just inside; a
+  // selected part's ring is drawn on the ring layer instead, which may run past the preview's border
+  if (!el.classList.contains("sel")) {
+    const c = clipOf(el).getBoundingClientRect(), edge = [box.left - c.left, box.top - c.top, c.right - box.right, c.bottom - box.bottom];
+    g.forEach((x, i) => { if (edge[i] > -3 && edge[i] + x < 4) g[i] = Math.max(x, 4 - Math.max(0, edge[i])); });
+  }
   ["--fl", "--ft", "--fr", "--fb"].forEach((v, i) => el.style.setProperty(v, g[i] + "px"));
   el.classList.add("fit");
 }
@@ -180,22 +184,102 @@ let ringObs = null;
 function watchRing(el) {
   if (ringObs) ringObs.disconnect();
   if (!window.ResizeObserver || !el) return;
-  ringObs = new ResizeObserver(() => fitRing(el));
+  ringObs = new ResizeObserver(() => { fitRing(el); wakeRings(); });
   ringObs.observe(el); el.querySelectorAll("*").forEach(c => ringObs.observe(c));
+  if ($("stage")) ringObs.observe($("stage"));
 }
 function clipOf(el) {
   for (let p = el.parentElement; p && p !== $("stage"); p = p.parentElement) { const cs = getComputedStyle(p); if (cs.overflowX !== "visible" || cs.overflowY !== "visible") return p; }
   return $("stage");
 }
-function fitOutline(el) {
-  fitRing(el); watchRing(el);
-  if (el.classList.contains("fit")) { el.classList.remove("selin"); return; }
-  // a ring that would run past the edge of the preview is drawn just inside instead (all four
-  // edges); one that reaches a corner follows the preview's rounded corner
-  const r = el.getBoundingClientRect(), b = clipOf(el).getBoundingClientRect();
-  const L = r.left < b.left + 4, R = r.right > b.right - 4, T = r.top < b.top + 4, B = r.bottom > b.bottom - 4;
-  el.classList.toggle("selin", L || R || T || B);
-  el.classList.toggle("selcorner", (L || R) && (T || B));
+function fitOutline(el) { fitRing(el); watchRing(el); wakeRings(); }
+// ---- The selection ring above the preview frame
+// The frame's rounded border clips the preview, so the ring of a part that sits against it (the
+// whole-window controls background, the fullscreen action bar) and its selection pop were cut off.
+// Such a ring is drawn on a layer above the frame instead, where it may run past the border; it
+// follows the part through the pop, scrolling and resizing. An inner scroller's edge still applies:
+// a part scrolled under a header shows no ring there, and one sitting against that edge has its
+// ring drawn just inside it.
+const RING_ROOM = 6;
+let ringRAF = 0, ringQuiet = 0, ringKey = "";
+function wakeRings() { ringQuiet = 0; if (!ringRAF) ringRAF = requestAnimationFrame(ringTick); }
+function ringTick() {
+  ringRAF = 0;
+  ringQuiet = syncRings() ? 0 : ringQuiet + 1;
+  if (ringQuiet < 45) ringRAF = requestAnimationFrame(ringTick);
+}
+// the box that actually clips el: the frame, narrowed by any scroller inside it
+function clipEdges(el, F) {
+  let l = F.left, t = F.top, r = F.right, b = F.bottom;
+  for (let p = el.parentElement; p && p !== $("stage"); p = p.parentElement) {
+    const cs = getComputedStyle(p);
+    if (cs.overflowX === "visible" && cs.overflowY === "visible") continue;
+    const q = p.getBoundingClientRect();
+    l = Math.max(l, q.left); t = Math.max(t, q.top); r = Math.min(r, q.right); b = Math.min(b, q.bottom);
+  }
+  return { l, t, r, b };
+}
+function ringGeom(el, F, frameR) {
+  const r = el.getBoundingClientRect();
+  if (r.width < 1 || r.height < 1) return null;
+  const A = clipEdges(el, F), s = el.offsetWidth ? r.width / el.offsetWidth : 1;
+  const fit = el.classList.contains("fit"), ghost = el.classList.contains("ghost");
+  const off = (ghost && fit ? 1 : 2) * s, w = (ghost ? 1.5 : 2) * s, d = off + w;
+  const v = n => fit ? (parseFloat(el.style.getPropertyValue(n)) || 0) * s : 0;
+  const bx = { l: r.left + v("--fl"), t: r.top + v("--ft"), r: r.right - v("--fr"), b: r.bottom - v("--fb") };
+  // only a ring that would reach what clips the part (now, or while the pop scales it) moves here
+  const mx = Math.max(RING_ROOM, r.width * .06), my = Math.max(RING_ROOM, r.height * .06);
+  if (bx.l - d - mx >= A.l && bx.t - d - my >= A.t && bx.r + d + mx <= A.r && bx.b + d + my <= A.b) return null;
+  const R = { l: bx.l - d, t: bx.t - d, r: bx.r + d, b: bx.b + d }, cut = { l: -1e9, t: -1e9, r: 1e9, b: 1e9 };
+  // the frame's own edge: the ring runs past it, unless the part itself is cut off there
+  // a scroller's edge inside the frame: the ring is drawn just inside it, or cut where the part is scrolled past it
+  if (A.l > F.left + 2) { if (bx.l >= A.l - 3) R.l = Math.max(R.l, A.l); else cut.l = A.l; } else if (bx.l < F.left - 3) cut.l = F.left;
+  if (A.t > F.top + 2) { if (bx.t >= A.t - 3) R.t = Math.max(R.t, A.t); else cut.t = A.t; } else if (bx.t < F.top - 3) cut.t = F.top;
+  if (A.r < F.right - 2) { if (bx.r <= A.r + 3) R.r = Math.min(R.r, A.r); else cut.r = A.r; } else if (bx.r > F.right + 3) cut.r = F.right;
+  if (A.b < F.bottom - 2) { if (bx.b <= A.b + 3) R.b = Math.min(R.b, A.b); else cut.b = A.b; } else if (bx.b > F.bottom + 3) cut.b = F.bottom;
+  const ins = [cut.t - R.t, R.r - cut.r, R.b - cut.b, cut.l - R.l].map(x => Math.max(0, x));
+  const hidden = R.r - R.l - ins[1] - ins[3] < 2 * w + 1 || R.b - R.t - ins[0] - ins[2] < 2 * w + 1;
+  // corners follow the ring's usual curve; one at a corner of the frame follows the frame's curve
+  const cs = getComputedStyle(el, fit ? "::before" : null), ref = Math.min(bx.r - bx.l, bx.b - bx.t);
+  const px = x => String(x).endsWith("%") ? parseFloat(x) * ref / 100 : parseFloat(x) || 0;
+  const aL = Math.abs(bx.l - F.left) <= 3, aR = Math.abs(bx.r - F.right) <= 3, aT = Math.abs(bx.t - F.top) <= 3, aB = Math.abs(bx.b - F.bottom) <= 3;
+  const corner = (prop, x, y) => Math.round((x && y ? frameR : px(cs[prop]) * s) + d);
+  const rad = [corner("borderTopLeftRadius", aL, aT), corner("borderTopRightRadius", aR, aT), corner("borderBottomRightRadius", aR, aB), corner("borderBottomLeftRadius", aL, aB)];
+  return { R, ins, hidden, w, ghost, rad };
+}
+function syncRings() {
+  const st = $("stage"), layer = $("ringLayer");
+  if (!st || !layer) return false;
+  const live = st.offsetParent ? [...st.querySelectorAll(".c.sel")] : [];
+  st.querySelectorAll(".selx:not(.sel)").forEach(e => e.classList.remove("selx"));
+  const L = layer.getBoundingClientRect(), F = st.getBoundingClientRect(), sb = getComputedStyle(st.parentElement);
+  const frameR = Math.max(0, parseFloat(sb.borderTopLeftRadius) - parseFloat(sb.borderTopWidth) || 0);
+  const out = [];
+  let key = `${Math.round(F.left)},${Math.round(F.top)}`;
+  for (const el of live) {
+    const g = ringGeom(el, F, frameR);
+    el.classList.toggle("selx", !!g);
+    if (!g) { const q = el.getBoundingClientRect(); key += `|${q.left | 0},${q.top | 0},${q.width | 0},${q.height | 0}`; continue; }
+    const f = n => Math.round(n * 10) / 10;
+    out.push({ ghost: g.ghost, css: g.hidden ? "display:none" : `left:${f(g.R.l - L.left)}px;top:${f(g.R.t - L.top)}px;width:${f(g.R.r - g.R.l)}px;height:${f(g.R.b - g.R.t)}px;border-width:${f(g.w)}px;border-radius:${g.rad.map(x => x + "px").join(" ")};clip-path:inset(${g.ins.map(x => f(x) + "px").join(" ")})` });
+  }
+  while (layer.children.length > out.length) layer.lastChild.remove();
+  while (layer.children.length < out.length) layer.appendChild(document.createElement("i"));
+  out.forEach((o, i) => { const ring = layer.children[i]; if (ring._css !== o.css) { ring.style.cssText = o.css; ring._css = o.css; } ring.classList.toggle("ghost", o.ghost); key += "|" + o.css; });
+  const changed = key !== ringKey; ringKey = key;
+  return changed;
+}
+// anything that moves or resizes the selected part wakes the ring layer for a moment
+["scroll", "animationstart", "animationiteration", "transitionrun"].forEach(t => document.addEventListener(t, e => {
+  const st = $("stage"); if (st && e.target instanceof Element && (st.contains(e.target) || e.target.contains(st))) wakeRings();
+}, { capture: true, passive: true }));
+window.addEventListener("resize", wakeRings);
+// the pop grows away from a clipping edge the part sits against, so it is never cut off there
+function popOrigin(e) {
+  const st = $("stage"); if (!st || !st.contains(e)) return;
+  const r = e.getBoundingClientRect(), A = clipEdges(e, st.getBoundingClientRect()), gx = r.width * .06 + 1, gy = r.height * .06 + 1;
+  const L = r.left - A.l < gx, R = A.r - r.right < gx, T = r.top - A.t < gy, B = A.b - r.bottom < gy;
+  e.style.setProperty("--pop", `${L === R ? "center" : L ? "left" : "right"} ${T === B ? "center" : T ? "top" : "bottom"}`);
 }
 function scrollRowIntoView(k, center, tries = 2) {
   const row = document.querySelector(`[data-row="${k}"]`); if (!row) return;
