@@ -175,6 +175,7 @@ html #pickGrid .pg.pgroups .gcard .pi svg { width: 24px; height: 24px; fill: var
 .stage { position: relative; overflow: hidden; overflow: clip; background: #000; user-select: none; -webkit-user-select: none; touch-action: manipulation; color: #f1f1f1; }
 .stage.original::after { content: "Original YouTube"; position: absolute; left: 50%; top: 6px; transform: translateX(-50%); background: rgba(0,0,0,.75); color: #fff; font-size: 11px; padding: 3px 7px; border-radius: 4px; z-index: 40; pointer-events: none; }
 .c { position: relative; cursor: pointer; transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease); pointer-events: auto; }
+.stage .fixed7 { opacity: .4; filter: grayscale(1); } /* nothing on this screen changes it */
 .c.sel { outline: 2px solid var(--ring-on); outline-offset: 2px; border-radius: 6px; z-index: 20; }
 .c.selin.sel { outline-offset: -2px; }
 .c.selin.flash::after { inset: 0; }

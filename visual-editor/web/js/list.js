@@ -133,8 +133,24 @@ function renderStage() {
   st.querySelectorAll(".inner-scroll").forEach((e, i) => { if (scrollers[i]) e.scrollTop = scrollers[i]; });
   st.querySelectorAll('[style*="overflow-x:auto"]').forEach((e, i) => { e.dataset.hs = ""; if (hscroll[i]) e.scrollLeft = hscroll[i]; });
   hugComponents(st);
+  markFixed(st);
   st.querySelectorAll(".c").forEach(fitRing);
   const sel = st.querySelector(".c.sel"); if (sel) watchRing(sel);
+}
+// Parts of the preview that no setting on this screen changes are greyed out: plain controls (the
+// play button, the time, a seekbar that belongs to another tab) and components of other screens.
+const FIXED_SEL = ".pbtn, .bigbtn, .time, .seek, .chip, svg.ico, .tb, .badge-txt";
+function markFixed(st) {
+  const mine = new Set(sectionKeys()), ours = e => mine.has(e.dataset.k) || mine.has(e.dataset.also);
+  const cs = [...st.querySelectorAll(".c[data-k]")];
+  cs.forEach(c => { if (!ours(c) && !c.classList.contains("ghost") && !c.querySelector("[data-k], [data-also]") && !c.closest(".finger")) c.classList.add("fixed7"); });
+  st.querySelectorAll(FIXED_SEL).forEach(e => {
+    const host = e.closest(".c[data-k]");
+    if (host) return; // inside a component: it follows that component (greyed above if it isn't ours)
+    if ([...e.querySelectorAll("[data-k], [data-also]")].some(ours)) return;
+    if (e.parentElement.closest(".fixed7")) return;
+    e.classList.add("fixed7");
+  });
 }
 // Many components are drawn as a wrapper around one card that carries its own margins. The outline,
 // flash and ghost dashes belong to the card, not to the full-width wrapper, so move the card's margins
@@ -295,6 +311,7 @@ function byPosition(keys) {
 }
 let lastVis = { sec: null, keys: new Set() };
 const pickedFiles = {}; // images chosen with a file picker, kept for this visit only
+const foldingKids = new Map(); // sub-option groups still folding away: their old rows, and until when
 let peekKid = null, lastOpen = new Set(), lastDis = { sec: null, keys: new Set() };
 const collapsed = new Set();
 function renderList() {
@@ -348,11 +365,21 @@ function renderList() {
   const list = $("list");
   // sub-options that are about to fold away keep their old look (no locks popping in) while they
   // close; the new state is swapped in once they are out of sight
-  const closingOld = new Map();
-  if (lastVis.sec === section) list.querySelectorAll(".kids.open").forEach(b => { if (!wantOpen.has(b.dataset.kidsOf)) closingOld.set(b.dataset.kidsOf, b.querySelector(".kin").innerHTML); });
+  // (a second render during the fold, e.g. from the selection that follows the toggle, keeps them too)
+  const closingOld = new Map(), now0 = performance.now();
+  if (lastVis.sec !== section) foldingKids.clear();
+  foldingKids.forEach((v, grp) => { if (v.until > now0 && !wantOpen.has(grp)) closingOld.set(grp, v.old); else foldingKids.delete(grp); });
+  if (lastVis.sec === section) list.querySelectorAll(".kids.open").forEach(b => { if (!wantOpen.has(b.dataset.kidsOf)) { const old = b.querySelector(".kin").innerHTML; closingOld.set(b.dataset.kidsOf, old); foldingKids.set(b.dataset.kidsOf, { old, until: now0 + 320 }); } });
   // switches keep their old position for a frame so the change slides instead of snapping
   const swWas = new Map(); list.querySelectorAll("[data-sw]").forEach(x => swWas.set(x.dataset.sw, [x.getAttribute("aria-checked"), x.dataset.at, x.dataset.tone]));
+  // groups caught mid-fold by this render: their new box carries on from the height it had
+  const midFold = new Map(); list.querySelectorAll(".kids:not(.open)").forEach(b => { const h = b.getBoundingClientRect().height; if (h > .5 && foldingKids.has(b.dataset.kidsOf)) midFold.set(b.dataset.kidsOf, h); });
   list.innerHTML = html;
+  midFold.forEach((h, grp) => {
+    const box = list.querySelector(`[data-kids-of="${grp}"]`), left = (foldingKids.get(grp)?.until ?? 0) - performance.now(); if (!box || left < 30) return;
+    box.classList.remove("open");
+    box.animate([{ height: h + "px", gridTemplateRows: "1fr" }, { height: "0px", gridTemplateRows: "1fr" }], { duration: left, easing: "cubic-bezier(.2,0,0,1)" });
+  });
   list.querySelectorAll("[data-sw]").forEach(x => {
     const was = swWas.get(x.dataset.sw), now = [x.getAttribute("aria-checked"), x.dataset.at, x.dataset.tone];
     if (!was || was[0] === now[0]) return;
@@ -363,7 +390,8 @@ function renderList() {
     const kin = list.querySelector(`[data-kids-of="${grp}"] > .kin`); if (!kin) return;
     const fresh = kin.innerHTML; kin.innerHTML = old;
     kin.querySelectorAll(".row").forEach(r => r.classList.remove("sel", "attn", "nudge"));
-    setTimeout(() => { if (kin.isConnected && !kin.parentElement.classList.contains("open")) kin.innerHTML = fresh; }, 320);
+    const left = Math.max(0, (foldingKids.get(grp)?.until ?? now0) - performance.now());
+    setTimeout(() => { if (kin.isConnected && !kin.parentElement.classList.contains("open")) kin.innerHTML = fresh; }, left + 20);
   });
   fitSums(list);
   // animate sub-option groups and rows from their previous state to the new one
@@ -554,17 +582,26 @@ $("btnReset").onclick = () => {
 // hide the top bar while scrolling down, show it again on the way up
 var progScrollUntil = 0;
 {
-  let lastY = 0, acc = 0;
+  let lastY = 0, acc = 0, barMoveUntil = 0;
   $("scroller").addEventListener("scroll", () => {
     const sc = $("scroller"), y = sc.scrollTop, app = $("app"), d = y - lastY; lastY = y;
     if (app.classList.contains("searching") || pickerOpen) { app.classList.remove("barhidden"); acc = 0; return; }
     // only your own scrolling moves the bar: jumps to a setting (and holds) leave it where it is
     if (performance.now() < progScrollUntil || press) { acc = 0; return; }
+    // Showing or hiding the bar resizes the scroller. Near the end of the list that moves the scroll
+    // position by itself, which used to read as scrolling the other way and flip the bar back: the
+    // preview then bounced up and down on its own. Scrolls during the bar's own move are ignored,
+    // and the bar only hides when the list has room to scroll past it.
+    if (performance.now() < barMoveUntil) { acc = 0; return; }
     acc = Math.sign(d) === Math.sign(acc) ? acc + d : d;
-    const bar = document.querySelector(".appbar"); if (bar && !app.classList.contains("barhidden")) app.style.setProperty("--abh", bar.offsetHeight + "px");
-    if (y < 8) app.classList.remove("barhidden");
-    else if (acc > 24) app.classList.add("barhidden");
-    else if (acc < -24) app.classList.remove("barhidden");
+    const bar = document.querySelector(".appbar"), hid = app.classList.contains("barhidden");
+    if (bar && !hid) app.style.setProperty("--abh", bar.offsetHeight + "px");
+    const room = sc.scrollHeight - sc.clientHeight - y, abh = bar ? bar.offsetHeight : 56;
+    let want = hid;
+    if (y < 8) want = false;
+    else if (acc > 24 && room > abh + 24) want = true;
+    else if (acc < -24) want = false;
+    if (want !== hid) { app.classList.toggle("barhidden", want); acc = 0; barMoveUntil = performance.now() + 320; }
   }, { passive: true });
 }
 $("dlg").addEventListener("click", e => { if (e.target.id === "dlg") closeDialog(); });
