@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>App view</title>
+<style>
+:root { --bg: #0b0c10; --ink: #e3e2e6; --ink-2: #a9adb5; --btn: #282a2c; --btn-h: #333537; --accent: #3ea6ff; }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg: #f3f4f6; --ink: #1a1c1e; --ink-2: #555a62; --btn: #e3e5e8; --btn-h: #d6d9dd; --accent: #065fd4; } }
+:root[data-theme="dark"] { --bg: #0b0c10; --ink: #e3e2e6; --ink-2: #a9adb5; --btn: #282a2c; --btn-h: #333537; --accent: #3ea6ff; }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--ink); font: 14px/1.4 Roboto, system-ui, -apple-system, "Segoe UI", sans-serif; display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 18px 16px 28px; }
+header { width: 100%; max-width: 400px; display: flex; align-items: center; gap: 10px; }
+header h1 { margin: 0; font-size: 17px; font-weight: 500; flex: 1; }
+header p { margin: 2px 0 0; font-size: 12px; color: var(--ink-2); }
+a.web, button { border: 0; border-radius: 999px; background: var(--btn); color: var(--ink); font: inherit; font-size: 13px; font-weight: 500; padding: 8px 14px; cursor: pointer; text-decoration: none; white-space: nowrap; }
+a.web:hover, button:hover { background: var(--btn-h); }
+.phone { position: relative; width: 400px; max-width: 100%; height: min(820px, calc(100vh - 150px)); min-height: 560px; border: 8px solid #000; border-radius: 34px; overflow: hidden; background: #0f0f0f; box-shadow: 0 10px 40px rgba(0,0,0,.45); }
+.phone iframe { width: 100%; height: 100%; border: 0; display: block; }
+.bar { display: flex; gap: 8px; }
+.toast { position: absolute; left: 50%; bottom: 24px; transform: translate(-50%, 12px); max-width: 86%; background: #f1f1f1; color: #0f0f0f; font-size: 13px; padding: 10px 14px; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.5); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; text-align: center; }
+.toast.on { opacity: 1; transform: translate(-50%, 0); }
+</style>
+</head>
+<body>
+<header>
+  <div style="flex:1"><h1>App view</h1><p>The page the app's editor loads, with the preview's default values</p></div>
+  <a class="web" href="index.html">Web preview</a>
+</header>
+<div class="phone"><iframe id="app" src="app/index.html" title="In-app editor"></iframe><div class="toast" id="toast"></div></div>
+<div class="bar">
+  <button id="back" title="The phone's Back gesture">Back</button>
+  <button id="again">Open the editor again</button>
+</div>
+<script>
+const frame = document.getElementById("app"), toast = document.getElementById("toast");
+let tt = 0;
+function say(t) { toast.textContent = t; toast.classList.add("on"); clearTimeout(tt); tt = setTimeout(() => toast.classList.remove("on"), 2600); }
+document.getElementById("again").onclick = () => { frame.src = "app/index.html"; };
+// Back does what the phone's Back does: the page handles it, or the editor is left
+document.getElementById("back").onclick = () => {
+  const w = frame.contentWindow;
+  if (w && typeof w.morpheBack === "function") w.morpheBack(); else say("Back leaves the editor");
+};
+addEventListener("keydown", e => { if (e.key === "Escape" || e.key === "Backspace" && !/input|textarea/i.test(e.target.tagName)) document.getElementById("back").click(); });
+addEventListener("message", e => {
+  const a = e.data && e.data.appview; if (!a) return;
+  if (a === "close") say("Here the app returns to YouTube settings");
+  if (a === "restart") say("Here the app restarts YouTube");
+  if (a === "disable") say("Here the new design is switched off and the regular Morphe settings come back");
+});
+</script>
+</body>
+</html>
