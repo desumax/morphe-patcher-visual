@@ -315,7 +315,17 @@ function classicParentsOk(k) {
 const TITLE_FALLBACK = { morphe_swipe_zone_preview: "Press for Swipe zone preview" };
 const title = k => {
   const p = PREF[k]; if (!p) return k;
-  return (p.title && p.title.trim()) || TITLE_FALLBACK[k] || k.replace(/^morphe_/, "").replace(/_/g, " ");
+  const t = (p.title && p.title.trim()) || TITLE_FALLBACK[k] || k.replace(/^morphe_/, "").replace(/_/g, " ");
+  return unitOf(k) && !/\(seconds\)$/i.test(t) ? `${t} (seconds)` : t;
+};
+// a setting whose choices are all "N seconds" (read from the app's own entries, so a new one is caught
+// too): its title says "(seconds)" once and the choices are short ("0.5s"), so they fit on fewer lines
+const unitCache = {};
+const unitOf = k => {
+  if (k in unitCache) return unitCache[k];
+  if (!PREF[k]) return false;
+  const e = PREF[k].entries || [];
+  return (unitCache[k] = e.length > 1 && e.every(x => /^[\d.]+\s*seconds?$/.test(String(x.label))));
 };
 // ------------------------------------------------------------------ list designs
 // Three looks for the settings list, picked at the bottom of the screen menu:

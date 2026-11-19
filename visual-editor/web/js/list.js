@@ -223,7 +223,7 @@ function controlFor(k) {
   if (OFF_LIST.has(k) && String(v) === "off") return "";
   // up to 8 choices: a row of pills; 9 to 16 (icon styles, theme colours, qualities): a 3-column grid
   // of pills built from the same entries, so it follows whatever list Morphe ships; more: a dropdown
-  if (ents.length && ents.length <= 16) return `<div class="ctl ${ents.length > 8 ? "grid3" : ""}">${ents.map(e => `<button class="opt" data-set="${k}" data-val="${esc(e.value)}" aria-pressed="${sameVal(e.value, v)}" ${dis}>${esc(e.label)}</button>`).join("")}</div>`;
+  if (ents.length && ents.length <= 16) return `<div class="ctl optgrid">${ents.map(e => `<button class="opt" data-set="${k}" data-val="${esc(e.value)}" aria-pressed="${sameVal(e.value, v)}" ${dis}>${esc(e.label)}</button>`).join("")}</div>`;
   if (ents.length) return `<div class="ctl"><select data-set="${k}" ${dis} aria-label="${esc(title(k))}">${ents.map(e => `<option value="${esc(e.value)}" ${sameVal(e.value, v) ? "selected" : ""}>${esc(e.label)}</option>`).join("")}</select></div>`;
   if (p.type === "integer" || p.type === "float" || p.type === "long") {
     const r = Object.entries(RANGES).find(([n]) => k.includes(n));
@@ -471,6 +471,7 @@ function renderList() {
   const headsWere = list.dataset.view === section ? shownHeads(list) : null;
   list.innerHTML = html; list.dataset.view = section;
   mergeZonePreview(list);
+  fitOpts(list);
   const goneNow = hideLocked(list);
   midFold.forEach((h, grp) => {
     const box = list.querySelector(`[data-kids-of="${grp}"]`), left = (foldingKids.get(grp)?.until ?? 0) - performance.now(); if (!box || left < 30) return;
@@ -554,7 +555,7 @@ function syncLocked(k) {
     const want = row.dataset.row === k || !row.classList.contains("dis"), out = isOut(box);
     if (want && out) {
       box.getAnimations().forEach(a => a.cancel()); box.classList.remove("gone", "going"); lastGone.keys.delete(row.dataset.row); changed = true;
-      syncGroups(list); sizeAnim(box, true);
+      syncGroups(list); fitOpts(box); sizeAnim(box, true);
     } else if (!want && !out) {
       lastGone.keys.add(row.dataset.row); changed = true;
       foldAway(box, () => syncGroups(list));
@@ -562,6 +563,23 @@ function syncLocked(k) {
   });
   if (changed) syncHeads(list, before);
 }
+// Option pills: as many columns as the longest label allows on this screen width, then the rows evened
+// out (6 speeds a row, 5 qualities, all pitches on one line when they fit), worked out again whenever
+// the list is drawn or the window changes size. Nothing is fixed per setting.
+let optCtx = null;
+function fitOpts(root = $("list")) {
+  root.querySelectorAll(".ctl.optgrid").forEach(box => {
+    const W = box.clientWidth, opts = [...box.querySelectorAll(".opt")]; if (!W || !opts.length) return;
+    const cs = getComputedStyle(opts[0]), gap = parseFloat(getComputedStyle(box).columnGap) || 6;
+    optCtx = optCtx || document.createElement("canvas").getContext("2d"); optCtx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    const need = Math.max(...opts.map(o => optCtx.measureText(o.textContent).width)) + 2 * OPT_PAD + 2;
+    const maxCols = Math.max(1, Math.floor((W + gap) / (need + gap)));
+    const n = opts.length, rows = Math.ceil(n / Math.min(n, maxCols)), cols = Math.ceil(n / rows);
+    box.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+  });
+}
+const OPT_PAD = 6; // the least room beside a pill's text
+addEventListener("resize", () => { clearTimeout(fitOpts._t); fitOpts._t = setTimeout(() => fitOpts(), 120); });
 function hideLocked(list) {
   const gone = new Set();
   list.querySelectorAll(".row.dis[data-row]").forEach(r => {

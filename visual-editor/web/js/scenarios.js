@@ -14,7 +14,8 @@ const scen = (section, keys, fn) => keys.split(/\s+/).forEach(k => { A["morphe_"
 // scenario can rotate the phone with rotate() and nothing ends up covering anything else.
 const DEV_SIZE = { port: [92, 172], land: [190, 108], duo: [206, 186] };
 // Two phones side by side (stock on the left, the setting on the right), scaled together as one.
-const duo7 = (left, right) => `<div class="duo7"><div class="dl7"><span class="neg">Off</span>${device("port", left)}</div><div class="dl7"><span class="on">On</span>${device("port", right)}</div></div>`;
+// sides: [[value, label], [value, label]] from duoValues, so the words and sides match the card's toggle
+const duo7 = (left, right, sides = [[false, "Off"], [true, "On"]]) => `<div class="duo7">${[left, right].map((html, i) => `<div class="dl7"><span class="${NEG_WORD.has(sides[i][1]) ? "neg" : i ? "on" : ""}">${esc(sides[i][1])}</span>${device("port", html)}</div>`).join("")}</div>`;
 function device(orient, inner, extra = "") {
   const [w, h] = DEV_SIZE[orient];
   return `<div class="dev ${orient}" style="width:${w}px;height:${h}px;${extra}"><div class="waves l"></div><div class="waves r"></div>${inner}<div class="finger" id="scFinger">${I("gesture")}</div></div>`;
@@ -416,7 +417,9 @@ function entriesFor(k) {
   if (RUNTIME_ENTRIES[k]) return RUNTIME_ENTRIES[k]();
   const p = PREF[k];
   const v = (p.entryVariants || []).find(x => evalRule(x.when, () => null));
-  return v ? v.entries : (p.entries || []);
+  const ents = v ? v.entries : (p.entries || []);
+  // choices that are all "N seconds" read "Ns"; the unit moves to the title (unitOf)
+  return unitOf(k) ? ents.map(e => ({ ...e, label: e.label.replace(/\s*seconds?$/, "s") })) : ents;
 }
 function versionDefault(k) { const d = PREF[k].versionDefault; return d ? (evalRule(d.when, () => null) ? d.then : d.else) : undefined; }
 function applyVersion() {
@@ -914,7 +917,14 @@ const SCN_SELF_DUO = new Set(["morphe_disable_player_popup_panels"]);
 const DUO_OTHER = { morphe_speed_tap_and_hold: 4 };
 function duoValues(k, prev) {
   const p = PREF[k];
-  if (p.type === "boolean") return [[false, "Off"], [true, "On"]];
+  // an on/off setting is compared under the same words, on the same sides, as its card's toggle
+  // (Hide | Show for "Hide X" in the clean design: Hide on the left drawing it hidden), never Off | On
+  // with the sides swapped
+  if (p.type === "boolean") {
+    const c = design === "clean" && cleanOf(k);
+    if (!c) return [[false, "Off"], [true, "On"]];
+    const [l0, l1] = c.labels; return NEG_WORD.has(l0) ? [[false, l0], [true, l1]] : [[true, l1], [false, l0]];
+  }
   const ents = entriesFor(k), lab = v => ents.find(e => sameVal(e.value, v))?.label || String(v) + (/speed/.test(k) ? "×" : "");
   const d = defaults[k], cur = V(k);
   // a clearer contrast than the next step up for a few settings (2x vs 4x speed)

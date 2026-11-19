@@ -435,8 +435,9 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .row .ctl.side input[type=color]::-moz-color-swatch { border: 1px solid rgba(255,255,255,.25); border-radius: 999px; }
 .row .ctl.side .val { min-width: 0; text-align: center; font-size: 9.5px; line-height: 1.1; }
 .ctl .opt { border: 1px solid var(--m-outline-var); background: transparent; border-radius: 999px; height: auto; min-height: 30px; max-width: 100%; padding: 5px 12px; line-height: 1.2; overflow-wrap: anywhere; text-align: center; font-size: 12px; cursor: pointer; color: var(--m-on); transition: background var(--dur) var(--ease); }
-.ctl.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-.ctl.grid3 .opt { padding: 2px 4px; height: auto; min-height: 34px; line-height: 1.15; white-space: normal; overflow-wrap: anywhere; text-align: center; }
+/* option pills sit in a grid whose columns fitOpts works out from the labels and the width */
+.ctl.optgrid, .fallback .ctl.optgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); gap: 6px; }
+.ctl.optgrid .opt { padding: 2px 6px; height: auto; min-height: 30px; line-height: 1.15; white-space: normal; overflow-wrap: anywhere; text-align: center; }
 .ctl .opt[aria-pressed="true"] { background: var(--m-secondary-c); border-color: var(--m-secondary-c); color: #D8E3F8; }
 .ctl input[type=range] { flex: 1; min-width: 120px; accent-color: var(--m-primary); }
 .ctl .val { font-family: var(--mono); font-size: 12px; color: var(--m-on-var); min-width: 44px; text-align: right; }
@@ -758,6 +759,7 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 @keyframes dood { 0%, 60%, 100% { transform: none; } 30% { transform: translateY(-3px) rotate(-6deg); } }
 .plainlogo { display: none !important; }
 .c.off:not(.ghost) + .plainlogo { display: flex !important; }
+@keyframes slidein7 { from { transform: translateX(100%); } to { transform: none; } }
 @keyframes sheetup { from { transform: translateY(100%); } to { transform: none; } }
 [data-icons] .pbtn svg path { transition: all .25s var(--ease); }
 /* Thin: YouTube's older thin player icons; Bold matches Automatic on the bold player; the other styles draw the real icon set (iconstyles.js) */

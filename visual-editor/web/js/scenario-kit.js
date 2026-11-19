@@ -378,7 +378,8 @@ scen("playback", "disable_player_popup_panels", (box) => {
   situation("1 · You open a video from a playlist");
   const desc = `<div class="ds7" style="display:grid;gap:3px"><b style="font-size:7px" class="tt7">Night train to Bodø</b><div style="display:flex;gap:3px">${chip7("Like")}${chip7("Share")}${chip7("Save")}</div><div style="font-size:6px;color:#aaa">Comments 312</div>${chat7([[1, "ola", "this view!"], [2, "mia", "take me there"], [3, "ken", "pure calm"]])}</div>`;
   const feed = `<div class="fd7" style="display:grid;gap:5px">${top7()}${row7(2, "Road trip mix", "", "Playlist · 12 videos")}${row7(4, "Lo-fi beats")}${row7(1, "Northern lights LIVE", `<span style="position:absolute;left:1px;bottom:1px;font-size:4.5px;background:#f03;padding:0 2px;border-radius:2px">LIVE</span>`, "1.2K watching")}${row7(5, "Cabin build")}</div>`;
-  box.innerHTML = duo7(pageRows(feed), pageRows(feed));
+  const sides = duoValues("morphe_disable_player_popup_panels");
+  box.innerHTML = duo7(pageRows(feed), pageRows(feed), sides);
   const bar = (label) => `<div class="pb7" style="position:absolute;left:4px;right:4px;bottom:4px;height:15px;border-radius:4px;background:#272727;display:flex;align-items:center;gap:3px;padding:0 5px;font-size:6px;z-index:3;animation:sheetup .3s var(--ease)">${ico7(label[0], 7)}<span style="flex:1;white-space:nowrap;overflow:hidden">${label[1]}</span>${ico7("expand", 7)}</div>`;
   const panel = (title, rows) => `<div class="pp7" style="position:absolute;left:0;right:0;top:52px;bottom:0;background:#1b1b1b;border-radius:5px 5px 0 0;padding:5px;display:grid;gap:3px;align-content:start;font-size:6px;animation:sheetup .35s var(--ease);z-index:4"><div style="width:16px;height:2px;border-radius:1px;background:#555;justify-self:center"></div><b style="font-size:6.5px">${title}</b>${rows}</div>`;
   const story = (dev, on) => {
@@ -408,7 +409,7 @@ scen("playback", "disable_player_popup_panels", (box) => {
     popAct(5450, ["chat", "Live chat"], "Live chat", chat7([[1, "ola", "so pretty"], [2, "mia", "green!!"], [3, "ken", "😍"], [4, "liv", "where is this?"], [5, "bo", "hi from Oslo"]]));
   };
   const [left, right] = box.querySelectorAll(".dev");
-  story(left, false); story(right, true);
+  story(left, sides[0][0]); story(right, sides[1][0]);
   at(4400, () => situation("2 · Then you open a live stream"));
   return "Stock panels jump open; with the setting on they wait for your tap";
 });
@@ -456,15 +457,40 @@ scen("playback", "do_not_remember_loop_video", (box, on) => {
   at(850, () => { f.classList.remove("show"); dev.querySelector(".pg7 > div").style.background = ART[2]; const l = dev.querySelector(".lp7"); if (on) l.style.background = "rgba(0,0,0,.5)"; toast7(dev, on ? "Loop is off again" : "Still looping", "80%"); });
   return on ? "Loop switches off for each new video" : "Loop stays on for the next videos (stock)";
 });
+// Morphe (ForceFullscreenLandscapePatch): on tablets and other large screens only (phones already open
+// fullscreen in landscape), entering fullscreen turns the screen to landscape, and leaving it brings back
+// the orientation it had before. Stock: a tablet held upright stays upright, the video letterboxed.
 scen("playback", "force_fullscreen_landscape", (box, on) => {
-  situation("Fullscreen on a vertical video");
-  box.innerHTML = device("port", watch7(`<div style="position:absolute;left:40%;right:40%;top:0;bottom:0;background:${ART[6]}"></div>`));
+  situation("A tablet held upright: tapping fullscreen");
+  box.innerHTML = device("port", playerArea(3));
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth;
-  at(300, () => fingerTo(f, W - 8, 44)); at(600, () => tapF(f));
-  at(850, () => { f.classList.remove("show"); if (on) { rotate(dev, "land"); dev.innerHTML = `<div style="position:absolute;inset:0;background:#000"></div><div style="position:absolute;left:38%;right:38%;top:0;bottom:0;background:${ART[6]}"></div>`; } else dev.innerHTML = `<div style="position:absolute;inset:0;background:#000"></div><div style="position:absolute;left:0;right:0;top:20%;bottom:20%;background:${ART[6]}"></div>`; });
-  return on ? "Fullscreen always turns the phone sideways" : "Vertical videos stay upright in fullscreen (stock)";
+  at(300, () => fingerTo(f, W - 10, 44)); at(600, () => tapF(f));
+  at(850, () => {
+    f.classList.remove("show");
+    if (on) turn(dev, "land", () => devContent(dev, miniVideo(3)));
+    else devContent(dev, `<div style="position:absolute;inset:0;background:#000"></div><div style="position:absolute;left:0;right:0;top:50%;height:30%;translate:0 -50%;background:${ART[3]}"></div>`);
+  });
+  return on ? "Fullscreen turns the tablet's screen to landscape" : "Fullscreen stays upright: the video is letterboxed (stock)";
 });
-hidePage("playback", "fullscreen_playlist_panel", "A playlist in fullscreen", `<div style="position:absolute;inset:0;background:${ART[3]}"></div><div class="tgt7" style="position:absolute;right:0;top:0;bottom:0;width:38%;background:rgba(15,15,15,.92);padding:4px;display:grid;gap:3px;align-content:start;font-size:5.5px"><b>Road trip mix</b>${[1, 2, 4].map(i => `<div style="display:flex;gap:2px"><span style="width:14px;height:8px;background:${ART[i]}"></span>Video ${i}</div>`).join("")}</div>`, { dev: "land", raw: true, invert: true, shown: "The playlist sits beside the video in fullscreen", hidden: "Leave fullscreen to see the playlist (stock)" });
+// Morphe (FullscreenPlaylistPanelPatch): on tablets, opening the playlist panel in fullscreen keeps
+// fullscreen and shows the panel over the player. Stock: opening it leaves fullscreen first.
+scen("playback", "fullscreen_playlist_panel", (box, on) => {
+  situation("A tablet in fullscreen: opening the playlist");
+  const list = `<b style="font-size:6px">Road trip mix · 2 / 12</b>${[1, 2, 4, 5].map(i => `<div style="display:flex;gap:3px;align-items:center;font-size:5.5px"><span style="width:16px;height:9px;flex:none;background:${ART[i]}"></span>Video ${i}</div>`).join("")}`;
+  box.innerHTML = device("land", `<div class="pv7" style="position:absolute;left:0;top:0;width:100%;height:100%;background:${ART[3]};transition:all .45s var(--ease)"></div><span style="position:absolute;right:6px;top:5px;z-index:2">${ico7("plist", 9)}</span>`);
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"), pv = dev.querySelector(".pv7"); const W = dev.clientWidth;
+  at(300, () => fingerTo(f, W - 9, 9)); at(600, () => tapF(f));
+  at(850, () => {
+    f.classList.remove("show");
+    if (on) dev.insertAdjacentHTML("beforeend", `<div style="position:absolute;right:0;top:0;bottom:0;width:40%;background:rgba(15,15,15,.92);padding:5px;display:grid;gap:3px;align-content:start;z-index:3;animation:slidein7 .35s var(--ease)">${list}</div>`);
+    else {
+      // out of fullscreen: the watch page, video top left, the playlist beside it
+      Object.assign(pv.style, { width: "58%", height: "60%", left: "4px", top: "4px", borderRadius: "3px" });
+      later(() => { dev.insertAdjacentHTML("beforeend", `<div style="position:absolute;left:4px;top:calc(60% + 8px);font-size:6px"><b>Building a tiny cabin</b></div><div style="position:absolute;right:4px;top:4px;bottom:4px;width:36%;background:#1b1b1b;border-radius:3px;padding:4px;display:grid;gap:3px;align-content:start;animation:ghostin .3s">${list}</div>`); toast7(dev, "Left fullscreen", "84%"); }, 300);
+    }
+  });
+  return on ? "The playlist opens over the fullscreen video" : "Opening the playlist leaves fullscreen (stock)";
+});
 for (const [k, label, icon] of [["hide_ask_gemini_button", "Ask", "spark"], ["hide_chapters_timeline_button", "Chapters", "list"], ["hide_live_chat_replay_button", "Live chat replay", "chat"], ["hide_sync_button", "Sync", "reload"]])
   hidePage("playback", k, "Under the video", player7(3) + `<b style="font-size:7px">Building a tiny cabin</b><div style="display:flex;gap:3px;align-items:center;overflow:hidden;padding:2px">${chip7("Like")}${tgt7(`<span style="display:inline-flex;gap:2px;align-items:center;padding:1px 5px;border-radius:5px;background:#272727;font-size:6px;white-space:nowrap">${ico7(icon, 6)}${label}</span>`, 1)}${chip7("Share")}</div>` + row7(2, "Up next"));
 hidePage("playback", "hide_subscribers_community_guidelines", "Before posting in a channel's community", top7("Fjord & Timber", ["more"]) + tgt7(`<div style="padding:3px;border-radius:3px;background:#1b1b1b;font-size:6px">Please follow the community guidelines · Got it</div>`) + cmt7(2, "Love the roof!"));

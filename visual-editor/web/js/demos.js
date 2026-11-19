@@ -71,9 +71,11 @@ function showPill(text, ms = 1100) {
   // never under the explanation pill in the top-left corner: sit just below it
   const lab = st.querySelector(".demo-label.dyn"), sr = st.getBoundingClientRect();
   d.style.top = (lab ? Math.max(14, lab.getBoundingClientRect().bottom - sr.top + 8) : 14) + "px"; d.textContent = text; st.appendChild(d);
-  // nor over a hint the scene already shows (such as "Pull up for precise seeking"): step below it
-  for (let i = 0; i < 4; i++) {
-    const a = d.getBoundingClientRect(), hit = [...st.querySelectorAll(".toastin:not(.dyn), .demo-label")].find(o => { if (o === d || !o.offsetWidth || getComputedStyle(o).visibility === "hidden") return false; const q = o.getBoundingClientRect(); return Math.min(a.right, q.right) - Math.max(a.left, q.left) > 2 && Math.min(a.bottom, q.bottom) - Math.max(a.top, q.top) > 2; });
+  // nor over a hint the scene already shows (such as "Pull up for precise seeking") or a part of the
+  // preview (badges, buttons, the time): step below it. Only small parts count, not whole panels.
+  const stArea = sr.width * sr.height || 1;
+  for (let i = 0; i < 8; i++) {
+    const a = d.getBoundingClientRect(), hit = [...st.querySelectorAll(".toastin:not(.dyn), .demo-label, .c[data-k], .chip, .badge-txt, .pbtn, .time")].find(o => { if (o === d || !o.offsetWidth || getComputedStyle(o).visibility === "hidden" || o.contains(d)) return false; { const q = o.getBoundingClientRect(); if (q.width * q.height > stArea * .2) return false; } const q = o.getBoundingClientRect(); return Math.min(a.right, q.right) - Math.max(a.left, q.left) > 2 && Math.min(a.bottom, q.bottom) - Math.max(a.top, q.top) > 2; });
     if (!hit) break; d.style.top = (hit.getBoundingClientRect().bottom - sr.top + 6) + "px";
   }
   dT(() => d.remove(), ms);
