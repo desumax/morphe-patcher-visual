@@ -267,7 +267,7 @@ function listAdd(k, raw) {
   else { if (items.includes(t)) return "Already in the list"; items.push(t); }
   listSet(k, items); return null;
 }
-function listSet(k, items) { ensureMod(); touchSel(k); const before = state[k]; state[k] = items.join("\n"); afterChange(k, before); requestAnimationFrame(() => document.querySelector(`[data-lin="${k}"]`)?.focus()); }
+function listSet(k, items) { ensureMod(); touchSel(k); const before = state[k]; state[k] = items.join("\n"); afterChange(k, before); requestAnimationFrame(() => document.querySelector(`[data-lin="${k}"]`)?.focus({ preventScroll: true })); }
 const whereOf = x => { const s = sectionOf(x); return s !== section ? ` (${esc(SECTIONS.find(z => z.id === s)?.title || "Miscellaneous")})` : ""; };
 function shortNeed(k) {
   if (!classicParentsOk(k)) return PREF[k].parents.some(x => x.mode === "not" && !!state[x.key]) ? "Parent setting must be disabled" : "Parent setting must be enabled";

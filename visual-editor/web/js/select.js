@@ -178,9 +178,19 @@ function holdRow(k) {
   const row = document.querySelector(`#list [data-row="${k}"]`), sc = $("scroller"); if (!row || !sc || searching) return () => {};
   const top = row.getBoundingClientRect().top, h = row.offsetHeight;
   return () => {
-    const r = document.querySelector(`#list [data-row="${k}"]`); if (!r) return;
-    const d = r.getBoundingClientRect().top - top; if (Math.abs(d) > .5) sc.scrollTop += d;
-    const h2 = r.offsetHeight; if (Math.abs(h2 - h) > .5) r.animate([{ height: h + "px", overflow: "hidden" }, { height: h2 + "px", overflow: "hidden" }], { duration: 220, easing: "cubic-bezier(.2,0,0,1)" });
+    const r0 = document.querySelector(`#list [data-row="${k}"]`); if (!r0) return;
+    const h2 = r0.offsetHeight; if (Math.abs(h2 - h) > .5) r0.animate([{ height: h + "px", overflow: "hidden" }, { height: h2 + "px", overflow: "hidden" }], { duration: 220, easing: "cubic-bezier(.2,0,0,1)" });
+    // held for a moment, frame by frame: the preview resizing, a demo or comparison starting and late
+    // redraws all land after this call; a finger or wheel on the list lets go at once
+    const until = performance.now() + 900; let stop = false;
+    const off = () => { stop = true; }; setTimeout(() => ["wheel", "touchstart", "pointerdown"].forEach(t => sc.addEventListener(t, off, { once: true, passive: true })), 0); // after the tap or key that made the change
+    const hold = () => {
+      if (stop) return;
+      const r = document.querySelector(`#list [data-row="${k}"]`);
+      if (r) { const d = r.getBoundingClientRect().top - top; if (Math.abs(d) > .5) sc.scrollTop += d; }
+      if (performance.now() < until) requestAnimationFrame(hold);
+    };
+    hold();
   };
 }
 function afterChange(k, before) {
