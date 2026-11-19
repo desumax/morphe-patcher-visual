@@ -128,6 +128,8 @@ function renderStage() {
   const scrollers = same ? [...st.querySelectorAll(".inner-scroll")].map(e => e.scrollTop) : [];
   const hscroll = same ? [...st.querySelectorAll("[data-hs]")].map(e => e.scrollLeft) : [];
   st.className = "stage" + (mode === "orig" ? " original" : "");
+  // a custom seekbar colour shows on every seekbar, not only on its own screen
+  st.style.setProperty("--seek-1", V("morphe_seekbar_custom_color") ? String(V("morphe_seekbar_custom_color_primary") || "") : "");
   st.innerHTML = scene().replace(/background:#0f0f0f/g, "background:var(--app-bg,#0f0f0f)");
   st.querySelectorAll(".finger").forEach(f => { if (!f.firstChild) f.innerHTML = I("gesture"); });
   st.querySelectorAll(".inner-scroll").forEach((e, i) => { if (scrollers[i]) e.scrollTop = scrollers[i]; });

@@ -4,6 +4,12 @@
 // ------------------------------------------------------------------ scenes
 const SCENES = {};
 
+// Parts of the player that several screens draw (time, seekbar, player buttons) are tied to their
+// setting wherever they appear: hide the time on Seekbar & gestures and it is gone on Controls and
+// Fullscreen too, and Original brings it back everywhere. On a screen that doesn't own the setting
+// they are greyed out (markFixed).
+const sharedTime = (t, pos) => C("hide_timestamp", `<div class="time">${t}</div>`, { style: `position:absolute;${pos}` });
+const sharedSeek = (inner, pos, extra = "") => C("hide_seekbar", `<div class="seek" style="position:relative;left:0;right:0;${extra}">${inner}</div>`, { style: `position:absolute;${pos}` });
 function videoFrame(i = 0, extra = "") {
   return `<div class="frame" style="background:${ART[i]}"></div>${extra}`;
 }
@@ -42,8 +48,8 @@ SCENES.player = () => {
         ${pb("hide_player_previous_next_buttons", I("next"))}
       </div>
       <div style="position:absolute;right:6px;bottom:18px;display:flex;gap:2px;max-width:340px;align-items:center">${pill}${on.map(b => btn(b)).join("")}${pb("hide_fullscreen_button", I("full"))}</div>
-      <div class="time" style="position:absolute;left:12px;bottom:24px">3:12 / 18:42</div>
-      <div class="seek" style="bottom:10px"><div class="buf" style="width:40%"></div><div class="played" style="width:17%"></div><div class="knob" style="left:17%"></div></div>
+      ${sharedTime("3:12 / 18:42", "left:12px;bottom:24px")}
+      ${sharedSeek(`<div class="buf" style="width:40%"></div><div class="played" style="width:17%"></div><div class="knob" style="left:17%"></div>`, "left:12px;right:12px;bottom:10px")}
     </div>
     ${tray}
   </div>`;
@@ -68,7 +74,7 @@ SCENES.endscreen = () => {
     <div style="position:absolute;left:10px;top:44px">${C("hide_end_screen_cards", `<div style="display:grid;gap:6px">${card(1)}${card(2)}</div>`)}</div>
     <div style="position:absolute;right:46px;top:30px">${upnext}</div>
     <div style="position:absolute;right:10px;bottom:12px">${C("hide_channel_watermark", `<div style="opacity:.8">${av(2, 26)}</div>`)}</div>
-    <div class="seek" style="bottom:4px"><div class="played" style="width:100%"></div></div>
+    ${sharedSeek(`<div class="played" style="width:100%"></div>`, "left:12px;right:12px;bottom:4px")}
   </div>`;
 };
 
@@ -104,7 +110,7 @@ SCENES.watch = () => {
     act("hide_report_button", "flag", "Report"), act("hide_more_button", "moreh", "")].join("");
   const rowStyle = two ? "display:flex;flex-wrap:wrap;gap:8px" : "display:flex;gap:8px;overflow-x:auto;scrollbar-width:none";
   return `<div style="background:#0f0f0f;height:330px;overflow-y:auto;scrollbar-width:thin" class="inner-scroll">
-    <div style="height:96px;position:relative">${videoFrame(0)}<div class="seek" style="bottom:0;left:0;right:0;border-radius:0"><div class="played" style="width:30%"></div></div></div>
+    <div style="height:96px;position:relative">${videoFrame(0)}${sharedSeek(`<div class="played" style="width:30%"></div>`, "left:0;right:0;bottom:0", "border-radius:0")}</div>
     <div style="padding:10px 12px 0">
       <div style="font-size:17px;font-weight:500;line-height:1.3">${esc(VIDEOS[0].t)}</div>
       <div class="t2" style="margin-top:4px">${VIDEOS[0].v} · ${VIDEOS[0].a} <b style="color:#fff">...more</b></div>
@@ -130,11 +136,11 @@ SCENES.fullscreen = () => {
     <div class="frame" style="${vstyle};position:absolute;background:${ART[6]}"></div>
     <div class="scrim" style="opacity:.4"></div>
     ${C("hide_video_title", `<div style="font-size:13px;font-weight:500;max-width:240px;line-height:1.25">${esc(VIDEOS[2].t)}</div>`, { style: "position:absolute;left:12px;top:10px" })}
-    <div style="position:absolute;right:8px;top:4px;display:flex">${I("cc", "ico", 'style="margin:8px 6px"')}${I("gear", "ico", 'style="margin:8px 6px"')}</div>
+    <div style="position:absolute;right:8px;top:4px;display:flex">${C("hide_captions_button", I("cc", "ico", 'style="margin:8px 6px"'))}${C("hide_settings_button", I("gear", "ico", 'style="margin:8px 6px"'))}</div>
     <div class="pbtn bigbtn" style="position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);background:rgba(0,0,0,.3)">${I("pause")}</div>
     ${C("hide_player_related_videos_overlay", `<div style="display:flex;gap:6px;padding:6px 8px;background:linear-gradient(transparent,rgba(0,0,0,.8))"><div class="t2" style="color:#fff;writing-mode:vertical-rl;transform:rotate(180deg);font-size:10px">More videos</div>${[1, 4, 5].map(i => `<div style="width:96px">${thumb(i, "border-radius:4px")}<div style="font-size:9.5px;line-height:1.2;margin-top:2px">${esc(VIDEOS[i].t.slice(0, 30))}…</div></div>`).join("")}</div>`, { cls: "moreoverlay", style: "position:absolute;left:0;right:0;bottom:46px" })}
-    <div class="time" style="position:absolute;left:12px;bottom:30px">21:40 / 41:05</div>
-    <div class="seek" style="bottom:24px"><div class="played" style="width:52%"></div><div class="knob" style="left:52%"></div></div>
+    ${sharedTime("21:40 / 41:05", "left:12px;bottom:30px")}
+    ${sharedSeek(`<div class="played" style="width:52%"></div><div class="knob" style="left:52%"></div>`, "left:12px;right:12px;bottom:24px")}
     ${C("hide_quick_actions", `<div style="display:flex;gap:5px;overflow-x:auto;scrollbar-width:none">
       ${q("hide_quick_actions_like_button", "like", "120K")}${q("hide_quick_actions_dislike_button", "dislike", "")}${q("hide_quick_actions_comments_button", "comment", "1.4K")}
       ${q("hide_quick_actions_save_button", "save", "")}${q("hide_quick_actions_share_button", "share", "")}${q("hide_quick_actions_playlist_button", "plist", "")}
@@ -164,7 +170,7 @@ SCENES.feed = () => {
     ${abNote}
     <div style="display:flex;align-items:center;padding:8px 6px 4px 12px;gap:4px">
       ${C("hide_youtube_doodles", doodle, { style: "display:flex;align-items:center" })}<div class="plainlogo" style="display:flex;align-items:center;gap:4px">${logo}</div>
-      <div style="flex:1"></div>${I("cast", "ico", 'style="margin:0 8px"')}${I("bell", "ico", 'style="margin:0 8px"')}${I("search", "ico", 'style="margin:0 8px"')}
+      <div style="flex:1"></div>${C("hide_cast_button", I("cast", "ico", 'style="margin:0 8px"'))}${I("bell", "ico", 'style="margin:0 8px"')}${I("search", "ico", 'style="margin:0 8px"')}
     </div>
     ${C("hide_filter_bar_in_feed", `<div style="display:flex;gap:8px;padding:10px 12px;overflow-x:auto;scrollbar-width:none">${["All", "Music", "Live", "Gaming", "Podcasts", "Trains"].map((t, i) => `<span class="chip" style="${i === 0 ? "background:#f1f1f1;color:#0f0f0f" : ""}">${t}</span>`).join("")}</div>`, { blk: 1 })}
     ${vcard(0, { prog: 64 })}
@@ -244,7 +250,7 @@ SCENES.nav = () => {
     <div style="display:flex;align-items:center;padding:6px 6px 6px 12px;gap:2px">
       ${C("header_logo", `<div style="display:flex;align-items:center;gap:4px"><div style="width:28px;height:20px;border-radius:6px;background:${logo === "MORPHE" ? "#1e5aa8" : "#ff0033"};display:grid;place-items:center">${I("play", "ico", 'style="width:14px;height:14px"')}</div><b style="font-size:17px;letter-spacing:-.4px">${logoTxt}</b></div>`)}
       <div style="flex:1"></div>
-      ${I("cast", "ico", 'style="margin:0 8px"')}${tb("hide_toolbar_chat_button", I("chat"))}
+      ${C("hide_cast_button", I("cast", "ico", 'style="margin:0 8px"'))}${tb("hide_toolbar_chat_button", I("chat"))}
       ${swap ? tb("hide_toolbar_create_button", I("plus")) : tb("hide_toolbar_notification_button", I("bell"))}
       ${tb("hide_toolbar_search_button", I("search"))}${tb("show_toolbar_settings_button", I("gear"))}
     </div>
