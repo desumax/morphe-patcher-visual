@@ -35,7 +35,9 @@ function hidePage(sec, key, sit, page, o = {}) {
     at(350, () => t.forEach(e => { e.classList.remove("instant7"); if (o.invert && show) e.classList.remove("gone7"); e.classList.add("mark7"); }));
     at(1050, () => t.forEach(e => { if (!o.invert && !show) e.classList.add("gone7"); }));
     at(1700, () => t.forEach(e => e.classList.remove("mark7")));
-    return show ? (o.shown || (o.invert ? "Shown" : "Shown (stock)")) : (o.hidden || (o.invert ? "Not shown (stock)" : "Removed"));
+    // no caption: "Removed" / "Shown (stock)" only repeated the Hide / Show label above each phone,
+    // and the marked part disappearing shows it; the phones get that room instead
+    return "";
   });
 }
 const feed7 = (inner, title = "YouTube") => top7(title) + chips7(["All", "Music", "Live", "Gaming"]) + inner;

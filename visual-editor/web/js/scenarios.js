@@ -241,7 +241,10 @@ function haptic(eventLabel, script) {
     box.innerHTML = device(portrait ? "port" : "land", portrait ? `${miniVideo(1, "34%")}<div style="position:absolute;left:0;right:0;top:34%;bottom:0;background:#0f0f0f"></div>` : land);
     const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger");
     script.run(dev, f, () => buzz(dev, !disabled));
-    return disabled ? `${eventLabel}: no vibration` : `${eventLabel}: phone vibrates`;
+    // the event is the situation line; vibrates / no vibration is what the buzz icon (or the crossed-out
+    // one) shows on each phone, so there is no caption repeating it under them
+    situation(eventLabel);
+    return "";
   };
 }
 scen("seekbar", "disable_haptic_feedback_chapters", haptic("Crossing a chapter", { run(dev, f, b) {
