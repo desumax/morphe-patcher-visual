@@ -217,6 +217,10 @@ function controlFor(k) {
   return "";
 }
 const whereOf = x => { const s = sectionOf(x); return s !== section ? ` (${esc(SECTIONS.find(z => z.id === s)?.title || "Miscellaneous")})` : ""; };
+function shortNeed(k) {
+  if (!classicParentsOk(k)) return PREF[k].parents.some(x => x.mode === "not" && !!state[x.key]) ? "Parent setting must be disabled" : "Parent setting must be enabled";
+  return /S\("/.test(String(PREF[k].availability || "")) ? "Parent setting must be enabled" : "Not available with the current settings";
+}
 function needText(k) {
   if (!classicParentsOk(k)) return "Needs " + PREF[k].parents.map(x => `“${esc(title(x.key))}” ${x.mode === "not" ? "off" : "on"}${whereOf(x.key)}`).join(", ");
   const av = String(PREF[k].availability || ""), sk = [...new Set([...av.matchAll(/S\("([^"]+)"\)/g)].map(m => m[1]))].filter(x => PREF[x] && inVersion(x));
@@ -260,7 +264,9 @@ function rowHTML(k, live) {
   const bp = dis ? null : borrowedParent(k);
   const goto = blk ? `<button class="goto" data-goto="${k}">${sectionOf(blk) !== section ? "Change it here" : "Take me there"} ${I("arrow")}</button>`
     : bp ? `<button class="goto more" data-more="${k}" data-target="${bp}" title="${esc(title(bp))}">More ${I("arrow")}</button>` : "";
-  const need = dis ? `<div class="need2">${needText(k)}</div>` : "";
+  // locked: a short line beside "Take me there" (the full reason is its tooltip), so the card keeps
+  // the height of an unlocked one
+  const need = dis ? `<div class="need3" title="${esc(needText(k).replace(/<[^>]*>/g, ""))}">${shortNeed(k)}</div>` : "";
   const tags = "";
   const kids = KIDS[k] ? KIDS[k].filter(x => kidVisible(x) || x === peekKid).length : 0;
   const kidbtn = kids ? `<button class="kidbtn" data-kidtoggle="${k}" aria-expanded="${!collapsed.has(k)}" aria-label="${kids} sub-options">${kids}${I("expand")}</button>`
@@ -268,7 +274,7 @@ function rowHTML(k, live) {
   const over = /^(hide|show) in /i.test(title(k)) && p.subScreenTitle ? `<div class="over">${esc(p.subScreenTitle)}</div>` : "";
   return `<div class="${cls.join(" ")}" data-row="${k}" data-k="${k}" tabindex="0">
     <div class="txt">${over}<div class="ttl">${ttlHTML(shownTitle(k), (dis ? I("lock", "lk") : "") + tags + kidbtn)}</div>
-      ${sum ? `<div class="sum">${esc(sum)}</div>` : ""}${need}${ctl}</div>${right || goto ? `<div class="side">${right}${goto}</div>` : ""}</div>`;
+      ${sum ? `<div class="sum">${esc(sum)}</div>` : ""}${ctl}</div>${right || goto || need ? `<div class="side">${right}${need}${goto}</div>` : ""}</div>`;
 }
 // The last word of a title and the badges after it never wrap apart, so a sub-options pill can't end up alone on a line.
 function ttlHTML(t, after) { if (!after) return esc(t); const i = t.lastIndexOf(" "); return `${esc(t.slice(0, i + 1))}<span class="nw">${esc(t.slice(i + 1))}${after}</span>`; }
@@ -383,6 +389,7 @@ function renderList() {
   const wasOpen = new Map([...list.querySelectorAll(".row > .txt > .sum.open")].map(e => [e.closest(".row").dataset.row, e.getBoundingClientRect().height]));
   list.innerHTML = html;
   mergeZonePreview(list);
+  const goneNow = hideLocked(list);
   midFold.forEach((h, grp) => {
     const box = list.querySelector(`[data-kids-of="${grp}"]`), left = (foldingKids.get(grp)?.until ?? 0) - performance.now(); if (!box || left < 30) return;
     box.classList.remove("open");
@@ -433,6 +440,13 @@ function renderList() {
   });
   list.querySelectorAll(".kids").forEach(e => e.classList.toggle("open", wantOpen.has(e.dataset.kidsOf)));
   lastOpen = wantOpen; lastVis = { sec: section, keys: nowVis };
+  // locked settings that came or went fold in and out like sub-options
+  if (lastGone.sec === section) list.querySelectorAll(".row[data-row]").forEach(r => {
+    const k = r.dataset.row, box = r.closest(".gunit") || r;
+    if (lastGone.keys.has(k) && !goneNow.has(k)) sizeAnim(box, true);
+    else if (!lastGone.keys.has(k) && goneNow.has(k)) { box.classList.remove("gone"); const an = sizeAnim(box, false); const end = () => { box.classList.add("gone"); box.getAnimations().forEach(a => a.cancel()); }; if (an) an.onfinish = end; else end(); }
+  });
+  lastGone = { sec: section, keys: goneNow };
   // rows that just became available on this screen get the unlock animation
   // read from the settings, not the drawn rows: a sub-option folding away keeps its unlocked look
   // while it folds, and read from the DOM it never counted as locked, so it unlocked only once
@@ -442,6 +456,24 @@ function renderList() {
 }
 // "Swipe zone preview" is one column on the right of the left, right and top zone rows, its title
 // running vertically, since it previews all three
+// A locked setting (its parent is off) isn't listed until the parent is on; one reached by search or
+// "Take me there" stays while it is selected, with its lock and the way to unlock it.
+let lastGone = { sec: null, keys: new Set() };
+function hideLocked(list) {
+  const gone = new Set();
+  list.querySelectorAll(".row.dis[data-row]").forEach(r => {
+    const k = r.dataset.row; if (k === selected || r.closest(".kids")) return;
+    const unit = r.parentElement.classList.contains("unit") && r.parentElement.firstElementChild === r ? r.parentElement : r;
+    unit.classList.add("gone", "gunit"); gone.add(k);
+  });
+  // a caption with nothing left under it goes too
+  list.querySelectorAll(".subhead").forEach(h => {
+    let any = false; for (let n = h.nextElementSibling; n && !n.classList.contains("subhead"); n = n.nextElementSibling) if (!n.classList.contains("gone")) { any = true; break; }
+    h.classList.toggle("gone", !any);
+  });
+  list.querySelectorAll(".group").forEach(g => g.classList.toggle("gone", ![...g.children].some(n => !n.classList.contains("gone") && !n.classList.contains("subhead"))));
+  return gone;
+}
 function mergeZonePreview(list) {
   const pv = list.querySelector('.row[data-row="morphe_swipe_zone_preview"]'); if (!pv) return;
   const zs = ["left", "right", "top"].map(s => list.querySelector(`.row[data-row="morphe_swipe_${s}_zone"]`)).filter(Boolean)
