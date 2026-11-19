@@ -617,7 +617,6 @@ scen("playback", "advanced_video_quality_menu", (box, on) => {
   return on ? "The full list of resolutions opens directly" : "A simplified menu first (stock)";
 });
 for (const [k, sit, offTxt, onTxt] of [
-  ["disable_playback_speed_music", "Music videos at 1.5×", "Music plays at your speed", "Music always plays at 1×"],
   ["force_original_audio", "A video with dubbed audio tracks", "Dubbed track in your language", "Original audio track"],
   ["remember_live_stream_position", "Coming back to a live stream", "Jumps to live", "Resumes where you were"],
   ["video_delay_bluetooth_only", "Audio delay correction", "Applied always", "Only with Bluetooth audio"],

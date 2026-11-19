@@ -180,8 +180,14 @@ const devScale = dev => (dev.getBoundingClientRect().width / (dev.offsetWidth ||
 // Scenarios are drawn twice, Off and On side by side. scSide is the side being drawn (null for a
 // scenario that draws its own comparison); scStretch slows the whole story down to the 11 s budget.
 let scSide = null, scStretch = 1;
+// A scenario that tells its story with a message inside the phones (toast7, check7, a .toastin pill)
+// gets no caption under them: the caption only repeated that message and took room from the phones.
+// Read from the scenario's own code, so every scenario follows it, including new ones.
+let scTold = false;
+const toldInside = fn => /toast7\(|check7\(|toastin/.test(String(fn));
 function situation(text) { if (scSide && scSide.i) return; const el = document.querySelector("#canvas .sit"); if (!el) return; el.style.opacity = 0; later(() => { el.textContent = text; el.style.opacity = 1; }, 160); }
 function setFoot(text) {
+  if (scTold) return;
   if (scSide) {
     const f = scSide.foot; if (f.textContent === text) return;
     const gen = f.closest(".duo7.gen");
@@ -591,7 +597,7 @@ scen("sponsorblock", "sb_auto_hide_skip_button", (box, on) => {
 
 // ------------------------------------------------------------------ fullscreen gestures (scenarios)
 const gestureScen = (key, orient, from, to, label, result) => scen("fullscreen", key, (box, disabled) => {
-  situation(orient === "land" ? "Fullscreen" : "Portrait player");
+  situation(label);
   box.innerHTML = device(orient, orient === "land" ? miniVideo(6) : playerArea(6));
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
   at(100, () => fingerTo(f, W * from[0], H * from[1])); at(350, () => fingerTo(f, W * to[0], H * to[1], 700));
@@ -601,6 +607,19 @@ const gestureScen = (key, orient, from, to, label, result) => scen("fullscreen",
   });
   return disabled ? `${label}: ignored` : `${label}: ${result.text}`;
 });
+// A message pill inside a phone always stays inside it: one that would run past the bottom (a long
+// message, or a phone drawn small) moves up just enough. Watches the scenario canvas, so it covers
+// every scenario's pills however they were added.
+function keepPillIn(t) {
+  const dev = t.closest(".dev"); if (!dev || !t.isConnected || getComputedStyle(t).position !== "absolute") return;
+  const H = dev.clientHeight, h = t.offsetHeight, mid = /-50%/.test(t.style.translate || "");
+  const bottom = t.offsetTop + (mid ? h / 2 : h);
+  if (bottom > H - 3) { t.style.top = Math.max(2, t.offsetTop - (bottom - (H - 3))) + "px"; t.style.bottom = "auto"; }
+}
+new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => {
+  if (n.nodeType !== 1) return;
+  [...(n.matches(".toastin") ? [n] : []), ...n.querySelectorAll(".toastin")].forEach(t => requestAnimationFrame(() => keepPillIn(t)));
+}))).observe($("canvas"), { childList: true, subtree: true });
 // swap what the device shows (fullscreen video vs portrait watch page) as it turns
 // The new screen goes in underneath, fully drawn, and the old one fades off the top of it. (Both used to
 // fade at once, old out and new in a little later, so the screen dipped to black in between: the flicker
@@ -967,16 +986,16 @@ function playScenario(k, prevValue) {
   const d = defaults[k], choices = entriesFor(k).filter(e => !sameVal(e.value, d));
   const ask = !self && PREF[k].type !== "boolean" && choices.length > 1 && sameVal(V(k), d) && (prevValue === undefined || sameVal(prevValue, d));
   const draw = () => {
-    clock.start("steps"); scStretch = stretch;
+    clock.start("steps"); scStretch = stretch; scTold = toldInside(fn);
     if (self) {
       const foot = fn(box, V(k), prevValue);
-      if (foot) canvas.querySelector(".foot").textContent = foot;
+      if (foot && !scTold) canvas.querySelector(".foot").textContent = foot;
     } else {
       box.innerHTML = `<div class="duo7 gen">${vals.map(([, l], i) => `<div class="dl7"><span class="${NEG_WORD.has(String(l)) ? "neg" : i ? "on" : ""} ${String(l).length > 14 ? "xlong" : String(l).length > 8 ? "long" : ""}">${esc(l)}</span><div class="side"></div><div class="sf7"></div></div>`).join("")}</div>`;
       box.querySelectorAll(".dl7").forEach((cell, i) => {
         const side = { i, foot: cell.querySelector(".sf7") };
         scSide = side;
-        try { const ft = fn(cell.querySelector(".side"), vals[i][0], vals[1 - i][0]); if (ft && !side.foot.textContent) side.foot.textContent = ft; }
+        try { const ft = fn(cell.querySelector(".side"), vals[i][0], vals[1 - i][0]); if (ft && !scTold && !side.foot.textContent) side.foot.textContent = ft; }
         finally { scSide = null; }
       });
     }
