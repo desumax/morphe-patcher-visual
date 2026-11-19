@@ -185,7 +185,14 @@ let scSide = null, scStretch = 1;
 // Read from the scenario's own code, so every scenario follows it, including new ones.
 let scTold = false;
 const toldInside = fn => /toast7\(|check7\(|toastin/.test(String(fn));
-function situation(text) { if (scSide && scSide.i) return; const el = document.querySelector("#canvas .sit"); if (!el) return; el.style.opacity = 0; later(() => { el.textContent = text; el.style.opacity = 1; }, 160); }
+// The situation line: the first one of a story is there with the phones (it used to fade in 160 ms
+// after them); a later, different line crossfades; the same line again (each new run) stays put.
+function situation(text) {
+  if (scSide && scSide.i) return; const el = document.querySelector("#canvas .sit"); if (!el) return;
+  if (el.textContent === text) return;
+  if (!el.textContent) { el.style.transition = "none"; el.textContent = text; el.style.opacity = 1; void el.offsetWidth; el.style.transition = ""; return; }
+  el.style.opacity = 0; later(() => { el.textContent = text; el.style.opacity = 1; }, 160);
+}
 function setFoot(text) {
   if (scTold) return;
   if (scSide) {

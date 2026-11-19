@@ -597,6 +597,12 @@ function fitPills(box, pills, textOf, chrome) {
   const n = pills.length, rows = Math.ceil(n / Math.min(n, maxCols)), cols = Math.ceil(n / rows);
   // fill the line only when that stretches the pills by at most a quarter; otherwise each keeps the
   // widest pill's width (three long options one per line stay that long, not the whole card wide)
+  // One line beats equal widths: when equal pills would wrap but the pills at their own widths fit
+  // on one line (Off · Volume · Brightness · Speed), they share the line in proportion to their text.
+  if (maxCols < n) {
+    const own = pills.map(o => Math.ceil(optCtx.measureText(textOf(o)).width + chrome)), sum = own.reduce((a, b) => a + b, 0) + gap * (n - 1);
+    if (sum <= W) { box.style.gridTemplateColumns = own.map(w => `minmax(${w}px, ${w}fr)`).join(" "); box.style.justifyContent = ""; return; }
+  }
   const even = (W - gap * (cols - 1)) / cols;
   const fill = cols > 1 && even <= need * 1.25;
   box.style.gridTemplateColumns = fill ? `repeat(${cols}, minmax(0, 1fr))` : `repeat(${cols}, ${Math.min(need, W)}px)`;

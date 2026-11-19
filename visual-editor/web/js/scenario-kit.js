@@ -538,7 +538,7 @@ scen("playback", "on_the_go", (box, on) => {
   // audio mode: the panel covers the video and the thumbnail takes its place
   at(3500, () => fingerTo(f, W / 2 - 8, H - 12)); at(3800, () => { tapF(f); const pn = dev.querySelector(".og8"); if (!pn) return; pn.style.top = "0px"; pn.querySelector(".th8").style.height = "46px"; pn.querySelector(".am8").innerHTML = ico7("tv", 8); });
   at(4100, () => { f.classList.remove("show"); toast7(dev, `${ico7("headset", 7)} Audio mode`, "40%"); });
-  return "Morphe's panel: big controls under the video, and an audio mode";
+  return "Morphe's panel";
 });
 // Sanitize video subtitle: no animation (Max, 2026-11-19)
 for (const [k, icon, text] of [["save_to_watch_later_flyout_button", "clock", "Save to Watch later"], ["feed_download_flyout_button", "dl", "Download with your app"], ["shorts_download_flyout_button", "dl", "Download this Short"]])
@@ -581,16 +581,17 @@ scen("playback", "live_chat_translate", (box, on) => {
 });
 scen("playback", "live_chat_translate_bold", (box, on) => {
   situation("Translated live chat");
-  box.innerHTML = lcPage(lcChat({ tr: true, bold: false }));
+  // drawn with its weight from the first frame (it used to turn bold 0.7 s in, which read as lag)
+  box.innerHTML = lcPage(lcChat({ tr: true, bold: on }));
   const dev = box.querySelector(".dev");
-  at(700, () => { if (on) dev.querySelectorAll(".lt8").forEach(e => { e.style.fontWeight = "700"; e.animate([{ opacity: .4 }, { opacity: 1 }], { duration: 250 }); }); });
+  at(150, () => { if (on) dev.querySelectorAll(".lt8").forEach(e => e.animate([{ opacity: .45 }, { opacity: 1 }], { duration: 300 })); });
   return on ? "Translations are bold" : "Translations in regular weight";
 });
 scen("playback", "live_chat_translate_use_color", (box, on) => {
   situation("Translated live chat");
-  box.innerHTML = lcPage(lcChat({ tr: true, color: false }));
-  const dev = box.querySelector(".dev"), col = cssColor(V("morphe_live_chat_translate_color") || "#38BDF8");
-  at(700, () => { if (on) dev.querySelectorAll(".lt8").forEach(e => { e.style.transition = "color .3s"; e.style.color = col; }); });
+  box.innerHTML = lcPage(lcChat({ tr: true, color: on }));
+  const dev = box.querySelector(".dev");
+  at(150, () => { if (on) dev.querySelectorAll(".lt8").forEach(e => e.animate([{ opacity: .45 }, { opacity: 1 }], { duration: 300 })); });
   return on ? "Translations in your colour" : "Translations in the chat's text colour";
 });
 scen("playback", "live_chat_translate_copy_button", (box, on) => {
@@ -600,7 +601,7 @@ scen("playback", "live_chat_translate_copy_button", (box, on) => {
   if (on) {
     at(500, () => { const c = dev.querySelector(".cp8"), d = dev.getBoundingClientRect(), r = c.getBoundingClientRect(), k = d.width / dev.offsetWidth; fingerTo(f, (r.left + r.width / 2 - d.left) / k, (r.top + r.height / 2 - d.top) / k); });
     at(900, () => tapF(f));
-    at(1100, () => { f.classList.remove("show"); toast7(dev, `${ico7("copy", 7)} Message copied`, "80%"); });
+    at(1100, () => { f.classList.remove("show"); toast7(dev, `${ico7("copy", 7)} Copied`, "58%"); });
   }
   return on ? "A copy icon after each message copies it" : "No copy icon (stock)";
 });

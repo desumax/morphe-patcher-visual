@@ -248,7 +248,9 @@ function goToSetting(k, after) {
     return;
   }
   switchSection(sectionOf(k), () => {
-    select(k, undefined, true);
+    // arriving (a search result, Take me there, a popup) plays what tapping the card plays: its
+    // animation or comparison, and the reveal of a hidden part
+    select(k, "list", true);
     if (after) fT(after, PARENT_OF[k] ? 520 : 380);
   });
 }
