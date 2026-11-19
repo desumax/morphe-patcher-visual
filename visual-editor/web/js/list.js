@@ -30,7 +30,7 @@ function renderBar() {
 // Screens Max has signed off ("lock it"). Shown as a small check in the screen menu and on the tabs.
 // To remove before shipping: delete this block, the .devdone CSS rule, and the three devMark /
 // devMarkGroup calls (screen menu card, group card, tab).
-const DEV_DONE = new Set(["player", "seekbar"]); // section ids, e.g. "player"
+const DEV_DONE = new Set(["player", "seekbar", "fullscreen", "flyout"]); // section ids, e.g. "player"
 const devMark = id => DEV_DONE.has(id) ? `<span class="devdone" title="Finished (development marker)">✓</span>` : "";
 const devMarkGroup = g => tabsOf(g).length && tabsOf(g).every(([id]) => DEV_DONE.has(id)) ? devMark(tabsOf(g)[0][0]) : "";
 // ---- end DEV ONLY ---------------------------------------------------------------------------------
@@ -654,11 +654,24 @@ function renderInspector() {
       </dl>`;
   }
   const total = CAT.preferences.length;
-  const live = Object.keys(A).filter(k => PREF[k]).length;
-  const anim = Object.keys(A).filter(k => PREF[k] && isAnimated(k)).length;
+  // Every setting is in the editor; what differs is how much the preview does for it. Three kinds,
+  // the same in the totals, each tab's bar and its list: animated (plays a demo or an Off / On
+  // comparison), shown (drawn in the preview, changes it, no animation), no preview (a plain row under
+  // the tab's "More settings", or in Miscellaneous when it has no tab).
+  const kindOf = k => !A[k] ? "none" : isAnimated(k) ? "anim" : "shown";
+  const count = keys => { const c = { anim: 0, shown: 0, none: 0 }; keys.forEach(k => c[kindOf(k)]++); return c; };
+  const bar = (c, t) => `<div class="bar3">${["anim", "shown", "none"].map(x => c[x] ? `<i class="${x}" style="width:${c[x] / t * 100}%"></i>` : "").join("")}</div>`;
+  const all = count(CAT.preferences.map(p => p.key));
+  const tabs = SECTIONS.filter(s => s.id !== "misc").map(s => { const m = MEMBERS[s.id], keys = [...m.live, ...m.misc]; return { s, keys, c: count(keys) }; });
+  const miscN = MEMBERS.misc ? MEMBERS.misc.live.length + MEMBERS.misc.misc.length : 0;
+  const openTabs = new Set([...$("covCard").querySelectorAll("details[open]")].map(d => d.dataset.s)); // stays open through redraws
   $("covCard").innerHTML = `<h2>Coverage</h2>
-    <div class="statrow"><div><div class="big">${live}</div><span>visualized</span></div><div><div class="big">${anim}</div><span>animated</span></div><div><div class="big">${total - live}</div><span>in Misc</span></div><div><div class="big">${total}</div><span>prefs found</span></div></div>
-    <div class="cov">${SECTIONS.filter(s => s.id !== "misc").map(s => { const m = MEMBERS[s.id]; const t = m.live.length + m.misc.length; return `<div class="r"><span>${s.title}</span><div class="bar"><i style="width:${t ? (m.live.length / t * 100) : 0}%"></i></div><span class="num">${m.live.length}/${t}</span></div>`; }).join("")}</div>
+    <p class="covlead">All ${total} settings in Morphe are in the editor. The bars show how much the preview does for them.</p>
+    <div class="covkey"><span><i class="anim"></i><b>${all.anim}</b> animated</span><span><i class="shown"></i><b>${all.shown}</b> shown, not animated</span><span><i class="none"></i><b>${all.none}</b> no preview</span></div>
+    <div class="covhelp">Animated: plays a demo or an Off / On comparison. Shown: drawn in the preview and changes it, without an animation. No preview: a plain setting row, under its tab's "More settings" (or in Miscellaneous when it has no tab). Tap a tab to see its settings without a preview.</div>
+    <div class="cov">${tabs.map(({ s, keys, c }) => `<details class="r3" data-s="${s.id}"${openTabs.has(s.id) ? " open" : ""}><summary><span>${esc(s.title)}</span>${bar(c, keys.length)}<span class="num">${c.anim}<i>·</i>${c.shown}<i>·</i>${c.none}</span></summary>
+      <div class="covmiss">${c.none ? keys.filter(k => kindOf(k) === "none").map(k => `<div>${esc(title(k))}</div>`).join("") : "Every setting here has a preview."}</div></details>`).join("")}</div>
+    <div class="covhelp">Numbers per tab: animated · shown · no preview. ${miscN ? `Miscellaneous holds ${miscN} more with no tab of their own.` : ""}</div>
     <p style="margin-top:12px;font-size:12px">Source: <span style="font-family:var(--mono)">${esc(CAT.source)}</span></p>`;
   const ch = changedOnly(); const n = Object.keys(ch).length;
   $("chgCard").innerHTML = `<h2>Changed settings</h2><p>${n ? `${n} setting${n > 1 ? "s" : ""} differ from Morphe's defaults. Saved in this browser only.` : "All settings are at Morphe's defaults."}</p>
