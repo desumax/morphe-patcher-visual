@@ -602,11 +602,14 @@ const gestureScen = (key, orient, from, to, label, result) => scen("fullscreen",
   return disabled ? `${label}: ignored` : `${label}: ${result.text}`;
 });
 // swap what the device shows (fullscreen video vs portrait watch page) as it turns
+// The new screen goes in underneath, fully drawn, and the old one fades off the top of it. (Both used to
+// fade at once, old out and new in a little later, so the screen dipped to black in between: the flicker
+// at the end of every turn: force landscape, the fullscreen swipe gestures, anything using turn().)
 function devContent(dev, html) {
-  [...dev.children].forEach(c => { if (!c.classList.contains("waves") && !c.classList.contains("finger")) { c.style.transition = "opacity .2s"; c.style.opacity = "0"; later(() => c.remove(), 200); } });
+  const old = [...dev.children].filter(c => !c.classList.contains("waves") && !c.classList.contains("finger"));
   const tmp = document.createElement("div"); tmp.innerHTML = html;
-  const f = dev.querySelector(".finger");
-  [...tmp.children].forEach(c => { c.style.opacity = "0"; c.style.transition = "opacity .3s .15s"; dev.insertBefore(c, f); requestAnimationFrame(() => requestAnimationFrame(() => { c.style.opacity = ""; })); });
+  [...tmp.children].reverse().forEach(c => dev.insertBefore(c, dev.firstChild));
+  old.forEach(c => { c.style.transition = "opacity .25s"; requestAnimationFrame(() => { c.style.opacity = "0"; }); later(() => c.remove(), 260); });
 }
 // the phone turns visibly (its screen rotates with it), then the app lays out for the new orientation
 function turn(dev, orient, then) {

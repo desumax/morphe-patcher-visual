@@ -581,8 +581,10 @@ function fitPills(box, pills, textOf, chrome) {
   const need = Math.ceil(Math.max(...pills.map(o => optCtx.measureText(textOf(o)).width)) + chrome);
   const maxCols = Math.max(1, Math.floor((W + gap) / (need + gap)));
   const n = pills.length, rows = Math.ceil(n / Math.min(n, maxCols)), cols = Math.ceil(n / rows);
+  // fill the line only when that stretches the pills by at most a quarter; otherwise each keeps the
+  // widest pill's width (three long options one per line stay that long, not the whole card wide)
   const even = (W - gap * (cols - 1)) / cols;
-  box.style.gridTemplateColumns = even <= need * 1.5 ? `repeat(${cols}, minmax(0, 1fr))` : `repeat(${cols}, minmax(0, ${need}px))`;
+  box.style.gridTemplateColumns = cols > 1 && even <= need * 1.25 ? `repeat(${cols}, minmax(0, 1fr))` : `repeat(${cols}, ${Math.min(need, W)}px)`;
 }
 function fitOpts(root = $("list")) {
   root.querySelectorAll(".ctl.optgrid").forEach(box => fitPills(box, [...box.querySelectorAll(".opt")], o => o.textContent, 2 * OPT_PAD + 2));
@@ -590,7 +592,7 @@ function fitOpts(root = $("list")) {
   root.querySelectorAll(".ctl.lst").forEach(box => fitPills(box, [...box.querySelectorAll(".lchip")], o => o.firstChild ? o.firstChild.textContent : "", LCHIP_CHROME));
 }
 const OPT_PAD = 6; // the least room beside a pill's text
-const LCHIP_CHROME = 11 + 2 + 26 + 2 + 8; // left padding, gap, remove button, right padding, breathing room
+const LCHIP_CHROME = 8 + 2 + 22 + 2; // left padding, gap, remove button, right padding (4 speeds a row in a ~300px card)
 addEventListener("resize", () => { clearTimeout(fitOpts._t); fitOpts._t = setTimeout(() => fitOpts(), 120); });
 function hideLocked(list) {
   const gone = new Set();
