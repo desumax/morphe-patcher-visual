@@ -32,7 +32,7 @@ function renderBar() {
 // devMarkGroup calls (screen menu card, group card, tab).
 const DEV_DONE = new Set(["player", "seekbar", "fullscreen", "flyout"]); // section ids, e.g. "player"
 // settings Max approved without a preview: a tab id approves all of its settings that have none, a key one setting
-const NO_PREVIEW_OK = new Set(["fullscreen"]);
+const NO_PREVIEW_OK = new Set(["fullscreen", "player", "morphe_custom_seekbar_thumb_file", "morphe_swipe_seek_sensitivity"]);
 const devMark = id => DEV_DONE.has(id) ? `<span class="devdone" title="Finished (development marker)">✓</span>` : "";
 const devMarkGroup = g => tabsOf(g).length && tabsOf(g).every(([id]) => DEV_DONE.has(id)) ? devMark(tabsOf(g)[0][0]) : "";
 // ---- end DEV ONLY ---------------------------------------------------------------------------------
@@ -661,7 +661,11 @@ function renderInspector() {
   // comparison), shown (drawn in the preview, changes it, no animation), no preview (a plain row under
   // the tab's "More settings", or in Miscellaneous when it has no tab).
   const okNone = k => NO_PREVIEW_OK.has(k) || NO_PREVIEW_OK.has(sectionOf(k));
-  const kindOf = k => !A[k] ? (okNone(k) ? "ok" : "none") : isAnimated(k) ? "anim" : "shown";
+  // a setting without its own entry that still lights up a part of the preview counts as shown: it
+  // acts on another setting's element (NEEDS), flashes a named one (PROXY_K) or its parent's element in the preview (a
+  // sub-option such as "Tap Playback speed button to cycle speeds")
+  const lights = k => { if (NEEDS[k] || PROXY_K[k]) return true; const seen = new Set(); for (let p = PARENT_OF[k]; p && !seen.has(p); p = PARENT_OF[p]) { seen.add(p); if ((A[p] && A[p].kind !== "scenario") || NEEDS[p] || PROXY_K[p]) return true; } return false; };
+  const kindOf = k => A[k] ? (isAnimated(k) ? "anim" : "shown") : NO_PREVIEW_OK.has(k) ? "ok" : lights(k) ? "shown" : okNone(k) ? "ok" : "none";
   const count = keys => { const c = { anim: 0, shown: 0, ok: 0, none: 0 }; keys.forEach(k => c[kindOf(k)]++); return c; };
   const bar = (c, t) => `<div class="bar3">${["anim", "shown", "ok", "none"].map(x => c[x] ? `<i class="${x}" style="width:${c[x] / t * 100}%"></i>` : "").join("")}</div>`;
   const all = count(CAT.preferences.map(p => p.key));
@@ -671,7 +675,7 @@ function renderInspector() {
   $("covCard").innerHTML = `<h2>Coverage</h2>
     <p class="covlead">All ${total} settings in Morphe are in the editor. The bars show how much the preview does for them.</p>
     <div class="covkey"><span><i class="anim"></i><b>${all.anim}</b> animated</span><span><i class="shown"></i><b>${all.shown}</b> shown, not animated</span><span><i class="ok"></i><b>${all.ok}</b> no preview, approved</span><span><i class="none"></i><b>${all.none}</b> no preview</span></div>
-    <div class="covhelp">Animated: plays a demo or an Off / On comparison. Shown: drawn in the preview and changes it, without an animation. Approved: no preview, and fine that way. No preview: a plain setting row, under its tab's "More settings" (or in Miscellaneous when it has no tab). Tap a tab to see its settings without a preview.</div>
+    <div class="covhelp">Animated: plays a demo or an Off / On comparison. Shown: drawn in the preview, or lights up the part of it it changes, without an animation. Approved: no preview, and fine that way. No preview: a plain setting row, under its tab's "More settings" (or in Miscellaneous when it has no tab). Tap a tab to see its settings without a preview.</div>
     <div class="cov">${tabs.map(({ s, keys, c }) => `<details class="r3" data-s="${s.id}"${openTabs.has(s.id) ? " open" : ""}><summary><span>${esc(s.title)}</span>${bar(c, keys.length)}<span class="num">${c.anim}<i>·</i>${c.shown}<i>·</i>${c.ok}<i>·</i>${c.none}</span></summary>
       <div class="covmiss">${c.none || c.ok ? keys.filter(k => /none|ok/.test(kindOf(k))).map(k => `<div>${esc(title(k))}${kindOf(k) === "ok" ? " <i>(approved)</i>" : ""}</div>`).join("") : "Every setting here has a preview."}</div></details>`).join("")}</div>
     <div class="covhelp">Numbers per tab: animated · shown · approved without preview · no preview. ${miscN ? `Miscellaneous holds ${miscN} more with no tab of their own.` : ""}</div>

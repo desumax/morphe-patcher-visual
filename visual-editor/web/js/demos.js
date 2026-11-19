@@ -17,10 +17,10 @@ let demoStep = 0;
 // Comparisons (Off / On side by side) are not demos: they live in scenarios.js (scen()).
 const DEMO_TYPES = {
   transient: "hide_player_gesture_hints seekbar_thumbnail_preview sb_create_new_segment sb_create_new_segment_step sb_voting_button",
-  gesture: "tap_to_seek slide_to_seek disable_precise_seeking_gesture swipe_seek swipe_seek_sensitivity disable_shorts_double_tap_to_like swap_save_and_queue_actions",
+  gesture: "tap_to_seek slide_to_seek disable_precise_seeking_gesture swipe_seek disable_shorts_double_tap_to_like swap_save_and_queue_actions",
   toast: "remember_playback_speed_last_selected_toast remember_video_quality_last_selected_toast skip_silence",
   motion: "autoplay_mode disable_like_subscribe_glow stable_caption_blocks niconico_comments narrow_navigation_buttons",
-  overlay: "swipe_left_zone swipe_right_zone swipe_top_zone swipe_overlay_style swipe_overlay_background_opacity swipe_text_overlay_size swipe_overlay_progress_volume_color swipe_overlay_progress_brightness_color swipe_overlay_progress_speed_color swipe_zone_width swipe_overlay_timeout swipe_speed_step swipe_speed_sensitivity swipe_threshold swipe_brightness_sensitivity swipe_volume_distance swipe_volume_steps swipe_zone_preview swipe_speed_zone_height",
+  overlay: "swipe_left_zone swipe_right_zone swipe_top_zone swipe_overlay_style swipe_overlay_background_opacity swipe_text_overlay_size swipe_overlay_progress_volume_color swipe_overlay_progress_brightness_color swipe_overlay_progress_speed_color swipe_zone_width swipe_overlay_timeout swipe_speed_step swipe_speed_sensitivity swipe_zone_preview swipe_speed_zone_height",
 };
 const DEMO_TYPE = {};
 Object.entries(DEMO_TYPES).forEach(([t, ks]) => ks.split(" ").forEach(k => { DEMO_TYPE["morphe_" + k] = t; }));
@@ -136,12 +136,6 @@ const DEMOS = {
   },
   morphe_swipe_speed_step() { swipeDemo(speedSide(), "SPEED"); dT(() => label(`Speed changes in ${(SPEED_STEPS[V("morphe_swipe_speed_step")] || .05).toFixed(2)}x steps`), 1000); },
   morphe_swipe_speed_sensitivity() { swipeDemo(speedSide(), "SPEED"); dT(() => label(`Sensitivity ${V("morphe_swipe_speed_sensitivity")}: this swipe reaches ${speedAt(1)}`), 1000); },
-  // the tuning settings play the swipe they tune, on the zone that uses them, and say what changed
-  morphe_swipe_threshold() { const side = activeSide(); swipeDemo(side, zoneAction(side)); dT(() => label(`Nothing changes for the first ${Number(V("morphe_swipe_threshold")) || 0} px of a swipe`), 1000); },
-  morphe_swipe_brightness_sensitivity() { swipeDemo(sideFor("BRIGHTNESS", "left"), "BRIGHTNESS"); dT(() => label(`Sensitivity ${V("morphe_swipe_brightness_sensitivity")}: this swipe reaches ${brightAt(1)[1]}`), 1000); },
-  morphe_swipe_volume_distance() { swipeDemo(sideFor("VOLUME", "right"), "VOLUME"); dT(() => label(`Sensitivity ${V("morphe_swipe_volume_distance")}: this swipe reaches ${volAt(1)[1]}`), 1000); },
-  morphe_swipe_volume_steps() { swipeDemo(sideFor("VOLUME", "right"), "VOLUME"); dT(() => label(`Volume moves in ${volSteps()} steps`), 1000); },
-  morphe_swipe_seek_sensitivity() { DEMOS.morphe_swipe_seek(true); },
   morphe_swipe_overlay_background_opacity() { stillHud(); },
   morphe_swipe_text_overlay_size() { stillHud(); },
   morphe_swipe_overlay_progress_volume_color() { swipeDemo("right", "VOLUME"); },

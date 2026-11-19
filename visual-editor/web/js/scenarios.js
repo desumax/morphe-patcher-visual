@@ -696,7 +696,7 @@ scen("fullscreen", "restore_pinch_to_zoom", (box, on) => {
 // ------------------------------------------------------------------ swipe controls: overlay style settings feed the swipe demo
 def("fullscreen", "style", "swipe_overlay_background_opacity swipe_overlay_progress_volume_color swipe_overlay_progress_brightness_color swipe_overlay_progress_speed_color swipe_text_overlay_size swipe_zone_width");
 def("fullscreen", "gesture", "swipe_top_zone");
-def("fullscreen", "style", "swipe_zone_preview swipe_speed_zone_height swipe_overlay_timeout swipe_speed_step swipe_speed_sensitivity swipe_threshold swipe_brightness_sensitivity swipe_volume_distance swipe_volume_steps swipe_seek_sensitivity");
+def("fullscreen", "style", "swipe_zone_preview swipe_speed_zone_height swipe_overlay_timeout swipe_speed_step swipe_speed_sensitivity");
 scen("fullscreen", "swipe_change_video", (box, on) => {
   situation("Fullscreen, swipe sideways");
   box.innerHTML = device("land", `<div class="sv" style="position:absolute;inset:0;display:flex;width:200%;transition:transform .45s var(--ease)"><div style="flex:1;background:${ART[6]}"></div><div style="flex:1;background:${ART[2]}"></div></div>`);
