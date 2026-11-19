@@ -611,6 +611,15 @@ function devContent(dev, html) {
   [...tmp.children].reverse().forEach(c => dev.insertBefore(c, dev.firstChild));
   old.forEach(c => { c.style.transition = "opacity .25s"; requestAnimationFrame(() => { c.style.opacity = "0"; }); later(() => c.remove(), 260); });
 }
+// Turn the phone and show what the app shows in the new orientation. The new screen crossfades in
+// while the phone is still turning, so it is fully there before the phone settles: swapping after the
+// turn showed the old layout re-laid out for a moment (the watch page's lower half flashing under the
+// fullscreen video). Every turn that changes the screen goes through here.
+function turnTo(dev, orient, html) {
+  const cur = dev.classList.contains("land") ? "land" : "port";
+  if (cur === orient) return devContent(dev, html);
+  turn(dev, orient); later(() => devContent(dev, html), 180);
+}
 // the phone turns visibly (its screen rotates with it), then the app lays out for the new orientation
 function turn(dev, orient, then) {
   const cur = dev.classList.contains("land") ? "land" : "port";
@@ -659,13 +668,13 @@ function turnInPair(gen, dev, cur, orient, then) {
     if (then) then();
   }, MOVE_MS);
 }
-const r1 = dev => turn(dev, "port", () => devContent(dev, playerArea(6))); r1.text = "leaves fullscreen";
+const r1 = dev => turnTo(dev, "port", playerArea(6)); r1.text = "leaves fullscreen";
 gestureScen("disable_fullscreen_dragged_down_gesture", "land", [.5, .25], [.5, .85], "Swipe down in fullscreen", r1);
-const r2 = dev => turn(dev, "land", () => devContent(dev, miniVideo(6))); r2.text = "enters fullscreen";
+const r2 = dev => turnTo(dev, "land", miniVideo(6)); r2.text = "enters fullscreen";
 gestureScen("disable_fullscreen_pulled_up_gesture", "port", [.5, .3], [.5, .08], "Swipe up on the player", r2);
 // Morphe's gesture type for this one is MAXIMIZED_TO_FULLSCREEN_SLIDING: pulling the portrait player
 // down slides it into fullscreen (not down to the miniplayer)
-const r3 = dev => { const v = dev.querySelector(".dv-video"); if (v) { v.style.transition = "transform .3s var(--ease)"; v.style.transformOrigin = "50% 0"; v.style.transform = "scaleY(1.25)"; } later(() => turn(dev, "land", () => devContent(dev, miniVideo(6))), 260); }; r3.text = "slides into fullscreen";
+const r3 = dev => { const v = dev.querySelector(".dv-video"); if (v) { v.style.transition = "transform .3s var(--ease)"; v.style.transformOrigin = "50% 0"; v.style.transform = "scaleY(1.25)"; } later(() => turnTo(dev, "land", miniVideo(6)), 260); }; r3.text = "slides into fullscreen";
 gestureScen("disable_fullscreen_sliding_down_gesture", "port", [.5, .1], [.5, .45], "Swipe down on the player", r3);
 scen("fullscreen", "disable_fullscreen_zoom_gesture", (box, disabled) => {
   situation("Fullscreen, two fingers spread");

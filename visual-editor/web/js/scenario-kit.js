@@ -467,7 +467,7 @@ scen("playback", "force_fullscreen_landscape", (box, on) => {
   at(300, () => fingerTo(f, W - 10, 44)); at(600, () => tapF(f));
   at(850, () => {
     f.classList.remove("show");
-    if (on) turn(dev, "land", () => devContent(dev, miniVideo(3)));
+    if (on) turnTo(dev, "land", miniVideo(3));
     else devContent(dev, `<div style="position:absolute;inset:0;background:#000"></div><div style="position:absolute;left:0;right:0;top:50%;height:30%;translate:0 -50%;background:${ART[3]}"></div>`);
   });
   return on ? "Fullscreen turns the tablet's screen to landscape" : "Fullscreen stays upright: the video is letterboxed (stock)";
@@ -626,7 +626,11 @@ function buildKids() {
       // zone) is not a sub-option of one of them: nesting it under the first made it pop up under a
       // parent that was never touched. It stays a normal row that is greyed out until one is on.
       const shared = avKeys.length > 1 && av.includes("||");
-      const par = MANUAL_PARENT[k] && set.has(MANUAL_PARENT[k].key) ? MANUAL_PARENT[k].key : (PREF[k].parents || []).map(x => x.key).find(ok) || (shared ? null : avKeys[0]);
+      // with several required parents, the nearest one is the one that itself needs the others
+      // (Audio time stretching needs the speed menu and Audio pitch controls: it belongs under the latter)
+      const ps = (PREF[k].parents || []).map(x => x.key).filter(ok);
+      const near = ps.find(x => ps.some(y => y !== x && (PREF[x]?.parents || []).some(z => z.key === y))) || ps[0];
+      const par = MANUAL_PARENT[k] && set.has(MANUAL_PARENT[k].key) ? MANUAL_PARENT[k].key : near || (shared ? null : avKeys[0]);
       if (par) PARENT_OF[k] = par;
     }
   }

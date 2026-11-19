@@ -705,6 +705,8 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 .kids .row .ttl { font-size: 14px; }
 .kids .row.peek { display: flex; }
 .kids .row.hide { display: none; }
+.kids .row.deep, .theme-yt .kids .row.deep { padding-left: 54px; }
+.kids .row.deep::after { left: 40px; }
 .ttl .nw { white-space: nowrap; }
 .devdone { display: inline-grid; place-items: center; width: 15px; height: 15px; margin-left: 5px; border-radius: 50%; background: #2e7d32; color: #fff; font-size: 10px; font-weight: 700; vertical-align: middle; line-height: 1; } /* DEV ONLY */
 /* two-way toggle naming both states (clean design) */
@@ -740,6 +742,7 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 .row.unlock { animation: unlockbg 900ms var(--ease); }
 @keyframes unlockbg { 0% { background: rgba(144,216,137,0); } 25% { background: rgba(144,216,137,.16); } 100% { background: rgba(144,216,137,0); } }
 .ulk { position: absolute; right: 74px; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 0; border-radius: 50%; background: var(--m-success-c, #1f3a1f); display: grid; place-items: center; pointer-events: none; z-index: 3; animation: ulkpop 900ms var(--ease) forwards; }
+.ulk.onctl { left: 50%; top: 50%; right: auto; margin: -20px 0 0 -20px; }
 .ulk svg { width: 22px; height: 22px; fill: var(--m-success); }
 .ulk .sh { transform-origin: 70% 50%; animation: ulkopen 900ms var(--ease) forwards; }
 @keyframes ulkpop { 0% { transform: scale(.4); opacity: 0; } 18% { transform: scale(1.08); opacity: 1; } 30% { transform: scale(1); } 70% { opacity: 1; transform: scale(1); } 100% { transform: scale(.8) translateY(-10px); opacity: 0; } }

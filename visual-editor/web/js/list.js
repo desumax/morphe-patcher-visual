@@ -420,7 +420,13 @@ function renderList() {
       const any = ks.some(x => kidVisible(x) || x === peekKid);
       if (any && (!collapsed.has(k) || ks.includes(peekKid))) wantOpen.add(k);
       // parent and its sub-options travel as one unit, so in two columns they stay in the same column
-      out = `<div class="unit">${out}<div class="kids ${lastOpen.has(k) ? "open" : ""}" data-kids-of="${k}"><div class="kin">${byPosition(ks).map(x => rowHTML(x, isLive(x))).join("")}</div></div></div>`;
+      // a sub-option of a sub-option (Audio time stretching needs Audio pitch controls) sits right under
+      // the one it depends on, one step further in
+      const deep = x => DIRECT_PARENT[x] && DIRECT_PARENT[x] !== k && ks.includes(DIRECT_PARENT[x]);
+      const flat = byPosition(ks).filter(x => !deep(x)), order = [];
+      const put = x => { order.push(x); byPosition(ks.filter(y => deep(y) && DIRECT_PARENT[y] === x)).forEach(put); };
+      flat.forEach(put); ks.forEach(x => { if (!order.includes(x)) order.push(x); });
+      out = `<div class="unit">${out}<div class="kids ${lastOpen.has(k) ? "open" : ""}" data-kids-of="${k}"><div class="kin">${order.map(x => { const h = rowHTML(x, isLive(x)); return deep(x) ? h.replace('class="row ', 'class="row deep ') : h; }).join("")}</div></div></div>`;
     }
     return out;
   };
@@ -584,7 +590,9 @@ function fitPills(box, pills, textOf, chrome) {
   // fill the line only when that stretches the pills by at most a quarter; otherwise each keeps the
   // widest pill's width (three long options one per line stay that long, not the whole card wide)
   const even = (W - gap * (cols - 1)) / cols;
-  box.style.gridTemplateColumns = cols > 1 && even <= need * 1.25 ? `repeat(${cols}, minmax(0, 1fr))` : `repeat(${cols}, ${Math.min(need, W)}px)`;
+  const fill = cols > 1 && even <= need * 1.25;
+  box.style.gridTemplateColumns = fill ? `repeat(${cols}, minmax(0, 1fr))` : `repeat(${cols}, ${Math.min(need, W)}px)`;
+  box.style.justifyContent = fill ? "" : "center"; // pills that don't fill the line sit in its middle
 }
 function fitOpts(root = $("list")) {
   root.querySelectorAll(".ctl.optgrid").forEach(box => fitPills(box, [...box.querySelectorAll(".opt")], o => o.textContent, 2 * OPT_PAD + 2));
@@ -648,14 +656,27 @@ function mergeZonePreview(list) {
   zs[0].before(g); zs.forEach(e => col.appendChild(e)); g.append(col, pv); pv.classList.add("zprev");
 }
 function unlockFx(row) {
-  row.classList.remove("unlock"); void row.offsetWidth; row.classList.add("unlock");
-  row.querySelectorAll(".ulk").forEach(e => e.remove());
-  const u = document.createElement("div"); u.className = "ulk";
-  u.innerHTML = `<svg viewBox="0 0 24 24"><path class="sh" d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0" fill="none" stroke="var(--m-success)" stroke-width="2.2" stroke-linecap="round"/><rect x="6" y="10.5" width="12" height="9.5" rx="2.2"/></svg>`;
-  // it pops up right on the card's control (the middle of a Hide / Show toggle, a switch, a box)
-  const ctl = row.querySelector(".side .lt7, .side .sw, .side .state, .ctl.side, .side > *");
-  if (ctl) { const rr = row.getBoundingClientRect(), cr = ctl.getBoundingClientRect(); Object.assign(u.style, { left: (cr.left - rr.left + cr.width / 2) + "px", top: (cr.top - rr.top + cr.height / 2) + "px", right: "auto", margin: "-20px 0 0 -20px" }); }
-  row.appendChild(u); setTimeout(() => { u.remove(); row.classList.remove("unlock"); }, 950);
+  // A row that just appeared (a sub-option unfolding) is still growing from zero height with its
+  // overflow clipped: measuring it then put the badge in the wrong place, clipped, between two cards.
+  // So the badge waits until the row and its sub-option group have finished moving, and it is placed
+  // inside the control's own box (centred by CSS), so it can't drift from it whatever the layout does.
+  const moving = [row, row.closest(".kids")].filter(Boolean).flatMap(e => e.getAnimations())
+    .filter(a => { const t = a.effect && a.effect.getComputedTiming(); return t && isFinite(t.endTime); });
+  const go = () => {
+    if (!row.isConnected) return;
+    row.classList.remove("unlock"); void row.offsetWidth; row.classList.add("unlock");
+    row.querySelectorAll(".ulk").forEach(e => e.remove());
+    const u = document.createElement("div"); u.className = "ulk";
+    u.innerHTML = `<svg viewBox="0 0 24 24"><path class="sh" d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0" fill="none" stroke="var(--m-success)" stroke-width="2.2" stroke-linecap="round"/><rect x="6" y="10.5" width="12" height="9.5" rx="2.2"/></svg>`;
+    // it pops up right on the card's control (the middle of a Hide / Show toggle, a switch, a box)
+    const ctl = row.querySelector(".side .lt7, .side .sw, .side .state, .ctl.side, .side > *");
+    const host = ctl ? (ctl.closest(".side") || ctl) : row;
+    if (ctl) { if (getComputedStyle(host).position === "static") host.style.position = "relative"; u.classList.add("onctl"); }
+    host.appendChild(u); setTimeout(() => { u.remove(); row.classList.remove("unlock"); }, 950);
+  };
+  if (!moving.length) return go();
+  let done = false; const once = () => { if (!done) { done = true; go(); } };
+  Promise.all(moving.map(a => a.finished.catch(() => {}))).then(once); setTimeout(once, 700);
 }
 
 // ------------------------------------------------------------------ search
