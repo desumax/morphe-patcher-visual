@@ -710,14 +710,31 @@ scen("playback", "hide_premium_video_quality", (box, on) => {
   at(400, () => t.classList.add("mark7")); at(1100, () => { if (on) t.classList.add("gone7"); }); at(1700, () => t.classList.remove("mark7"));
   return ""; // the list in the phones says it
 });
+// A Short filling the phone: video, its channel line at the bottom and the action column on the right.
+// Messages on it go in the free middle (SHORT_PILL), never over the channel line at the bottom.
+const SHORT_PILL = "44%";
+const short7 = (art, inner = "") => `<div class="pg7" style="position:absolute;inset:0"><div style="position:absolute;inset:0;background:${ART[art]};transition:background .3s"></div>
+  <div style="position:absolute;right:4px;bottom:16px;display:grid;gap:5px;justify-items:center">${["like", "comment", "share"].map(n => ico7(n, 8)).join("")}</div>
+  <b style="position:absolute;left:5px;right:20px;bottom:6px;font-size:6.5px">@fjordtimber · Tiny cabin tour</b>${inner}</div>`;
+// Default Shorts quality on mobile data / Wi-Fi: a Short opens at the default (Auto) or at the chosen quality
+for (const [k, net, label] of [["shorts_quality_default_mobile", "phone", "Mobile data"], ["shorts_quality_default_wifi", "wifi", "Wi-Fi"]]) {
+  scen("playback", k, (box, v) => {
+    situation(`Opening a Short on ${label.toLowerCase()}`);
+    box.innerHTML = device("port", short7(5, `<span class="badge7" style="left:3px;top:3px">${ico7(net, 6)} ${label}</span>`));
+    const dev = box.querySelector(".dev");
+    at(300, () => { dev.querySelector(".pg7 > div").style.background = ART[6]; dev.querySelector(".pg7").insertAdjacentHTML("beforeend", `<span class="badge7" style="right:3px;top:3px">${esc(entryLabel("morphe_" + k, v))}</span>`); });
+    return "";
+  });
+}
 for (const [k, what, val] of [["remember_playback_speed_last_selected", "speed", "1.5×"], ["remember_shorts_quality_last_selected", "Shorts quality", "720p"], ["remember_video_quality_last_selected", "quality", "1080p"]]) {
   scen("playback", k, (box, on) => {
     situation(`Picking a ${what}, then opening another video`);
     // Shorts quality on a Short (full-height video), the others on the watch page
     const rv = `<span class="rv7 badge7" style="right:3px;top:3px">${what === "speed" ? ico7("speed", 6) + " " : ""}${val}</span>`;
-    box.innerHTML = device("port", what === "Shorts quality" ? `<div class="pg7" style="position:absolute;inset:0"><div style="position:absolute;inset:0;background:${ART[5]};transition:background .3s"></div>${rv}<b style="position:absolute;left:5px;bottom:12px;font-size:6.5px">@fjordtimber · Tiny cabin tour</b></div>` : watch7(rv));
+    const isShort = what === "Shorts quality";
+    box.innerHTML = device("port", isShort ? short7(5, rv) : watch7(rv));
     const dev = box.querySelector(".dev");
-    toast7(dev, on ? `Your ${what} is kept` : `Back to the default ${what}`, "80%");
+    toast7(dev, on ? `Your ${what} is kept` : `Back to the default ${what}`, isShort ? SHORT_PILL : "80%");
     at(300, () => { dev.querySelector(".pg7 > div").style.background = ART[6]; dev.querySelector(".rv7").innerHTML = (what === "speed" ? ico7("speed", 6) + " " : "") + (on ? val : (what === "speed" ? "1×" : "Auto")); });
     return on ? `The last ${what} you picked becomes the default` : `Each video starts at the default ${what} (stock)`;
   });
