@@ -433,7 +433,9 @@ function renderList() {
   list.querySelectorAll(".kids").forEach(e => e.classList.toggle("open", wantOpen.has(e.dataset.kidsOf)));
   lastOpen = wantOpen; lastVis = { sec: section, keys: nowVis };
   // rows that just became available on this screen get the unlock animation
-  const dis = new Set([...list.querySelectorAll(".row.dis")].map(r => r.dataset.row));
+  // read from the settings, not the drawn rows: a sub-option folding away keeps its unlocked look
+  // while it folds, and read from the DOM it never counted as locked, so it unlocked only once
+  const dis = new Set([...list.querySelectorAll(".row[data-row]")].map(r => r.dataset.row).filter(k => PREF[k] && !parentsOk(k)));
   if (lastDis.sec === section) lastDis.keys.forEach(k => { if (!dis.has(k)) { const r = list.querySelector(`[data-row="${k}"]`); if (r && !r.classList.contains("hide")) unlockFx(r); } });
   lastDis = { sec: section, keys: dis };
 }
