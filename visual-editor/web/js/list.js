@@ -216,7 +216,7 @@ function controlFor(k) {
   }
   return "";
 }
-const whereOf = x => { const s = sectionOf(x); return s !== section ? ` (${esc(SECTIONS.find(z => z.id === s)?.title || "Misc")})` : ""; };
+const whereOf = x => { const s = sectionOf(x); return s !== section ? ` (${esc(SECTIONS.find(z => z.id === s)?.title || "Miscellaneous")})` : ""; };
 function needText(k) {
   if (!classicParentsOk(k)) return "Needs " + PREF[k].parents.map(x => `“${esc(title(x.key))}” ${x.mode === "not" ? "off" : "on"}${whereOf(x.key)}`).join(", ");
   const av = String(PREF[k].availability || ""), sk = [...new Set([...av.matchAll(/S\("([^"]+)"\)/g)].map(m => m[1]))].filter(x => PREF[x] && inVersion(x));
@@ -376,7 +376,8 @@ function renderList() {
   // groups caught mid-fold by this render: their new box carries on from the height it had
   const midFold = new Map(); list.querySelectorAll(".kids:not(.open)").forEach(b => { const h = b.getBoundingClientRect().height; if (h > .5 && foldingKids.has(b.dataset.kidsOf)) midFold.set(b.dataset.kidsOf, h); });
   // descriptions that were unfolded stay unfolded through the redraw, without playing the unfold again
-  const wasOpen = new Set([...list.querySelectorAll(".row > .txt > .sum.open")].map(e => e.closest(".row").dataset.row));
+  // (one caught mid-unfold, e.g. by the switch tap that selected its card, carries on from its height)
+  const wasOpen = new Map([...list.querySelectorAll(".row > .txt > .sum.open")].map(e => [e.closest(".row").dataset.row, e.getBoundingClientRect().height]));
   list.innerHTML = html;
   midFold.forEach((h, grp) => {
     const box = list.querySelector(`[data-kids-of="${grp}"]`), left = (foldingKids.get(grp)?.until ?? 0) - performance.now(); if (!box || left < 30) return;
@@ -404,9 +405,9 @@ function renderList() {
     setTimeout(() => { if (kin.isConnected && !kin.parentElement.classList.contains("open")) kin.innerHTML = fresh; }, left + 20);
   });
   const keepOpen = [...list.querySelectorAll(".row > .txt > .sum")].filter(e => wasOpen.has(e.closest(".row").dataset.row));
-  keepOpen.forEach(e => { e.style.transition = "none"; });
+  keepOpen.forEach(e => { e.style.transition = "none"; e.style.maxHeight = wasOpen.get(e.closest(".row").dataset.row) + "px"; });
   fitSums(list);
-  if (keepOpen.length) { void list.offsetHeight; keepOpen.forEach(e => { e.style.transition = ""; }); }
+  if (keepOpen.length) { void list.offsetHeight; keepOpen.forEach(e => { e.style.transition = ""; e.style.maxHeight = ""; }); }
   // animate sub-option groups and rows from their previous state to the new one
   void list.offsetHeight;
   const sameSec = lastVis.sec === section;
@@ -547,7 +548,7 @@ function borrowPopup(k, target) {
   const sec = SECTIONS.find(z => z.id === sectionOf(target)), p = PREF[target];
   const where = [p.screenTitle, p.subScreenTitle].filter(Boolean).join(" › ");
   openDialog(`<h2 id="dlgTitle">${esc(title(target))}</h2>
-    <p class="dlgwhere">Lives on the <b>${esc(sec ? sec.title : "Misc")}</b> screen${where ? ` · in Morphe: ${esc(where)}` : ""}. “${esc(title(k))}” needs it.</p>
+    <p class="dlgwhere">Lives on the <b>${esc(sec ? sec.title : "Miscellaneous")}</b> screen${where ? ` · in Morphe: ${esc(where)}` : ""}. “${esc(title(k))}” needs it.</p>
     <div class="dlglist">${rowHTML(target, false).replace('class="row', 'class="row inpop')}</div>
     <div class="acts"><button class="dbtn tonal" id="dDone">Done</button></div>`);
   const box = $("dlgBox");
