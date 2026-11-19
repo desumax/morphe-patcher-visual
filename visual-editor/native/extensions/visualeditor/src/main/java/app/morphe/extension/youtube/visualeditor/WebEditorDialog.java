@@ -162,6 +162,7 @@ final class WebEditorDialog extends Dialog {
     @Override
     public void show() {
         super.show();
+        registerPredictiveBack();
         try {
             View list = activity.findViewById(android.R.id.content);
             if (list != null && list.getVisibility() == View.VISIBLE) {
@@ -368,6 +369,53 @@ final class WebEditorDialog extends Dialog {
         }
     }
 
+    // ------------------------------------------------------------------ predictive back
+
+    @Nullable private Object backCallback; // an OnBackAnimationCallback on Android 14+
+
+    /**
+     * Android 14+: forwards the Back gesture's progress to the page, so a screen can shrink and show
+     * the card menu behind it while the gesture is held (window.morpheBackStart / Progress / Cancel).
+     * Letting go runs the usual Back. Where the app hasn't opted into predictive back, the system
+     * ignores this and onBackPressed() is called as before.
+     */
+    private void registerPredictiveBack() {
+        if (Build.VERSION.SDK_INT < 34 || backCallback != null) return;
+        try {
+            android.window.OnBackAnimationCallback cb = new android.window.OnBackAnimationCallback() {
+                @Override public void onBackStarted(android.window.BackEvent e) {
+                    js("window.morpheBackStart && morpheBackStart(" + e.getSwipeEdge() + ")");
+                }
+                @Override public void onBackProgressed(android.window.BackEvent e) {
+                    js("window.morpheBackProgress && morpheBackProgress(" + e.getProgress() + ")");
+                }
+                @Override public void onBackCancelled() {
+                    js("window.morpheBackCancel && morpheBackCancel()");
+                }
+                @Override public void onBackInvoked() {
+                    onBackPressed();
+                }
+            };
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, cb);
+            backCallback = cb;
+        } catch (Throwable ex) {
+            Logger.printException(() -> "Visual editor: predictive back unavailable", ex);
+        }
+    }
+
+    private void unregisterPredictiveBack() {
+        if (Build.VERSION.SDK_INT < 34 || backCallback == null) return;
+        try {
+            getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback((android.window.OnBackInvokedCallback) backCallback);
+        } catch (Throwable ignored) {
+        }
+        backCallback = null;
+    }
+
+    private void js(String code) {
+        if (!destroyed) web.evaluateJavascript(code, null);
+    }
+
     @Override
     public void onBackPressed() {
         web.evaluateJavascript("window.morpheBack ? (morpheBack(), 'ok') : 'none'", r -> {
@@ -393,6 +441,7 @@ final class WebEditorDialog extends Dialog {
 
     @Override
     public void dismiss() {
+        unregisterPredictiveBack();
         super.dismiss();
         if (hiddenList != null) {
             hiddenList.setVisibility(View.VISIBLE);

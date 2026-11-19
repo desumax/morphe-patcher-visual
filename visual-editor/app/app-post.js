@@ -72,6 +72,44 @@ if (INAPP) {
     if (searching) { $("qClose").click(); return; }
     $("btnBack").click();
   };
+  // Predictive back (Android 14+): while the Back gesture is held on a screen, the screen shrinks
+  // toward the finger's side and the card menu shows behind it. Letting go goes to the menu,
+  // swiping back in cancels. The app forwards the gesture's progress; elsewhere it does nothing.
+  let peek = null;
+  const ed = document.querySelector(".editor"), pk = $("picker");
+  const canPeek = () => !menuPage && !$("dlg").classList.contains("open") && !($("tut") && $("tut").classList.contains("on")) && !searching;
+  const peekDraw = p => {
+    const e = 1 - Math.pow(1 - Math.min(1, Math.max(0, p)), 2); // ease out, like the system's
+    ed.style.transform = `translateX(${(peek.edge === 1 ? -1 : 1) * 18 * e}px) scale(${1 - 0.1 * e})`;
+    ed.style.borderRadius = `${28 * e}px`;
+    pk.style.opacity = String(0.4 + 0.6 * e);
+  };
+  const peekEnd = () => {
+    document.documentElement.classList.remove("peekback");
+    ed.style.transition = ed.style.transform = ed.style.borderRadius = ed.style.opacity = pk.style.opacity = "";
+    peek = null;
+  };
+  window.morpheBackStart = edge => {
+    if (!canPeek()) return;
+    peek = { edge };
+    pk.classList.add("open"); // the menu, drawn behind the screen
+    document.documentElement.classList.add("peekback");
+    ed.style.transition = "none"; peekDraw(0);
+  };
+  window.morpheBackProgress = p => { if (peek) peekDraw(p); };
+  window.morpheBackCancel = () => {
+    if (!peek) return;
+    ed.style.transition = "transform 200ms var(--ease), border-radius 200ms var(--ease)"; peekDraw(0);
+    setTimeout(() => { if (!peek) return; pk.classList.remove("open"); peekEnd(); }, 210);
+  };
+  const keyBack = window.morpheBack;
+  window.morpheBack = () => {
+    if (!peek) return keyBack();
+    // the gesture was let go: the screen finishes leaving, then the menu page takes over
+    ed.style.transition = "transform 160ms var(--ease), opacity 160ms var(--ease)";
+    ed.style.transform = `translateX(${(peek.edge === 1 ? -1 : 1) * 30}px) scale(.86)`; ed.style.opacity = "0"; pk.style.opacity = "1";
+    setTimeout(() => { peekEnd(); setMenu(true); }, 170);
+  };
   setMenu(true);
   // Tell the app the first screen is drawn, so it can fade the editor in (no loading frames).
   requestAnimationFrame(() => requestAnimationFrame(() => { try { MorpheApp.ready(); } catch (e) { /* older app */ } }));

@@ -18,6 +18,9 @@ a.web:hover, button:hover { background: var(--btn-h); }
 /* realme GT 8 Pro: 1440 x 3136 px at 3.5x = a 412 x 896 screen in CSS pixels, the size the app's WebView gets */
 .phone { position: relative; width: 428px; height: 912px; flex: none; transform-origin: top center; border: 8px solid #000; border-radius: 34px; overflow: hidden; background: #0f0f0f; box-shadow: 0 10px 40px rgba(0,0,0,.45); }
 .phone iframe { width: 100%; height: 100%; border: 0; display: block; }
+/* thin strips on both sides of the screen: drag inwards from one for the Back gesture, as on the phone */
+.edge { position: absolute; top: 0; bottom: 0; width: 18px; z-index: 3; cursor: e-resize; touch-action: none; }
+.edge.l { left: 0; } .edge.r { right: 0; cursor: w-resize; }
 .bar { display: flex; gap: 8px; }
 .toast { position: absolute; left: 50%; bottom: 24px; transform: translate(-50%, 12px); max-width: 86%; background: #f1f1f1; color: #0f0f0f; font-size: 13px; padding: 10px 14px; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.5); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; text-align: center; }
 .toast.on { opacity: 1; transform: translate(-50%, 0); }
@@ -25,10 +28,10 @@ a.web:hover, button:hover { background: var(--btn-h); }
 </head>
 <body>
 <header>
-  <div style="flex:1"><h1>App view</h1><p>The page the app's editor loads, at the realme GT 8 Pro's screen size</p></div>
+  <div style="flex:1"><h1>App view</h1><p>The page the app's editor loads, at the realme GT 8 Pro's screen size. Drag in from a side edge for the Back gesture.</p></div>
   <a class="web" href="index.html">Web preview</a>
 </header>
-<div class="phone"><iframe id="app" src="app/index.html" title="In-app editor"></iframe><div class="toast" id="toast"></div></div>
+<div class="phone"><iframe id="app" src="app/index.html" title="In-app editor"></iframe><div class="edge l" data-edge="0"></div><div class="edge r" data-edge="1"></div><div class="toast" id="toast"></div></div>
 <div class="bar">
   <button id="back" title="The phone's Back gesture">Back</button>
   <button id="again">Open the editor again</button>
@@ -47,6 +50,28 @@ document.getElementById("back").onclick = () => {
   if (w && typeof w.morpheBack === "function") w.morpheBack(); else say("Back leaves the editor");
 };
 addEventListener("keydown", e => { if (e.key === "Escape" || e.key === "Backspace" && !/input|textarea/i.test(e.target.tagName)) document.getElementById("back").click(); });
+// predictive back: progress follows the drag, letting go past a third of the way goes back
+document.querySelectorAll(".edge").forEach(strip => {
+  let g = null;
+  strip.addEventListener("pointerdown", e => {
+    const w = frame.contentWindow; if (!w) return;
+    strip.setPointerCapture(e.pointerId);
+    g = { x: e.clientX, edge: Number(strip.dataset.edge), p: 0, w };
+    w.morpheBackStart && w.morpheBackStart(g.edge);
+  });
+  strip.addEventListener("pointermove", e => {
+    if (!g) return;
+    const k = phone.getBoundingClientRect().width / 428; // the phone may be scaled down
+    g.p = Math.min(1, Math.max(0, (g.edge ? g.x - e.clientX : e.clientX - g.x) / (k * 428 * 0.45)));
+    g.w.morpheBackProgress && g.w.morpheBackProgress(g.p);
+  });
+  const end = () => {
+    if (!g) return;
+    if (g.p > 0.33) { if (g.w.morpheBack) g.w.morpheBack(); } else if (g.w.morpheBackCancel) g.w.morpheBackCancel();
+    g = null;
+  };
+  strip.addEventListener("pointerup", end); strip.addEventListener("pointercancel", end);
+});
 addEventListener("message", e => {
   const a = e.data && e.data.appview; if (!a) return;
   if (a === "close") say("Here the app returns to YouTube settings");
