@@ -20,7 +20,7 @@ const DEMO_TYPES = {
   gesture: "tap_to_seek slide_to_seek disable_precise_seeking_gesture swipe_seek disable_shorts_double_tap_to_like swap_save_and_queue_actions",
   toast: "remember_playback_speed_last_selected_toast remember_video_quality_last_selected_toast skip_silence",
   motion: "autoplay_mode disable_like_subscribe_glow stable_caption_blocks niconico_comments narrow_navigation_buttons",
-  overlay: "swipe_left_zone swipe_right_zone swipe_top_zone swipe_overlay_style swipe_overlay_background_opacity swipe_text_overlay_size swipe_overlay_progress_volume_color swipe_overlay_progress_brightness_color swipe_overlay_progress_speed_color swipe_zone_width swipe_zone_preview swipe_speed_zone_height",
+  overlay: "swipe_left_zone swipe_right_zone swipe_top_zone swipe_overlay_style swipe_overlay_background_opacity swipe_text_overlay_size swipe_overlay_progress_volume_color swipe_overlay_progress_brightness_color swipe_overlay_progress_speed_color swipe_zone_width swipe_overlay_timeout swipe_speed_step swipe_speed_sensitivity swipe_zone_preview swipe_speed_zone_height",
 };
 const DEMO_TYPE = {};
 Object.entries(DEMO_TYPES).forEach(([t, ks]) => ks.split(" ").forEach(k => { DEMO_TYPE["morphe_" + k] = t; }));
@@ -124,6 +124,18 @@ const DEMOS = {
     swipeDemo(side, v && v !== "OFF" ? v : side === "left" ? "BRIGHTNESS" : side === "right" ? "VOLUME" : "SPEED", "Shared by every zone · ");
   },
   morphe_swipe_top_zone(v) { swipeDemo("top", v); },
+  // the overlay shows the way it is set up, and stays for the timeout after the finger lifts; the loop
+  // waits for it, so a long timeout plays out in full
+  morphe_swipe_overlay_timeout() {
+    const ms = Math.max(0, Math.min(5000, Number(V("morphe_swipe_overlay_timeout")) || 0)), every = Math.ceil((1300 + ms) / LOOP_MS);
+    if (demoStep % every) return;
+    const side = ["left", "right", "top"].find(x => { const v = V("morphe_swipe_" + x + "_zone"); return v && v !== "OFF"; }) || "left";
+    const v = V("morphe_swipe_" + side + "_zone");
+    swipeDemo(side, v && v !== "OFF" ? v : "BRIGHTNESS", "", false, ms);
+    dT(() => label(`Finger lifted: the overlay stays ${ms} ms`, false, ms + 200), 1050);
+  },
+  morphe_swipe_speed_step() { swipeDemo(speedSide(), "SPEED"); dT(() => label(`Speed changes in ${(SPEED_STEPS[V("morphe_swipe_speed_step")] || .05).toFixed(2)}x steps`), 1000); },
+  morphe_swipe_speed_sensitivity() { swipeDemo(speedSide(), "SPEED"); dT(() => label(`Sensitivity ${V("morphe_swipe_speed_sensitivity")}: this swipe reaches ${speedAt(1)}`), 1000); },
   morphe_swipe_overlay_background_opacity() { stillHud(); },
   morphe_swipe_text_overlay_size() { stillHud(); },
   morphe_swipe_overlay_progress_volume_color() { swipeDemo("right", "VOLUME"); },
@@ -185,7 +197,9 @@ function swipeZones(ms = 900, labels = false) {
 }
 // still: the overlay stays up, half full and without a finger, so a slider for its look (opacity,
 // text size) can be dragged while watching it change
-function swipeDemo(side, action, prefix = "", still = false) {
+// hold: how long the overlay stays after the finger lifts (the "Swipe overlay timeout" demo passes the
+// setting; the other demos keep it short so they fit their loop)
+function swipeDemo(side, action, prefix = "", still = false, hold = 100) {
   const st = $("stage"), f = finger(), hud = $("hud"); if (!f || !hud) return;
   const zw = Math.max(5, Math.min(50, Number(V("morphe_swipe_zone_width")) || 37)) / 100;
   const W = st.clientWidth, H = st.firstElementChild.clientHeight, x = side === "top" ? W * .5 : side === "left" ? W * zw / 2 : W * (1 - zw / 2);
@@ -217,7 +231,7 @@ function swipeDemo(side, action, prefix = "", still = false) {
     const hv = hud.querySelector(".hv"), a0 = side === "top" ? W * .35 : H * .75, a1 = side === "top" ? W * .65 : H * .25;
     const show = fr => {
       const p = 20 + 70 * fr; hud.style.setProperty("--p", p.toFixed(2) + "%");
-      if (hv) hv.textContent = action === "SPEED" ? (1 + fr).toFixed(2).replace(/0$/, "") + "x" : String(Math.round(p));
+      if (hv) hv.textContent = action === "SPEED" ? speedAt(fr) : String(Math.round(p));
     };
     if (still) { show(.6); hud.style.transition = "none"; hud.style.opacity = "1"; return; }
     show(0);
@@ -229,11 +243,20 @@ function swipeDemo(side, action, prefix = "", still = false) {
       if (performance.now() - t0 > 1000) clearInterval(t);
     }, 16);
     label(`${prefix}${sideName} swipe: ${entryLabel("morphe_swipe_" + side + "_zone", action) || action.toLowerCase()}`);
-    dT(() => { hud.style.opacity = "0"; }, 1150);
-    dT(() => { hud.style.display = "none"; hud.style.opacity = ""; }, 1320);
+    dT(() => { hud.style.opacity = "0"; }, 1050 + hold);
+    dT(() => { hud.style.display = "none"; hud.style.opacity = ""; }, 1220 + hold);
   }
   hideF(f, 1050);
 }
+// the speed a swipe reaches: it moves in "Speed step" steps, and a higher "Speed swipe sensitivity"
+// needs more swiping per step, so the same swipe covers fewer steps (as in Morphe)
+const SPEED_STEPS = { STEP_005: .05, STEP_010: .1, STEP_025: .25 };
+function speedAt(fr) {
+  const step = SPEED_STEPS[V("morphe_swipe_speed_step")] || .05, sens = Math.max(1, Number(V("morphe_swipe_speed_sensitivity")) || 10);
+  const n = Math.floor(fr * 10 * (10 / sens) + 1e-6); // ticks this swipe covers
+  return Math.min(8, 1 + n * step).toFixed(2).replace(/0$/, "") + "x";
+}
+const speedSide = () => ["left", "right", "top"].find(x => V("morphe_swipe_" + x + "_zone") === "SPEED") || "right";
 // the overlay's look, held still on the first zone that has a gesture; dragging its slider redraws it live
 function stillHud() {
   const side = ["left", "right", "top"].find(x => { const v = V("morphe_swipe_" + x + "_zone"); return v && v !== "OFF"; }) || "left";

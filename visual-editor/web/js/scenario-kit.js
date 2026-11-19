@@ -333,10 +333,10 @@ scen("shorts", "skip_live_shorts", (box, on) => {
 });
 scen("fullscreen", "swipe_ignore_when_locked", (box, on) => {
   situation("Swiping while the screen is locked");
-  box.innerHTML = device("land", `<div style="position:absolute;inset:0;background:${ART[3]}"></div><div style="position:absolute;left:50%;top:6px;transform:translateX(-50%);font-size:6px;background:rgba(0,0,0,.6);padding:1px 5px;border-radius:5px;display:flex;gap:2px">${ico7("lock", 7)}Locked</div>`);
+  box.innerHTML = device("land", `<div style="position:absolute;inset:0;background:${ART[3]}"></div><div style="position:absolute;left:50%;top:6px;transform:translateX(-50%);font-size:8.5px;background:rgba(0,0,0,.7);padding:2px 7px;border-radius:7px;display:flex;align-items:center;gap:3px">${ico7("lock", 9)}Locked</div>`);
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
   at(300, () => fingerTo(f, W * .82, H * .7)); at(500, () => fingerTo(f, W * .82, H * .3, 500));
-  at(1100, () => { f.classList.remove("show"); if (on) toast7(dev, "Ignored while locked", "50%"); else dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:40%;font-size:7px">${ico7("vol", 8)} 80%</div>`); });
+  at(1100, () => { f.classList.remove("show"); if (on) { toast7(dev, "Ignored while locked", "50%"); const t = dev.querySelector(".t7"); if (t) { t.style.fontSize = "10px"; t.style.padding = "4px 10px"; } } else dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:40%;font-size:10px;padding:4px 10px;display:flex;align-items:center;gap:4px">${ico7("vol", 11)} 80%</div>`); });
   return on ? "Swipe gestures do nothing while locked" : "Swipes still change volume when locked (stock)";
 });
 scen("fullscreen", "swipe_lowest_value_enable_auto_brightness", (box, on) => {

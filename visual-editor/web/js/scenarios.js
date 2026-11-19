@@ -583,13 +583,26 @@ function turn(dev, orient, then) {
   dev.style.transition = "transform .5s var(--ease), scale .5s var(--ease)"; dev.style.transform = `rotate(${orient === "land" ? -90 : 90}deg)`;
   const inPair = !!dev.closest(".duo7.gen"); // in a pair the turning phone shrinks to stay inside its own slot
   dev.style.scale = (inPair ? Math.min(w, h) / Math.max(w, h) : Math.min(parseFloat(dev.style.scale) || 1, fitScale(h, w))).toFixed(3);
-  later(() => { dev.style.transition = "none"; dev.style.transform = ""; if (inPair) dev.style.scale = ""; rotate(dev, orient); if (then) then(); }, 520);
+  later(() => {
+    // the phone is re-laid out for the new orientation; it starts from exactly the box the turned
+    // phone had and eases into its new size, so the swap doesn't jump
+    const b = dev.getBoundingClientRect();
+    dev.style.transition = "none"; dev.style.transform = ""; if (inPair) dev.style.scale = ""; rotate(dev, orient);
+    const a = dev.getBoundingClientRect(), s = parseFloat(getComputedStyle(dev).scale) || 1;
+    if (a.width && a.height && b.width) {
+      dev.style.transform = `translate(${((b.left + b.width / 2) - (a.left + a.width / 2)) / s}px, ${((b.top + b.height / 2) - (a.top + a.height / 2)) / s}px) scale(${b.width / a.width}, ${b.height / a.height})`;
+      void dev.offsetWidth; dev.style.transition = "transform .28s var(--ease)"; dev.style.transform = "";
+    }
+    if (then) then();
+  }, 520);
 }
 const r1 = dev => turn(dev, "port", () => devContent(dev, playerArea(6))); r1.text = "leaves fullscreen";
 gestureScen("disable_fullscreen_dragged_down_gesture", "land", [.5, .25], [.5, .85], "Swipe down in fullscreen", r1);
 const r2 = dev => turn(dev, "land", () => devContent(dev, miniVideo(6))); r2.text = "enters fullscreen";
 gestureScen("disable_fullscreen_pulled_up_gesture", "port", [.5, .3], [.5, .08], "Swipe up on the player", r2);
-const r3 = dev => { const v = dev.querySelector(".dv-video"); if (v) { v.style.transition = "transform .4s"; v.style.transform = "translateY(70%) scale(.5)"; } }; r3.text = "shrinks to the miniplayer";
+// Morphe's gesture type for this one is MAXIMIZED_TO_FULLSCREEN_SLIDING: pulling the portrait player
+// down slides it into fullscreen (not down to the miniplayer)
+const r3 = dev => { const v = dev.querySelector(".dv-video"); if (v) { v.style.transition = "transform .3s var(--ease)"; v.style.transformOrigin = "50% 0"; v.style.transform = "scaleY(1.25)"; } later(() => turn(dev, "land", () => devContent(dev, miniVideo(6))), 260); }; r3.text = "slides into fullscreen";
 gestureScen("disable_fullscreen_sliding_down_gesture", "port", [.5, .1], [.5, .45], "Swipe down on the player", r3);
 scen("fullscreen", "disable_fullscreen_zoom_gesture", (box, disabled) => {
   situation("Fullscreen, two fingers spread");
@@ -604,25 +617,29 @@ scen("fullscreen", "disable_fullscreen_zoom_gesture", (box, disabled) => {
 });
 
 scen("fullscreen", "restore_pinch_to_zoom", (box, on) => {
-  situation("Fullscreen, two fingers spread");
-  box.innerHTML = device("land", `<div class="zv" style="position:absolute;left:10%;right:10%;top:0;bottom:0;background:${ART[6]};transform-origin:50% 50%;transition:transform .12s linear"></div>`);
-  const dev = box.querySelector(".dev"), f1 = box.querySelector("#scFinger"), zv = box.querySelector(".zv"); const W = dev.clientWidth, H = dev.clientHeight;
+  situation("Fullscreen, two fingers spread, then pinch back a little");
+  // Morphe's restore scales the video with the fingers, smoothly, anywhere from 1x up to 8x; without it
+  // (YouTube 21.36+) a pinch only snaps between fitted and filled
+  box.innerHTML = device("land", `<div class="zv" style="position:absolute;left:10%;right:10%;top:0;bottom:0;background:${ART[0]};transform-origin:50% 50%"></div><div class="zr7 toastin" style="top:8px;font-size:9px;padding:3px 8px;opacity:0;transition:opacity .2s">1.0x</div>`);
+  const dev = box.querySelector(".dev"), f1 = box.querySelector("#scFinger"), zv = box.querySelector(".zv"), zr = box.querySelector(".zr7"); const W = dev.clientWidth, H = dev.clientHeight;
   const f2 = f1.cloneNode(true); f2.id = ""; dev.appendChild(f2);
-  at(150, () => { fingerTo(f1, W * .44, H * .55); fingerTo(f2, W * .56, H * .45); });
-  // stock YouTube snaps between fitted and filled; Morphe's restore follows the fingers up to its max scale
-  [1.15, 1.3, 1.45, 1.6].forEach((sc, i) => at(420 + i * 160, () => {
-    fingerTo(f1, W * (.44 - .08 * (i + 1)), H * (.55 + .07 * (i + 1)), 160); fingerTo(f2, W * (.56 + .08 * (i + 1)), H * (.45 - .07 * (i + 1)), 160);
-    if (on) zv.style.transform = `scale(${sc})`;
-    else if (i === 1) { zv.style.transition = "all .3s var(--ease)"; zv.style.left = "0"; zv.style.right = "0"; zv.style.transform = "scale(1.08)"; }
-  }));
-  at(1250, () => { f1.classList.remove("show"); f2.classList.remove("show"); });
-  return on ? "Pinch: zoom follows your fingers, step by step" : "Pinch: the video only snaps from fitted to filled";
+  const spread = (d, ms) => { fingerTo(f1, W * (.5 - d), H * (.5 + d * .55), ms); fingerTo(f2, W * (.5 + d), H * (.5 - d * .55), ms); };
+  const zoomTo = (sc, ms) => { zv.style.transition = `transform ${ms}ms var(--ease)`; zv.style.transform = `scale(${sc})`; zr.textContent = sc.toFixed(1) + "x"; };
+  at(150, () => spread(.06, 0));
+  at(380, () => {
+    spread(.3, 900 * scStretch);
+    if (on) { zr.style.opacity = "1"; zoomTo(2.4, 900 * scStretch); }
+  });
+  if (!on) at(700, () => { zv.style.transition = "left .22s var(--ease), right .22s var(--ease)"; zv.style.left = zv.style.right = "0"; });
+  at(1450, () => { spread(.2, 500 * scStretch); if (on) zoomTo(1.7, 500 * scStretch); });
+  at(2200, () => { f1.classList.remove("show"); f2.classList.remove("show"); });
+  return on ? "Pinch: the zoom follows your fingers, in and out (up to 8x)" : "Pinch: the video only snaps from fitted to filled";
 });
 
 // ------------------------------------------------------------------ swipe controls: overlay style settings feed the swipe demo
 def("fullscreen", "style", "swipe_overlay_background_opacity swipe_overlay_progress_volume_color swipe_overlay_progress_brightness_color swipe_overlay_progress_speed_color swipe_text_overlay_size swipe_zone_width");
 def("fullscreen", "gesture", "swipe_top_zone");
-def("fullscreen", "style", "swipe_zone_preview swipe_speed_zone_height");
+def("fullscreen", "style", "swipe_zone_preview swipe_speed_zone_height swipe_overlay_timeout swipe_speed_step swipe_speed_sensitivity");
 scen("fullscreen", "swipe_change_video", (box, on) => {
   situation("Fullscreen, swipe sideways");
   box.innerHTML = device("land", `<div class="sv" style="position:absolute;inset:0;display:flex;width:200%;transition:transform .45s var(--ease)"><div style="flex:1;background:${ART[6]}"></div><div style="flex:1;background:${ART[2]}"></div></div>`);

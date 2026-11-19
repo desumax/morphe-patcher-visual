@@ -143,10 +143,10 @@ SCENES.fullscreen = () => {
     ${C("hide_player_related_videos_overlay", `<div style="display:flex;gap:6px;padding:6px 8px;background:linear-gradient(transparent,rgba(0,0,0,.8))"><div class="t2" style="color:#fff;writing-mode:vertical-rl;transform:rotate(180deg);font-size:10px">More videos</div>${[1, 4, 5].map(i => `<div style="width:96px">${thumb(i, "border-radius:4px")}<div style="font-size:9.5px;line-height:1.2;margin-top:2px">${esc(VIDEOS[i].t.slice(0, 30))}…</div></div>`).join("")}</div>`, { cls: "moreoverlay", style: "position:absolute;left:0;right:0;bottom:54px" })}
     ${sharedTime("21:40 / 41:05", "left:12px;bottom:36px")}
     ${sharedSeek(`<div class="played" style="width:52%"></div><div class="knob" style="left:52%"></div>`, "left:12px;right:12px;bottom:30px")}
-    ${C("hide_quick_actions", `<div style="display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;padding:3px 0">
+    ${C("hide_quick_actions", `<div style="display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;height:26px;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 18px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 18px),transparent)">
       ${q("hide_quick_actions_like_button", "like", "120K")}${q("hide_quick_actions_dislike_button", "dislike", "")}${q("hide_quick_actions_comments_button", "comment", "1.4K")}
       ${q("hide_quick_actions_save_button", "save", "")}${q("hide_quick_actions_share_button", "share", "")}${q("hide_quick_actions_playlist_button", "plist", "")}
-      ${q("hide_quick_actions_mix_button", "queue", "")}${q("hide_quick_actions_more_videos_button", "tv", "")}${q("hide_quick_actions_ask_button", "spark", "")}${q("hide_quick_actions_more_button", "moreh", "")}</div>`, { style: "position:absolute;left:10px;right:10px;bottom:2px;height:32px" })}
+      ${q("hide_quick_actions_mix_button", "queue", "")}${q("hide_quick_actions_more_videos_button", "tv", "")}${q("hide_quick_actions_ask_button", "spark", "")}${q("hide_quick_actions_more_button", "moreh", "")}</div>`, { style: "position:absolute;left:10px;right:10px;bottom:6px;height:26px" })}
     <div id="hud" style="position:absolute;display:none;z-index:31"></div>
     <div class="finger" id="finger"></div>
   </div>`;
