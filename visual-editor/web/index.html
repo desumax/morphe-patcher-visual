@@ -463,6 +463,10 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .ladd .lplus { width: 26px; height: 26px; border: 0; border-radius: 50%; background: var(--m-secondary-c); display: grid; place-items: center; cursor: pointer; padding: 0; }
 .ladd .lplus svg { width: 16px; height: 16px; fill: #D8E3F8; }
 .lst button:disabled, .lst input:disabled { opacity: .5; cursor: default; }
+.lreset { width: 34px; height: 34px; border: 0; border-radius: 50%; background: transparent; display: grid; place-items: center; cursor: pointer; padding: 0; flex: none; }
+.lreset svg { width: 20px; height: 20px; fill: var(--m-primary); }
+.lreset:hover:not(:disabled) { background: rgba(255,255,255,.08); }
+.lreset:disabled { opacity: .3; cursor: default; }
 .lerr { flex-basis: 100%; font-size: 11.5px; color: var(--m-error); }
 /* option pills always wrap onto new lines and grow with their text, so it never spills past the border */
 .fallback .ctl:has(.opt) { flex-wrap: wrap; }

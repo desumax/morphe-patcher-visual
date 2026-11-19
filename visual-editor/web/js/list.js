@@ -248,8 +248,8 @@ function controlFor(k) {
 // so Morphe parses what it always did.
 const isListBox = k => PREF[k].type === "string" && (String(PREF[k].default ?? "").includes("\n") || /strings|phrases|speeds|whitelist|filter/.test(k));
 const listNumeric = k => /speeds/.test(k);
-function listItems(k) {
-  const v = String(V(k) ?? "");
+function listItems(k, from = V(k)) {
+  const v = String(from ?? "");
   // older or hand-typed values may use spaces or commas; Morphe's own default is one per line
   const parts = v.includes("\n") || !listNumeric(k) ? v.split("\n") : v.split(/[\s,]+/);
   return parts.map(x => x.trim()).filter(Boolean);
@@ -306,6 +306,8 @@ function rowHTML(k, live) {
   else if (live && a.kind !== "scenario") { right = stateChip(k); if (!isBool) ctl = controlFor(k); }
   else if (isBool) right = swHTML();
   else if (!info || (p.widget === "NonInteractivePreference" && /_file$/.test(k))) ctl = controlFor(k);
+  // a list setting (speeds, filter words) gets a reset on the right that brings back Morphe's own list
+  if (!info && isListBox(k)) { const same = String(V(k) ?? "") === String(defaults[k] ?? ""); right = `<button class="lreset" data-lreset="${k}" ${same || dis ? "disabled" : ""} title="Restore the default list" aria-label="Restore the default list">${I("reset")}</button>`; }
   const cls = ["row", live ? "live" : "fallback"];
   if (selected === k) cls.push("sel");
   if (dis) cls.push("dis");
@@ -655,7 +657,7 @@ function setSearch(on) {
   $("app").classList.toggle("searching", on);
   $("btnSearch").setAttribute("aria-expanded", String(on));
   $("q").tabIndex = on ? 0 : -1; $("qClose").tabIndex = on ? 0 : -1;
-  if (on) { stopDemo(); stopScenario(); setPicker(false); $("q").value = query; setTimeout(() => $("q").focus(), 60); $("scroller").scrollTop = 0; renderList(); }
+  if (on) { stopDemo(); stopScenario(); setPicker(false); $("q").value = query; setTimeout(() => { $("q").focus(); $("q").select(); }, 60) /* a remembered search is selected, so one key replaces or clears it */; $("scroller").scrollTop = 0; renderList(); }
   else { $("q").blur(); renderStage(); renderList(); }
 }
 function renderSearch() {

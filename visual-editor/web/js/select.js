@@ -171,9 +171,22 @@ function sizeAnim(el, show, ms = SIZE_MS) {
   if (show) a.onfinish = a.oncancel = () => el.classList.remove("sizing", "sizew", "sizei");
   return a;
 }
+// A card changed through its own control stays where it is on screen: whatever else moves (the preview
+// above changing height, the list redrawn), the scroll follows it, and if the card itself grows or
+// shrinks (a list gaining a line of chips) it does so smoothly instead of jumping.
+function holdRow(k) {
+  const row = document.querySelector(`#list [data-row="${k}"]`), sc = $("scroller"); if (!row || !sc || searching) return () => {};
+  const top = row.getBoundingClientRect().top, h = row.offsetHeight;
+  return () => {
+    const r = document.querySelector(`#list [data-row="${k}"]`); if (!r) return;
+    const d = r.getBoundingClientRect().top - top; if (Math.abs(d) > .5) sc.scrollTop += d;
+    const h2 = r.offsetHeight; if (Math.abs(h2 - h) > .5) r.animate([{ height: h + "px", overflow: "hidden" }, { height: h2 + "px", overflow: "hidden" }], { duration: 220, easing: "cubic-bezier(.2,0,0,1)" });
+  };
+}
 function afterChange(k, before) {
   if (peekKid && kidVisible(peekKid)) peekKid = null;
-  commit(); select(k);
+  const settle = holdRow(k);
+  commit(); select(k); settle();
   // the whole preview only pulses when nothing in it stands for this setting
   const sb = document.querySelector(".stagebox"); if (sb && !document.querySelector(`#stage [data-k="${k}"], #stage [data-also="${k}"]`) && !proxyEls(k).length) { sb.classList.remove("changed"); void sb.offsetWidth; sb.classList.add("changed"); }
   try { navigator.vibrate && navigator.vibrate(20); } catch { /* ignore */ }
