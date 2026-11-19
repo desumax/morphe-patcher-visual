@@ -420,7 +420,7 @@ scen("comments", "search_comments", (box, on) => {
   const list = ["The wood stove at 12:04 is pure cosiness", "Which stove model is that?", "Subscribed for part 2", "Stove + rain = perfect"];
   box.innerHTML = device("port", pageRows(`<div style="display:flex;align-items:center;gap:4px"><b style="font-size:8px;flex:1">Comments</b>${on ? `<span class="srch7" style="width:10px;height:10px;display:grid;place-items:center">${I("search", "ico", 'style="width:10px;height:10px"')}</span>` : ""}</div><div class="q7" style="height:0;overflow:hidden;transition:height .25s"><div style="height:12px;border-radius:6px;background:#2c2c2c;padding:0 5px;line-height:12px;color:#aaa"></div></div>${list.map((t, i) => cmt7(i + 1, t)).join("")}`));
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
-  if (!on) { at(300, () => toast7(dev, "No search in comments", "60%")); return "No way to search the loaded comments (stock)"; }
+  if (!on) { toast7(dev, "No search in comments", "60%"); return "No way to search the loaded comments (stock)"; }
   at(200, () => fingerTo(f, W * .88, H * .055)); at(550, () => tapF(f));
   at(750, () => { f.classList.remove("show"); dev.querySelector(".q7").style.height = "14px"; });
   const q = dev.querySelector(".q7 div"); "stove".split("").forEach((ch, i) => at(950 + i * 110, () => { q.textContent += ch; }));
@@ -480,8 +480,8 @@ scen("watch", "remove_viewer_discretion_dialog", (box, on) => {
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
   dev.insertAdjacentHTML("beforeend", `<div class="dlg7" style="position:absolute;left:8%;right:8%;top:30%;background:#282828;border-radius:6px;padding:6px;font-size:7px;display:grid;gap:4px;transition:opacity .25s"><b>Viewer discretion advised</b><span style="color:#aaa">This video may be inappropriate for some users.</span><span style="justify-self:end;color:#3ea6ff">I understand</span></div>`);
   const d = dev.querySelector(".dlg7");
-  if (on) { d.style.opacity = "0"; at(500, () => d.style.opacity = "1"); at(800, () => d.style.opacity = "0"); at(1000, () => toast7(dev, "Accepted for you", "70%")); return "The dialog is accepted automatically (age limits still apply)"; }
-  at(700, () => toast7(dev, "Playback waits for you", "82%"));
+  if (on) { d.style.opacity = "0"; at(500, () => d.style.opacity = "1"); at(800, () => { d.style.opacity = "0"; toast7(dev, "Accepted for you", "70%"); }); return "The dialog is accepted automatically (age limits still apply)"; }
+  toast7(dev, "Playback waits for you", "82%");
   at(1300, () => fingerTo(f, W * .75, H * .47)); at(1900, () => tapF(f)); at(2100, () => { d.style.opacity = "0"; f.classList.remove("show"); dev.querySelectorAll(".t7").forEach(e => e.remove()); });
   at(2300, () => toast7(dev, "Every time you open one", "82%"));
   return "You have to confirm the dialog each time (stock)";
@@ -529,6 +529,23 @@ SCENES.playback = () => {
     </div>
     ${C("custom_playback_speeds", `<div style="padding:10px 12px 4px"><div class="t2" style="margin-bottom:6px">Playback speed</div><div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none">${speeds.map(n => `<span class="chip" style="height:28px;flex:none;${n === (spd > 0 ? spd : 1) ? "background:#f1f1f1;color:#0f0f0f" : ""}">${n}x</span>`).join("")}</div></div>`, { blk: 1, also: "custom_speed_menu" })}
     <div style="padding:10px 12px 14px"><div class="t1">${esc(VIDEOS[5].t)}</div><div class="t2">${VIDEOS[5].c} · ${VIDEOS[5].v}</div></div>
+  </div>`;
+};
+// Behaviour: a watch page, the place where autoplay, loops, live chat and the player's popups happen.
+// Every setting here plays its own Off / On scenario; the page is what the tab shows between them.
+SCENES.behaviour = () => {
+  const ap = !!V("morphe_autoplay_control"), lc = !!V("morphe_loop_count");
+  return `<div class="inner-scroll" style="background:#0f0f0f;max-height:350px;overflow-y:auto">
+    <div class="video" style="position:relative">${videoFrame(3)}<div class="scrim" style="opacity:.25"></div>
+      ${C("autoplay_control", `<span class="chip" style="position:absolute;right:8px;top:8px;height:22px;font-size:11px;padding:0 7px;background:rgba(0,0,0,.6)">${I("play", "ico", 'style="width:12px;height:12px"')} Autoplay ${ap ? "on" : "off"}</span>`, { tag: "span" })}
+      ${lc ? C("loop_count", `<span class="chip" style="position:absolute;left:8px;top:8px;height:22px;font-size:11px;padding:0 7px;background:rgba(0,0,0,.6)">${I("loop", "ico", 'style="width:12px;height:12px"')} Loop 2</span>`, { tag: "span" }) : ""}
+      <div class="pbtn bigbtn" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.3)">${I("pause")}</div>
+      <div class="time" style="position:absolute;left:12px;bottom:14px">12:05 / ${VIDEOS[3].d}</div>
+      <div class="seek" style="bottom:6px"><div class="played" style="width:96%"></div></div>
+    </div>
+    <div style="padding:10px 12px 4px"><div class="t1">${esc(VIDEOS[3].t)}</div><div class="t2">${VIDEOS[3].c} · ${VIDEOS[3].v}</div></div>
+    <div class="t2" style="padding:8px 12px 4px">Up next</div>
+    ${[4, 5].map(i => `<div style="display:flex;gap:10px;padding:6px 12px">${thumb(i, "width:120px;border-radius:8px;flex:none")}<div><div class="t1" style="font-size:13px">${esc(VIDEOS[i].t)}</div><div class="t2">${VIDEOS[i].c}</div></div></div>`).join("")}
   </div>`;
 };
 def("playback", "style", "playback_speed_default video_quality_default_wifi video_quality_default_mobile disable_hdr_video force_hdr_video video_codec playback_audio_pitch_default custom_playback_speeds custom_speed_menu");

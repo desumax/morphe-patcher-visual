@@ -150,7 +150,7 @@ scen("feed", "post_translate", (box, on) => {
   situation("A community post in another language");
   box.innerHTML = device("port", pageRows(`<div style="display:flex;gap:4px;align-items:center"><span style="width:12px;height:12px;border-radius:50%;background:${AV[0]}"></span><b style="font-size:7px">Fjord & Timber</b></div><div class="tx7" style="font-size:6.5px;line-height:1.35;transition:opacity .25s">Taket er ferdig! Neste uke: vedovnen.</div>${on ? `<div class="tb7" style="font-size:6px;color:#3ea6ff;display:flex;gap:2px;align-items:center">${ico7("translate", 7, "#3ea6ff")}Translate</div>` : ""}<div style="height:34px;border-radius:4px;background:${ART[3]}"></div>`));
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
-  if (!on) { at(400, () => toast7(dev, "No translate button", "80%")); return "Posts stay in their language (stock)"; }
+  if (!on) { toast7(dev, "No translate button", "80%"); return "Posts stay in their language (stock)"; }
   at(300, () => fingerTo(f, W * .25, H * .2)); at(650, () => tapF(f));
   at(900, () => { f.classList.remove("show"); const t = dev.querySelector(".tx7"); t.style.opacity = 0; later(() => { t.textContent = "The roof is done! Next week: the wood stove."; t.style.opacity = 1; }, 260); dev.querySelector(".tb7").innerHTML = "Show original"; });
   return "A Translate button under posts in other languages";
@@ -167,8 +167,8 @@ scen("feed", "restore_original_titles", (box, on) => {
   situation("A video with a translated title");
   box.innerHTML = device("port", pageRows(feed7(`${big7(3, "")}<div class="tt7" style="font-size:7px;font-weight:600;transition:opacity .25s">Ich habe eine winzige Hütte gebaut</div>${row7(4, "Nachtzug nach Bodø")}`)));
   const dev = box.querySelector(".dev"), t = dev.querySelector(".tt7");
-  at(700, () => { if (!on) return; t.style.opacity = 0; later(() => { t.textContent = "I built a tiny cabin"; t.style.opacity = 1; }, 260); });
-  at(1200, () => toast7(dev, on ? "The creator's original title" : "Auto-translated title (stock)", "84%"));
+  if (!on) toast7(dev, "Auto-translated title (stock)", "84%");
+  at(700, () => { if (!on) return; t.style.opacity = 0; toast7(dev, "The creator's original title", "84%"); later(() => { t.textContent = "I built a tiny cabin"; t.style.opacity = 1; }, 260); });
   return on ? "Titles show as the creator wrote them" : "Titles are auto-translated to your language (stock)";
 });
 hidePage("feed", "playlist_hide_removal_snackbar", "Removing a video from a playlist", top7("Road trip mix", ["search", "more"]) + row7(1, "Night train to Bodø") + row7(2, "Lo-fi beats") + `<div style="height:40px"></div>` + tgt7(`<div style="display:flex;justify-content:space-between;align-items:center;gap:4px;padding:3px 5px;border-radius:3px;background:#f1f1f1;color:#000;font-size:6px"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Removed from Road trip mix</span><b style="color:#065fd4;flex:none">UNDO</b></div>`), { hidden: "No “Removed” snackbar after each removal" });
@@ -187,7 +187,7 @@ scen("look", "disable_layout_updates", (box, on) => {
   situation("YouTube tests a new layout on you");
   box.innerHTML = device("port", pageRows(feed7(`<div class="ly7" style="display:grid;gap:5px;transition:opacity .3s">${big7(3, "Building a tiny cabin")}${row7(4, "Night train to Bodø")}</div>`)));
   const dev = box.querySelector(".dev"), ly = dev.querySelector(".ly7");
-  at(500, () => toast7(dev, "Server: try layout B", "50%"));
+  toast7(dev, "Server: try layout B", "50%");
   at(1200, () => { dev.querySelector(".t7")?.remove(); if (on) { x7(dev, ly); later(() => { dev.querySelector(".x7")?.remove(); check7(dev, "Layout stays the same"); }, 600); } else { ly.style.opacity = 0; later(() => { ly.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px">${[3, 4, 5, 6].map(i => `<div style="height:22px;border-radius:3px;background:${ART[i]}"></div>`).join("")}</div>`; ly.style.opacity = 1; }, 300); } });
   return on ? "Server-side layout experiments are ignored" : "YouTube can switch your layout at any time (stock)";
 });
@@ -195,7 +195,7 @@ scen("look", "fix_status_bar_layout", (box, on) => {
   situation("Opening a video");
   box.innerHTML = device("port", `<div style="position:absolute;left:0;right:0;top:0;height:8px;background:#000;font-size:5px;display:flex;justify-content:space-between;padding:0 4px;align-items:center;z-index:3"><span>9:41</span><span>5G ▮</span></div>` + `<div class="pv7" style="position:absolute;left:0;right:0;top:${on ? 8 : 0}px;height:52px;background:${ART[3]};transition:top .3s"></div><div style="position:absolute;left:5px;right:5px;top:66px;display:grid;gap:4px">${bar7(90)}${bar7(70)}</div>`);
   const dev = box.querySelector(".dev");
-  at(700, () => toast7(dev, on ? "Video sits below the status bar" : "Status bar covers the video", "78%"));
+  toast7(dev, on ? "Video sits below the status bar" : "Status bar covers the video", "78%");
   return on ? "The status bar no longer overlaps the player" : "On some devices the status bar overlaps the top of the player (stock)";
 });
 scen("look", "native_snackbar", (box, on) => {
@@ -228,8 +228,8 @@ scen("look", "theme_color_change_foreground", (box, on) => {
   box.innerHTML = device("port", pageRows(top7("You", ["cast", "search", "gear"]) + `<div style="display:grid;gap:3px">${items.map(([i, t]) => `<div class="fg7" style="display:flex;gap:5px;align-items:center;font-size:7px;color:#f1f1f1;fill:#f1f1f1;transition:color .4s,fill .4s">${I(i, "ico", 'style="width:9px;height:9px;fill:inherit;transition:fill .4s"')}<span>${t}</span></div>`).join("")}</div><div style="height:10px;border-radius:5px;background:#26a69a;width:60%"></div>`));
   const dev = box.querySelector(".dev");
   dev.querySelectorAll(".pg7 > div:first-child svg").forEach(e => { e.style.transition = "fill .4s"; });
-  at(800, () => { if (!on) return; dev.querySelectorAll(".fg7").forEach(e => { e.style.color = "#4db6ac"; e.style.fill = "#4db6ac"; }); dev.querySelectorAll(".pg7 > div:first-child svg").forEach(e => { e.style.fill = "#4db6ac"; }); });
-  at(1300, () => toast7(dev, on ? "Text and icons take the theme colour" : "Text and icons stay white", "78%"));
+  at(800, () => { if (!on) return; dev.querySelectorAll(".fg7").forEach(e => { e.style.color = "#4db6ac"; e.style.fill = "#4db6ac"; }); dev.querySelectorAll(".pg7 > div:first-child svg").forEach(e => { e.style.fill = "#4db6ac"; }); toast7(dev, "Text and icons take the theme colour", "78%"); });
+  if (!on) toast7(dev, "Text and icons stay white", "78%");
   return on ? "Text and icons use your theme colour" : "Text and icons stay white (stock)";
 });
 scen("look", "custom_filter", (box, on) => {
@@ -362,7 +362,7 @@ scen("playback", "autoplay_control", (box, on) => {
   situation("A video ends");
   box.innerHTML = device("port", watch7(`<div class="ap7" style="position:absolute;right:3px;top:3px;display:flex;gap:2px;align-items:center;font-size:5.5px">${on ? `<span style="padding:0 3px;border-radius:5px;background:rgba(0,0,0,.6)">${ico7("play", 6)} Auto</span>` : ""}</div>`));
   const dev = box.querySelector(".dev");
-  at(800, () => toast7(dev, on ? "Autoplay follows your rule: next in playlist only" : "Next video starts automatically", "60%"));
+  toast7(dev, on ? "Autoplay follows your rule: next in playlist only" : "Next video starts automatically", "60%");
   return on ? "A player button and a rule decide what plays next" : "YouTube decides (stock)";
 });
 scen("playback", "disable_playlist_autoplay", (box, on) => {
@@ -587,14 +587,14 @@ scen("playback", "live_chat_translate_bold", (box, on) => {
   box.innerHTML = lcPage(lcChat({ tr: true, bold: on }));
   const dev = box.querySelector(".dev");
   at(150, () => { if (on) dev.querySelectorAll(".lt8").forEach(e => e.animate([{ opacity: .45 }, { opacity: 1 }], { duration: 300 })); });
-  return on ? "Translations are bold" : "Translations in regular weight";
+  return ""; // the drawn chat says it; no caption
 });
 scen("playback", "live_chat_translate_use_color", (box, on) => {
   situation("Translated live chat");
   box.innerHTML = lcPage(lcChat({ tr: true, color: on }));
   const dev = box.querySelector(".dev");
   at(150, () => { if (on) dev.querySelectorAll(".lt8").forEach(e => e.animate([{ opacity: .45 }, { opacity: 1 }], { duration: 300 })); });
-  return on ? "Translations in your colour" : "Translations in the chat's text colour";
+  return ""; // the drawn chat says it; no caption
 });
 scen("playback", "live_chat_translate_copy_button", (box, on) => {
   situation("Translated live chat");
@@ -612,12 +612,12 @@ scen("playback", "loop_count", (box, on) => {
   box.innerHTML = device("port", watch7(`<span class="lc8 badge7" style="right:3px;top:3px">${on ? "Loop 1" : ""}</span>`));
   const dev = box.querySelector(".dev");
   [2, 3, 4].forEach((n, i) => at(500 + i * 450, () => { if (on) dev.querySelector(".lc8").textContent = "Loop " + n; }));
-  return on ? "A counter shows how many times it looped" : "No loop counter (stock)";
+  return ""; // the counter on the player says it; no caption
 });
 scen("playback", "advanced_video_quality_menu", (box, on) => {
   situation("Tapping Quality");
   box.innerHTML = device("port", pageRows(player7(3)) + `<div style="position:absolute;left:0;right:0;bottom:0;background:#212121;border-radius:6px 6px 0 0;padding:7px 7px 8px;display:grid;gap:6px;font-size:8.5px;line-height:1.2;animation:sheetup .25s">${on ? ["1080p60", "720p60", "480p", "360p", "Auto"].map(t => `<div>${t}</div>`).join("") : ["Auto", "Higher quality", "Data saver", "Advanced ›"].map(t => `<div>${t}</div>`).join("")}</div>`);
-  return on ? "The full list of resolutions opens directly" : "A simplified menu first (stock)";
+  return on ? "All resolutions open directly" : "A simplified menu first (stock)";
 });
 for (const [k, sit, offTxt, onTxt] of [
   ["force_original_audio", "A video with dubbed audio tracks", "Dubbed track in your language", "Original audio track"],
@@ -628,7 +628,7 @@ for (const [k, sit, offTxt, onTxt] of [
     situation(sit);
     box.innerHTML = device("port", watch7(`<div class="wave7" style="position:absolute;left:6px;right:6px;bottom:6px;height:12px;display:flex;gap:1px;align-items:center">${Array.from({ length: 22 }, (_, i) => `<i style="flex:1;background:#fff;opacity:.85;height:${on && k === "disable_drc_audio" ? 20 + (i * 37 % 80) : 45 + (i * 13 % 20)}%;transition:height .4s"></i>`).join("")}</div>`));
     const dev = box.querySelector(".dev");
-    at(600, () => toast7(dev, on ? onTxt : offTxt, "78%"));
+    toast7(dev, on ? onTxt : offTxt, "78%");
     return on ? onTxt : offTxt + " (stock)";
   });
 }
@@ -677,6 +677,8 @@ function buildMembers() {
   MEMBERS = {};
   SECTIONS.forEach(s => (MEMBERS[s.id] = { live: [], misc: [] }));
   const assigned = new Set();
+  // scenarios are written for "playback"; the ones of Morphe's Player screen belong to the Behaviour tab
+  for (const k in A) if (A[k].section === "playback" && PREF[k] && PREF[k].screen !== "VIDEO") A[k].section = "behaviour";
   for (const k in A) if (PREF[k] && MEMBERS[A[k].section] && inVersion(k)) { MEMBERS[A[k].section].live.push(k); assigned.add(k); }
   for (const p of CAT.preferences) {
     if (assigned.has(p.key) || !inVersion(p.key) || p.type === "screen") continue; // sub-screen links are navigation, not settings
@@ -707,10 +709,22 @@ function buildKids() {
   PARENT_OF = {}; KIDS = {};
   for (const s of SECTIONS) {
     const keys = [...MEMBERS[s.id].live, ...MEMBERS[s.id].misc], set = new Set(keys);
+    const avOf = k => { const av = String(PREF[k].availability || ""); return [av, [...new Set([...(PREF[k].availabilityParents || []), ...[...av.matchAll(/S\("([^"]+)"\)/g)].map(m => m[1])])].filter(x => x !== k && set.has(x))]; };
+    // Peers: settings that together unlock something ("any swipe zone is on"). When only ONE of the peers
+    // also has a dependent of its own (the top zone's height), nesting it would give that peer a lock pill
+    // the others lack although they unlock the same menu, so that dependent stays a plain greyed row too.
+    const families = [], soloKids = {};
+    for (const k of keys) {
+      const [av, ks] = avOf(k);
+      if (ks.length > 1 && av.includes("||")) families.push(ks);
+      else if (ks.length === 1) (soloKids[ks[0]] = soloKids[ks[0]] || []).push(k);
+    }
+    const lonePeerKid = k => { const [av, ks] = avOf(k); if (ks.length !== 1 || av.includes("||")) return false; const p = ks[0];
+      return soloKids[p].length === 1 && families.some(f => f.includes(p) && f.every(m => m === p || !soloKids[m])); };
     for (const k of keys) {
       const ok = x => x !== k && x !== NOT_PARENT[k] && set.has(x);
       const av = String(PREF[k].availability || "");
-      const avKeys = [...new Set([...(PREF[k].availabilityParents || []), ...[...av.matchAll(/S\("([^"]+)"\)/g)].map(m => m[1])])].filter(ok);
+      const avKeys = lonePeerKid(k) ? [] : avOf(k)[1].filter(ok);
       // a setting that unlocks when ANY of several settings is on (DeArrow titles in any place, any swipe
       // zone) is not a sub-option of one of them: nesting it under the first made it pop up under a
       // parent that was never touched. It stays a normal row that is greyed out until one is on.

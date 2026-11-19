@@ -867,7 +867,9 @@ SECTIONS.push(
   { id: "ads", icon: "dollar", title: "Ads", scopes: [["ADS", null]] },
   { id: "look", icon: "palette", title: "App look", scopes: [["GENERAL", null], ["GENERAL", "morphe_custom_filter_screen"], ["GENERAL", "morphe_series_tracker_screen"]] },
   { id: "snackbar", icon: "chat", title: "Snackbar", scopes: [["GENERAL", "morphe_snackbar_screen"]] },
-  { id: "playback", icon: "speed", title: "Playback", scopes: [["VIDEO", null], ["VIDEO", "morphe_vot_screen"], ["PLAYER", null], ["PLAYER", "morphe_loop_count_screen"], ["PLAYER", "morphe_live_chat_translate_screen"], ["PLAYER", "morphe_external_downloader_screen"]] },
+  // Morphe's Video screen and its Player screen, kept apart so each tab fits on its group card
+  { id: "playback", icon: "speed", title: "Video & audio", scopes: [["VIDEO", null], ["VIDEO", "morphe_vot_screen"]] },
+  { id: "behaviour", icon: "loop", title: "Behaviour", scopes: [["PLAYER", null], ["PLAYER", "morphe_loop_count_screen"], ["PLAYER", "morphe_live_chat_translate_screen"], ["PLAYER", "morphe_external_downloader_screen"]] },
   { id: "dearrow", icon: "eye", title: "DeArrow", scopes: [["DEARROW", null]] },
 );
 SECTIONS.find(s => s.id === "watch").scopes.push(["RETURN_YOUTUBE_DISLIKE", null]);
@@ -945,7 +947,7 @@ def("snackbar", "style", "custom_snackbar_theme custom_snackbar_color_dark custo
 
 // ------------------------------------------------------------------ section order with the new ones
 {
-  const order = ["player", "endscreen", "seekbar", "fullscreen", "flyout", "captions", "sponsorblock", "playback", "watch", "description", "comments", "ambient", "danmaku", "miniplayer", "feed", "channel", "explore", "shorts", "nav", "ads", "look", "snackbar", "dearrow", "misc"];
+  const order = ["player", "endscreen", "seekbar", "fullscreen", "flyout", "captions", "sponsorblock", "playback", "behaviour", "watch", "description", "comments", "ambient", "danmaku", "miniplayer", "feed", "channel", "explore", "shorts", "nav", "ads", "look", "snackbar", "dearrow", "misc"];
   const all = [...SECTIONS]; SECTIONS.length = 0;
   order.forEach(id => { const s = all.find(x => x.id === id); if (s) SECTIONS.push(s); });
 }
