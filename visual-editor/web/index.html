@@ -365,14 +365,16 @@ html #pickGrid .pg.pgroups.pvis:not(.nx) .gcard .pi svg { width: 18px; height: 1
 /* The Off / On labels sit beside the phones, never above them (Max, Nov 20): side by side, the left
    label on the left of its phone and the right one on the right; stacked, each on the right of its
    phone. Centred on the phone. The height labels took above the phones goes to the phones. */
-.duo7.gen.labout { flex-direction: row !important; align-items: center; }
-.duo7.gen.labout .dl7 { width: max-content; column-gap: 6px; align-items: center; }
-.duo7.gen.labout .dl7:first-child { grid-template-columns: auto min-content; grid-template-areas: "pill dev" ". cap"; }
-.duo7.gen.labout .dl7 + .dl7 { grid-template-columns: min-content auto; grid-template-areas: "dev pill" "cap ."; } /* not :last-child: a gliding caption copy may follow */
+/* labels beside the phones sit close to them: the gaps are a few screen pixels (divided by the pair's
+   scale), and a caption spans under label and phone so its width never pushes them apart (Max, Nov 20) */
+.duo7.gen.labout { flex-direction: row !important; align-items: center; gap: calc(8px / var(--dsc, 1.7)); }
+.duo7.gen.labout .dl7 { width: max-content; column-gap: calc(5px / var(--dsc, 1.7)); align-items: center; }
+.duo7.gen.labout .dl7:first-child { grid-template-columns: auto min-content; grid-template-areas: "pill dev" "cap cap"; }
+.duo7.gen.labout .dl7 + .dl7 { grid-template-columns: min-content auto; grid-template-areas: "dev pill" "cap cap"; } /* not :last-child: a gliding caption copy may follow */
 .duo7.gen.labout .dl7:first-child > span { justify-self: end; }
 .duo7.gen.labout .dl7 + .dl7 > span { justify-self: start; }
 .duo7.gen.labright { flex-direction: column !important; align-items: stretch; }
-.duo7.gen.labright .dl7 { width: max-content; grid-template-columns: min-content auto; grid-template-areas: "dev pill" "cap ."; column-gap: 6px; align-items: center; justify-content: start; }
+.duo7.gen.labright .dl7 { width: max-content; grid-template-columns: min-content auto; grid-template-areas: "dev pill" "cap cap"; column-gap: calc(5px / var(--dsc, 1.7)); align-items: center; justify-content: start; }
 .duo7.gen.labright .dl7 > span { justify-self: start; }
 .duo7.gen.labout .dl7 > span, .duo7.gen.labright .dl7 > span { grid-area: pill; }
 /* a long label beside a phone breaks onto two short lines instead of taking the phones' width */

@@ -43,13 +43,16 @@ function measurePair(gen) {
   probe.querySelectorAll("[id]").forEach(e => e.removeAttribute("id")); probe.querySelectorAll(".glide7").forEach(e => e.remove()); probe.classList.remove("capgo");
   gen.parentElement.appendChild(probe);
   // labels beside the phones (labout side by side, labright stacked): see the CSS
-  const size = (dir, side = false) => { probe.classList.toggle("capside", side); probe.classList.toggle("labright", dir === "column"); probe.classList.toggle("labout", dir === "row"); probe.style.flexDirection = dir; return [probe.offsetWidth, probe.offsetHeight]; };
+  const size = (dir, side = false, top = false) => { probe.classList.toggle("capside", side); probe.classList.toggle("labright", dir === "column" && !top); probe.classList.toggle("labout", dir === "row" && !top); probe.style.flexDirection = dir; return [probe.offsetWidth, probe.offsetHeight]; };
   // captions beside the phones: only for portrait pairs (landscape phones are already wide)
   const portrait = !probe.querySelector(".dev.land");
   const rowWH = size("row"), colWH = size("column");
   const sideWH = portrait ? size("row", true) : null;
+  // labels above the phones, side by side: taken only when it draws the phones clearly larger (a wide,
+  // short preview gives the width to the labels beside; a tall one can spare a line on top; Max, Nov 20)
+  const topWH = size("row", false, true);
   probe.remove();
-  return { rowWH, colWH, sideWH };
+  return { rowWH, colWH, sideWH, topWH };
 }
 // where an element sits inside the pair, in the pair's own unscaled pixels (whatever its scale is right
 // now), measured from the pair's centre: the pair is centred in the preview, so when it changes size its
@@ -150,15 +153,16 @@ function fitDev(orient) {
     if (first) {
       const f = (wh) => wh ? fitScale(wh[0], wh[1]) : 0;
       for (let n = 0, m = measurePair(gen); n < 4; n++) {
-        const best = scTurns ? Math.max(f(m.rowWH), f(m.sideWH)) : Math.max(f(m.rowWH), f(m.colWH), f(m.sideWH)), was = parseFloat(gen.style.getPropertyValue("--dsc")) || 0;
+        const best = scTurns ? Math.max(f(m.rowWH), f(m.sideWH), f(m.topWH)) : Math.max(f(m.rowWH), f(m.colWH), f(m.sideWH), f(m.topWH)), was = parseFloat(gen.style.getPropertyValue("--dsc")) || 0;
         gen.style.setProperty("--dsc", best.toFixed(3)); if (Math.abs(best - was) < .005) break;
         m = measurePair(gen);
       }
     }
-    const { rowWH, colWH, sideWH } = measurePair(gen);
-    const row = fitScale(rowWH[0], rowWH[1]), col = fitScale(colWH[0], colWH[1]), side = sideWH ? fitScale(sideWH[0], sideWH[1]) : 0;
-    const S = { side, row, column: col }, WH = { side: sideWH, row: rowWH, column: colWH };
+    const { rowWH, colWH, sideWH, topWH } = measurePair(gen);
+    const row = fitScale(rowWH[0], rowWH[1]), col = fitScale(colWH[0], colWH[1]), side = sideWH ? fitScale(sideWH[0], sideWH[1]) : 0, top = fitScale(topWH[0], topWH[1]);
+    const S = { side, row, column: col, top }, WH = { side: sideWH, row: rowWH, column: colWH, top: topWH };
     let pick = side >= Math.max(row, col) * 1.04 ? "side" : row >= col || scTurns ? "row" : "column";
+    if (top >= S[pick] * 1.06) pick = "top";
     // a caption changing mid-story must not flip the layout back and forth or nudge the size:
     // keep the current layout (and scale) unless the new one is clearly better
     const cur = gen.dataset.lay, curSc = parseFloat(gen.style.scale) || 0;
@@ -178,7 +182,7 @@ function fitDev(orient) {
     // The final layout lands at once, captions in their final places (hidden while their gliding copies
     // move); the phones and labels glide there (pairGlide). Taking the captions out of the flow until
     // the end of the move made everything jump into place when they came back.
-    gen.classList.remove("capgo"); gen.classList.toggle("capside", pick === "side"); gen.classList.toggle("labright", pick === "column"); gen.classList.toggle("labout", pick !== "column"); gen.style.flexDirection = pick === "column" ? "column" : "row";
+    gen.classList.remove("capgo"); gen.classList.toggle("capside", pick === "side"); gen.classList.toggle("labright", pick === "column"); gen.classList.toggle("labout", pick === "row" || pick === "side"); gen.style.flexDirection = pick === "column" ? "column" : "row";
     gen.style.scale = sc.toFixed(3); if (first || !gen.style.getPropertyValue("--dsc")) gen.style.setProperty("--dsc", sc.toFixed(3));
     pairGlide(gen, wasParts);
     if (before) { const ends = finalCapPlaces(gen); caps.forEach((c, i) => glideCap(gen, c, before[i], ends[i])); }
@@ -1120,11 +1124,20 @@ const FOOT_OFF = new Set([
   "morphe_custom_filter", // "No custom filter": the labels and the drawing say it
   "morphe_swipe_haptic_feedback", // the buzz icon on each phone says it (Max, Nov 20)
   "morphe_navigation_bar_animations", // the tab change is drawn (Max, Nov 20)
+  "morphe_seek_notification_media_prev_next", // the buttons and their -10 s / +10 s say it (Max, Nov 20)
+  "morphe_show_menu_icons", // the icons are drawn (Max, Nov 20)
+  "morphe_continue_watching_prompt", // the prompt, the countdown and the phone's own message say it (Max, Nov 20)
   "morphe_disable_auto_hide_navigation_bar", // the bar staying or sliding away is drawn (Max, Nov 20)
 ]);
 let askOnly = false; // drawing only the default side while the other waits for a choice
 const SCN_SELF_DUO = new Set(["morphe_disable_player_popup_panels", "morphe_playback_buffer_size", "morphe_skip_silence_minimum_pause"]); // one phone that tells all values itself
 const DUO_OTHER = { morphe_speed_tap_and_hold: 4 };
+// Short words beside the phones where Morphe's option names don't read as a contrast on their own
+// ("Default" next to "Disabled, always show the autoplay countdown"; Max, Nov 20). Only the comparison
+// labels change; the list keeps Morphe's names.
+const DUO_LABEL = {
+  morphe_continue_watching_prompt: { DEFAULT: "Asks to continue", DISABLED: "Never asks", ALWAYS_COUNTDOWN: "Countdown only" },
+};
 function duoValues(k, prev) {
   const p = PREF[k];
   // an on/off setting is compared under the same words, on the same sides, as its card's toggle
@@ -1135,7 +1148,7 @@ function duoValues(k, prev) {
     if (!c) return [[false, "Off"], [true, "On"]];
     const [l0, l1] = c.labels; return NEG_WORD.has(l0) ? [[false, l0], [true, l1]] : [[true, l1], [false, l0]];
   }
-  const ents = entriesFor(k), lab = v => ents.find(e => sameVal(e.value, v))?.label || String(v) + (/speed/.test(k) ? "×" : "");
+  const ents = entriesFor(k), lab = v => DUO_LABEL[k]?.[v] || ents.find(e => sameVal(e.value, v))?.label || String(v) + (/speed/.test(k) ? "×" : "");
   const d = defaults[k], cur = V(k);
   // a clearer contrast than the next step up for a few settings (2x vs 4x speed)
   if (DUO_OTHER[k] !== undefined && sameVal(cur, d) && (prev === undefined || sameVal(prev, d))) return [[d, lab(d)], [DUO_OTHER[k], lab(DUO_OTHER[k])]];

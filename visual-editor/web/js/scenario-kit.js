@@ -700,7 +700,12 @@ scen("playback", "video_delay_bluetooth_only", (box, on) => {
   box.innerHTML = device("port", watch7(`<span class="out7 badge7" style="left:3px;top:3px">${ico7("headset", 6)} Bluetooth</span><span class="dl8 badge7" style="right:3px;top:3px">Delay ${ms} ms</span>` + prog7(35)));
   const dev = box.querySelector(".dev");
   toast7(dev, sync(true), "78%");
-  at(2000, () => { // the headphones part lasts longer (Max, Nov 20)
+  // the headphones part is held on purpose: at(0) keeps the start from being pulled forward to 0.3 s
+  // (LEAD_MS), which is what cut it short before (Max, Nov 20, twice)
+  // the video plays on through the headphones part, so the phones never sit still
+  at(0, () => {});
+  [300, 700, 1100, 1500, 1900].forEach((t, i) => at(t, () => { dev.querySelector(".skp7").style.width = 38 + i * 6 + "%"; }));
+  at(2000, () => {
     dev.querySelector(".out7").innerHTML = `${ico7("vol", 6)} Speaker`;
     if (on) dev.querySelector(".dl8").textContent = "No delay";
     const t = dev.querySelector(".toastin"); if (t) t.innerHTML = sync(on);
