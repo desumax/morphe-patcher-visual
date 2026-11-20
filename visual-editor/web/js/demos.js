@@ -559,13 +559,13 @@ def("playback", "behaviour", "remember_playback_speed_last_selected_toast rememb
 // guessed) while the other screen fades in or out. The same idea as the pair glide: real layouts, one
 // measured move. screenMove(otherId, true) goes to the other screen; screenMove(otherId, false) starts on
 // it and comes back here. Returns { go(), back() } to play the move (go) or return without it (back).
-function screenMove(otherId, leaving, ms = 550) {
+function screenMove(otherId, leaving, edit = html => html, ms = 550) {
   const st = $("stage"); st.querySelectorAll(".sm7").forEach(n => n.remove());
   const here = st.querySelector(".frame"); if (!here || !SCENES[otherId]) return null;
   const k = (st.getBoundingClientRect().width / (st.offsetWidth || 1)) || 1; // the stage may be drawn scaled
   const rectIn = el => { const a = el.getBoundingClientRect(), b = st.getBoundingClientRect(); return { left: (a.left - b.left) / k, top: (a.top - b.top) / k, width: a.width / k, height: a.height / k }; };
   const layer = document.createElement("div"); layer.className = "sm7 dyn";
-  layer.innerHTML = SCENES[otherId]().replace(/background:#0f0f0f/g, "background:var(--app-bg,#0f0f0f)");
+  layer.innerHTML = edit(SCENES[otherId]()).replace(/background:#0f0f0f/g, "background:var(--app-bg,#0f0f0f)");
   layer.querySelectorAll("[id]").forEach(e => e.removeAttribute("id"));
   layer.querySelectorAll(".c").forEach(e => e.classList.remove("c")); // not a setting target: only scenery
   Object.assign(layer.style, { position: "absolute", left: "0", top: "0", width: st.offsetWidth + "px", zIndex: "29", pointerEvents: "none", opacity: leaving ? "0" : "1" });
@@ -596,6 +596,8 @@ function screenMove(otherId, leaving, ms = 550) {
 }
 // Entering and leaving fullscreen, played on the Fullscreen preview itself: the fullscreen player moves
 // into the watch page's player (the Watch page tab's real scene) or out of it. One story every three loops.
+// The watch page plays the fullscreen preview's video, so its title follows.
+const fsWatch = html => html.split(esc(VIDEOS[0].t)).join(esc(VIDEOS[2].t));
 Object.assign(DEMOS, {
   morphe_exit_fullscreen(v) {
     if (demoStep % 3) return;
@@ -607,7 +609,7 @@ Object.assign(DEMOS, {
     const exits = /LANDSCAPE/.test(String(v));
     dT(() => {
       if (!exits) { showPill(String(v) === "PORTRAIT" ? "Stays: only portrait fullscreen is left" : "Stays in fullscreen", 1600); return; }
-      const m = screenMove("watch", true); if (!m) return;
+      const m = screenMove("watch", true, fsWatch); if (!m) return;
       m.go(); dT(() => { m.back(); set(52, 0); }, 2900);
     }, 1050);
     dT(() => set(52, 0), 4300);
@@ -615,9 +617,9 @@ Object.assign(DEMOS, {
   morphe_open_videos_fullscreen(v) {
     if (demoStep % 3) return;
     const on = String(v) !== "DISABLED";
-    const m = screenMove("watch", false); if (!m) return; // a video opening on the watch page
+    const m = screenMove("watch", false, fsWatch); if (!m) return; // a video opening on the watch page
     dT(() => {
-      if (on) { m.go(); showPill(String(v) === "PORTRAIT" ? "Opens in portrait fullscreen" : "Opens in fullscreen", 1400); }
+      if (on) { m.go(); dT(() => showPill(String(v) === "PORTRAIT" ? "Opens in portrait fullscreen" : "Opens in fullscreen", 1400), 600); } // once the video has filled the screen (the pill jumped while the page moved)
       else { showPill("Opens in the normal player", 1400); dT(() => m.back(), 2200); }
     }, 700);
   },

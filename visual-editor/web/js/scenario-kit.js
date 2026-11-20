@@ -15,6 +15,19 @@ const tgt7 = (html, w) => `<div class="tgt7${w ? " w7" : ""}">${html}</div>`;
 // A Short filling the phone: video, its channel line at the bottom and the action column on the right.
 // Messages on it go in the free middle (SHORT_PILL), never over the channel line at the bottom.
 const SHORT_PILL = "44%";
+// A swipe to the next Short (shared): the one on screen slides up while the next slides in under the
+// finger, together, as in the app. The next one used to pop in only after the screen had gone black,
+// which read as the picture being replaced.
+function swipeShort7(dev, art, ms = 400) {
+  const cur = dev.querySelector(".sv7"); if (!cur) return null;
+  const nx = cur.cloneNode(false); nx.style.transition = "none"; nx.style.background = art; nx.style.transform = "translateY(100%)";
+  cur.after(nx); void nx.offsetWidth;
+  const d = Math.round(ms * scStretch);
+  [cur, nx].forEach(e => { e.style.transition = `transform ${d}ms var(--ease)`; });
+  cur.style.transform = "translateY(-100%)"; nx.style.transform = "none";
+  later(() => cur.remove(), d + 50);
+  return nx;
+}
 const short7 = (art, inner = "") => `<div class="pg7" style="position:absolute;inset:0"><div style="position:absolute;inset:0;background:${ART[art]};transition:background .3s"></div>
   <div style="position:absolute;right:4px;bottom:16px;display:grid;gap:5px;justify-items:center">${["like", "comment", "share"].map(n => ico7(n, 8)).join("")}</div>
   <b style="position:absolute;left:5px;right:20px;bottom:6px;font-size:6.5px">@fjordtimber · Tiny cabin tour</b>${inner}</div>`;
@@ -326,16 +339,16 @@ scen("shorts", "shorts_remember_playback_speed", (box, on) => {
   situation("Changing speed on a Short, then swiping", true);
   box.innerHTML = device("port", `<div class="sv7" style="position:absolute;inset:0;background:${ART[5]};transition:transform .4s var(--ease)"></div><div class="sp7 toastin chg7" style="top:8px">1.5×</div>`);
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
-  at(500, () => fingerTo(f, W * .5, H * .7)); at(700, () => { fingerTo(f, W * .5, H * .25, 400); dev.querySelector(".sv7").style.transform = "translateY(-100%)"; });
-  at(1200, () => { f.classList.remove("show"); dev.querySelector(".sv7").style.cssText += `;transition:none;transform:none;background:${ART[6]}`; dev.querySelector(".sp7").textContent = on ? "1.5×" : "1×"; });
+  at(500, () => fingerTo(f, W * .5, H * .7)); at(700, () => { fingerTo(f, W * .5, H * .25, 400); swipeShort7(dev, ART[6]); });
+  at(1200, () => { f.classList.remove("show"); dev.querySelector(".sp7").textContent = on ? "1.5×" : "1×"; });
   return on ? "The next Short keeps your speed" : "Every Short starts at normal speed (stock)";
 });
 scen("shorts", "skip_live_shorts", (box, on) => {
   situation("Swiping through Shorts");
   box.innerHTML = device("port", `<div class="sv7" style="position:absolute;inset:0;background:${ART[5]};transition:transform .4s var(--ease)"></div>`);
-  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"), sv = dev.querySelector(".sv7"); const W = dev.clientWidth, H = dev.clientHeight;
-  at(400, () => fingerTo(f, W * .5, H * .7)); at(600, () => { fingerTo(f, W * .5, H * .25, 400); sv.style.transform = "translateY(-100%)"; });
-  at(1100, () => { f.classList.remove("show"); sv.style.cssText = `position:absolute;inset:0;background:${on ? ART[6] : ART[0]}`; if (!on) dev.insertAdjacentHTML("beforeend", `<span style="position:absolute;left:5px;top:8px;background:#cc0000;font-size:6px;padding:0 3px;border-radius:2px">LIVE</span>`); else toast7(dev, "Live Short skipped", "50%"); });
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
+  at(400, () => fingerTo(f, W * .5, H * .7)); at(600, () => { fingerTo(f, W * .5, H * .25, 400); swipeShort7(dev, on ? ART[6] : ART[0]); });
+  at(1100, () => { f.classList.remove("show"); if (!on) dev.insertAdjacentHTML("beforeend", `<span style="position:absolute;left:5px;top:8px;background:#cc0000;font-size:6px;padding:0 3px;border-radius:2px">LIVE</span>`); else toast7(dev, "Live Short skipped", "50%"); });
   return on ? "Live streams in the Shorts feed are skipped" : "Live streams show up between Shorts (stock)";
 });
 scen("fullscreen", "swipe_ignore_when_locked", (box, on) => {
@@ -807,14 +820,15 @@ for (const [k, net, label] of [["shorts_quality_default_mobile", "phone", "Mobil
 }
 for (const [k, what, val] of [["remember_playback_speed_last_selected", "speed", "1.5×"], ["remember_shorts_quality_last_selected", "Shorts quality", "720p"], ["remember_video_quality_last_selected", "quality", "1080p"]]) {
   scen("playback", k, (box, on) => {
-    situation(`Picking a ${what}, then opening another video`, true);
+    // no blue line and no picture swap (Max, Nov 20: the swap read as a glitch): the badge shows the
+    // picked value, then what the next video starts at, and the pill says which
     // Shorts quality on a Short (full-height video), the others on the watch page
     const rv = `<span class="rv7 badge7" style="right:3px;top:3px">${what === "speed" ? ico7("speed", 6) + " " : ""}${val}</span>`;
     const isShort = what === "Shorts quality";
     box.innerHTML = device("port", isShort ? short7(5, rv) : watch7(rv));
     const dev = box.querySelector(".dev");
     toast7(dev, on ? `Your ${what} is kept` : `Back to the default ${what}`, isShort ? SHORT_PILL : "80%");
-    at(300, () => { dev.querySelector(".pg7 > div").style.background = ART[6]; dev.querySelector(".rv7").innerHTML = (what === "speed" ? ico7("speed", 6) + " " : "") + (on ? val : (what === "speed" ? "1×" : "Auto")); });
+    at(300, () => { dev.querySelector(".rv7").innerHTML = (what === "speed" ? ico7("speed", 6) + " " : "") + (on ? val : (what === "speed" ? "1×" : "Auto")); });
     return on ? `The last ${what} you picked becomes the default` : `Each video starts at the default ${what} (stock)`;
   });
 }

@@ -79,10 +79,13 @@ function glideCap(gen, cap, from, to) {
   if (cap._gliding) { cap._gliding.remove(); }
   const g = cap.cloneNode(true); g.className = "sf7 glide7"; cap._gliding = g; g._to = to;
   const px = v => parseFloat(v) || 0, t0 = performance.now();
-  g.style.cssText = `position:absolute;margin:0;min-width:0;pointer-events:none;z-index:0;text-align:center;left:calc(50% + ${from.x}px);top:${from.y}px;width:${from.w}px;font-size:${from.fs};line-height:${from.lh}`;
+  g.style.cssText = `position:absolute;margin:0;min-width:0;pointer-events:none;z-index:2;text-align:center;left:calc(50% + ${from.x}px);top:${from.y}px;width:${from.w}px;font-size:${from.fs};line-height:${from.lh}`;
   gen.appendChild(g); cap.style.opacity = "0";
   const lerp = (a, b, e) => a + (b - a) * e;
   const step = now => {
+    // replaced by a newer glide (the other phone turning, a new caption): that one owns the caption now;
+    // clearing it here showed the real caption under the new copy (two lines drawn over each other)
+    if (cap._gliding !== g) { g.remove(); return; }
     if (!g.isConnected || !cap.isConnected) { g.remove(); cap.style.opacity = ""; cap._gliding = null; return; }
     const t = Math.min(1, (now - t0) / MOVE_MS), e = moveEase(t), to = g._to;
     g.textContent = cap.textContent;
@@ -90,6 +93,9 @@ function glideCap(gen, cap, from, to) {
     g.style.left = `calc(50% + ${lerp(from.x, to.x, e)}px)`; g.style.top = lerp(from.y, to.y, e) + "px";
     g.style.width = lerp(from.w, to.w, e) + "px";
     g.style.fontSize = lerp(px(from.fs), px(to.fs), e) + "px"; g.style.lineHeight = lerp(px(from.lh), px(to.lh), e) + "px";
+    // out of its old place and into the new one: it never crosses over (or hides behind) the phones
+    // that are growing past it at mid-move
+    g.style.opacity = String(e < .5 ? Math.max(0, 1 - 3 * e) : Math.max(0, (e - .65) / .35));
     if (t < 1) requestAnimationFrame(step);
     else { g.remove(); cap.style.opacity = ""; cap._gliding = null; cap._pos = inPair(gen, cap); }
   };
