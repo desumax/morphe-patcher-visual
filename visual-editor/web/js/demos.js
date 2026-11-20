@@ -11,14 +11,14 @@ let demoStep = 0;
 //              demo still spawns and removes it, on the ghost, so you see what you are hiding.
 //   gesture    a finger does something and the result shows (seek, swipe, double-tap, tap and hold);
 //              the element it acts on comes from NEEDS when your settings hide it.
-//   toast      a confirmation pill appears (remember speed / quality, skip silence).
+//   toast      a confirmation pill appears (remember speed / quality).
 //   motion     an element already on screen changes over time (countdown, glow, captions, nav width).
 //   overlay    guides drawn over the player (swipe zones and their style, size and colours).
 // Comparisons (Off / On side by side) are not demos: they live in scenarios.js (scen()).
 const DEMO_TYPES = {
   transient: "hide_player_gesture_hints seekbar_thumbnail_preview sb_create_new_segment sb_create_new_segment_step sb_voting_button",
   gesture: "tap_to_seek slide_to_seek disable_precise_seeking_gesture swipe_seek disable_shorts_double_tap_to_like swap_save_and_queue_actions",
-  toast: "remember_playback_speed_last_selected_toast remember_video_quality_last_selected_toast skip_silence",
+  toast: "remember_playback_speed_last_selected_toast remember_video_quality_last_selected_toast",
   motion: "autoplay_mode disable_like_subscribe_glow stable_caption_blocks niconico_comments narrow_navigation_buttons",
   overlay: "swipe_left_zone swipe_right_zone swipe_top_zone swipe_overlay_style swipe_overlay_background_opacity swipe_text_overlay_size swipe_overlay_progress_volume_color swipe_overlay_progress_brightness_color swipe_overlay_progress_speed_color swipe_zone_width swipe_overlay_timeout swipe_speed_step swipe_speed_sensitivity swipe_zone_preview swipe_speed_zone_height",
 };
@@ -551,13 +551,8 @@ def("playback", "style", "playback_speed_default video_quality_default_wifi vide
 Object.assign(DEMOS, {
   morphe_remember_playback_speed_last_selected_toast(on) { if (on) showPill("Changed default speed to: 1.5x", 1300); label(on ? "A toast confirms the new default speed" : "No toast when the default speed changes", !on, 1300); },
   morphe_remember_video_quality_last_selected_toast(on) { if (on) showPill("Changed default Wi-Fi quality to: 1080p", 1300); label(on ? "A toast confirms the new default quality" : "No toast when the default quality changes", !on, 1300); },
-  morphe_skip_silence(on) {
-    const t = $("pbTime"); if (!t) return;
-    t.textContent = "3:12 / 18:42"; label(on ? "A quiet pause: skipped" : "A quiet pause: plays through (stock)", !on, 1300);
-    if (on) dT(() => { t.textContent = "3:14 / 18:42"; flash7(t); showPill("Skipped 2 s of silence", 1300); }, 500);
-  },
 });
-def("playback", "behaviour", "remember_playback_speed_last_selected_toast remember_video_quality_last_selected_toast skip_silence");
+def("playback", "behaviour", "remember_playback_speed_last_selected_toast remember_video_quality_last_selected_toast"); // skip silence: a comparison (scenario-kit.js)
 // Comments: context lines (pinned, creator heart), gift cards, and a scrollable panel
 { const base = SCENES.comments; SCENES.comments = () => base()
     .replace('<div style="position:absolute;left:0;right:0;top:44px;bottom:0;background:#212121;border-radius:14px 14px 0 0;overflow-y:auto;scrollbar-width:thin">', '<div class="inner-scroll" style="position:absolute;left:0;right:0;top:44px;bottom:0;background:#212121;border-radius:14px 14px 0 0;overflow-y:auto;scrollbar-width:thin;padding-bottom:10px">')

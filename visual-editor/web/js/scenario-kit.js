@@ -670,6 +670,63 @@ scen("playback", "video_quality_prioritize", (box, on) => {
   });
   return "";
 });
+// Skip silence and its Minimum pause length: a talk plays with seven pauses of different lengths under
+// the video. Speech plays at the same pace on both phones; every pause at least the minimum length is
+// shortened to 40% of its length as the playhead reaches it (what Morphe does: SILENCE_RETENTION_RATIO),
+// the shorter ones play in full, so the side that skips reaches the end sooner. The pauses span every
+// choice (0.5 s to 10 s), so each one cuts a different set. Off (or no minimum) plays every pause.
+const SIL_PAUSES = [0.8, 2.5, 0.6, 8, 1.5, 12, 4], SIL_KEEP = .4, SIL_MS = 195; // real ms per second of audio
+// "MS_700" / "S_2" (Morphe's MinimumPause names) in seconds; read from the value, so a new choice upstream still works
+const silMin = v => { const m = /^(MS|S)_(\d+)$/.exec(String(v)); return m ? Number(m[2]) / (m[1] === "MS" ? 1000 : 1) : .7; };
+const silS = x => (Math.round(x * 10) / 10).toString(); // seconds, one decimal at most
+function silenceScen(box, min) {
+  situation("A talk with pauses");
+  const SPEECH = 2, SW = 9, gw = p => 4 + 5 * Math.log2(1 + p); // drawn widths in phone pixels
+  const cut = SIL_PAUSES.map(p => min != null && p >= min);
+  const bars = i => [3, 7, 5, 9, 4, 6, 8, 5].slice(i % 4, i % 4 + 4);
+  const segs = []; // [kind, index, sim start, sim length, drawn width, drawn start]
+  let t = 0, x = 0;
+  for (let i = 0; i <= SIL_PAUSES.length; i++) {
+    segs.push(["s", i, t, SPEECH, SW, x]); t += SPEECH; x += SW;
+    if (i === SIL_PAUSES.length) break;
+    const p = SIL_PAUSES[i], len = cut[i] ? p * SIL_KEEP : p, w = gw(len);
+    segs.push(["g", i, t, len, w, x]); t += len; x += w;
+  }
+  const total = t, saved = SIL_PAUSES.reduce((a, p, i) => a + (cut[i] ? p * (1 - SIL_KEEP) : 0), 0);
+  const track = segs.map(([k, i]) => k === "s"
+    ? `<div class="ss7" style="flex:none;width:${SW}px;display:flex;align-items:center;justify-content:space-around">${bars(i).map(h => `<i style="width:1.2px;height:${h}px;border-radius:1px;background:#bbb;transition:background .2s"></i>`).join("")}</div>`
+    : `<div class="sg7" data-i="${i}" style="flex:none;position:relative;width:${gw(SIL_PAUSES[i])}px;transition:width .25s var(--ease)"><i style="position:absolute;left:0;right:0;top:50%;height:1px;background:#555"></i><span style="position:absolute;left:50%;top:15px;transform:translateX(-50%);font-size:5px;color:#aaa;white-space:nowrap;transition:color .2s">${silS(SIL_PAUSES[i])}s</span></div>`).join("");
+  box.innerHTML = device("land", `<div style="position:absolute;left:0;right:0;top:0;height:58px;background:${ART[3]}">
+      ${min != null ? `<span class="badge7" style="left:3px;top:3px">Shortens ≥ ${silS(min)} s</span><span class="sv7 badge7" style="right:3px;top:3px">Saved 0 s</span>` : ""}
+      <span class="tm7" style="position:absolute;left:4px;bottom:3px;font-size:6px;color:#fff;text-shadow:0 0 2px #000">0:00</span></div>
+    <div class="tr7" style="position:absolute;left:6px;top:66px;height:14px;display:flex">${track}
+      <i class="ph7" style="position:absolute;left:0;top:-2px;bottom:-2px;width:1px;background:#fff;box-shadow:0 0 2px #fff"></i></div>`);
+  const dev = box.querySelector(".dev"), ph = dev.querySelector(".ph7"), tm = dev.querySelector(".tm7"), sv = dev.querySelector(".sv7");
+  const ss = [...dev.querySelectorAll(".ss7")], sg = [...dev.querySelectorAll(".sg7")];
+  const clockText = sim => `0:${String(Math.floor(sim)).padStart(2, "0")}`;
+  let got = 0;
+  at(0, () => { // the audio clock follows the playhead, from the first frame
+    const t0 = performance.now(), K = SIL_MS * scStretch;
+    const tick = () => { if (!tm.isConnected) return; const sim = Math.min(total, (performance.now() - t0) / K); tm.textContent = clockText(sim); if (sim < total) requestAnimationFrame(tick); };
+    tick();
+  });
+  segs.forEach(([k, i, start, len, w, x0]) => at(start * SIL_MS, () => {
+    const ms = len * SIL_MS * scStretch;
+    ph.style.transition = `left ${ms}ms linear`; ph.style.left = x0 + w + "px";
+    if (k === "s") { ss[i].querySelectorAll("i").forEach(b => { b.style.background = "#f03"; }); return; }
+    if (!cut[i]) return;
+    const g = sg[i], lab = g.querySelector("span");
+    g.style.transitionDuration = Math.min(250, ms) + "ms"; g.style.width = w + "px"; // shrinks as the playhead crosses it
+    g.querySelector("i").style.background = "#4cc764";
+    lab.style.color = "#4cc764"; lab.textContent = silS(len) + "s";
+    got += SIL_PAUSES[i] * (1 - SIL_KEEP); if (sv) sv.textContent = `Saved ${silS(got)} s`; // a corner readout: flashes
+  }));
+  at(total * SIL_MS, () => { tm.textContent = clockText(total) + (saved ? `  (−${silS(saved)} s)` : ""); });
+  return "";
+}
+SCN_HOLD.morphe_skip_silence = SCN_HOLD.morphe_skip_silence_minimum_pause = 10200;
+scen("playback", "skip_silence", (box, on) => silenceScen(box, on ? silMin(V("morphe_skip_silence_minimum_pause")) : null));
+scen("playback", "skip_silence_minimum_pause", (box, v) => silenceScen(box, silMin(v)));
 // Playback buffer size: one phone cycles through every size by itself, no picking. Morphe multiplies how
 // much video is loaded ahead: Default ×1 (YouTube's own), Low ×2, Medium ×4, Maximum ×8 (memory capped).
 SCN_HOLD.morphe_playback_buffer_size = 10400;

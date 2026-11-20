@@ -652,10 +652,16 @@ const CHG_SEL = ".badge7, .chg7";
 function flash7(el) {
   if (!el || !el.isConnected || el._flashAt && performance.now() - el._flashAt < 300) return;
   el._flashAt = performance.now();
-  if (getComputedStyle(el).borderTopLeftRadius === "0px") el.style.borderRadius = ".35em"; // plain text (a time readout): a rounded ring
-  el.animate([{ scale: 1, boxShadow: "0 0 0 0 rgba(62,166,255,0)" }, { scale: 1.3, boxShadow: "0 0 0 .2em rgba(62,166,255,.95)", offset: .25 },
-    { scale: 1, boxShadow: "0 0 0 .1em rgba(62,166,255,.5)", offset: .5 }, { scale: 1.3, boxShadow: "0 0 0 .2em rgba(62,166,255,.95)", offset: .75 },
-    { scale: 1, boxShadow: "0 0 0 0 rgba(62,166,255,0)" }], { duration: 900, easing: "ease-in-out" });
+  const cs = getComputedStyle(el);
+  if (cs.borderTopLeftRadius === "0px") el.style.borderRadius = ".35em"; // plain text (a time readout): a rounded ring
+  // Grow around the part's own middle. A pill centred with transform: translateX(-50%) (every message
+  // pill) would otherwise grow around the box it was moved out of and slide sideways: so the scale is
+  // added after its own transform, not as the separate scale property (which applies before it).
+  const base = cs.transform && cs.transform !== "none" ? cs.transform + " " : "";
+  const k = s => base ? { transform: `${base}scale(${s})` } : { scale: s };
+  el.animate([{ ...k(1), boxShadow: "0 0 0 0 rgba(62,166,255,0)" }, { ...k(1.3), boxShadow: "0 0 0 .2em rgba(62,166,255,.95)", offset: .25 },
+    { ...k(1), boxShadow: "0 0 0 .1em rgba(62,166,255,.5)", offset: .5 }, { ...k(1.3), boxShadow: "0 0 0 .2em rgba(62,166,255,.95)", offset: .75 },
+    { ...k(1), boxShadow: "0 0 0 0 rgba(62,166,255,0)" }], { duration: 900, easing: "ease-in-out" });
 }
 new MutationObserver(ms => {
   const hit = new Set();
