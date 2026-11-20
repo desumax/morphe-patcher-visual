@@ -1021,6 +1021,11 @@ def("snackbar", "style", "custom_snackbar_theme custom_snackbar_color_dark custo
 // A short story is slowed down (up to 1.6x) and played again if there is time; a list setting
 // compares its default with the chosen value (or the first other value when it is on the default).
 const SC_TOTAL = 11000;
+// The white line under the phones (a scenario's return value or setFoot) is off for every comparison
+// (Max, Nov 20: it kept repeating what the phones, their Off / On labels or a pill in them already show).
+// A story that truly can't be read without words opts in here, by key; nothing does today. Like the blue
+// situation line (keep), a new scenario gets no words unless it asks, so the redundancy can't come back.
+const FOOT_KEEP = new Set();
 const SCN_SELF_DUO = new Set(["morphe_disable_player_popup_panels", "morphe_playback_buffer_size", "morphe_skip_silence_minimum_pause"]); // one phone that tells all values itself
 const DUO_OTHER = { morphe_speed_tap_and_hold: 4 };
 function duoValues(k, prev) {
@@ -1063,7 +1068,7 @@ function playScenario(k, prevValue) {
   const d = defaults[k], choices = entriesFor(k).filter(e => !sameVal(e.value, d));
   const ask = !self && PREF[k].type !== "boolean" && choices.length > 1 && sameVal(V(k), d) && (prevValue === undefined || sameVal(prevValue, d));
   const draw = () => {
-    clock.start("steps"); scStretch = stretch; scTold = toldInside(fn); scCollect = [];
+    clock.start("steps"); scStretch = stretch; scTold = !FOOT_KEEP.has(k) || toldInside(fn); scCollect = [];
     try { drawSides(); } finally { const list = scCollect; scCollect = null; startCollected(list); }
     fitDev();
   };
@@ -1096,7 +1101,6 @@ function playScenario(k, prevValue) {
   draw(); clock.stop("steps"); // the first frame holds still
   const right = box.querySelectorAll(".dl7")[1];
   right.querySelector("span").textContent = "Select an option"; right.querySelector("span").classList.add("ask");
-  right.querySelector(".sf7").textContent = "Pick one on the setting below";
   const dev = right.querySelector(".dev"), dw = dev ? dev.style.width : "92px", dh = dev ? dev.style.height : "172px";
   right.querySelector(".side").innerHTML = `<div class="ask7" style="width:${dw};height:${dh}"></div>`;
   fitDev();
