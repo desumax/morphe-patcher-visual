@@ -674,19 +674,24 @@ scen("playback", "video_quality_prioritize", (box, on) => {
 // much video is loaded ahead: Default ×1 (YouTube's own), Low ×2, Medium ×4, Maximum ×8 (memory capped).
 SCN_HOLD.morphe_playback_buffer_size = 10400;
 scen("playback", "playback_buffer_size", (box) => {
-  const steps = [["DEFAULT", 1, "YouTube's own"], ["LOW", 2, "2× more ahead"], ["MEDIUM", 4, "4× more ahead"], ["MAXIMUM", 8, "8× more ahead, fewest stalls"]];
-  const name = v => entryLabel("morphe_playback_buffer_size", v), ahead = m => Math.min(72, 7 * m); // % of the bar
-  box.innerHTML = device("port", pageRows(player7(3, `<span class="bf7 badge7" style="right:3px;top:3px">${name("DEFAULT")}</span>`) + `<b style="font-size:7px">Building a tiny cabin</b>
-    <div style="display:grid;gap:4px;padding:5px;border-radius:5px;background:#1b1b1b;font-size:6px"><div style="display:flex;justify-content:space-between"><span>Loaded ahead</span><b class="bx7 chg7">×1</b></div>
-      <div style="position:relative;height:6px;border-radius:3px;background:#3a3a3a;overflow:hidden"><div class="ba7" style="position:absolute;left:18%;top:0;bottom:0;width:7%;background:#9e9e9e;transition:width .6s var(--ease)"></div><div style="position:absolute;left:0;top:0;bottom:0;width:18%;background:#f03"></div></div>
-      <div class="bt7" style="color:#aaa;transition:opacity .2s">YouTube's own</div>
-      <div class="bp7" style="display:flex;gap:2px">${steps.map(([v]) => `<span data-v="${v}" style="flex:1;text-align:center;padding:1px 0;border-radius:4px;background:#2a2a2a;transition:background .3s">${name(v)}</span>`).join("")}</div></div>`));
-  const dev = box.querySelector(".dev");
-  steps.forEach(([v, m, txt], i) => i && at(i * 2500, () => { // step 0 is the first drawing
+  const steps = [["DEFAULT", 1, "YouTube's own"], ["LOW", 2, "2× more ahead"], ["MEDIUM", 4, "4× more ahead"], ["MAXIMUM", 8, "8× ahead, fewest stalls"]];
+  const name = v => entryLabel("morphe_playback_buffer_size", v), ahead = m => Math.min(76, 8 * m); // % of the bar
+  // a landscape phone: the video with its loaded-ahead bar on the left, the four sizes on the right, so every word fits
+  box.innerHTML = device("land", `<div style="position:absolute;left:0;top:0;bottom:0;width:56%;background:${ART[3]}">
+      <span class="bf7 badge7" style="right:3px;top:3px">${name("DEFAULT")}</span>
+      <div style="position:absolute;left:5px;right:5px;bottom:7px;height:4px;border-radius:2px;background:rgba(255,255,255,.3);overflow:hidden"><div class="ba7" style="position:absolute;left:20%;top:0;bottom:0;width:8%;background:#d0d0d0;transition:width .45s var(--ease)"></div><div style="position:absolute;left:0;top:0;bottom:0;width:20%;background:#f03"></div></div></div>
+    <div style="position:absolute;left:58%;right:4px;top:5px;bottom:5px;display:grid;align-content:space-between;font-size:6.5px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="color:#aaa">Loaded ahead</span><b class="bx7 chg7" style="font-size:9px">×1</b></div>
+      <div class="bt7" style="color:#f1f1f1;line-height:1.25;min-height:2.5em">YouTube's own</div>
+      <div class="bp7" style="display:grid;grid-template-columns:1fr 1fr;gap:2px">${steps.map(([v]) => `<span data-v="${v}" style="text-align:center;padding:2px 0;border-radius:4px;background:${v === "DEFAULT" ? "var(--on-green)" : "#2a2a2a"};transition:background .25s">${name(v)}</span>`).join("")}</div></div>`);
+  const dev = box.querySelector(".dev"), STEP = 1400;
+  at(0, () => {}); // the first size is the first drawing: keep it on screen a full step (no lead-in trim)
+  for (let n = 1; n < 8; n++) at(n * STEP, () => { // two rounds through the four sizes
+    const [v, m, txt] = steps[n % 4];
     dev.querySelector(".bf7").textContent = name(v); dev.querySelector(".bx7").textContent = "×" + m;
     dev.querySelector(".ba7").style.width = ahead(m) + "%"; dev.querySelector(".bt7").textContent = txt;
-    dev.querySelectorAll(".bp7 span").forEach(e => { e.style.background = e.dataset.v === v ? "#1a73e8" : "#2a2a2a"; });
-  }));
+    dev.querySelectorAll(".bp7 span").forEach(e => { e.style.background = e.dataset.v === v ? "var(--on-green)" : "#2a2a2a"; });
+  });
   return "";
 });
 // A comparison told in words instead of an animation: two cards the size of the phones, a heading and

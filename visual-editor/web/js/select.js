@@ -242,7 +242,15 @@ function switchSection(id, after) {
     after && setTimeout(after, 120);
   }, 120);
 }
+// A sub-screen (Voice over translation, Loop count, ...) is reached through its first setting, normally its
+// main switch: arriving there plays its animation and flash like any setting, instead of an empty landing.
+function screenLead(k) {
+  const kids = CAT.preferences.filter(p => p.subScreen === k && p.type && p.type !== "screen" && inVersion(p.key) && sectionOf(p.key));
+  return (kids.find(p => title(p.key) === title(k)) || kids.find(p => p.type === "boolean") || kids[0] || {}).key || null;
+}
 function goToSetting(k, after) {
+  const lead = PREF[k] && PREF[k].type === "screen" ? screenLead(k) : null;
+  if (lead) return goToSetting(lead, after);
   if (PREF[k] && PREF[k].type === "screen") { // a sub-screen: open the editor screen and show it from the top
     switchSection(sectionOf(k), () => { $("scroller").scrollTo({ top: 0 }); const pill = $("secPill"); if (pill) { pill.classList.remove("attn"); void pill.offsetWidth; pill.classList.add("attn"); } after && after(); });
     return;

@@ -234,7 +234,14 @@ function buzz(dev, on) {
 // steps belong to the scenario that scheduled them; a replaced scenario never runs its leftover steps
 // a sub-step inside a comparison step (not slowed down again); it belongs to the same pass
 const later = (fn, ms) => clock.after("steps", ms, fn);
-const at = (ms, f) => { const side = scSide; return clock.after("steps", ms * scStretch, () => { const p = scSide; scSide = side; try { f(); } finally { scSide = p; } }); };
+const atNow = (ms, f, side) => clock.after("steps", ms * scStretch, () => { const p = scSide; scSide = side; try { f(); } finally { scSide = p; } });
+// While a comparison is being drawn its steps are collected (scCollect) and then started together, with
+// any idle lead-in trimmed: the first thing that happens comes at most LEAD_MS after the phones appear,
+// in every story, whatever times it was written with (an 0.8 s wait with nothing moving read as lag).
+const LEAD_MS = 300;
+let scCollect = null;
+const at = (ms, f) => { if (scCollect) { scCollect.push([ms, f, scSide]); return; } return atNow(ms, f, scSide); };
+function startCollected(list) { const lead = list.length ? Math.max(0, Math.min(...list.map(x => x[0])) - LEAD_MS) : 0; list.forEach(([ms, f, side]) => atNow(ms - lead, f, side)); }
 function fingerTo(f, x, y, ms = 0) { f.style.transition = ms ? `left ${ms}ms var(--ease), top ${ms}ms var(--ease), opacity 120ms` : "opacity 120ms"; f.style.left = x + "px"; f.style.top = y + "px"; f.classList.add("show"); }
 function tapF(f) { f.classList.remove("tap"); void f.offsetWidth; f.classList.add("tap"); }
 const miniSeek = (pct = 30, marks = []) => `<div class="msk" style="position:absolute;left:8%;right:8%;bottom:16%;height:3px;background:rgba(255,255,255,.3)"><div class="mp" style="position:absolute;left:0;top:0;bottom:0;width:${pct}%;background:#ff0033;transition:width .9s linear"></div>${marks.map(m => `<i style="position:absolute;left:${m}%;top:-1px;width:2px;height:5px;background:#000"></i>`).join("")}</div>`;
@@ -410,13 +417,19 @@ const ytAtLeast = (maj, min) => { const [a, b] = vNum(ytVersion); return a > maj
 // "availability" (Setting.Availability rules, which can also depend on the version).
 const ytV = (maj, min) => ytAtLeast(maj, min);
 const unknownAssume = name => !/spoof/i.test(name); // device checks pass; "is spoofing" checks do not
+// Morphe's Utils.isTablet(): smallestScreenWidthDp >= 600. The preview answers it for the screen it is
+// shown on (CSS px stand in for dp), so a phone-only or tablet-only setting locks the way it does in
+// Morphe; inside the app the live Setting.isAvailable() answer is used instead.
+const previewIsTablet = () => { const a = document.getElementById("app"); return !a || Math.min(a.clientWidth, a.clientHeight) >= 600; };
+const deviceCheck = name => name === "isTablet" ? previewIsTablet() : unknownAssume(name);
+const needsTablet = k => /U\("isTablet"\)/.test(String(PREF[k]?.availability || "")) && !previewIsTablet();
 const compiled = new Map();
 function evalRule(expr, getter) {
   if (!expr) return true;
   let fn = compiled.get(expr);
   if (fn === undefined) { try { fn = new Function("S", "V", "U", `return (${expr});`); } catch { fn = null; } compiled.set(expr, fn); }
   if (!fn) return true;
-  try { return !!fn(getter, ytV, unknownAssume); } catch { return true; }
+  try { return !!fn(getter, ytV, deviceCheck); } catch { return true; }
 }
 const inVersion = k => { const p = PREF[k]; return !p || evalRule(p.when, () => null); };
 const availOk = k => { const p = PREF[k]; return !p || !p.availability || evalRule(p.availability, x => (x in PREF ? V(x) : null)); };
@@ -1024,7 +1037,11 @@ function playScenario(k, prevValue) {
   const d = defaults[k], choices = entriesFor(k).filter(e => !sameVal(e.value, d));
   const ask = !self && PREF[k].type !== "boolean" && choices.length > 1 && sameVal(V(k), d) && (prevValue === undefined || sameVal(prevValue, d));
   const draw = () => {
-    clock.start("steps"); scStretch = stretch; scTold = toldInside(fn);
+    clock.start("steps"); scStretch = stretch; scTold = toldInside(fn); scCollect = [];
+    try { drawSides(); } finally { const list = scCollect; scCollect = null; startCollected(list); }
+    fitDev();
+  };
+  const drawSides = () => {
     if (self) {
       const foot = fn(box, V(k), prevValue);
       if (foot && !scTold) canvas.querySelector(".foot").textContent = foot;
@@ -1037,7 +1054,6 @@ function playScenario(k, prevValue) {
         finally { scSide = null; }
       });
     }
-    fitDev();
   };
   const start = () => {
     draw();

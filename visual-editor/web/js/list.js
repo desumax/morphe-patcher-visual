@@ -350,12 +350,14 @@ function listSet(k, items) { if (listJSON(k)) { ensureMod(); touchSel(k); const 
 const whereOf = x => { const s = sectionOf(x); return s !== section ? ` (${esc(SECTIONS.find(z => z.id === s)?.title || "Miscellaneous")})` : ""; };
 function shortNeed(k) {
   if (!classicParentsOk(k)) { const b = PREF[k].parents.find(x => x.mode === "not" ? !!state[x.key] : !state[x.key]) || PREF[k].parents[0]; return `Parent setting must be ${stateWord(b.key, b.mode !== "not")}`; }
+  if (needsTablet(k)) return "Only on tablets and large screens";
   return /S\("/.test(String(PREF[k].availability || "")) ? "Parent setting must be enabled" : "Not available with the current settings";
 }
 function needText(k) {
   if (!classicParentsOk(k)) return "Needs " + PREF[k].parents.map(x => `“${esc(shownTitle(x.key))}” set to ${stateWord(x.key, x.mode !== "not")}${whereOf(x.key)}`).join(", ");
   const av = String(PREF[k].availability || ""), sk = [...new Set([...av.matchAll(/S\("([^"]+)"\)/g)].map(m => m[1]))].filter(x => PREF[x] && inVersion(x));
   if (sk.length > 1 && av.includes("||")) return `Available once one of these is set: ${sk.map(x => `“${esc(shownTitle(x))}”${PREF[x].type === "boolean" ? " " + stateWord(x, true) : ""}${whereOf(x)}`).join(", ")}`;
+  if (needsTablet(k)) return "Only on tablets and large screens (600 dp or wider). Morphe turns it off on phones, which already open fullscreen in landscape";
   const ap = (PREF[k].availabilityParents || []).filter(x => PREF[x]);
   return ap.length ? `Not available with the current ${ap.map(x => `“${esc(shownTitle(x))}”`).join(", ")}` : "Not available here";
 }
@@ -845,6 +847,8 @@ function renderSearch() {
     const t = title(p.key).toLowerCase();
     hits.push({ p, sec, score: (t.startsWith(q) ? 0 : t.includes(q) ? 1 : 2) });
   }
+  // a sub-screen and its own main switch with the same name (Voice over translation) are one result: the setting
+  for (let i = hits.length - 1; i >= 0; i--) { const s = hits[i].p; if (s.type === "screen" && hits.some(h => h.p.subScreen === s.key && title(h.p.key) === title(s.key))) hits.splice(i, 1); }
   hits.sort((a, b) => a.score - b.score || SECTIONS.indexOf(a.sec) - SECTIONS.indexOf(b.sec));
   const mark = t => { let h = esc(t); for (const w of words) h = h.replace(new RegExp(`(${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "ig"), "<mark>$1</mark>"); return h; };
   $("list").innerHTML = hits.length
@@ -999,6 +1003,8 @@ var progScrollUntil = 0;
 // landscape still hide it). Based on the app's own size, so the in-app WebView follows the device.
 const barStays = () => { const a = $("app"); return a.clientWidth >= 600 && a.clientHeight >= 600; };
 window.addEventListener("resize", () => { if (barStays()) $("app").classList.remove("barhidden"); });
+// crossing the tablet size changes which settings Morphe offers (Utils.isTablet): redraw the list then
+{ let wasTab = null; window.addEventListener("resize", () => { const t = previewIsTablet(); if (wasTab !== null && t !== wasTab) { renderList(); renderInspector(); } wasTab = t; }); }
 {
   let lastY = 0, acc = 0, barMoveUntil = 0;
   $("scroller").addEventListener("scroll", () => {
