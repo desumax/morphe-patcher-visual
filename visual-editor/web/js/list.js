@@ -285,7 +285,7 @@ function controlFor(k) {
   if (OFF_LIST.has(k) && String(v) === "off") return "";
   // up to 8 choices: a row of pills; 9 to 16 (icon styles, theme colours, qualities): a 3-column grid
   // of pills built from the same entries, so it follows whatever list Morphe ships; more: a dropdown
-  if (ents.length && ents.length <= 16) return `<div class="ctl optgrid">${ents.map(e => `<button class="opt" data-set="${k}" data-val="${esc(e.value)}" aria-pressed="${sameVal(e.value, v)}" ${dis}>${esc(e.label)}</button>`).join("")}</div>`;
+  if (ents.length && ents.length <= 16) return `<div class="ctl optgrid">${ents.map(e => `<button class="opt${NEG_WORD.has(String(e.label)) ? " neg" : ""}" data-set="${k}" data-val="${esc(e.value)}" aria-pressed="${sameVal(e.value, v)}" ${dis}>${esc(e.label)}</button>`).join("")}</div>`;
   if (ents.length) return `<div class="ctl"><select data-set="${k}" ${dis} aria-label="${esc(shownTitle(k))}">${ents.map(e => `<option value="${esc(e.value)}" ${sameVal(e.value, v) ? "selected" : ""}>${esc(e.label)}</option>`).join("")}</select></div>`;
   if (p.type === "integer" || p.type === "float" || p.type === "long") {
     const r = Object.entries(RANGES).find(([n]) => k.includes(n));
