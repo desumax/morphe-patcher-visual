@@ -18,8 +18,14 @@ import androidx.annotation.Nullable;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.lang.ref.WeakReference;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import app.morphe.extension.shared.Logger;
 import app.morphe.extension.shared.settings.BooleanSetting;
@@ -46,9 +52,12 @@ final class LiveSettings {
         JSONObject out = new JSONObject();
         Map<String, Row> rows = new HashMap<>();
         PreferenceScreen root = VisualEditorEntry.liveRoot();
+        ACTION_ROWS.clear();
         if (root != null) walk(root, null, null, 0, rows);
         PreferenceTree tree = PreferenceTree.get();
+        Set<String> settingKeys = new HashSet<>();
         for (Setting<?> s : Setting.allLoadedSettings()) {
+            settingKeys.add(s.key);
             try {
                 JSONObject m = new JSONObject();
                 m.put("type", typeOf(s));
@@ -83,7 +92,77 @@ final class LiveSettings {
                 Logger.printException(() -> "Visual editor: meta failed for " + s.key, ex);
             }
         }
+        addActions(out, settingKeys, rows);
         return out;
+    }
+
+    // ------------------------------------------------------------------ action rows
+
+    /**
+     * Rows of Morphe's list that are not settings but actions: import / export, export debug logs,
+     * about and links, and whatever Morphe adds later. They are sent as type "action" (keyless
+     * rows get a key of their own for this visit) and a tap in the editor runs the real row
+     * (MorpheApp.action), so nothing Morphe's own screen offers goes missing in the editor.
+     */
+    private static final Map<String, WeakReference<Preference>> ACTIONS = new HashMap<>();
+
+    private static void addActions(JSONObject out, Set<String> settingKeys, Map<String, Row> rows) {
+        ACTIONS.clear();
+        int n = 0;
+        for (Row r : ACTION_ROWS) {
+            Preference p = r.pref;
+            String key = p.getKey();
+            if (key != null && (settingKeys.contains(key) || key.startsWith("morphe_visual_editor_"))) continue;
+            if (p instanceof PreferenceGroup g && (g.getPreferenceCount() > 0 || !(p instanceof PreferenceScreen))) continue;
+            if (p.getTitle() == null || p.getTitle().length() == 0) continue;
+            if (key == null || out.has(key)) key = "morphe_action_" + (n++);
+            try {
+                JSONObject m = new JSONObject();
+                m.put("type", "action");
+                m.put("ui", true);
+                m.put("available", p.isEnabled());
+                putText(m, "title", p.getTitle());
+                putText(m, "summary", p.getSummary());
+                putText(m, "screenTitle", r.screen);
+                putText(m, "subScreenTitle", r.sub);
+                out.put(key, m);
+                ACTIONS.put(key, new WeakReference<>(p));
+            } catch (Exception ex) {
+                Logger.printException(() -> "Visual editor: action row failed", ex);
+            }
+        }
+    }
+
+    /** Every leaf row in list order, with or without a key (filled by walk). */
+    private static final List<Row> ACTION_ROWS = new ArrayList<>();
+
+    /** Runs an action row as if it was tapped in Morphe's own list. Main thread. */
+    static boolean runAction(String key) {
+        WeakReference<Preference> ref = ACTIONS.get(key);
+        Preference p = ref == null ? null : ref.get();
+        if (p == null || !p.isEnabled()) return false;
+        PreferenceScreen root = VisualEditorEntry.liveRoot();
+        // Preference.performClick(PreferenceScreen): onClick(), the click listener, the fragment's
+        // tree click (sub-screens), then the row's intent. Not public, so reached by reflection.
+        try {
+            Method m = Preference.class.getDeclaredMethod("performClick", PreferenceScreen.class);
+            m.setAccessible(true);
+            m.invoke(p, root);
+            return true;
+        } catch (Throwable ignored) {
+            // fall through to the public parts of the same sequence
+        }
+        try {
+            Method onClick = Preference.class.getDeclaredMethod("onClick");
+            onClick.setAccessible(true);
+            onClick.invoke(p);
+            if (p.getOnPreferenceClickListener() != null && p.getOnPreferenceClickListener().onPreferenceClick(p)) return true;
+            if (p.getIntent() != null) p.getContext().startActivity(p.getIntent());
+            return true;
+        } catch (Throwable ex) {
+            Logger.printException(() -> "Visual editor: could not run " + key, ex);
+            return false;
+        }
     }
 
     /** Availability of every loaded setting, as Morphe's own list enables its rows. */
@@ -114,7 +193,9 @@ final class LiveSettings {
         for (int i = 0, n = group.getPreferenceCount(); i < n; i++) {
             Preference p = group.getPreference(i);
             String key = p.getKey();
-            if (key != null && !rows.containsKey(key)) rows.put(key, new Row(p, screen, sub));
+            Row row = new Row(p, screen, sub);
+            if (key != null && !rows.containsKey(key)) rows.put(key, row);
+            ACTION_ROWS.add(row);
             if (p instanceof PreferenceGroup g) {
                 String t = p.getTitle() == null ? null : p.getTitle().toString();
                 boolean isScreen = p instanceof PreferenceScreen;

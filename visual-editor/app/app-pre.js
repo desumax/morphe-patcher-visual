@@ -16,7 +16,9 @@ if (INAPP) {
     if (!/catalogue\.json$/.test(String(url))) return r;
     const cat = await r.json();
     const live = LIVE.values || {};
-    if (Object.keys(live).length) cat.preferences = cat.preferences.filter(p => p.key in live);
+    // keep what this Morphe build has: its settings, and its action rows (import / export, logs, links)
+    const isAction = k => LIVE.meta && LIVE.meta[k] && LIVE.meta[k].type === "action";
+    if (Object.keys(live).length) cat.preferences = cat.preferences.filter(p => p.key in live || isAction(p.key));
     applyLive(cat);
     if (Array.isArray(cat.youtubeVersions) && cat.youtubeVersions.length && LIVE.version) {
       const vs = cat.youtubeVersions.slice().sort((a, b) => cmpV(b.version, a.version));
@@ -30,6 +32,8 @@ if (INAPP) {
   // animation, order, grouping). Availability follows Setting.isAvailable(), refreshed after
   // every change (morpheAvailability), instead of the catalogue's copied rules.
   window.__liveAvail = {};
+  // Morphe's action rows (not settings): a tap runs the real row in the app, see app-post.js
+  window.__liveActions = new Set(Object.keys(LIVE.meta || {}).filter(k => LIVE.meta[k] && LIVE.meta[k].type === "action"));
   function applyLive(cat) {
     const meta = LIVE.meta || {};
     const known = new Set(cat.preferences.map(p => p.key));
@@ -54,12 +58,12 @@ if (INAPP) {
       }
     }
     // Settings this build has that the catalogue doesn't know: plain rows under Misc, so nothing is hidden.
-    const TYPE_WIDGET = { boolean: "SwitchPreference", enum: "ListPreference", string: "EditTextPreference", integer: "EditTextPreference", long: "EditTextPreference", float: "EditTextPreference" };
+    const TYPE_WIDGET = { action: "Preference", boolean: "SwitchPreference", enum: "ListPreference", string: "EditTextPreference", integer: "EditTextPreference", long: "EditTextPreference", float: "EditTextPreference" };
     for (const [k, m] of Object.entries(meta)) {
       if (known.has(k) || !m.ui || !TYPE_WIDGET[m.type] || /^morphe_visual_editor_/.test(k)) continue;
       const entries = Array.isArray(m.entries) && m.entries.length ? m.entries.map(([label, value]) => ({ label, value })) : undefined;
       cat.preferences.push({ key: k, title: m.title || "", summary: m.summary ?? null, summaryOn: m.summaryOn ?? null, summaryOff: m.summaryOff ?? null,
-        widget: entries ? "ListPreference" : TYPE_WIDGET[m.type], type: m.type, default: m.default, rebootApp: !!m.rebootApp, parents: [], customAvailability: [],
+        widget: entries ? "ListPreference" : TYPE_WIDGET[m.type], type: m.type === "action" ? null : m.type, default: m.default, rebootApp: !!m.rebootApp, parents: [], customAvailability: [],
         screen: null, screenTitle: m.screenTitle || null, subScreen: null, subScreenTitle: m.subScreenTitle || null, entries, live: true });
       if (typeof m.available === "boolean") __liveAvail[k] = m.available;
     }

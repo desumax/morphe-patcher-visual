@@ -72,6 +72,14 @@ if (INAPP) {
     if (searching) { $("qClose").click(); return; }
     $("btnBack").click();
   };
+  // Action rows (import / export, export logs, links...): a tap runs Morphe's own row, so its
+  // dialog or screen opens exactly as in the regular settings. Search results lead to them too.
+  const runAction = k => { try { MorpheApp.action(k); } catch (e) { snack("Update the visual editor patch to use this"); } };
+  document.addEventListener("click", e => {
+    const row = e.target.closest("#list [data-row]");
+    if (!row || !__liveActions.has(row.dataset.row)) return;
+    e.stopPropagation(); select(row.dataset.row, "list"); runAction(row.dataset.row);
+  }, true);
   // Predictive back (Android 14+): while the Back gesture is held on a screen, the screen shrinks
   // toward the finger's side and the card menu shows behind it. Letting go goes to the menu,
   // swiping back in cancels. The app forwards the gesture's progress; elsewhere it does nothing.

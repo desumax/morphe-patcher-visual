@@ -307,6 +307,14 @@ final class WebEditorDialog extends Dialog {
          * The page found this WebView too old to draw the editor: show Morphe's regular list for
          * now, without turning the editor's setting off, so it works again once WebView updates.
          */
+        /** Runs one of Morphe's action rows (import / export, export logs, links...) as if tapped. */
+        @JavascriptInterface
+        public void action(String key) {
+            Utils.runOnMainThread(() -> {
+                if (!LiveSettings.runAction(key)) Utils.showToastShort("Not available right now");
+            });
+        }
+
         @JavascriptInterface
         public void fallback() {
             Utils.runOnMainThread(() -> {
