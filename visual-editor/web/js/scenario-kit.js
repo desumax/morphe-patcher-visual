@@ -692,9 +692,16 @@ function silenceScen(box, min) {
     segs.push(["g", i, t, len, w, x]); t += len; x += w;
   }
   const total = t, saved = SIL_PAUSES.reduce((a, p, i) => a + (cut[i] ? p * (1 - SIL_KEEP) : 0), 0);
-  const track = segs.map(([k, i]) => k === "s"
-    ? `<div class="ss7" style="flex:none;width:${SW}px;display:flex;align-items:center;justify-content:space-around">${bars(i).map(h => `<i style="width:1.2px;height:${h}px;border-radius:1px;background:#bbb;transition:background .2s"></i>`).join("")}</div>`
-    : `<div class="sg7" data-i="${i}" style="flex:none;position:relative;width:${gw(SIL_PAUSES[i])}px;transition:width .25s var(--ease)"><i style="position:absolute;left:0;right:0;top:50%;height:1px;background:#555"></i><span style="position:absolute;left:50%;top:15px;transform:translateX(-50%);font-size:5px;color:#aaa;white-space:nowrap;transition:color .2s">${silS(SIL_PAUSES[i])}s</span></div>`).join("");
+  // A pause to be shortened is drawn in two parts from the start: the part Morphe keeps (grey) and the part
+  // it drops (red, hatched). When the playhead arrives the dropped part vanishes at once and only the kept
+  // part plays, so nothing plays during a skip. A pause shorter than the minimum is one grey line: it plays in full.
+  const line = c => `<i style="position:absolute;left:0;right:0;top:50%;height:1px;background:${c};transition:background .2s"></i>`;
+  const track = segs.map(([k, i, , , w]) => {
+    if (k === "s") return `<div class="ss7" style="flex:none;width:${SW}px;display:flex;align-items:center;justify-content:space-around">${bars(i).map(h => `<i style="width:1.2px;height:${h}px;border-radius:1px;background:#bbb;transition:background .1s"></i>`).join("")}</div>`;
+    const p = SIL_PAUSES[i], lab = `<span style="position:absolute;left:50%;top:15px;transform:translateX(-50%);font-size:5px;color:${cut[i] ? "#ff8a80" : "#888"};white-space:nowrap;transition:color .2s">${silS(p)}s</span>`;
+    if (!cut[i]) return `<div class="sg7" style="flex:none;position:relative;width:${w}px">${line("#555")}${lab}</div>`;
+    return `<div class="sg7" style="flex:none;position:relative;display:flex"><div class="sk8" style="position:relative;width:${w}px">${line("#555")}</div><div class="sx8" style="position:relative;width:${gw(p) - w}px;overflow:hidden;background:repeating-linear-gradient(135deg,rgba(255,80,80,.55) 0 1px,transparent 1px 3px);transition:width .12s ease-in">${line("#ff6b6b")}</div>${lab}</div>`;
+  }).join("");
   box.innerHTML = device("land", `<div style="position:absolute;left:0;right:0;top:0;height:58px;background:${ART[3]}">
       ${min != null ? `<span class="badge7" style="left:3px;top:3px">Shortens ≥ ${silS(min)} s</span><span class="sv7 badge7" style="right:3px;top:3px">Saved 0 s</span>` : ""}
       <span class="tm7" style="position:absolute;left:4px;bottom:3px;font-size:6px;color:#fff;text-shadow:0 0 2px #000">0:00</span></div>
@@ -712,11 +719,12 @@ function silenceScen(box, min) {
   segs.forEach(([k, i, start, len, w, x0]) => at(start * SIL_MS, () => {
     const ms = len * SIL_MS * scStretch;
     ph.style.transition = `left ${ms}ms linear`; ph.style.left = x0 + w + "px";
-    if (k === "s") { ss[i].querySelectorAll("i").forEach(b => { b.style.background = "#f03"; }); return; }
+    // each bar turns red as the playhead passes it, not all at once
+    if (k === "s") { ss[i].querySelectorAll("i").forEach((b, j, all) => { b.style.transitionDelay = (j + .5) / all.length * ms + "ms"; b.style.background = "#f03"; }); return; }
     if (!cut[i]) return;
-    const g = sg[i], lab = g.querySelector("span");
-    g.style.transitionDuration = Math.min(250, ms) + "ms"; g.style.width = w + "px"; // shrinks as the playhead crosses it
-    g.querySelector("i").style.background = "#4cc764";
+    const g = sg[i], lab = g.querySelector("span"), sx = g.querySelector(".sx8");
+    sx.style.transitionDuration = Math.min(120, ms * .6) + "ms"; sx.style.width = "0px"; // gone before the playhead gets there
+    g.querySelector(".sk8 i").style.background = "#4cc764";
     lab.style.color = "#4cc764"; lab.textContent = silS(len) + "s";
     got += SIL_PAUSES[i] * (1 - SIL_KEEP); if (sv) sv.textContent = `Saved ${silS(got)} s`; // a corner readout: flashes
   }));
