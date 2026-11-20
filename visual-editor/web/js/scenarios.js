@@ -677,6 +677,27 @@ function keepPillIn(t) {
   const bottom = t.offsetTop + (mid ? h / 2 : h);
   if (bottom > H - 3) { t.style.top = Math.max(2, t.offsetTop - (bottom - (H - 3))) + "px"; t.style.bottom = "auto"; }
 }
+// Two pills in one phone never sit on each other. Pills keep one size on screen, so in a phone drawn
+// small they are bigger next to it, and two that fit side by side (or one under the other) in a large
+// phone would overlap: then the later one moves down just clear of the other, so a readout in the right
+// corner drops under the one in the left corner. One rule for every scenario, run from the observer
+// below. Only pills placed in the same box are compared (a readout riding on a sliding Short is not).
+function pillsApart(dev) {
+  if (!dev.isConnected) return;
+  const k = devScale(dev), gap = 2;
+  // where a pill is drawn, without the growth of a pulse that may be running: its middle, and its laid-out size
+  const box = e => { const r = e.getBoundingClientRect(), w = e.offsetWidth * k, h = e.offsetHeight * k, x = (r.left + r.right) / 2, y = (r.top + r.bottom) / 2; return { l: x - w / 2, r: x + w / 2, t: y - h / 2, b: y + h / 2 }; };
+  const pills = [...dev.querySelectorAll(".toastin, .badge7")].filter(e => !e.classList.contains("dyn") && e.offsetWidth && getComputedStyle(e).position === "absolute" && parseFloat(getComputedStyle(e).opacity) > .5)
+    .map((e, i) => ({ e, i, q: box(e) })).sort((a, b) => Math.round((a.q.t - b.q.t) / k) || a.i - b.i); // top to bottom, and in a row the first one stays
+  for (let j = 1; j < pills.length; j++) for (let i = 0; i < j; i++) {
+    const a = pills[i], b = pills[j]; if (a.e.offsetParent !== b.e.offsetParent || a.e.contains(b.e) || b.e.contains(a.e)) continue;
+    if (Math.min(a.q.r, b.q.r) - Math.max(a.q.l, b.q.l) <= 1 || Math.min(a.q.b, b.q.b) - Math.max(a.q.t, b.q.t) <= 1) continue;
+    const down = a.q.b - b.q.t + gap * k;
+    b.e.style.top = (b.e.offsetTop + down / k) + "px"; b.e.style.bottom = "auto";
+    b.q.t += down; b.q.b += down;
+    if (b.e.matches(".toastin")) keepPillIn(b.e);
+  }
+}
 // A small part of a scenario that changes (a corner readout such as "1.5×" or "720p", or anything marked
 // .chg7) flashes twice so the eye finds it: one shared rule for every animation, run from the observer
 // below, so a scenario only has to change the text. The first drawing of a phone never flashes.
@@ -705,17 +726,20 @@ function flash7(el) {
     { ...k(1), boxShadow: "0 0 0 0 rgba(62,166,255,0)" }], { duration: 900, easing: "ease-in-out" });
 }
 new MutationObserver(ms => {
-  const hit = new Set();
+  const hit = new Set(), devs = new Set(), PILLS = ".toastin, .badge7";
   ms.forEach(m => {
     const t = m.target.nodeType === 1 ? m.target : m.target.parentElement, own = t && t.closest && t.closest(CHG_SEL);
     if (own && own.closest(".dev")) hit.add(own); // its text or content changed
+    const pill = t && t.closest && t.closest(PILLS); if (pill && pill.closest(".dev")) devs.add(pill.closest(".dev")); // a pill's text changed: its size did too
     m.addedNodes.forEach(n => {
       if (n.nodeType !== 1) return;
       [...(n.matches(".toastin") ? [n] : []), ...n.querySelectorAll(".toastin")].forEach(t => requestAnimationFrame(() => keepPillIn(t)));
+      if (n.matches(PILLS) || n.querySelector(PILLS)) [...(n.closest(".dev") ? [n.closest(".dev")] : n.querySelectorAll(".dev"))].forEach(d => devs.add(d));
       if (n.matches(CHG_SEL) && m.target.closest && m.target.closest(".dev")) hit.add(n); // a readout appearing later
     });
   });
   hit.forEach(flash7);
+  if (devs.size) requestAnimationFrame(() => devs.forEach(pillsApart)); // after keepPillIn, in the same frame
 }).observe(document.getElementById("canvas"), { childList: true, subtree: true, characterData: true }); // $() is defined later, in list.js
 // swap what the device shows (fullscreen video vs portrait watch page) as it turns
 // The new screen goes in underneath, fully drawn, and the old one fades off the top of it. (Both used to

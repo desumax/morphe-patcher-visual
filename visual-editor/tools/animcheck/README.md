@@ -17,9 +17,15 @@ node tools/animcheck/animcheck.js
 # only the settings you changed, with a contact sheet of the frames to look at
 node tools/animcheck/animcheck.js --keys morphe_exit_fullscreen,morphe_loop_video --sheet --out /tmp/ac
 
-# another screen size, one target
+# the other two sizes: a small phone, and the web preview at desktop width
+node tools/animcheck/animcheck.js --size 360x740
 node tools/animcheck/animcheck.js --target web --size 1280x800
 ```
+
+Run all three sizes before reporting. The preview box, and with it every phone in a comparison,
+changes size with the screen while message pills keep their size, so a layout that is clean at one
+size can overlap at another (the first run at 360x740 found two pills overlapping and a message
+judged against a button that was hidden).
 
 | Option | Meaning |
 | --- | --- |
@@ -35,7 +41,7 @@ node tools/animcheck/animcheck.js --target web --size 1280x800
 
 Environment: `ANIMCHECK_DEBUG=1` prints each run; `ANIMCHECK_EVAL="expr"` evaluates an expression
 in the page after each run and prints it (for example `window.__pills.slice(-4)`, the last pill
-placements).
+placements, or `window.__apart`, the pills the shared rule moved off another pill in this run).
 
 The exit code is 1 when there is a failure. Warnings are listed and counted; info lines (a still
 comparison) are listed only.
@@ -69,7 +75,7 @@ Each rule is a bug that was reported at least once.
 | `preview-hidden` | The preview box is not on screen (this is how the App view's menu page hid everything from an earlier checker). |
 | `no-comparison`, `no-phone` | A comparison that never opens, or opens with no phone in it. |
 | `text-clipped`, `pill-clipped-flashing` | Text or a pill cut by the edge of its phone or of the box while at rest, or while it pulses. |
-| `text-overlap`, `pill-over-part` | Two texts on top of each other, or a pill sitting on a button or text. |
+| `text-overlap`, `pill-over-part` | Two texts drawn on top of each other, or a message sitting on a button or readout of the screen it is shown on. Only what is drawn counts: text cut away by its phone, or a button hidden under something else, is not there to collide with. |
 | `phone-clipped` | A phone drawn partly outside the box. |
 | `progress-covered`, `no-progress` | The comparison's progress line is covered, or never grows. |
 | `jump` | A phone or part that moves a long way in one step with no animation (a hard cut). |

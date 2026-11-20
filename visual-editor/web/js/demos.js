@@ -82,10 +82,15 @@ function placePill(d, host) {
   const stage = $("stage"), hr = host.getBoundingClientRect(), vr = stage.getBoundingClientRect(), k = (vr.width / (stage.offsetWidth || 1)) || 1;
   const seen = e => { if (!e.getClientRects().length) return false; const cs = getComputedStyle(e); return cs.visibility !== "hidden" && parseFloat(cs.opacity) > .05; }; // a hidden part is no obstacle
   const boxes = [], area = hr.width * hr.height || 1;
+  // Nor is a part with something else drawn over its middle (the centre button under the end screen's
+  // cards). The hit test tells: a cover ignores taps, so it is opened to the test while this runs.
+  const pe = host.style.pointerEvents; host.style.pointerEvents = "auto";
+  const under = (e, q) => { const top = document.elementsFromPoint((q.left + q.right) / 2, (q.top + q.bottom) / 2).find(h => host.contains(h) && h !== d && !d.contains(h)); return !!top && !e.contains(top) && !top.contains(e); };
   host.querySelectorAll(PILL_PARTS).forEach(e => { // only small parts count, not whole panels
     if (e === d || e.contains(d) || !seen(e)) return;
-    const q = e.getBoundingClientRect(); if (q.width * q.height <= area * .2) boxes.push([q, 3]);
+    const q = e.getBoundingClientRect(); if (q.width * q.height <= area * .2 && !under(e, q)) boxes.push([q, 3]);
   });
+  host.style.pointerEvents = pe;
   const walk = document.createTreeWalker(host, NodeFilter.SHOW_TEXT), range = document.createRange();
   for (let n = walk.nextNode(); n; n = walk.nextNode()) {
     if (!n.nodeValue.trim() || d.contains(n) || !seen(n.parentElement)) continue;

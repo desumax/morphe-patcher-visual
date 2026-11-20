@@ -52,7 +52,8 @@
         const r = rect(el); if (r.w < 1 || r.h < 1) continue;
         const op = opacityOf(el, stick); if (op < .12) continue;
         const dev = el.closest(".dev");
-        s.items.push({ id: idOf(el), kind, root: rootName, text, r, op, clip: clipOf(el, stick), dev: dev ? idOf(dev) : 0, dyn: el.classList.contains("dyn"),
+        const cover = el.closest(".sm7");
+        s.items.push({ id: idOf(el), kind, root: rootName, text, r, op, clip: clipOf(el, stick), dev: dev ? idOf(dev) : 0, dyn: el.classList.contains("dyn"), host: cover ? idOf(cover) : 0,
           flash: anims(el).some(ks => ks.some(k => "boxShadow" in k)), grow: anims(el).some(scaleOnly), off: [el.offsetLeft, el.offsetTop, el.offsetWidth] });
       }
     }
@@ -69,7 +70,18 @@
       s.ask = !!canvas.querySelector(".ask7");
     } else {
       const root = stage.firstElementChild;
-      if (root) { artOf(root, rect(root), s.art); s.parts = q(STAGE_PARTS, stage).filter(e => !e.closest(".sm7") && opacityOf(e, stick) > .3).map(e => ({ r: rect(e), text: txt(e) })).filter(p => p.r.w > 1 && p.r.w * p.r.h < s.box.w * s.box.h * .2); }
+      if (root) {
+        artOf(root, rect(root), s.art);
+        // The screen on top (a whole-screen cover, else the preview itself) is the one a message is read
+        // against. A part with something else drawn over its middle is not there to be covered: the hit
+        // test tells, and a cover (which ignores taps) is opened to it for the moment of the test.
+        const top = q(".sm7", stage).pop() || null, host = top || root, pe = host.style.pointerEvents;
+        if (top) host.style.pointerEvents = "auto";
+        const under = e => { const b = e.getBoundingClientRect(), hit = document.elementsFromPoint((b.left + b.right) / 2, (b.top + b.bottom) / 2).find(h => host.contains(h) && !h.closest(".dyn")); return !!hit && !e.contains(hit) && !hit.contains(e); };
+        s.parts = q(STAGE_PARTS, host).filter(e => (top || !e.closest(".sm7")) && opacityOf(e, stick) > .3 && !under(e)).map(e => ({ r: rect(e), text: txt(e) })).filter(p => p.r.w > 1 && p.r.w * p.r.h < s.box.w * s.box.h * .2);
+        if (top) { host.style.pointerEvents = pe; if (mo) mo.takeRecords(); } // the probe's own change is not the page's
+        s.items.forEach(it => { if (it.dyn) it.onTop = it.host === (top ? idOf(top) : 0); });
+      }
       s.extra = q(".sm7, .dyn", stage).length;
       s.sig = hash(stage.innerHTML); // the preview's markup, inline styles included: everything a demo changes step by step
     }
@@ -152,7 +164,7 @@
   window.addEventListener("unhandledrejection", e => S.errors.push("promise: " + String(e.reason && e.reason.message || e.reason)));
   let mo = null;
   function begin(step, fineUntil) {
-    S.samples = []; S.muts = 0; S.on = true; S.t0 = performance.now(); S.next = 0; S.step = step; S.fineUntil = fineUntil;
+    window.__apart = []; S.samples = []; S.muts = 0; S.on = true; S.t0 = performance.now(); S.next = 0; S.step = step; S.fineUntil = fineUntil;
     if (!mo) { mo = new MutationObserver(ms => { S.muts += ms.length; }); mo.observe(document.getElementById("stick"), { subtree: true, childList: true, attributes: true, characterData: true }); }
     // One sample per frame the runner draws, taken once the frame is done: other code fits things in its
     // own frame callbacks (a pill moved back inside its phone), and those run after this one, so reading
@@ -195,13 +207,15 @@
         if (cut > tol) add(it.flash ? "pill-clipped-flashing" : "text-clipped", s.t, `${it.kind} "${it.text}" is cut by ${Math.round(cut)}px (${c.by})${it.flash ? " while it flashes" : ""}`, "fail", it.text);
       }
       // text over text: two messages, labels or captions drawn over each other
-      const vis = s.items.filter(it => it.op >= .4 && it.kind !== "line");
+      // only what is drawn counts: a readout that has slid out of its phone lies under the label above the phone, unseen
+      const cutTo = (r, c) => { const l = Math.max(r.l, c.l), t = Math.max(r.t, c.t), rr = Math.min(r.r, c.r), bb = Math.min(r.b, c.b); return rr - l > 1 && bb - t > 1 ? { l, t, r: rr, b: bb, w: rr - l, h: bb - t } : null; };
+      const vis = s.items.filter(it => it.op >= .4 && it.kind !== "line").map(it => ({ ...it, full: it.r, r: cutTo(it.r, it.clip) })).filter(it => it.r);
       for (let a = 0; a < vis.length; a++) for (let b = a + 1; b < vis.length; b++) {
         const A = vis[a], B = vis[b], ov = inter(A.r, B.r); if (!ov) continue;
-        if (ov > .2 * Math.min(A.r.w * A.r.h, B.r.w * B.r.h)) add("text-overlap", s.t, `${A.kind} "${A.text}" and ${B.kind} "${B.text}" overlap`);
+        if (ov > .2 * Math.min(A.full.w * A.full.h, B.full.w * B.full.h)) add("text-overlap", s.t, `${A.kind} "${A.text}" and ${B.kind} "${B.text}" overlap`);
       }
       // a message pill on the live preview over one of its buttons or readouts
-      if (s.parts) for (const it of s.items) if (it.dyn && it.op >= .4) for (const p of s.parts) {
+      if (s.parts) for (const it of s.items) if (it.dyn && it.onTop && it.op >= .4) for (const p of s.parts) {
         const ov = inter(it.r, p.r); if (ov > .25 * p.r.w * p.r.h && ov > 30) add("pill-over-part", s.t, `pill "${it.text}" covers "${p.text || "a control"}"`, "warn");
       }
       // phones cut by the preview box, or drawn over the progress line
@@ -269,6 +283,9 @@
   // debugging: ANIMCHECK_EVAL can read window.__pills, every message pill the preview placed in this run
   window.__pills = [];
   window.addEventListener("load", () => { if (typeof placePill !== "function") return; const real = placePill; placePill = (d, host) => { real(d, host); const h = host.getBoundingClientRect(), v = document.getElementById("stage").getBoundingClientRect(); window.__pills.push({ text: d.textContent, top: d.style.top, host: [Math.round(h.top), Math.round(h.height)], stage: [Math.round(v.top), Math.round(v.height)] }); }; });
+  // and window.__apart, every pill the shared rule moved off another one (text, how far in phone pixels)
+  window.__apart = [];
+  window.addEventListener("load", () => { if (typeof pillsApart !== "function") return; const real = pillsApart; pillsApart = dev => { const ps = [...dev.querySelectorAll(".toastin, .badge7")], was = ps.map(e => e.offsetTop); real(dev); ps.forEach((e, i) => { if (e.offsetTop !== was[i]) window.__apart.push([(e.textContent || "").trim().slice(0, 30), e.offsetTop - was[i]]); }); }; });
   window.__animcheck = {
     info() {
       const jobs = [];
