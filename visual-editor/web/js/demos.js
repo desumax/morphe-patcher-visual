@@ -19,7 +19,7 @@ const DEMO_TYPES = {
   transient: "hide_player_gesture_hints seekbar_thumbnail_preview sb_create_new_segment sb_create_new_segment_step sb_voting_button",
   gesture: "tap_to_seek slide_to_seek disable_precise_seeking_gesture swipe_seek disable_shorts_double_tap_to_like swap_save_and_queue_actions",
   toast: "remember_playback_speed_last_selected_toast remember_video_quality_last_selected_toast",
-  motion: "autoplay_mode disable_like_subscribe_glow stable_caption_blocks niconico_comments narrow_navigation_buttons",
+  motion: "exit_fullscreen open_videos_fullscreen autoplay_mode disable_like_subscribe_glow stable_caption_blocks niconico_comments narrow_navigation_buttons",
   overlay: "swipe_left_zone swipe_right_zone swipe_top_zone swipe_overlay_style swipe_overlay_background_opacity swipe_text_overlay_size swipe_overlay_progress_volume_color swipe_overlay_progress_brightness_color swipe_overlay_progress_speed_color swipe_zone_width swipe_overlay_timeout swipe_speed_step swipe_speed_sensitivity swipe_zone_preview swipe_speed_zone_height",
 };
 const DEMO_TYPE = {};
@@ -553,6 +553,53 @@ Object.assign(DEMOS, {
   morphe_remember_video_quality_last_selected_toast(on) { if (on) showPill("Changed default Wi-Fi quality to: 1080p", 1300); label(on ? "A toast confirms the new default quality" : "No toast when the default quality changes", !on, 1300); },
 });
 def("playback", "behaviour", "remember_playback_speed_last_selected_toast remember_video_quality_last_selected_toast"); // skip silence: a comparison (scenario-kit.js)
+// Entering and leaving fullscreen, played on the Fullscreen preview itself (Max, Nov 20: no separate
+// phones). The fullscreen player shrinks into the watch page's player, or grows out of it, using what the
+// preview shows at that moment; a choice that doesn't apply to it (portrait only, while the preview is a
+// landscape fullscreen) says so and the player stays. One story every three loops (4.5 s).
+function fsMorph(fromFull, toFull) {
+  const st = $("stage").firstElementChild; if (!st) return null;
+  st.querySelectorAll(".fsm7").forEach(n => n.remove());
+  const fr = st.querySelector(".frame"), art = (fr && fr.style.background) || ART[0]; // the picture the preview shows now
+  const small = "left:25%;right:25%;top:0;height:50%;border-radius:0", full = "left:0;right:0;top:0;height:100%;border-radius:0";
+  const o = document.createElement("div"); o.className = "fsm7 dyn";
+  o.style.cssText = `position:absolute;inset:0;z-index:30;background:#0f0f0f;opacity:${fromFull ? 0 : 1};transition:opacity .35s`;
+  o.innerHTML = `<div class="fsv7" style="position:absolute;${fromFull ? full : small};background:${art};transition:all .55s var(--ease)"></div>
+    <div style="position:absolute;left:25%;right:25%;top:56%;display:grid;gap:6px"><i style="height:9px;width:80%;border-radius:4px;background:#2a2a2a"></i><i style="height:9px;width:55%;border-radius:4px;background:#2a2a2a"></i><i style="height:9px;width:65%;border-radius:4px;background:#2a2a2a"></i></div>`;
+  st.appendChild(o); onDemoStop(() => o.remove());
+  const v = o.querySelector(".fsv7");
+  void o.offsetWidth;
+  if (fromFull && !toFull) { o.style.opacity = 1; v.style.cssText += ";" + small; }
+  if (!fromFull && toFull) { v.style.cssText += ";" + full; dT(() => { o.style.opacity = 0; }, 450); }
+  return o;
+}
+Object.assign(DEMOS, {
+  morphe_exit_fullscreen(v) {
+    if (demoStep % 3) return;
+    const st = $("stage").firstElementChild, pl = st && st.querySelector(".seek .played"), kn = st && st.querySelector(".seek .knob");
+    st && st.querySelectorAll(".fsm7").forEach(n => n.remove());
+    const set = (w, ms) => [pl, kn].forEach(e => { if (!e) return; e.style.transition = ms ? `${e === pl ? "width" : "left"} ${ms}ms linear` : "none"; e.style[e === pl ? "width" : "left"] = w + "%"; });
+    set(88, 0); onDemoStop(() => set(52, 0));
+    dT(() => set(100, 900), 60); // the video plays to its end
+    const exits = /LANDSCAPE/.test(String(v)); // the preview is a landscape fullscreen
+    dT(() => {
+      if (exits) fsMorph(true, false);
+      else showPill(String(v) === "PORTRAIT" ? "Stays: only portrait fullscreen is left" : "Stays in fullscreen", 1600);
+    }, 1050);
+    dT(() => { st && st.querySelectorAll(".fsm7").forEach(n => n.remove()); set(52, 0); }, 4200);
+  },
+  morphe_open_videos_fullscreen(v) {
+    if (demoStep % 3) return;
+    const on = String(v) !== "DISABLED";
+    const o = fsMorph(false, false); if (!o) return; // a video opening in the watch page's player
+    dT(() => {
+      if (on) { fsMorph(false, true); showPill(String(v) === "PORTRAIT" ? "Opens in portrait fullscreen" : "Opens in fullscreen", 1400); }
+      else showPill("Opens in the normal player", 1400);
+    }, 700);
+    dT(() => { const st = $("stage").firstElementChild; st && st.querySelectorAll(".fsm7").forEach(n => n.remove()); }, 4200);
+  },
+});
+def("fullscreen", "behaviour", "exit_fullscreen open_videos_fullscreen");
 // Comments: context lines (pinned, creator heart), gift cards, and a scrollable panel
 { const base = SCENES.comments; SCENES.comments = () => base()
     .replace('<div style="position:absolute;left:0;right:0;top:44px;bottom:0;background:#212121;border-radius:14px 14px 0 0;overflow-y:auto;scrollbar-width:thin">', '<div class="inner-scroll" style="position:absolute;left:0;right:0;top:44px;bottom:0;background:#212121;border-radius:14px 14px 0 0;overflow-y:auto;scrollbar-width:thin;padding-bottom:10px">')

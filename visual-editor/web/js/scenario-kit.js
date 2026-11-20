@@ -831,7 +831,6 @@ function inScope(p, scopes) { return scopes.some(([s, sub]) => p.screen === s &&
 // Settings without a preview or animation that sit in the main list of a Morphe screen but belong with
 // another tab's settings (Max, Nov 20: organised by where they act, not by Morphe's menu)
 const MISC_HOME = {
-  morphe_exit_fullscreen: "fullscreen", morphe_open_videos_fullscreen: "fullscreen",
   morphe_seek_notification_media_fast_forward_length: "miniplayer", morphe_seek_notification_media_rewind_length: "miniplayer",
 };
 function buildMembers() {
