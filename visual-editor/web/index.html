@@ -927,6 +927,9 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .dev .toastin, .dev .badge7 { font-size: calc(var(--pill7) / var(--dsc, 1.7)); line-height: 1.25; font-weight: 500; color: #fff; background: rgba(0,0,0,.72); border-radius: .75em; }
 .dev .toastin { white-space: normal; width: max-content; max-width: 88%; text-align: center; padding: .28em .8em; }
 .dev .toastin svg, .dev .badge7 svg { width: 1.15em !important; height: 1.15em !important; vertical-align: -.2em; }
+/* an icon in a pill sits on its own line (icons are display:block): centred over the text, not at its left */
+.dev .toastin svg, .dev .badge7 svg { margin: 0 auto .12em; }
+.dev .badge7 { text-align: center; }
 /* the smaller readouts in a corner of a video (Loop 2, 1.5×): one size for all of them too */
 .dev .badge7:empty, .dev .toastin:empty { display: none; }
 .dev .badge7 { position: absolute; font-size: calc(var(--pill7) * .9 / var(--dsc, 1.7)); padding: .05em .45em; white-space: nowrap; pointer-events: none; z-index: 31; }
