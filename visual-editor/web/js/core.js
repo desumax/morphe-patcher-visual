@@ -151,7 +151,7 @@ const SECTIONS = [
   { id: "feed", icon: "home", title: "Home feed", scopes: [["FEED", null], ["FEED", "morphe_hide_filter_bar_screen"]] },
   { id: "shorts", icon: "shorts", title: "Shorts", scopes: [["SHORTS", null], ["SHORTS", "morphe_shorts_player_screen"]] },
   { id: "nav", icon: "layout", title: "Navigation", scopes: [["GENERAL", "morphe_navigation_bar_screen"], ["GENERAL", "morphe_toolbar_screen"]] },
-  { id: "comments", icon: "comment", title: "Comments", scopes: [["PLAYER", "morphe_comments_screen"]] },
+  { id: "comments", icon: "comment", title: "Comments", scopes: [["PLAYER", "morphe_comments_screen"], ["PLAYER", "morphe_live_chat_translate_screen"]] },
   { id: "flyout", icon: "tune", title: "Player menu", scopes: [["PLAYER", "morphe_hide_player_flyout"]] },
   { id: "captions", icon: "cc", title: "Captions", scopes: [["PLAYER", "morphe_captions_screen"], ["PLAYER", "morphe_captions_advanced"]] },
   { id: "miniplayer", icon: "pip", title: "Miniplayer", scopes: [["PLAYER", "morphe_miniplayer_screen"], ["PLAYER", "morphe_notification_media_screen"]] },
@@ -195,7 +195,7 @@ def("endscreen", "overlay", "hide_end_screen_cards hide_autoplay_preview hide_en
 def("endscreen", "vis", "hide_info_cards hide_channel_watermark hide_end_screen_store_banner");
 def("endscreen", "behaviour", "autoplay_mode");
 
-def("seekbar", "vis", "hide_seekbar hide_timestamp seekbar_thumbnail_preview hide_player_gesture_hints");
+def("seekbar", "vis", "hide_seekbar hide_timestamp seekbar_thumbnail_preview hide_player_gesture_hints hide_chapters_timeline_button");
 def("seekbar", "gesture", "tap_to_seek slide_to_seek disable_precise_seeking_gesture");
 def("seekbar", "style", "seekbar_custom_color seekbar_custom_color_primary seekbar_custom_color_accent");
 
@@ -204,7 +204,7 @@ def("watch", "overlay", "hide_player_related_videos");
 def("watch", "layout", "video_action_bar_layout");
 def("watch", "behaviour", "disable_like_subscribe_glow");
 
-def("fullscreen", "vis", "hide_video_title hide_quick_actions hide_quick_actions_like_button hide_quick_actions_dislike_button hide_quick_actions_comments_button hide_quick_actions_save_button hide_quick_actions_share_button hide_quick_actions_more_button hide_quick_actions_playlist_button hide_quick_actions_mix_button hide_quick_actions_more_videos_button hide_quick_actions_ask_button");
+def("fullscreen", "vis", "hide_video_title hide_quick_actions hide_quick_actions_like_button hide_quick_actions_dislike_button hide_quick_actions_comments_button hide_quick_actions_save_button hide_quick_actions_share_button hide_quick_actions_more_button hide_quick_actions_playlist_button hide_quick_actions_mix_button hide_quick_actions_more_videos_button hide_quick_actions_ask_button hide_quick_actions_live_chat_button hide_live_chat_replay_button");
 def("fullscreen", "overlay", "hide_player_related_videos_overlay");
 def("fullscreen", "gesture", "swipe_left_zone swipe_right_zone swipe_seek");
 def("fullscreen", "style", "fullscreen_video_scale swipe_overlay_style");
@@ -222,7 +222,7 @@ def("nav", "style", "narrow_navigation_buttons navigation_bar_style");
 
 def("comments", "vis", "hide_comments_filter_bar_options hide_comments_ai_chat_summary hide_comments_community_guidelines hide_comments_channel_guidelines hide_comments_emoji_button hide_comments_timestamp_button hide_comments_gif_button hide_comments_thanks_button hide_comments_create_a_short_button hide_comments_dislike_button hide_comments_translate_button hide_comments_menu_button hide_comments_gift_button hide_comments_info_button");
 
-def("flyout", "vis", "hide_player_flyout_quality hide_player_flyout_captions hide_player_flyout_speed hide_player_flyout_sleep_timer hide_player_flyout_loop_video hide_player_flyout_ambient_mode hide_player_flyout_lock_screen hide_player_flyout_stable_volume hide_player_flyout_audio_track hide_player_flyout_listen_with_youtube_music hide_player_flyout_watch_in_vr hide_player_flyout_on_the_go hide_player_flyout_additional_settings hide_player_flyout_help pip_button_flyout video_delay_button_flyout");
+def("flyout", "vis", "hide_player_flyout_quality hide_player_flyout_captions hide_player_flyout_speed hide_player_flyout_sleep_timer hide_player_flyout_loop_video hide_player_flyout_ambient_mode hide_player_flyout_lock_screen hide_player_flyout_stable_volume hide_player_flyout_audio_track hide_player_flyout_listen_with_youtube_music hide_player_flyout_watch_in_vr hide_player_flyout_on_the_go hide_player_flyout_additional_settings hide_player_flyout_help pip_button_flyout video_delay_button_flyout save_to_watch_later_flyout_button");
 
 def("captions", "style", "caption_scale secondary_caption_language");
 def("captions", "behaviour", "stable_caption_blocks");

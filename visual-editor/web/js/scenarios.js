@@ -934,7 +934,7 @@ SECTIONS.push(
   { id: "snackbar", icon: "chat", title: "Snackbar", scopes: [["GENERAL", "morphe_snackbar_screen"]] },
   // Morphe's Video screen and its Player screen, kept apart so each tab fits on its group card
   { id: "playback", icon: "speed", title: "Video & audio", scopes: [["VIDEO", null], ["VIDEO", "morphe_vot_screen"]] },
-  { id: "behaviour", icon: "loop", title: "Behaviour", scopes: [["PLAYER", null], ["PLAYER", "morphe_loop_count_screen"], ["PLAYER", "morphe_live_chat_translate_screen"], ["PLAYER", "morphe_external_downloader_screen"]] },
+  { id: "behaviour", icon: "loop", title: "Behaviour", scopes: [["PLAYER", null], ["PLAYER", "morphe_loop_count_screen"], ["PLAYER", "morphe_external_downloader_screen"]] },
   { id: "dearrow", icon: "eye", title: "DeArrow", scopes: [["DEARROW", null]] },
 );
 SECTIONS.find(s => s.id === "watch").scopes.push(["RETURN_YOUTUBE_DISLIKE", null]);

@@ -8,7 +8,9 @@ const SCENES = {};
 // setting wherever they appear: hide the time on Seekbar & gestures and it is gone on Controls and
 // Fullscreen too, and Original brings it back everywhere. On a screen that doesn't own the setting
 // they are greyed out (markFixed).
-const sharedTime = (t, pos) => C("hide_timestamp", `<div class="time">${t}</div>`, { style: `position:absolute;${pos}` });
+// The chapter chip (• chapter ›) sits right after the time on the time bar (Morphe hides both the chip
+// and the chapter title next to the timestamp): drawn with the time everywhere, owned by Seekbar & gestures.
+const sharedTime = (t, pos) => `<div style="position:absolute;${pos};display:flex;align-items:center;gap:6px">${C("hide_timestamp", `<div class="time">${t}</div>`)}${C("hide_chapters_timeline_button", `<div class="time" style="white-space:nowrap">• Building the frame ›</div>`)}</div>`;
 const sharedSeek = (inner, pos, extra = "") => C("hide_seekbar", `<div class="seek" style="position:relative;left:0;right:0;${extra}">${inner}</div>`, { style: `position:absolute;${pos}` });
 function videoFrame(i = 0, extra = "") {
   return `<div class="frame" style="background:${ART[i]}"></div>${extra}`;
@@ -88,7 +90,7 @@ SCENES.seekbar = () => {
     <div style="position:absolute;left:50%;top:38px;transform:translateX(-50%)">${C("hide_player_gesture_hints", `<div class="toastin" style="position:static;transform:none">Pull up for precise seeking</div>`)}</div>
     <div class="pbtn bigbtn" style="position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);background:rgba(0,0,0,.3)">${I("play")}</div>
     <div id="thumbBubble" style="position:absolute;left:calc(12px + 0.42 * (100% - 24px));bottom:40px;transform:translateX(-50%)">${C("seekbar_thumbnail_preview", `<div style="width:96px">${thumb(4, "border-radius:4px;border:2px solid #fff")}<div class="time" style="text-align:center;margin-top:2px">7:51</div></div>`)}</div>
-    ${C("hide_timestamp", `<div class="time">3:12 / 18:42</div>`, { style: "position:absolute;left:12px;bottom:30px" })}
+    ${sharedTime("3:12 / 18:42", "left:12px;bottom:30px")}
     ${C("hide_seekbar", `<div class="seek" id="seek" style="position:relative;left:0;right:0;height:4px;${custom ? `background:linear-gradient(90deg,rgba(255,255,255,.3),rgba(255,255,255,.3))` : ""}">
         <div class="buf" style="width:55%"></div><div class="played" id="played" style="width:17%;${custom ? `background:linear-gradient(90deg,${c1},${c2})` : ""};transition:width .35s"></div>
         <div class="knob" id="knob" style="left:17%;transition:left .35s;${custom ? `background:${c2}` : ""}"></div>
@@ -141,10 +143,11 @@ SCENES.fullscreen = () => {
     <div style="position:absolute;right:8px;top:4px;display:flex">${C("hide_captions_button", I("cc", "ico", 'style="margin:8px 6px"'))}${C("hide_settings_button", I("gear", "ico", 'style="margin:8px 6px"'))}</div>
     <div class="pbtn bigbtn" style="position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);background:rgba(0,0,0,.3)">${I("pause")}</div>
     ${C("hide_player_related_videos_overlay", `<div style="display:flex;gap:6px;padding:6px 8px;background:linear-gradient(transparent,rgba(0,0,0,.8))"><div class="t2" style="color:#fff;writing-mode:vertical-rl;transform:rotate(180deg);font-size:10px">More videos</div>${[1, 4, 5].map(i => `<div style="width:96px">${thumb(i, "border-radius:4px")}<div style="font-size:9.5px;line-height:1.2;margin-top:2px">${esc(VIDEOS[i].t.slice(0, 30))}…</div></div>`).join("")}</div>`, { cls: "moreoverlay", style: "position:absolute;left:0;right:0;bottom:54px" })}
+    ${C("hide_live_chat_replay_button", `<div class="chip" style="height:26px;font-size:11px;padding:0 9px;background:rgba(255,255,255,.14)">${I("chat")}Chat replay</div>`, { style: "position:absolute;right:10px;bottom:40px" })}
     ${sharedTime("21:40 / 41:05", "left:12px;bottom:36px")}
     ${sharedSeek(`<div class="played" style="width:52%"></div><div class="knob" style="left:52%"></div>`, "left:12px;right:12px;bottom:30px")}
     ${C("hide_quick_actions", `<div style="display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;height:26px;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 18px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 18px),transparent)">
-      ${q("hide_quick_actions_like_button", "like", "120K")}${q("hide_quick_actions_dislike_button", "dislike", "")}${q("hide_quick_actions_comments_button", "comment", "1.4K")}
+      ${q("hide_quick_actions_like_button", "like", "120K")}${q("hide_quick_actions_dislike_button", "dislike", "")}${q("hide_quick_actions_comments_button", "comment", "1.4K")}${q("hide_quick_actions_live_chat_button", "chat", "")}
       ${q("hide_quick_actions_save_button", "save", "")}${q("hide_quick_actions_share_button", "share", "")}${q("hide_quick_actions_playlist_button", "plist", "")}
       ${q("hide_quick_actions_mix_button", "queue", "")}${q("hide_quick_actions_more_videos_button", "tv", "")}${q("hide_quick_actions_ask_button", "spark", "")}${q("hide_quick_actions_more_button", "moreh", "")}</div>`, { style: "position:absolute;left:10px;right:10px;bottom:6px;height:26px" })}
     <div id="hud" style="position:absolute;display:none;z-index:31"></div>
@@ -278,6 +281,7 @@ SCENES.comments = () => {
       <div style="display:flex;align-items:center;padding:0 12px 6px;gap:8px"><b style="font-size:16px">Comments</b><span class="t2">1.2K</span><div style="flex:1"></div>
         ${C("hide_comments_info_button", I("info", "ico", 'style="width:20px;height:20px"'))}${I("sort", "ico", 'style="width:20px;height:20px"')}${I("close", "ico", 'style="width:20px;height:20px"')}</div>
       ${C("hide_comments_filter_bar_options", `<div style="display:flex;gap:8px;padding:2px 12px 8px">${["Top", "Newest", "Timed"].map((t, i) => `<span class="chip" style="height:28px;${i === 0 ? "background:#f1f1f1;color:#0f0f0f" : "background:#3a3a3a"}">${t}</span>`).join("")}</div>`, { blk: 1 })}
+      ${C("hide_timed_reactions", `<div style="display:flex;gap:10px;align-items:center;padding:0 12px 8px;font-size:17px">❤️ 😂 🔥 😮<span class="t2" style="font-size:12px">React at this moment</span></div>`, { blk: 1 })}
       ${C("hide_comments_ai_chat_summary", `<div style="margin:0 12px 8px;padding:8px 10px;border-radius:10px;background:#2c2c3a;font-size:12.5px;line-height:1.4">${I("spark", "ico", 'style="width:14px;height:14px;display:inline;vertical-align:-2px;fill:#b9a3ff"')} Viewers love the wood stove and want a follow-up on the roof.</div>`, { blk: 1 })}
       ${C("hide_comments_community_guidelines", `<div class="t2" style="padding:0 12px 6px">Remember to keep comments respectful and to follow our Community Guidelines</div>`, { blk: 1 })}
       ${C("hide_comments_channel_guidelines", `<div class="t2" style="padding:0 12px 6px">Channel guidelines: no spoilers please</div>`, { blk: 1 })}
@@ -310,7 +314,7 @@ SCENES.flyout = () => {
       ${row("hide_player_flyout_speed", "speed", "Playback speed", "Normal")}${row("hide_player_flyout_sleep_timer", "timer", "Sleep timer", "Off")}
       ${row("hide_player_flyout_loop_video", "loop", "Loop video", "Off")}${row("hide_player_flyout_ambient_mode", "bright", "Ambient mode", "On")}
       ${row("hide_player_flyout_lock_screen", "lock", "Lock screen")}${row("hide_player_flyout_stable_volume", "vol", "Stable volume", "On")}
-      ${row("hide_player_flyout_audio_track", "music", "Audio track", "English (original)")}${row("pip_button_flyout", "pip", "Picture-in-picture")}
+      ${row("hide_player_flyout_audio_track", "music", "Audio track", "English (original)")}${row("pip_button_flyout", "pip", "Picture-in-picture")}${row("save_to_watch_later_flyout_button", "clock", "Save to Watch later")}
       ${row("video_delay_button_flyout", "clock", "Video delay", "0 ms")}${row("hide_player_flyout_listen_with_youtube_music", "music", "Listen with YouTube Music")}
       ${row("hide_player_flyout_watch_in_vr", "vr", "Watch in VR")}${row("hide_player_flyout_on_the_go", "gesture", "On the go")}
       ${row("hide_player_flyout_additional_settings", "gear", "Additional settings")}${row("hide_player_flyout_help", "help", "Help & feedback")}
@@ -533,7 +537,7 @@ def("channel", "vis", "hide_links_preview hide_subscribe_button_in_channel_page 
 def("explore", "vis", ["hide_explore_button", "hide_privacy_tos_footer", ...EXPLORE.map(e => e[0]), ...MORE_YT.map(e => e[0])].join(" "));
 def("watch", "vis", "hide_crowdfunding_box hide_emergency_box hide_medical_panels");
 def("flyout", "vis", "hide_player_flyout_quality_header hide_player_flyout_quality_footer hide_player_flyout_captions_header hide_player_flyout_captions_footer hide_player_flyout_audio_track_footer");
-def("comments", "vis", "hide_comments_top_fans_button hide_comments_gifs_and_images hide_comments_by_members_header");
+def("comments", "vis", "hide_comments_top_fans_button hide_comments_gifs_and_images hide_comments_by_members_header hide_timed_reactions"); // timed reactions: the emoji bar of the comments and live chat (emoji_control_panel)
 def("feed", "vis", "hide_post_like_dislike_buttons hide_post_dislike_button hide_post_comment_button hide_post_share_button hide_post_comments_preview hide_horizontal_shelves hide_playables hide_surveys hide_ticket_shelf");
 def("seekbar", "style", "fullscreen_large_seekbar");
 
