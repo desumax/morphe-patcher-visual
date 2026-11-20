@@ -23,7 +23,7 @@ if (INAPP) {
     let p = {};
     try { p = JSON.parse(MorpheApp.pending ? MorpheApp.pending() : "{}") || {}; } catch (e) { /* older app */ }
     for (const k in p) if (k in PREF) { baseline[k] = p[k]; __pendingAtOpen.push(k); }
-    if (__pendingAtOpen.length) renderBar();
+    if (__pendingAtOpen.length) { renderBar(); pendingDialog(__pendingAtOpen); } // "Changes not applied yet": apply and restart, continue, or reset
   }
   // Leaving with "Save for later": the values are already saved; Morphe keeps the list for next time.
   window.savePendingForLater = () => {
@@ -54,13 +54,10 @@ if (INAPP) {
     for (const k in map) if (k in __liveAvail && __liveAvail[k] !== map[k]) { __liveAvail[k] = map[k]; changed = true; }
     if (changed) commit();
   };
-  const previewRestart = restartDialog;
-  restartDialog = function () {
-    previewRestart();
-    $("dRestart").onclick = () => { closeDialog(); try { MorpheApp.restart(); } catch (e) { /* ignore */ } };
-    $("dStay").textContent = "Later";
-    $("dStay").onclick = () => { closeDialog(); savePendingForLater(); try { MorpheApp.close(); } catch (e) { /* ignore */ } };
-  };
+  // The leave and reopen prompts (restartDialog, pendingDialog in list.js) run Morphe's own actions here.
+  leaveHost.restart = () => { try { MorpheApp.restart(); } catch (e) { /* ignore */ } };
+  leaveHost.saveForLater = () => { savePendingForLater(); try { MorpheApp.close(); } catch (e) { /* ignore */ } };
+  leaveHost.reset = leaving => { resetPendingChanges(); if (leaving) { try { MorpheApp.close(); } catch (e) { /* ignore */ } } else snack("Changes reset"); };
   // Navigation in the app: the editor opens on the screen menu, shown as a page of cards. A card
   // opens its live preview screen; Back (key, gesture or arrow) from a screen returns to the menu,
   // Back from the menu leaves the editor. The restart prompt only comes when leaving the editor.

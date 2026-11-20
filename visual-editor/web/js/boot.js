@@ -38,6 +38,8 @@ async function boot() {
   tick(); setInterval(tick, 30000);
   let seen = false; try { seen = localStorage.getItem(LS + "-tutorial") === "1"; } catch { /* storage unavailable */ }
   if (!seen) runTutorial();
+  // changes saved for later on the last visit that still wait for a restart: ask what to do with them
+  else { let pend = null; try { pend = JSON.parse(localStorage.getItem(LS + "-pending") || "null"); } catch { /* storage unavailable */ } if (Array.isArray(pend) && pendingRestart().some(k => pend.includes(k))) pendingDialog(); }
 }
 store.save = function () { try { localStorage.setItem(LS, JSON.stringify({ state: changedOnly(), section, device: device_, yt: ytVersion, theme, grouped, lv: 2, design, tabs: lastTab, tabOrder, order: customOrder, borrowed: Object.fromEntries(Object.entries(borrowed).map(([s, v]) => [s, [...v]])) })); localStorage.setItem(LS + "-baseline", JSON.stringify(baseline)); } catch { /* storage unavailable */ } };
 boot();

@@ -257,9 +257,23 @@ function syncRings() {
   const L = layer.getBoundingClientRect(), F = st.getBoundingClientRect(), sb = getComputedStyle(st.parentElement);
   const frameR = Math.max(0, parseFloat(sb.borderTopLeftRadius) - parseFloat(sb.borderTopWidth) || 0);
   const out = [];
-  let key = `${Math.round(F.left)},${Math.round(F.top)}`;
+  // what of the ring layer can be seen: the screen and every clipping box around the preview. A ring
+  // that would run past it (the preview pinned at the top of the screen after scrolling, its edge on the
+  // screen's edge) is drawn just inside instead, so no side of it ever disappears (Max, Nov 20)
+  const V = { l: 0, t: 0, r: innerWidth, b: innerHeight };
+  for (let a = layer.parentElement; a && a !== document.documentElement; a = a.parentElement) {
+    const cs = getComputedStyle(a); if (cs.overflowX === "visible" && cs.overflowY === "visible") continue;
+    const q = a.getBoundingClientRect(); V.l = Math.max(V.l, q.left); V.t = Math.max(V.t, q.top); V.r = Math.min(V.r, q.right); V.b = Math.min(V.b, q.bottom);
+  }
+  let key = `${Math.round(F.left)},${Math.round(F.top)},${Math.round(V.t)},${Math.round(V.b)}`;
   for (const el of live) {
     const g = ringGeom(el, F, frameR);
+    if (g) {
+      const R = g.R, was = { ...R };
+      R.l = Math.max(R.l, V.l); R.t = Math.max(R.t, V.t); R.r = Math.min(R.r, V.r); R.b = Math.min(R.b, V.b);
+      g.ins = [g.ins[0] - (R.t - was.t), g.ins[1] - (was.r - R.r), g.ins[2] - (was.b - R.b), g.ins[3] - (R.l - was.l)].map(x => Math.max(0, x));
+      if (R.r - R.l < 2 * g.w + 1 || R.b - R.t < 2 * g.w + 1) g.hidden = true;
+    }
     el.classList.toggle("selx", !!g);
     if (!g) { const q = el.getBoundingClientRect(); key += `|${q.left | 0},${q.top | 0},${q.width | 0},${q.height | 0}`; continue; }
     const f = n => Math.round(n * 10) / 10;

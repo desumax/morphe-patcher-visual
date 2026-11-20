@@ -1007,14 +1007,52 @@ function commit() { applyAppColors(); renderBar(); renderStage(); renderList(); 
 const pendingRestart = () => Object.keys(PREF).filter(k => PREF[k].rebootApp && JSON.stringify(state[k]) !== JSON.stringify(baseline[k]));
 function openDialog(html) { $("dlgBox").innerHTML = html; $("dlg").classList.add("open"); setTimeout(() => $("dlgBox").querySelector("button")?.focus(), 50); }
 function closeDialog() { $("dlg").classList.remove("open"); }
+// Changes that only apply after YouTube restarts (Max, Nov 20). Values are saved as soon as they are
+// changed; leaving asks what to do with these: restart now, keep them for later, or reset them to the
+// values YouTube runs with. Opening the editor again with some still waiting asks the same in reverse.
+// leaveHost holds what each answer does: the web demo's versions here, the in-app editor's in app-post.js.
+const pendingList = keys => `<ul>${keys.map(k => `<li>${esc(shownTitle(k))}</li>`).join("")}</ul>`;
+const nSettings = n => `${n} setting${n > 1 ? "s" : ""}`;
+const leaveHost = {
+  restart() { $("restarting").classList.add("on"); setTimeout(() => { baseline = { ...state }; storeBaseline(); savedPending(null); renderBar(); $("restarting").classList.remove("on"); snack("YouTube restarted. All changes are applied."); }, 1400); },
+  saveForLater() { savedPending(pendingRestart()); webLeave("Saved. They apply the next time YouTube restarts"); },
+  reset(leaving) { for (const k of pendingRestart()) state[k] = baseline[k]; savedPending(null); commit(); if (leaving) webLeave("Changes reset"); else snack("Changes reset"); },
+};
+function webLeave(msg) {
+  const app = $("app"); app.classList.remove("exitflash"); void app.offsetWidth; app.classList.add("exitflash");
+  setTimeout(() => snack(`${msg} (demo: the editor reopens)`), 350);
+}
+function savedPending(keys) { try { if (keys && keys.length) localStorage.setItem(LS + "-pending", JSON.stringify(keys)); else localStorage.removeItem(LS + "-pending"); } catch { /* storage unavailable */ } }
+function resetConfirm(n, leaving, back) {
+  openDialog(`<div class="di">${I("reset")}</div><h2 id="dlgTitle">Reset these changes?</h2>
+    <p>${nSettings(n)} go${n > 1 ? "" : "es"} back to the value${n > 1 ? "s" : ""} YouTube is running with now.</p>
+    <div class="acts"><button class="dbtn primary neg" id="dReset">Reset</button><button class="dbtn tonal" id="dBack">Cancel</button></div>`);
+  $("dReset").onclick = () => { closeDialog(); leaveHost.reset(leaving); };
+  $("dBack").onclick = back;
+}
+// leaving the editor
 function restartDialog() {
   const keys = pendingRestart();
   openDialog(`<div class="di">${I("restart")}</div><h2 id="dlgTitle">Restart to apply</h2>
-    <p>${keys.length} setting${keys.length > 1 ? "s" : ""} only take${keys.length > 1 ? "" : "s"} effect after YouTube restarts.</p>
-    <ul>${keys.map(k => `<li>${esc(shownTitle(k))}</li>`).join("")}</ul>
-    <div class="acts"><button class="dbtn primary" id="dRestart">Restart now</button><button class="dbtn tonal" id="dStay">Keep editing</button></div>`);
-  $("dRestart").onclick = () => { closeDialog(); $("restarting").classList.add("on"); setTimeout(() => { baseline = { ...state }; storeBaseline(); renderBar(); $("restarting").classList.remove("on"); snack("YouTube restarted. All changes are applied."); }, 1400); };
-  $("dStay").onclick = closeDialog;
+    <p>${nSettings(keys.length)} only take${keys.length > 1 ? "" : "s"} effect after YouTube restarts. They are saved.</p>
+    ${pendingList(keys)}
+    <div class="acts"><button class="dbtn primary" id="dRestart">Restart now</button><button class="dbtn tonal" id="dLater">Save for later</button><button class="dbtn text neg" id="dReset">Reset changes</button></div>`);
+  $("dRestart").onclick = () => { closeDialog(); leaveHost.restart(); };
+  $("dLater").onclick = () => { closeDialog(); leaveHost.saveForLater(); };
+  $("dReset").onclick = () => resetConfirm(keys.length, true, restartDialog);
+}
+// opening the editor with changes saved earlier that still wait for a restart
+// (saved: the keys the app kept from the last visit; the App view stand-in has no live values, so it
+// can only list those)
+function pendingDialog(saved = []) {
+  const now = pendingRestart(), keys = now.length ? now : saved.filter(k => PREF[k]); if (!keys.length) return;
+  openDialog(`<div class="di">${I("restart")}</div><h2 id="dlgTitle">Changes not applied yet</h2>
+    <p>You saved ${nSettings(keys.length)} last time. YouTube hasn't restarted since, so ${keys.length > 1 ? "they aren't" : "it isn't"} applied yet.</p>
+    ${pendingList(keys)}
+    <div class="acts"><button class="dbtn primary" id="dRestart">Apply and restart</button><button class="dbtn tonal" id="dGo">Continue changes</button><button class="dbtn text neg" id="dReset">Reset changes</button></div>`);
+  $("dRestart").onclick = () => { closeDialog(); leaveHost.restart(); };
+  $("dGo").onclick = closeDialog;
+  $("dReset").onclick = () => resetConfirm(keys.length, false, () => pendingDialog(saved));
 }
 function storeBaseline() { try { localStorage.setItem(LS + "-baseline", JSON.stringify(baseline)); } catch { /* storage unavailable */ } }
 // with the search bar open, the back arrow closes search (like its cross), it doesn't leave the editor;
@@ -1022,8 +1060,7 @@ function storeBaseline() { try { localStorage.setItem(LS + "-baseline", JSON.str
 $("btnBack").addEventListener("click", e => { if (searching) { e.stopImmediatePropagation(); e.preventDefault(); $("qClose").click(); } }, true);
 $("btnBack").onclick = () => {
   if (pendingRestart().length) return restartDialog();
-  const app = $("app"); app.classList.remove("exitflash"); void app.offsetWidth; app.classList.add("exitflash");
-  setTimeout(() => snack("Back to Morphe settings (demo: the editor reopens)"), 350);
+  webLeave("Back to Morphe settings");
 };
 // Settings from other screens changed through the popup count as part of this screen for Reset.
 const borrowed = {};
