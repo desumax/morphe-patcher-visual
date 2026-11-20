@@ -115,6 +115,7 @@ final class LiveSettings {
             if (key != null && (settingKeys.contains(key) || key.startsWith("morphe_visual_editor_"))) continue;
             if (p instanceof PreferenceGroup g && (g.getPreferenceCount() > 0 || !(p instanceof PreferenceScreen))) continue;
             if (p.getTitle() == null || p.getTitle().length() == 0) continue;
+            if (key == null) key = keyFromTitle(p); // the same name the preview's catalogue gives it
             if (key == null || out.has(key)) key = "morphe_action_" + (n++);
             try {
                 JSONObject m = new JSONObject();
@@ -130,6 +131,19 @@ final class LiveSettings {
             } catch (Exception ex) {
                 Logger.printException(() -> "Visual editor: action row failed", ex);
             }
+        }
+    }
+
+    /** A keyless row is named after its title string, minus "_title" (as extract_catalogue.py does). */
+    @Nullable
+    private static String keyFromTitle(Preference p) {
+        try {
+            int id = p.getTitleRes();
+            if (id == 0) return null;
+            String name = p.getContext().getResources().getResourceEntryName(id);
+            return name.endsWith("_title") ? name.substring(0, name.length() - 6) : name;
+        } catch (Throwable ex) {
+            return null;
         }
     }
 
