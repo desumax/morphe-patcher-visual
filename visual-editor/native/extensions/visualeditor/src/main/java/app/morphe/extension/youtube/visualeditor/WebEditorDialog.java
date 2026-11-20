@@ -334,7 +334,44 @@ final class WebEditorDialog extends Dialog {
 
         @JavascriptInterface
         public void restart() {
-            Utils.runOnMainThread(() -> Utils.restartApp(activity));
+            Utils.runOnMainThread(() -> {
+                PendingChanges.clear();
+                Utils.restartApp(activity);
+            });
+        }
+
+        /**
+         * Changes saved but not applied yet (they need a restart), as {key: value YouTube still runs
+         * with}. Empty once YouTube has restarted. The page reads it when it opens.
+         */
+        @JavascriptInterface
+        public String pending() {
+            try {
+                return PendingChanges.forPage().toString();
+            } catch (Exception ex) {
+                return "{}";
+            }
+        }
+
+        /** "Save for later": the page's list of changes waiting for a restart, {key: running value}. */
+        @JavascriptInterface
+        public void savePending(String json) {
+            Utils.runOnMainThread(() -> PendingChanges.merge(json));
+        }
+
+        /**
+         * "Reset": puts the changes waiting for a restart back to the values YouTube runs with. The
+         * page gets each value back (morpheSetValue) and fresh availability.
+         */
+        @JavascriptInterface
+        public void resetPending() {
+            Utils.runOnMainThread(() -> {
+                for (String key : PendingChanges.reset()) {
+                    Setting<?> s = Setting.getSettingFromPath(key);
+                    if (s != null) sendBack(s);
+                }
+                pushAvailability();
+            });
         }
 
         @JavascriptInterface

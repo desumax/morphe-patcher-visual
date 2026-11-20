@@ -89,7 +89,9 @@ final class SettingsBridge {
 
     private void saveConfirmed(Setting<?> s, String newValue) {
         try {
+            PendingChanges.beforeSave(s, String.valueOf(s.get()));
             s.saveFromString(newValue);
+            PendingChanges.afterSave(s);
             if (s.rebootApp) markRestart();
         } catch (RuntimeException ex) {
             Logger.printException(() -> "Visual editor: could not save " + s.key + ": " + newValue, ex);
@@ -100,7 +102,9 @@ final class SettingsBridge {
         for (String key : keys) {
             Setting<?> s = setting(key);
             if (s != null && !s.isSetToDefault()) {
+                PendingChanges.beforeSave(s, String.valueOf(s.get()));
                 s.resetToDefault();
+                PendingChanges.afterSave(s);
                 if (s.rebootApp) markRestart();
             }
         }

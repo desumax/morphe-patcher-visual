@@ -28,7 +28,12 @@ window.MorpheApp = {
   close: () => parent.postMessage({ appview: "close" }, "*"),
   restart: () => parent.postMessage({ appview: "restart" }, "*"),
   disableEditor: () => parent.postMessage({ appview: "disable" }, "*"),
+  // changes waiting for a restart, kept across "Open the editor again" like the app keeps them
+  pending: () => { try { return localStorage.getItem("appview-pending") || "{}"; } catch (e) { return "{}"; } },
+  savePending: json => { try { const o = Object.assign(JSON.parse(json), JSON.parse(localStorage.getItem("appview-pending") || "{}")); localStorage.setItem("appview-pending", JSON.stringify(o)); } catch (e) {} },
+  resetPending: () => { try { localStorage.removeItem("appview-pending"); } catch (e) {} },
 };
+(() => { const r = window.MorpheApp.restart; window.MorpheApp.restart = () => { window.MorpheApp.resetPending(); r(); }; })();
 </script>
 """
 page = (app / "index.html").read_text(encoding="utf-8")

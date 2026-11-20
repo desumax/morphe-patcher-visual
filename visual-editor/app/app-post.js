@@ -8,12 +8,34 @@ if (INAPP) {
   store.save = function () {
     fileSave();
     if (!Object.keys(PREF).length) return;
-    if (!sent) { sent = snapshot(); return; }
+    if (!sent) { sent = snapshot(); carryPending(); return; }
     for (const k in PREF) {
       if (!(k in LIVE.values)) continue;
       const j = JSON.stringify(state[k]);
       if (j !== sent[k]) { sent[k] = j; try { MorpheApp.set(k, j); } catch (e) { /* ignore */ } }
     }
+  };
+  // Changes saved earlier that still wait for a restart (Morphe keeps the values YouTube runs with):
+  // they count as changed from the start, so the restart prompt on leaving lists them again, and
+  // window.__pendingAtOpen holds them for the prompt shown when the editor opens.
+  window.__pendingAtOpen = [];
+  function carryPending() {
+    let p = {};
+    try { p = JSON.parse(MorpheApp.pending ? MorpheApp.pending() : "{}") || {}; } catch (e) { /* older app */ }
+    for (const k in p) if (k in PREF) { baseline[k] = p[k]; __pendingAtOpen.push(k); }
+    if (__pendingAtOpen.length) renderBar();
+  }
+  // Leaving with "Save for later": the values are already saved; Morphe keeps the list for next time.
+  window.savePendingForLater = () => {
+    const o = {}; for (const k of pendingRestart()) o[k] = baseline[k];
+    try { MorpheApp.savePending(JSON.stringify(o)); } catch (e) { /* older app */ }
+  };
+  // "Reset": every change waiting for a restart goes back to the value YouTube runs with.
+  window.resetPendingChanges = () => {
+    for (const k of pendingRestart()) state[k] = baseline[k];
+    try { MorpheApp.resetPending(); } catch (e) { /* older app */ }
+    if (sent) for (const k in PREF) sent[k] = JSON.stringify(state[k]);
+    commit();
   };
   // Morphe kept another value (a confirmation was declined, or the value was refused).
   window.morpheSetValue = (k, json) => {
@@ -37,7 +59,7 @@ if (INAPP) {
     previewRestart();
     $("dRestart").onclick = () => { closeDialog(); try { MorpheApp.restart(); } catch (e) { /* ignore */ } };
     $("dStay").textContent = "Later";
-    $("dStay").onclick = () => { closeDialog(); try { MorpheApp.close(); } catch (e) { /* ignore */ } };
+    $("dStay").onclick = () => { closeDialog(); savePendingForLater(); try { MorpheApp.close(); } catch (e) { /* ignore */ } };
   };
   // Navigation in the app: the editor opens on the screen menu, shown as a page of cards. A card
   // opens its live preview screen; Back (key, gesture or arrow) from a screen returns to the menu,
