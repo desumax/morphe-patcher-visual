@@ -36,6 +36,8 @@ public final class VisualEditorEntry {
     private static WeakReference<PreferenceScreen> liveRoot = new WeakReference<>(null);
     /** Activity the editor last opened by itself in, so a fragment rebuilt in it doesn't reopen it. */
     private static WeakReference<Activity> autoOpenedIn = new WeakReference<>(null);
+    /** Set when this device's WebView is too old for the editor: no more automatic opening until YouTube restarts. */
+    static volatile boolean webViewTooOld;
 
     private VisualEditorEntry() {
     }
@@ -122,7 +124,7 @@ public final class VisualEditorEntry {
             root.addPreference(open);
 
             Activity activity = fragment.getActivity();
-            if (VisualEditorSettings.ENABLED.get() && activity != null && autoOpenedIn.get() != activity) {
+            if (VisualEditorSettings.ENABLED.get() && !webViewTooOld && activity != null && autoOpenedIn.get() != activity) {
                 autoOpenedIn = new WeakReference<>(activity);
                 // Already posted after onCreate, so closing the editor lands on the settings list.
                 show(activity);

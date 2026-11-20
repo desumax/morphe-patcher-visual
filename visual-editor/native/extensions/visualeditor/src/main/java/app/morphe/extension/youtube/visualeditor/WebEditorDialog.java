@@ -290,6 +290,18 @@ final class WebEditorDialog extends Dialog {
         }
 
         /** "Disable new design": switch the editor off and show the regular Morphe list. */
+        /**
+         * The page found this WebView too old to draw the editor: show Morphe's regular list for
+         * now, without turning the editor's setting off, so it works again once WebView updates.
+         */
+        @JavascriptInterface
+        public void fallback() {
+            Utils.runOnMainThread(() -> {
+                VisualEditorEntry.webViewTooOld = true;
+                dismiss();
+            });
+        }
+
         @JavascriptInterface
         public void disableEditor() {
             Utils.runOnMainThread(() -> {
