@@ -385,10 +385,13 @@ function linkFor(k) {
 function deepKidPill(k) {
   if (!PARENT_OF[k]) return "";
   const dk = sectionKeys().filter(x => DIRECT_PARENT[x] === k); if (!dk.length) return "";
-  const shown = dk.filter(x => kidVisible(x) || x === peekKid).length;
+  const shown = dk.filter(x => kidVisible(x) || peeking(x)).length;
   return shown ? `<span class="kidbtn kidin" aria-expanded="true" aria-label="${shown} sub-settings, shown below">${shown}${I("expand")}</span>`
-    : `<span class="kidbtn kidoff" title="Sub-settings hidden while this is off" aria-label="${dk.length} sub-settings, hidden">${dk.length}${I("lock")}</span>`;
+    : kidLock(k, dk.length);
 }
+// the lock pill of a parent whose sub-settings are hidden: a button that shows them, locked
+const peeking = x => x === peekKid || (!!peekPar && (PARENT_OF[x] === peekPar || DIRECT_PARENT[x] === peekPar));
+const kidLock = (k, n) => `<button class="kidbtn kidoff" data-kidpeek="${k}" aria-expanded="${peekPar === k}" title="Show the ${n} locked sub-settings" aria-label="${n} sub-settings, locked: show them">${n}${I("lock")}</button>`;
 function rowHTML(k, live) {
   const p = PREF[k]; const a = A[k];
   const dis = !parentsOk(k);
@@ -414,7 +417,7 @@ function rowHTML(k, live) {
   const cls = ["row", live ? "live" : "fallback"];
   if (selected === k) cls.push("sel");
   if (dis) cls.push("dis");
-  if (PARENT_OF[k]) { if (k === peekKid) cls.push("peek"); else if (!kidVisible(k)) cls.push("hide"); }
+  if (PARENT_OF[k]) { if (peeking(k)) cls.push("peek"); else if (!kidVisible(k)) cls.push("hide"); }
   if (live && (a.kind === "vis" || a.kind === "overlay") && !shown(k)) cls.push("offstate");
   const sum = info ? (String(p.summary || "").replace(/\s*Tap here to open \S+\s*$/, "") || (p.type === "screen" ? "Opens a sub-screen in Morphe settings" : "Information")) : summaryFor(k); // the link has its own button (linkFor)
   const blk = dis ? blockerOf(k) : null;
@@ -425,9 +428,9 @@ function rowHTML(k, live) {
   // the height of an unlocked one
   const need = dis ? `<div class="need3" title="${esc(needText(k).replace(/<[^>]*>/g, ""))}">${shortNeed(k)}</div>` : "";
   const tags = "";
-  const kids = KIDS[k] ? KIDS[k].filter(x => kidVisible(x) || x === peekKid).length : 0;
+  const kids = KIDS[k] ? KIDS[k].filter(x => kidVisible(x) || (x === peekKid && peekPar !== k)).length : 0;
   const kidbtn = kids ? `<button class="kidbtn" data-kidtoggle="${k}" aria-expanded="${!collapsed.has(k)}" aria-label="${kids} sub-options">${kids}${I("expand")}</button>`
-    : KIDS[k] ? `<span class="kidbtn kidoff" title="Sub-settings hidden while this is off" aria-label="${KIDS[k].length} sub-settings, hidden">${KIDS[k].length}${I("lock")}</span>`
+    : KIDS[k] ? kidLock(k, KIDS[k].length)
     : deepKidPill(k); // same footprint as the open/close button, so the card never changes width
   const over = /^(hide|show) in /i.test(title(k)) && p.subScreenTitle ? `<div class="over">${esc(p.subScreenTitle)}</div>` : "";
   return `<div class="${cls.join(" ")}" data-row="${k}" data-k="${k}" tabindex="0">
@@ -453,7 +456,7 @@ const LAYOUT = {
   fullscreen: [
     ["On the player", ["hide_video_title", "hide_live_chat_replay_button", "hide_player_related_videos_overlay", "hide_quick_actions", "fullscreen_video_scale", "fullscreen_playlist_panel"]],
     ["Swipe zones", ["swipe_left_zone", "swipe_right_zone", "swipe_top_zone", "swipe_zone_preview", "swipe_zone_width"]],
-    ["Shared by every swipe zone", ["swipe_overlay_style", "swipe_overlay_background_opacity", "swipe_overlay_progress_brightness_color", "swipe_overlay_progress_volume_color", "swipe_overlay_progress_speed_color", "swipe_text_overlay_size", "swipe_haptic_feedback", "swipe_press_to_engage", "volume_boost", "swipe_ignore_when_locked", "swipe_lowest_value_enable_auto_brightness", "swipe_save_and_restore_brightness"]],
+    ["Shared by every swipe zone", ["swipe_overlay_style", "swipe_overlay_background_opacity", "swipe_overlay_progress_brightness_color", "swipe_overlay_progress_volume_color", "swipe_overlay_progress_speed_color", "swipe_text_overlay_size", "swipe_haptic_feedback", "swipe_press_to_engage", "volume_boost", "swipe_ignore_when_locked", "swipe_lowest_value_enable_auto_brightness", "swipe_save_and_restore_brightness", "swipe_threshold", "swipe_brightness_sensitivity", "swipe_volume_distance", "swipe_volume_steps"]],
     ["Swipe to seek", ["swipe_seek"]],
     ["Entering and leaving fullscreen", ["open_videos_fullscreen", "exit_fullscreen", "force_fullscreen_landscape", "disable_fullscreen_dragged_down_gesture", "disable_fullscreen_pulled_up_gesture", "disable_fullscreen_sliding_down_gesture"]],
     ["Pinch to zoom", ["disable_fullscreen_zoom_gesture", "restore_pinch_to_zoom"]],
@@ -482,6 +485,49 @@ function byPosition(keys) {
   const placed = keys.filter(k => at(k) !== null).sort((a, b) => at(a) - at(b) || idx.get(a) - idx.get(b));
   const rest = placeDependents([placed], keys.filter(k => at(k) === null));
   return keepTogether([...placed, ...rest]);
+}
+// Related settings sit together in a tab's list (Max, Nov 20: the three Shorts speed settings were apart),
+// whatever their parts' places in the preview and whether they have a preview at all: each group lands,
+// in this order, where its first member would be. A member without a preview leaves "More settings" for
+// its group; a group with no previewed member stays together under "More settings". Members in another
+// tab, or that are sub-options, are left where they are. One table for every tab.
+const RELATED = [
+  // Shorts
+  ["shorts_playback_speed_default", "shorts_remember_playback_speed", "shorts_playback_speed_flyout_button"],
+  ["shorts_autoplay", "shorts_autoplay_background", "shorts_disable_background_playback"],
+  ["hide_shorts_flyout_audio_track", "hide_shorts_flyout_captions", "shorts_download_flyout_button"],
+  // Video & audio
+  ["playback_speed_default", "custom_speed_menu", "remember_playback_speed_last_selected", "disable_playback_speed_music", "playback_speed_channel_whitelist"],
+  ["video_quality_default_wifi", "video_quality_default_mobile", "remember_video_quality_last_selected", "video_quality_prioritize", "advanced_video_quality_menu", "hide_premium_video_quality"],
+  ["shorts_quality_default_wifi", "shorts_quality_default_mobile", "remember_shorts_quality_last_selected"],
+  ["video_delay", "video_delay_bluetooth_only"],
+  // Behaviour
+  ["do_not_remember_loop_video", "loop_count", "loop_count_clear"],
+  ["download_force_4k", "download_mode"],
+  // Look
+  ["theme_color_dark", "theme_color_dark_custom", "theme_color_light", "theme_color_light_custom", "theme_color_change_foreground"],
+  ["custom_font_type", "custom_font_file"],
+  ["gradient_loading_screen", "splash_screen_style", "splash_screen_duration"],
+  ["series_tracker", "series_tracker_completion", "series_tracker_backup"],
+  // Feed
+  ["hide_view_count", "feed_view_count"],
+  ["hide_community_posts", "hide_post_like_dislike_buttons", "hide_post_comment_button", "hide_post_share_button", "hide_post_comments_preview", "post_buttons_layout", "post_image_download", "post_translate"],
+  ["hide_filter_bar_in_feed", "hide_filter_bar_in_search", "hide_filter_bar_in_related_videos", "hide_filter_bar_in_history", "hide_filter_bar_in_comments"],
+  ["hide_keyword_content_home", "hide_keyword_content_subscriptions", "hide_keyword_content_search", "hide_keyword_content_comments", "hide_keyword_content_about_whole_words", "hide_keyword_content_about"],
+  ["hide_aislist_blocklist_home", "hide_aislist_blocklist_search", "hide_aislist_warnlist_home", "hide_aislist_warnlist_search", "aislist_submit_flyout_menu", "hide_aislist_about", "hide_aislist_attribution"],
+  ["hide_feed_flyout_menu", "ads_channel_whitelist_flyout_menu", "ask_summarize_flyout_menu", "playback_speed_channel_whitelist_flyout_menu", "feed_download_flyout_button"],
+  ["playlist_long_press_drag", "playlist_wide_drag_handles", "playlist_hide_removal_snackbar"],
+  // Captions
+  ["preferred_caption_language", "secondary_caption_language", "auto_translate_additional_languages"],
+];
+function relate(list, rest) {
+  for (const g of RELATED) {
+    const ks = g.map(x => "morphe_" + x).filter(k => !PARENT_OF[k] && (list.includes(k) || rest.includes(k))); if (ks.length < 2) continue;
+    const at = Math.min(...ks.map(k => list.indexOf(k)).filter(i => i >= 0)), into = isFinite(at) ? list : rest;
+    const where = isFinite(at) ? at : Math.min(...ks.map(k => rest.indexOf(k)));
+    ks.forEach(k => [list, rest].forEach(l => { const i = l.indexOf(k); if (i >= 0) l.splice(i, 1); }));
+    into.splice(where, 0, ...ks);
+  }
 }
 // settings that belong right after another one wherever their own parts sit
 const NEXT_TO = { morphe_custom_speed_menu: "morphe_playback_speed_default" };
@@ -513,7 +559,9 @@ function placeDependents(lists, movable) {
 let lastVis = { sec: null, keys: new Set() };
 const pickedFiles = {}; // images chosen with a file picker, kept for this visit only
 const foldingKids = new Map(); // sub-option groups still folding away: their old rows, and until when
-let peekKid = null, lastOpen = new Set(), lastDis = { sec: null, keys: new Set() };
+// peekPar: a parent whose locked sub-settings are shown, locked, after a tap on its lock pill (Max, Nov 20:
+// the pill looked like a button and did nothing). Each one says what unlocks it.
+let peekKid = null, peekPar = null, lastOpen = new Set(), lastDis = { sec: null, keys: new Set() };
 const collapsed = new Set();
 function renderList() {
   if (searching) return renderSearch();
@@ -525,8 +573,8 @@ function renderList() {
     let out = rowHTML(k, isLive(k));
     const ks = KIDS[k];
     if (ks) {
-      const any = ks.some(x => kidVisible(x) || x === peekKid);
-      if (any && (!collapsed.has(k) || ks.includes(peekKid))) wantOpen.add(k);
+      const any = ks.some(x => kidVisible(x) || peeking(x));
+      if (any && (!collapsed.has(k) || ks.some(peeking))) wantOpen.add(k);
       // parent and its sub-options travel as one unit, so in two columns they stay in the same column
       // a sub-option of a sub-option (Audio time stretching needs Audio pitch controls) sits right under
       // the one it depends on, one step further in
@@ -543,11 +591,14 @@ function renderList() {
     // in the clean design a setting whose title can't be converted keeps Morphe's look, at the end
     const ordered0 = byPosition(top), ordered = [...ordered0.filter(k => !cleanBroken(k)), ...ordered0.filter(cleanBroken)];
     const rest = m.misc.filter(k => !PARENT_OF[k]);
+    relate(ordered, rest);
     let live = "";
     const lay = LAYOUT[section];
     if (lay) {
       // screens with a lot of related settings get small captions so it is clear what belongs together
-      const used = new Set(), caps = lay.map(([cap, ks]) => [cap, ks.map(x => "morphe_" + x).filter(x => ordered.includes(x))]);
+      // a caption can take settings without a preview too: they leave "More settings" for it
+      const used = new Set(), caps = lay.map(([cap, ks]) => [cap, ks.map(x => "morphe_" + x).filter(x => ordered.includes(x) || rest.includes(x))]);
+      caps.forEach(([, inSec]) => inSec.forEach(x => { const i = rest.indexOf(x); if (i >= 0) rest.splice(i, 1); }));
       caps.forEach(([, inSec]) => inSec.forEach(x => used.add(x)));
       // settings not in a caption join the related ones (see placeDependents); only the rest go first
       const left = placeDependents(caps.map(c => c[1]), ordered.filter(x => !used.has(x))).map(withKids).join("");
@@ -694,7 +745,16 @@ function fitPills(box, pills, textOf, chrome, tight = false) {
   const W = box.clientWidth; if (!W || !pills.length) return;
   const cs = getComputedStyle(pills[0]), gap = parseFloat(getComputedStyle(box).columnGap) || 6;
   optCtx = optCtx || document.createElement("canvas").getContext("2d"); optCtx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
-  const need = Math.ceil(Math.max(...pills.map(o => optCtx.measureText(textOf(o)).width)) + chrome);
+  let need = Math.ceil(Math.max(...pills.map(o => optCtx.measureText(textOf(o)).width)) + chrome);
+  // A few long labels (Chinese (Simplified)) take two lines when that gains a column, so one long name
+  // does not halve the grid (Max, Nov 20). Each label's best two-line width is its widest half.
+  if (!tight || pills.length > 8) {
+    const w = t => optCtx.measureText(t).width;
+    const two = t => { const p = t.split(/\s+/); let b = w(t); for (let i = 1; i < p.length; i++) b = Math.min(b, Math.max(w(p.slice(0, i).join(" ")), w(p.slice(i).join(" ")))); return b; };
+    const need2 = Math.ceil(Math.max(...pills.map(o => two(textOf(o)))) + chrome);
+    const wraps = pills.filter(o => w(textOf(o)) + chrome > need2).length;
+    if (wraps <= Math.max(1, Math.floor(pills.length / 4)) && Math.floor((W + gap) / (need2 + gap)) > Math.floor((W + gap) / (need + gap))) need = need2;
+  }
   const maxCols = Math.max(1, Math.floor((W + gap) / (need + gap)));
   const n = pills.length, rows = Math.ceil(n / Math.min(n, maxCols)), cols = Math.ceil(n / rows);
   // fill the line only when that stretches the pills by at most a quarter; otherwise each keeps the
@@ -914,7 +974,7 @@ function renderInspector() {
   // acts on another setting's element (NEEDS), flashes a named one (PROXY_K) or its parent's element in the preview (a
   // sub-option such as "Tap Playback speed button to cycle speeds")
   const lights = k => { if (NEEDS[k] || PROXY_K[k]) return true; const seen = new Set(); for (let p = PARENT_OF[k]; p && !seen.has(p); p = PARENT_OF[p]) { seen.add(p); if ((A[p] && A[p].kind !== "scenario") || NEEDS[p] || PROXY_K[p]) return true; } return false; };
-  const kindOf = k => A[k] ? (isAnimated(k) ? "anim" : "shown") : NO_PREVIEW_OK.has(k) ? "ok" : lights(k) ? "shown" : okNone(k) ? "ok" : "none";
+  const kindOf = k => A[k] && A[k].kind !== "list" ? (isAnimated(k) ? "anim" : "shown") : NO_PREVIEW_OK.has(k) ? "ok" : lights(k) ? "shown" : okNone(k) ? "ok" : "none";
   const count = keys => { const c = { anim: 0, shown: 0, ok: 0, none: 0 }; keys.forEach(k => c[kindOf(k)]++); return c; };
   const bar = (c, t) => `<div class="bar3">${["anim", "shown", "ok", "none"].map(x => c[x] ? `<i class="${x}" style="width:${c[x] / t * 100}%"></i>` : "").join("")}</div>`;
   const all = count(CAT.preferences.map(p => p.key));

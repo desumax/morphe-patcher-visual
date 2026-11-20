@@ -362,22 +362,37 @@ html #pickGrid .pg.pgroups.pvis:not(.nx) .gcard .pi svg { width: 18px; height: 1
 /* on the way into the side layout: captions out of the flow, phones placed as they will be */
 .duo7.gen.capgo { gap: 6px; }
 .duo7.gen.capgo .dl7 > .sf7 { position: absolute; visibility: hidden; }
-/* captions beside the phones (portrait pairs): left caption on the left, right one on the right, larger */
+/* The Off / On labels sit beside the phones, never above them (Max, Nov 20): side by side, the left
+   label on the left of its phone and the right one on the right; stacked, each on the right of its
+   phone. Centred on the phone. The height labels took above the phones goes to the phones. */
+.duo7.gen.labout { flex-direction: row !important; align-items: center; }
+.duo7.gen.labout .dl7 { width: max-content; column-gap: 6px; align-items: center; }
+.duo7.gen.labout .dl7:first-child { grid-template-columns: auto min-content; grid-template-areas: "pill dev" ". cap"; }
+.duo7.gen.labout .dl7 + .dl7 { grid-template-columns: min-content auto; grid-template-areas: "dev pill" "cap ."; } /* not :last-child: a gliding caption copy may follow */
+.duo7.gen.labout .dl7:first-child > span { justify-self: end; }
+.duo7.gen.labout .dl7 + .dl7 > span { justify-self: start; }
+.duo7.gen.labright { flex-direction: column !important; align-items: stretch; }
+.duo7.gen.labright .dl7 { width: max-content; grid-template-columns: min-content auto; grid-template-areas: "dev pill" "cap ."; column-gap: 6px; align-items: center; justify-content: start; }
+.duo7.gen.labright .dl7 > span { justify-self: start; }
+.duo7.gen.labout .dl7 > span, .duo7.gen.labright .dl7 > span { grid-area: pill; }
+/* a long label beside a phone breaks onto two short lines instead of taking the phones' width */
+.duo7.gen.labout .dl7 > span:not(.ask), .duo7.gen.labright .dl7 > span:not(.ask) { white-space: normal; max-width: 5.6em; width: max-content; text-align: center; overflow: visible; line-height: 1.3; text-wrap: balance; }
+.duo7.gen.labout .dl7 > span.xlong, .duo7.gen.labright .dl7 > span.xlong { max-width: 9em; }
+.duo7.gen.labout .dl7 > .side, .duo7.gen.labright .dl7 > .side { grid-area: dev; }
+.duo7.gen.labout .dl7 > .sf7, .duo7.gen.labright .dl7 > .sf7 { grid-area: cap; }
+/* captions beside the phones (portrait pairs): on the outer side, under the label, both centred on the phone */
 .duo7.gen.capside { flex-direction: row !important; align-items: stretch; gap: 6px; }
-.duo7.gen.capside .dl7 { width: max-content; grid-template-columns: auto auto; grid-template-rows: auto 1fr; column-gap: 6px; align-items: center; }
-.duo7.gen.capside .dl7 > span { grid-row: 1; justify-self: center; }
-.duo7.gen.capside .dl7 > .side { grid-row: 2; }
-.duo7.gen.capside .dl7 > .sf7 { grid-row: 2; width: 80px; min-width: 0; font-size: 12px; line-height: 15px; margin: 0; -webkit-line-clamp: 5; hyphens: manual; }
-.duo7.gen.capside .dl7:first-child { grid-template-areas: ". pill" "cap dev"; }
-.duo7.gen.capside .dl7 + .dl7 { grid-template-areas: "pill ." "dev cap"; } /* not :last-child: a gliding caption copy may follow */
-.duo7.gen.capside .dl7 > span { grid-area: pill; }
-.duo7.gen.capside .dl7 > .side { grid-area: dev; }
-.duo7.gen.capside .dl7 > .sf7 { grid-area: cap; }
-.duo7.gen.capside .dl7 > .sf7 { text-align: center; } /* centred like below, so moving between them doesn't jump */
+.duo7.gen.capside .dl7 { grid-template-rows: 1fr auto auto 1fr; row-gap: 4px; }
+.duo7.gen.capside .dl7:first-child { grid-template-columns: auto min-content; grid-template-areas: ". dev" "pill dev" "cap dev" ". dev"; }
+.duo7.gen.capside .dl7 + .dl7 { grid-template-columns: min-content auto; grid-template-areas: "dev ." "dev pill" "dev cap" "dev ."; }
+.duo7.gen.capside .dl7 > span { justify-self: center; }
+.duo7.gen.capside .dl7 > .sf7 { width: 80px; min-width: 0; font-size: 12px; line-height: 15px; margin: 0; -webkit-line-clamp: 5; hyphens: manual; text-align: center; }
 .duo7.gen .dl7 > span.long { font-size: calc(var(--duopill) * .9 / var(--dsc, 1.7)); }
 .duo7.gen .dl7 > span.xlong { font-size: calc(var(--duopill) * .8 / var(--dsc, 1.7)); }
 .duo7.gen .dl7 > span.ask { font-size: calc(var(--duopill) * .9 / var(--dsc, 1.7)); line-height: 1.55; white-space: nowrap; overflow: visible; max-width: none; background: #1a73e8; }
-.ask7 { box-sizing: border-box; border-radius: 12px; border: 2px dashed #555; background: rgba(255,255,255,.03); }
+.ask7 { box-sizing: border-box; border-radius: 12px; border: 2px dashed #555; background: rgba(255,255,255,.03); display: grid; place-items: center; padding: 6px; }
+.ask7 > span { font-size: calc(var(--duopill) * .9 / var(--dsc, 1.7)); font-weight: 600; color: #fff; background: #1a73e8; border-radius: .7em; padding: .42em .75em; text-align: center; line-height: 1.25; }
+.duo7.gen .dl7 > span.ask:empty { display: none; }
 .ctl .opt.nudge7 { animation: nudge7 .9s var(--ease) 2; }
 @keyframes nudge7 { 50% { border-color: var(--m-primary, #3ea6ff); box-shadow: 0 0 0 2px rgba(62,166,255,.35); } }
 .sf7 { font-size: 11px; line-height: 13px; color: #ddd; text-align: center; text-wrap: balance; overflow-wrap: break-word; hyphens: auto; min-height: 13px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; width: 100%; min-width: 110px; margin-top: 2px; }
@@ -444,7 +459,8 @@ html #pickGrid .pg.pgroups.pvis:not(.nx) .gcard .pi svg { width: 18px; height: 1
 .row:has(> .txt > .sum) { min-height: 70px; }
 .row:not(:has(> .txt > .sum)) { min-height: 56px; }
 .row .state { min-width: 62px; text-align: center; }
-.kidbtn.kidoff { opacity: .55; cursor: default; }
+.kidbtn.kidoff { opacity: .55; cursor: pointer; }
+.kidbtn.kidoff[aria-expanded="true"] { opacity: .85; }
 .kidbtn.kidin { cursor: default; } /* a sub-option's own sub-options: shown under it, no folding */
 .kidbtn.kidoff svg { width: 12px; height: 12px; }
 .row .sum.need { color: var(--m-warning); display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; -webkit-line-clamp: unset; }
@@ -742,6 +758,10 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 .resetbtn:disabled { opacity: .38; cursor: default; background: transparent; }
 /* rows: compact locked layout */
 .row .side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex: none; }
+/* toggles: as narrow as their two words (equal halves, the longer word sets both) and closer to the
+   card's right edge; the title and description get the room (Max, Nov 20) */
+.row .side > .lt7, .row .side > .sw { margin-right: -6px; }
+.row:has(.side > .lt7, .side > .sw) { gap: 10px; }
 .row .lk { width: 14px; height: 14px; fill: var(--m-warning); vertical-align: -1px; margin-left: 6px; }
 .row .need2 { font-size: 12px; color: var(--m-warning); line-height: 1.35; margin-top: 3px; }
 .row .side .need3 { font-size: 11.5px; font-weight: 600; color: var(--m-warning); line-height: 1.3; max-width: 112px; text-align: left; align-self: flex-start; }
@@ -773,14 +793,14 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 @keyframes devcopy { 0% { opacity: 0; } 12%, 75% { opacity: 1; } 100% { opacity: 0; } }
 .devdone { display: inline-grid; place-items: center; width: 15px; height: 15px; margin-left: 5px; border-radius: 50%; background: #2e7d32; color: #fff; font-size: 10px; font-weight: 700; vertical-align: middle; line-height: 1; } /* DEV ONLY */
 /* two-way toggle naming both states (clean design) */
-.lt7 { flex: none; position: relative; display: inline-grid; grid-template-columns: 1fr 1fr; align-items: stretch; width: 112px; height: 30px; padding: 2px; border: 0; border-radius: 999px; background: var(--m-c-highest, #303134); cursor: pointer; font: inherit; font-size: 12px; font-weight: 600; touch-action: manipulation; isolation: isolate; }
+.lt7 { flex: none; position: relative; display: inline-grid; grid-template-columns: 1fr 1fr; align-items: stretch; width: auto; height: 28px; padding: 2px; border: 0; border-radius: 999px; background: var(--m-c-highest, #303134); cursor: pointer; font: inherit; font-size: 12px; font-weight: 600; touch-action: manipulation; isolation: isolate; }
 .lt7 > i { position: absolute; z-index: -1; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 2px); border-radius: 999px; background: var(--m-primary, #3ea6ff);
   transition: transform .42s cubic-bezier(.3, 1.35, .45, 1), background-color .32s var(--ease), width .2s var(--ease); }
 .lt7[data-at="r"] > i { transform: translateX(100%); }
 .lt7[data-tone="neg"] > i { background: #5c2b2b; }
 .lt7:active > i { width: calc(50% + 4px); } /* the thumb stretches a little under the finger */
 .lt7[data-at="r"]:active > i { transform: translateX(calc(100% - 12px)); }
-.lt7 > span { display: grid; place-items: center; min-width: 0; padding: 0 4px; border-radius: 999px; color: var(--m-on-var, #aaa); transition: color .3s var(--ease); }
+.lt7 > span { display: grid; place-items: center; min-width: 34px; padding: 0 7px; white-space: nowrap; border-radius: 999px; color: var(--m-on-var, #aaa); transition: color .3s var(--ease); }
 .lt7[data-at="l"] > span:first-of-type, .lt7[data-at="r"] > span:last-of-type { color: var(--on-green-ink); }
 .lt7[data-tone="neg"][data-at="l"] > span:first-of-type, .lt7[data-tone="neg"][data-at="r"] > span:last-of-type { color: #ffd9d6; }
 .lt7.still > i, .lt7.still > span, .sw.still, .sw.still::after { transition: none; }
@@ -960,6 +980,8 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 /* an icon in a pill sits on its own line (icons are display:block): centred over the text, not at its left */
 .dev .toastin svg, .dev .badge7 svg { margin: 0 auto .12em; }
 .dev .badge7 { text-align: center; }
+/* in a landscape phone (short) a message keeps its icon on its line, before the text, so it takes one line */
+.dev.land .toastin svg { display: inline-block; margin: 0 .3em 0 0; }
 /* the smaller readouts in a corner of a video (Loop 2, 1.5×): one size for all of them too */
 .dev .badge7:empty, .dev .toastin:empty { display: none; }
 .dev .badge7 { position: absolute; font-size: calc(var(--pill7) * .9 / var(--dsc, 1.7)); padding: .05em .45em; white-space: nowrap; pointer-events: none; z-index: 31; }

@@ -205,7 +205,7 @@ hidePage("feed", "hide_keyword_content_comments", "Comments with filtered words"
 hidePage("ads", "hide_fullscreen_ads", "Opening a video", player7(3) + row7(2, "Up next") + row7(4, "Up next") + `<div class="tgt7" style="position:absolute;inset:0;max-height:200px;background:#fff;color:#000;display:grid;place-items:center;font-size:7px;z-index:4"><div style="text-align:center"><b>Ad · 0:05</b><div style="font-size:6px">Install Pocket Planner</div></div></div>`, { hidden: "No full-screen ad before the video" });
 hidePage("channel", "hide_channel_tab", "A channel page", top7("Fjord & Timber", ["search", "more"]) + `<div style="height:18px;border-radius:2px;background:${ART[3]}"></div><div style="display:flex;gap:6px;font-size:6px;border-bottom:1px solid #333;padding-bottom:2px"><span>Home</span><span>Videos</span>${tgt7("<span>Shorts</span>", 1)}${tgt7("<span>Store</span>", 1)}<span>Posts</span></div>` + row7(2, "Building a tiny cabin"), { hidden: "Channel tabs you filtered are removed" });
 scen("look", "disable_layout_updates", (box, on) => {
-  situation("YouTube tests a new layout on you", true);
+  situation("YouTube tests a new layout on you"); // no blue line (Max, Nov 20)
   box.innerHTML = device("port", pageRows(feed7(`<div class="ly7" style="display:grid;gap:5px;transition:opacity .3s">${big7(3, "Building a tiny cabin")}${row7(4, "Night train to Bodø")}</div>`)));
   const dev = box.querySelector(".dev"), ly = dev.querySelector(".ly7");
   toast7(dev, "Server: try layout B", "50%");
@@ -228,14 +228,22 @@ scen("look", "native_snackbar", (box, on) => {
 });
 hidePage("look", "override_youtube_music_buttons", "Tapping a YouTube Music link", feed7(big7(6, "Midnight Tapes · Neon Fjord")) + tgt7(`<div style="padding:3px;border-radius:4px;background:#1b1b1b;font-size:6px;display:flex;gap:3px;align-items:center">${ico7("music", 7, "#ff0033")}Opens your patched YouTube Music</div>`), { invert: true, shown: "Music buttons open your chosen YouTube Music app", hidden: "Music buttons open the stock YouTube Music (stock)" });
 hidePage("look", "settings_search_history", "Searching in settings", search7("speed", `<div style="display:grid;gap:3px">${tgt7(item7("clock", "seekbar"))}${tgt7(item7("clock", "captions"))}${item7("gear", "Playback speed")}</div>`), { invert: true, shown: "Your recent settings searches are listed", hidden: "No search history (stock)" });
+// Show Morphe setting icons: the icons beside the sections of Morphe's own settings screen (not YouTube's
+// menus). Tap Morphe in YouTube's settings, the Morphe screen slides in with or without its icons.
 scen("look", "show_menu_icons", (box, on) => {
-  box.innerHTML = device("port", pageRows(feed7(big7(3, "Building a tiny cabin"))) + `<div style="position:absolute;left:0;right:0;bottom:0;background:#212121;border-radius:6px 6px 0 0;padding:5px;display:grid;gap:3px;font-size:6.5px">${[["clock", "Save to Watch later"], ["plist", "Save to playlist"], ["share", "Share"], ["flag", "Report"]].map(([i, t]) => `<div style="display:flex;gap:5px;align-items:center"><span class="mi7" style="display:inline-flex;transition:width .3s,opacity .3s;overflow:hidden;width:${on ? 0 : 8}px;opacity:${on ? 0 : 1}">${ico7(i)}</span>${t}</div>`).join("")}</div>`);
-  const dev = box.querySelector(".dev");
-  at(700, () => dev.querySelectorAll(".mi7").forEach(e => { e.style.width = on ? "8px" : "0px"; e.style.opacity = on ? 1 : 0; }));
-  return on ? "Menus show an icon next to each item" : "Text-only menu items (stock on some versions)";
+  situation("Opening Morphe settings");
+  const secs = [["dollar", "Ads"], ["home", "Feed"], ["layout", "General"], ["tv", "Player"], ["shorts", "Shorts"], ["timer", "SponsorBlock"], ["gesture", "Swipe controls"], ["speed", "Video"]];
+  const row = ([i, t]) => `<div style="display:flex;gap:6px;align-items:center;height:11px;white-space:nowrap">${on ? ico7(i, 8) : ""}<span>${t}</span></div>`;
+  box.innerHTML = device("port", pageRows(top7("Settings", ["search"]) + ["General", "Account", "Notifications", "Privacy"].map(t => `<div style="height:11px;display:flex;align-items:center">${t}</div>`).join("") + `<div class="mo7" style="height:11px;display:flex;align-items:center;gap:5px;font-weight:700">Morphe</div>`)
+    + `<div class="ms7" style="position:absolute;inset:0;background:#0f0f0f;padding:6px;display:grid;grid-auto-rows:max-content;gap:5px;font-size:7px;color:#ddd;transform:translateX(100%);transition:transform .4s var(--ease)">${top7("Morphe", ["search"])}${secs.map(row).join("")}</div>`);
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"), mo = dev.querySelector(".mo7");
+  at(150, () => { const k = devScale(dev), d = dev.getBoundingClientRect(), r = mo.getBoundingClientRect(); fingerTo(f, (r.left - d.left) / k + 14, (r.top - d.top + r.height / 2) / k); });
+  at(450, () => tapF(f));
+  at(550, () => { dev.querySelector(".ms7").style.transform = "none"; f.classList.remove("show"); }); // the finger leaves, so the list reads clearly
+  return on ? "Each Morphe settings section has its icon" : "Morphe settings sections are text only";
 });
 scen("look", "spoof_app_version", (box, on) => {
-  situation("Pretending to be an older YouTube", true);
+  situation("Pretending to be an older YouTube"); // no blue line (Max, Nov 20)
   box.innerHTML = device("port", pageRows(top7("Settings", ["search"]) + `<div style="display:grid;gap:3px;font-size:6.5px"><div>About</div><div style="color:#aaa">App version</div><b class="v7 chg7" style="font-size:8px;transition:opacity .25s">20.44.38</b></div>` + feed7(big7(3, ""))));
   const dev = box.querySelector(".dev"), v = dev.querySelector(".v7");
   if (on) toast7(dev, "Old layout comes back", "82%");
@@ -273,9 +281,9 @@ scen("ambient", "disable_fullscreen_ambient_mode", (box, on) => {
 });
 scen("captions", "auto_translate_additional_languages", (box, on) => {
   situation("Auto-translate menu in captions");
-  box.innerHTML = device("port", pageRows(player7(3) + `<div style="background:#212121;border-radius:5px;padding:4px;display:grid;gap:2px;font-size:6.5px"><b>Auto-translate</b>${["English", "German", "Spanish"].map(t => `<div>${t}</div>`).join("")}<div class="mo7" style="display:grid;gap:2px"></div></div>`));
+  box.innerHTML = device("port", pageRows(player7(3) + `<div style="background:#212121;border-radius:5px;padding:4px;display:grid;gap:1.5px;font-size:8px;line-height:1.2"><b>Auto-translate</b>${["English", "German", "Spanish"].map(t => `<div>${t}</div>`).join("")}<div class="mo7" style="display:grid;gap:2px"></div></div>`));
   const dev = box.querySelector(".dev");
-  at(700, () => { if (on) dev.querySelector(".mo7").innerHTML = ["Norwegian", "Icelandic", "Welsh", "Yoruba"].map(t => `<div style="color:#3ea6ff;animation:sheetup .25s">${t}</div>`).join(""); });
+  at(700, () => { if (on) dev.querySelector(".mo7").innerHTML = ["Norwegian", "Icelandic", "Welsh", "Yoruba"].map(t => `<div style="color:#3ea6ff;animation:ghostin .3s">${t}</div>`).join(""); });
   return on ? "More languages in the auto-translate list" : "Only the default languages (stock)";
 });
 scen("captions", "fix_transcript", (box, on) => {
@@ -338,7 +346,7 @@ scen("shorts", "shorts_disable_background_playback", (box, on) => {
   return on ? "Shorts stop when you leave the app" : "Shorts keep playing in the background like videos (patched default)";
 });
 scen("shorts", "shorts_remember_playback_speed", (box, on) => {
-  situation("Changing speed on a Short, then swiping", true);
+  situation("Changing speed on a Short, then swiping"); // no blue line (Max, Nov 20)
   // the whole story: the Short plays at 1×, you set 1.5× on it (both phones), then swipe. The next
   // Short brings its own readout: still 1.5× when remembered, back to 1× when not.
   const sp = (t, cls = "") => `<div class="sp7 toastin ${cls}" style="top:8px">${t}</div>`;
@@ -362,7 +370,7 @@ scen("shorts", "skip_live_shorts", (box, on) => {
   return on ? "Live streams in the Shorts feed are skipped" : "Live streams show up between Shorts (stock)";
 });
 scen("fullscreen", "swipe_ignore_when_locked", (box, on) => {
-  situation("Swiping while the screen is locked", true);
+  situation("Swiping while the screen is locked"); // no blue line (Max, Nov 20)
   box.innerHTML = device("land", `<div style="position:absolute;inset:0;background:${ART[3]}"></div><div class="toastin" style="top:6px">${ico7("lock", 9)} Locked</div>`);
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
   at(300, () => fingerTo(f, W * .82, H * .7)); at(500, () => fingerTo(f, W * .82, H * .3, 500));
@@ -378,7 +386,7 @@ scen("fullscreen", "swipe_lowest_value_enable_auto_brightness", (box, on) => {
   return on ? "Below the lowest level, brightness switches to automatic" : "It stays at the lowest level (stock)";
 });
 scen("fullscreen", "swipe_save_and_restore_brightness", (box, on) => {
-  situation("Leaving fullscreen after dimming the video", true);
+  situation("Leaving fullscreen after dimming the video"); // no blue line (Max, Nov 20)
   box.innerHTML = device("land", `<div class="br7" style="position:absolute;inset:0;background:${ART[3]};filter:brightness(.45)"></div>`);
   const dev = box.querySelector(".dev");
   at(600, () => { rotate(dev, "port"); dev.innerHTML = pageRows(player7(3) + row7(2, "Up next") + row7(4, "Up next")); dev.querySelector(".pg7").style.filter = on ? "none" : "brightness(.45)"; toast7(dev, on ? "Your normal brightness is back" : "Still dimmed", "80%"); });
@@ -405,7 +413,7 @@ scen("playback", "disable_playlist_autoplay", (box, on) => {
 // Stock: the panel jumps up on its own and buries the page. On: it waits as a small bar until tapped.
 SCN_HOLD.morphe_disable_player_popup_panels = 8400;
 scen("playback", "disable_player_popup_panels", (box) => {
-  situation("1 · You open a video from a playlist", true);
+  situation("1 · You open a video from a playlist"); // no blue line (Max, Nov 20)
   const desc = `<div class="ds7" style="display:grid;gap:3px"><b style="font-size:7px" class="tt7">Night train to Bodø</b><div style="display:flex;gap:3px">${chip7("Like")}${chip7("Share")}${chip7("Save")}</div><div style="font-size:6px;color:#aaa">Comments 312</div>${chat7([[1, "ola", "this view!"], [2, "mia", "take me there"], [3, "ken", "pure calm"]])}</div>`;
   const feed = `<div class="fd7" style="display:grid;gap:5px">${top7()}${row7(2, "Road trip mix", "", "Playlist · 12 videos")}${row7(4, "Lo-fi beats")}${row7(1, "Northern lights LIVE", `<span style="position:absolute;left:1px;bottom:1px;font-size:4.5px;background:#f03;padding:0 2px;border-radius:2px">LIVE</span>`, "1.2K watching")}${row7(5, "Cabin build")}</div>`;
   const sides = duoValues("morphe_disable_player_popup_panels");
@@ -440,13 +448,13 @@ scen("playback", "disable_player_popup_panels", (box) => {
   };
   const [left, right] = box.querySelectorAll(".dev");
   story(left, sides[0][0]); story(right, sides[1][0]);
-  at(4400, () => situation("2 · Then you open a live stream", true));
+  at(4400, () => situation("2 · Then you open a live stream"));
   return `Stock panels jump open; set to ${sides.find(x => x[0] === true)[1]} they wait for your tap`;
 });
 // A long session with nobody touching the phone, shown as a run of videos with a clock.
 SCN_HOLD.morphe_continue_watching_prompt = 5200;
 scen("playback", "continue_watching_prompt", (box, v) => {
-  situation("Autoplay runs for hours, nobody touches the phone", true);
+  situation("Autoplay runs for hours, nobody touches the phone"); // no blue line (Max, Nov 20)
   const vids = [[3, "Building a tiny cabin"], [2, "Night train to Bodø"], [4, "Lo-fi beats to relax"], [5, "Rain on a tin roof"]];
   box.innerHTML = device("port", pageRows(player7(3, `<span class="tm7" style="position:absolute;left:3px;bottom:3px;font-size:5.5px;background:rgba(0,0,0,.6);padding:0 3px;border-radius:3px">0:58</span><span class="pz7" style="position:absolute;left:0;bottom:0;height:2px;background:#f03;width:0"></span>`) + `<b class="tt7" style="font-size:7px">Building a tiny cabin</b><div class="run7" style="display:flex;gap:2px;align-items:center;font-size:5.5px;color:#aaa;white-space:nowrap;overflow:hidden">${ico7("clock", 7, "#aaa")}<span class="hrs7">0 h idle</span></div>` + row7(2, "Up next · Night train") + row7(4, "Up next · Lo-fi beats")));
   const dev = box.querySelector(".dev"), pv = dev.querySelector(".pg7 > div"), pz = dev.querySelector(".pz7"), hrs = dev.querySelector(".hrs7"), run = dev.querySelector(".run7");
@@ -669,7 +677,7 @@ scen("playback", "force_original_audio", (box, on) => {
 });
 // Remember live stream position: you went back in a live stream, left, and come back to it.
 scen("playback", "remember_live_stream_position", (box, on) => {
-  situation("Coming back to a live stream you rewound", true);
+  situation("Coming back to a live stream you rewound"); // no blue line (Max, Nov 20)
   const live = `<span class="lv7 badge7" style="left:3px;top:3px;background:#555">LIVE</span><span class="lag7 badge7" style="right:3px;top:3px">−12:40</span>`;
   box.innerHTML = device("port", watch7(live + prog7(62)));
   const dev = box.querySelector(".dev"), pg = dev.querySelector(".pg7");
@@ -682,15 +690,20 @@ scen("playback", "remember_live_stream_position", (box, on) => {
   });
   return "";
 });
-// Only delay with Bluetooth audio: the audio delay correction, with headphones and then the phone speaker.
+// Only delay with Bluetooth audio: Video delay holds the picture back to match the late sound of Bluetooth
+// headphones. With headphones both phones delay and stay in sync. Then the sound moves to the phone
+// speaker, which is not late: Off keeps delaying, so the picture now lags the sound; On drops the delay.
 scen("playback", "video_delay_bluetooth_only", (box, on) => {
   situation("Bluetooth headphones, then the phone speaker");
-  box.innerHTML = device("port", watch7(`<span class="out7 badge7" style="left:3px;top:3px">${ico7("headset", 6)} Bluetooth</span><span class="dl8 badge7" style="right:3px;top:3px">Delay 200 ms</span>` + prog7(35)));
+  const ms = Number(V("morphe_video_delay")) > 0 ? Number(V("morphe_video_delay")) : 200;
+  const sync = ok => `${ico7(ok ? "check" : "close", 7, ok ? "#4caf50" : "#ff6b6b")} ${ok ? "Picture and sound in sync" : "Picture lags the sound"}`;
+  box.innerHTML = device("port", watch7(`<span class="out7 badge7" style="left:3px;top:3px">${ico7("headset", 6)} Bluetooth</span><span class="dl8 badge7" style="right:3px;top:3px">Delay ${ms} ms</span>` + prog7(35)));
   const dev = box.querySelector(".dev");
-  toast7(dev, on ? "Delay only with Bluetooth" : "Delay even on the speaker", "78%");
-  at(1000, () => {
+  toast7(dev, sync(true), "78%");
+  at(2000, () => { // the headphones part lasts longer (Max, Nov 20)
     dev.querySelector(".out7").innerHTML = `${ico7("vol", 6)} Speaker`;
-    const d = dev.querySelector(".dl8"); d.textContent = on ? "No delay" : "Delay 200 ms"; d.animate([{ opacity: .3 }, { opacity: 1 }], { duration: 300 });
+    if (on) dev.querySelector(".dl8").textContent = "No delay";
+    const t = dev.querySelector(".toastin"); if (t) t.innerHTML = sync(on);
   });
   return "";
 });

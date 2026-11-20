@@ -19,7 +19,7 @@ const DEMO_TYPES = {
   transient: "hide_player_gesture_hints seekbar_thumbnail_preview sb_create_new_segment sb_create_new_segment_step sb_voting_button",
   gesture: "tap_to_seek slide_to_seek disable_precise_seeking_gesture swipe_seek disable_shorts_double_tap_to_like swap_save_and_queue_actions",
   toast: "remember_playback_speed_last_selected_toast remember_video_quality_last_selected_toast",
-  motion: "exit_fullscreen open_videos_fullscreen autoplay_mode disable_like_subscribe_glow stable_caption_blocks niconico_comments narrow_navigation_buttons",
+  motion: "exit_fullscreen autoplay_mode disable_like_subscribe_glow stable_caption_blocks niconico_comments narrow_navigation_buttons",
   overlay: "swipe_left_zone swipe_right_zone swipe_top_zone swipe_overlay_style swipe_overlay_background_opacity swipe_text_overlay_size swipe_overlay_progress_volume_color swipe_overlay_progress_brightness_color swipe_overlay_progress_speed_color swipe_zone_width swipe_overlay_timeout swipe_speed_step swipe_speed_sensitivity swipe_zone_preview swipe_speed_zone_height",
 };
 const DEMO_TYPE = {};
@@ -390,7 +390,7 @@ Object.assign(DEMOS, {
 });
 const liveDev = (rew) => `${miniVideo(5)}<span style="position:absolute;left:8px;top:7px;font-size:8px;font-weight:700;background:#cc0000;padding:1px 4px;border-radius:2px">LIVE</span><div class="msk" style="position:absolute;left:8%;right:8%;bottom:16%;height:3px;background:rgba(255,255,255,.3)"><div class="buf" style="position:absolute;left:${rew}%;right:0;top:0;bottom:0;background:rgba(255,255,255,.35)"></div><div class="mp" style="position:absolute;left:0;top:0;bottom:0;width:100%;background:#ff0033;transition:width .9s var(--ease)"></div></div>`;
 scen("seekbar", "live_stream_dvr", (box, on) => {
-  situation("A live stream that blocks rewinding", true);
+  situation("A live stream that blocks rewinding"); // no blue line (Max, Nov 20)
   box.innerHTML = device("land", liveDev(on ? 0 : 96));
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"), mp = dev.querySelector(".mp"); const W = dev.clientWidth, H = dev.clientHeight;
   at(150, () => fingerTo(f, W * .9, H * .84)); at(450, () => { fingerTo(f, W * .35, H * .84, 900); if (on) mp.style.width = "35%"; });
@@ -606,16 +606,6 @@ const coverOf = (otherId, edit = html => html, z = 29) => (SCENES[otherId] && $(
 const coverNow = (z = 30) => { const here = $("stage").firstElementChild; return here && !here.classList.contains("sm7") ? cover7(here.cloneNode(true), z) : null; };
 const covers = () => [...$("stage").querySelectorAll(".sm7")];
 const clearCovers = () => covers().forEach(n => n.remove());
-// a cover sliding up from under the screen (a page opening) or away down (going back)
-const slide7 = (el, from, to, ms, ease = COVER_EASE) => el.animate([{ transform: `translateY(${from}%)` }, { transform: `translateY(${to}%)` }], { duration: ms, easing: ease, fill: "both" });
-// a finger of the cover's own (the preview's finger sits under the covers)
-function coverTap(cover, target) {
-  const st = $("stage"), k = (st.getBoundingClientRect().width / (st.offsetWidth || 1)) || 1, b = st.getBoundingClientRect(), r = target.getBoundingClientRect();
-  // the middle of the part of the target that is inside the preview box
-  const x = (Math.max(r.left, b.left) + Math.min(r.right, b.right)) / 2, y = (Math.max(r.top, b.top) + Math.min(r.bottom, b.bottom)) / 2;
-  const f = document.createElement("div"); f.className = "finger"; f.innerHTML = I("gesture"); cover.appendChild(f);
-  tapAt((x - b.left) / k, (y - b.top) / k, f);
-}
 // The video of the Fullscreen preview, on the other screens of its stories (same title and length).
 const fsVideo = html => html.split(esc(VIDEOS[0].t)).join(esc(VIDEOS[2].t)).split(`>${VIDEOS[0].d}<`).join(`>${VIDEOS[2].d}<`);
 // The player leaving fullscreen: a copy of the preview shrinks into the watch page's player (measured)
@@ -657,32 +647,10 @@ Object.assign(DEMOS, {
       dT(() => { covers().forEach(n => { if (n !== watch) n.remove(); }); showPill("Leaves fullscreen", 1500); }, ms + 20);
     }, t + 1050);
   },
-  // A video is tapped in the feed (the Feed tab's real scene) and opens: in fullscreen (the preview as
-  // it is, sliding up as a whole) or in the normal player (the Watch page tab's real scene). Each round
-  // starts by going back to the feed: the screen that is up slides away down. One story every three loops.
-  morphe_open_videos_fullscreen(v) {
-    if (demoStep % 3) return;
-    if (!demoStep) onDemoStop(clearCovers);
-    const on = String(v) !== "DISABLED";
-    const was = covers(), up = was.length ? was[was.length - 1] : coverNow(31);
-    const feed = coverOf("feed", fsVideo, 28); if (!feed || !up) { clearCovers(); return; }
-    up.style.zIndex = "31";
-    slide7(up, 0, 100, 300, "cubic-bezier(.3,0,1,1)");
-    dT(() => covers().forEach(n => { if (n !== feed) n.remove(); }), 320);
-    const card = feed.querySelector(".thumb");
-    dT(() => { if (card) coverTap(feed, card); }, 620);
-    dT(() => {
-      const page = on ? coverNow(30) : coverOf("watch", fsVideo, 30); if (!page) return;
-      slide7(page, 100, 0, 420);
-      dT(() => {
-        // in fullscreen the copy has landed on the preview it was made from: the covers can go
-        if (on) clearCovers(); else feed.remove();
-        showPill(!on ? "Opens in the normal player" : String(v) === "PORTRAIT" ? "Opens in portrait fullscreen" : "Opens in landscape fullscreen", 1700);
-      }, 450);
-    }, 900);
-  },
 });
-def("fullscreen", "behaviour", "exit_fullscreen open_videos_fullscreen");
+def("fullscreen", "behaviour", "exit_fullscreen");
+// a plain row on the Fullscreen tab, in its "Entering and leaving fullscreen" group, with no animation (Max, Nov 20)
+def("fullscreen", "list", "open_videos_fullscreen");
 // Comments: context lines (pinned, creator heart), gift cards, and a scrollable panel
 { const base = SCENES.comments; SCENES.comments = () => base()
     .replace('<div style="position:absolute;left:0;right:0;top:44px;bottom:0;background:#212121;border-radius:14px 14px 0 0;overflow-y:auto;scrollbar-width:thin">', '<div class="inner-scroll" style="position:absolute;left:0;right:0;top:44px;bottom:0;background:#212121;border-radius:14px 14px 0 0;overflow-y:auto;scrollbar-width:thin;padding-bottom:10px">')

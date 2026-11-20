@@ -15,7 +15,8 @@ const scen = (section, keys, fn) => keys.split(/\s+/).forEach(k => { A["morphe_"
 const DEV_SIZE = { port: [92, 172], land: [190, 108], duo: [206, 186] };
 // Two phones side by side (stock on the left, the setting on the right), scaled together as one.
 // sides: [[value, label], [value, label]] from duoValues, so the words and sides match the card's toggle
-const duo7 = (left, right, sides = [[false, "Off"], [true, "On"]]) => `<div class="duo7">${[left, right].map((html, i) => `<div class="dl7"><span class="${NEG_WORD.has(sides[i][1]) ? "neg" : i ? "on" : ""}">${esc(sides[i][1])}</span>${device("port", html)}</div>`).join("")}</div>`;
+// a hand-built pair: the same markup as a generated one, so it is laid out the same way (labels beside it)
+const duo7 = (left, right, sides = [[false, "Off"], [true, "On"]]) => `<div class="duo7 gen">${[left, right].map((html, i) => `<div class="dl7"><span class="${NEG_WORD.has(sides[i][1]) ? "neg" : i ? "on" : ""}">${esc(sides[i][1])}</span><div class="side">${device("port", html)}</div><div class="sf7"></div></div>`).join("")}</div>`;
 function device(orient, inner, extra = "") {
   const [w, h] = DEV_SIZE[orient];
   return `<div class="dev ${orient}" style="width:${w}px;height:${h}px;${extra}"><div class="waves l"></div><div class="waves r"></div>${inner}<div class="finger" id="scFinger">${I("gesture")}</div></div>`;
@@ -41,10 +42,11 @@ function measurePair(gen) {
   probe.removeAttribute("data-fit"); probe.classList.add("probe7");
   probe.querySelectorAll("[id]").forEach(e => e.removeAttribute("id")); probe.querySelectorAll(".glide7").forEach(e => e.remove()); probe.classList.remove("capgo");
   gen.parentElement.appendChild(probe);
-  const size = (dir, side = false) => { probe.classList.toggle("capside", side); probe.style.flexDirection = dir; return [probe.offsetWidth, probe.offsetHeight]; };
-  const rowWH = size("row"), colWH = size("column");
+  // labels beside the phones (labout side by side, labright stacked): see the CSS
+  const size = (dir, side = false) => { probe.classList.toggle("capside", side); probe.classList.toggle("labright", dir === "column"); probe.classList.toggle("labout", dir === "row"); probe.style.flexDirection = dir; return [probe.offsetWidth, probe.offsetHeight]; };
   // captions beside the phones: only for portrait pairs (landscape phones are already wide)
   const portrait = !probe.querySelector(".dev.land");
+  const rowWH = size("row"), colWH = size("column");
   const sideWH = portrait ? size("row", true) : null;
   probe.remove();
   return { rowWH, colWH, sideWH };
@@ -67,7 +69,7 @@ const moveEase = (() => { // cubic-bezier(.4, 0, .2, 1), the CSS --ease
 function finalCapPlaces(gen) {
   const probe = gen.cloneNode(true); probe.removeAttribute("data-fit"); probe.classList.add("probe7");
   probe.querySelectorAll("[id]").forEach(e => e.removeAttribute("id")); probe.querySelectorAll(".glide7").forEach(e => e.remove());
-  probe.classList.remove("capgo"); probe.classList.toggle("capside", gen.dataset.lay === "side");
+  probe.classList.remove("capgo"); probe.classList.toggle("capside", gen.dataset.lay === "side"); probe.classList.toggle("labright", gen.classList.contains("labright")); probe.classList.toggle("labout", gen.classList.contains("labout"));
   gen.parentElement.appendChild(probe);
   const out = [...probe.querySelectorAll(".dl7 > .sf7")].map(c => inPair(probe, c));
   probe.remove(); return out;
@@ -144,11 +146,19 @@ function fitDev(orient) {
     if (first) gen.style.transition = "none"; // a new pair appears at its size; only later changes animate
     // the Off / On labels are sized for the screen (divided by --dsc), so a new pair is measured once,
     // given its scale, and measured again with its labels at their real size
-    if (first) { const m = measurePair(gen), f = (wh) => wh ? fitScale(wh[0], wh[1]) : 0; gen.style.setProperty("--dsc", Math.max(f(m.rowWH), f(m.colWH), f(m.sideWH)).toFixed(3)); }
+    // (a few rounds: a label that wraps differently at its real size changes the pair's width, and so its scale)
+    if (first) {
+      const f = (wh) => wh ? fitScale(wh[0], wh[1]) : 0;
+      for (let n = 0, m = measurePair(gen); n < 4; n++) {
+        const best = scTurns ? Math.max(f(m.rowWH), f(m.sideWH)) : Math.max(f(m.rowWH), f(m.colWH), f(m.sideWH)), was = parseFloat(gen.style.getPropertyValue("--dsc")) || 0;
+        gen.style.setProperty("--dsc", best.toFixed(3)); if (Math.abs(best - was) < .005) break;
+        m = measurePair(gen);
+      }
+    }
     const { rowWH, colWH, sideWH } = measurePair(gen);
     const row = fitScale(rowWH[0], rowWH[1]), col = fitScale(colWH[0], colWH[1]), side = sideWH ? fitScale(sideWH[0], sideWH[1]) : 0;
     const S = { side, row, column: col }, WH = { side: sideWH, row: rowWH, column: colWH };
-    let pick = side >= Math.max(row, col) * 1.04 ? "side" : row >= col ? "row" : "column";
+    let pick = side >= Math.max(row, col) * 1.04 ? "side" : row >= col || scTurns ? "row" : "column";
     // a caption changing mid-story must not flip the layout back and forth or nudge the size:
     // keep the current layout (and scale) unless the new one is clearly better
     const cur = gen.dataset.lay, curSc = parseFloat(gen.style.scale) || 0;
@@ -168,7 +178,7 @@ function fitDev(orient) {
     // The final layout lands at once, captions in their final places (hidden while their gliding copies
     // move); the phones and labels glide there (pairGlide). Taking the captions out of the flow until
     // the end of the move made everything jump into place when they came back.
-    gen.classList.remove("capgo"); gen.classList.toggle("capside", pick === "side"); gen.style.flexDirection = pick === "column" ? "column" : "row";
+    gen.classList.remove("capgo"); gen.classList.toggle("capside", pick === "side"); gen.classList.toggle("labright", pick === "column"); gen.classList.toggle("labout", pick !== "column"); gen.style.flexDirection = pick === "column" ? "column" : "row";
     gen.style.scale = sc.toFixed(3); if (first || !gen.style.getPropertyValue("--dsc")) gen.style.setProperty("--dsc", sc.toFixed(3));
     pairGlide(gen, wasParts);
     if (before) { const ends = finalCapPlaces(gen); caps.forEach((c, i) => glideCap(gen, c, before[i], ends[i])); }
@@ -197,6 +207,11 @@ let scSide = null, scStretch = 1;
 // gets no caption under them: the caption only repeated that message and took room from the phones.
 // Read from the scenario's own code, so every scenario follows it, including new ones.
 let scTold = false;
+// A story that turns a phone keeps its two phones side by side: stacked phones would have to swap to side
+// by side as one turns (or back), and on the way the moving phone crosses the other. Read from the code.
+let scTurns = false;
+const turnsPhone = fn => /\b(turn|turnTo|rotate)\(/.test(String(fn));
+const SCN_TURNS = new Set(); // stories whose turn is in a helper they are given (gestureScen's result)
 const toldInside = fn => /toast7\(|check7\(|toastin/.test(String(fn));
 // The situation line: the first one of a story is there with the phones (it used to fade in 160 ms
 // after them); a later, different line crossfades; the same line again (each new run) stays put.
@@ -268,7 +283,7 @@ function haptic(eventLabel, script) {
     // the event is the situation line; vibrates / no vibration is what the buzz icon (or the crossed-out
     // one) shows on each phone, so there is no caption repeating it under them. No line when the phones
     // already say the event (the "Release to cancel" pill, the held finger with its 2x pill)
-    if (eventLabel) situation(eventLabel, true);
+    if (eventLabel) situation(eventLabel); // no blue line on the haptics stories (Max, Nov 20)
     return "";
   };
 }
@@ -321,8 +336,16 @@ scen("seekbar", "disable_haptic_feedback_zoom", haptic("Pinch to zoom snaps to f
 scen("fullscreen", "swipe_haptic_feedback", (box, on) => {
   box.innerHTML = device("land", `${miniVideo(6)}`);
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
+  // the volume level fills one step at a time; with ticks on, each step keeps a small buzz mark, so the
+  // two phones still differ when the swipe is over (no white line here, Max, Nov 20)
+  dev.insertAdjacentHTML("beforeend", `<div class="lvl7" style="position:absolute;left:8px;top:18%;bottom:18%;width:6px;display:grid;grid-template-rows:repeat(4,1fr);gap:2px">${[3, 2, 1, 0].map(i => `<i data-s="${i}" style="position:relative;border-radius:2px;background:#ffffff33;transition:background .15s"></i>`).join("")}</div>`);
   at(100, () => fingerTo(f, W * .82, H * .8)); at(300, () => fingerTo(f, W * .82, H * .2, 1400));
-  [500, 800, 1100, 1400].forEach(t => at(t, () => buzz(dev, on)));
+  [500, 800, 1100, 1400].forEach((t, i) => at(t, () => {
+    const seg = dev.querySelector(`.lvl7 [data-s="${i}"]`); seg.style.background = "#fff";
+    if (on) seg.insertAdjacentHTML("beforeend", `<span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);display:flex">${ico7("vibration", 10, "#4caf50")}</span>`);
+    buzz(dev, on);
+  }));
+  at(1900, () => f.classList.remove("show"));
   return on ? "Swiping volume or brightness: a tick at each step" : "Swiping volume or brightness: no ticks";
 });
 // Where a component really sits in the live preview, as fractions of its video frame, so a
@@ -360,11 +383,11 @@ scen("player", "copy_video_link_with_timestamp_button", (box, on) => {
   const toast = link => { dev.querySelectorAll(".toastin").forEach(e => e.remove()); dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:42%">Link copied<br><b style="font-weight:500;color:#9cd1ff">${link}</b><br><span style="color:#bbb">${link === timed ? "opens at 3:12" : "opens at the start"}</span></div>`); };
   const press = on => { btn.style.transform = on ? "scale(.88)" : ""; btn.style.background = on ? "rgba(62,166,255,.55)" : "rgba(0,0,0,.45)"; };
   const fade = () => dev.querySelectorAll(".toastin").forEach(e => { e.style.transition = "opacity .3s"; e.style.opacity = 0; });
-  situation("Tap the Copy link button", true);
+  situation("Tap the Copy link button"); // no blue line (Max, Nov 20)
   at(150, () => fingerTo(f, W * fx, H * fy, 350));
   at(800, () => { tapF(f); press(true); }); at(1000, () => { press(false); toast(on ? timed : plain); });
   at(2900, fade);
-  at(3300, () => situation("Tap and hold it", true));
+  at(3300, () => situation("Tap and hold it"));
   at(3500, () => { f.classList.add("hold"); press(true); });
   at(4500, () => { f.classList.remove("hold"); press(false); toast(on ? plain : timed); });
   at(6600, fade);
@@ -657,7 +680,7 @@ scen("sponsorblock", "sb_auto_hide_skip_button", (box, on) => {
 });
 
 // ------------------------------------------------------------------ fullscreen gestures (scenarios)
-const gestureScen = (key, orient, from, to, label, result) => scen("fullscreen", key, (box, disabled) => {
+const gestureScen = (key, orient, from, to, label, result) => (turnsPhone(result) && SCN_TURNS.add("morphe_" + key), scen("fullscreen", key, (box, disabled) => {
   situation(label);
   box.innerHTML = device(orient, orient === "land" ? miniVideo(6) : playerArea(6));
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
@@ -667,7 +690,7 @@ const gestureScen = (key, orient, from, to, label, result) => scen("fullscreen",
     result(dev);
   });
   return disabled ? `${label}: ignored` : `${label}: ${result.text}`;
-});
+}));
 // A message pill inside a phone always stays inside it: one that would run past the bottom (a long
 // message, or a phone drawn small) moves up just enough. Watches the scenario canvas, so it covers
 // every scenario's pills however they were added.
@@ -684,17 +707,34 @@ function keepPillIn(t) {
 // below. Only pills placed in the same box are compared (a readout riding on a sliding Short is not).
 function pillsApart(dev) {
   if (!dev.isConnected) return;
-  const k = devScale(dev), gap = 2;
+  const k = devScale(dev), gap = 2, D = dev.getBoundingClientRect(), edge = 3 * k + dev.clientLeft * k;
   // where a pill is drawn, without the growth of a pulse that may be running: its middle, and its laid-out size
   const box = e => { const r = e.getBoundingClientRect(), w = e.offsetWidth * k, h = e.offsetHeight * k, x = (r.left + r.right) / 2, y = (r.top + r.bottom) / 2; return { l: x - w / 2, r: x + w / 2, t: y - h / 2, b: y + h / 2 }; };
-  const pills = [...dev.querySelectorAll(".toastin, .badge7")].filter(e => !e.classList.contains("dyn") && e.offsetWidth && getComputedStyle(e).position === "absolute" && parseFloat(getComputedStyle(e).opacity) > .5)
-    .map((e, i) => ({ e, i, q: box(e) })).sort((a, b) => Math.round((a.q.t - b.q.t) / k) || a.i - b.i); // top to bottom, and in a row the first one stays
+  // a pill fading in (its pop animation) counts already; only one hidden on purpose does not
+  const pills = [...dev.querySelectorAll(".toastin, .badge7")].filter(e => !e.classList.contains("dyn") && e.offsetWidth && getComputedStyle(e).position === "absolute" && getComputedStyle(e).visibility !== "hidden" && parseFloat(e.style.opacity || "1") > .5)
+    .map((e, i) => { const o = { e, i, q: box(e), old: !!e._apart }; e._apart = true; return o; }).sort((a, b) => Math.round((a.q.t - b.q.t) / k) || a.i - b.i); // top to bottom, and in a row the first one stays
+  // pills in the same screen (their boxes coincide), not one riding on a Short that slides over the other
+  const sameBox = (x, y) => { if (x.offsetParent === y.offsetParent) return true; const p = x.offsetParent && x.offsetParent.getBoundingClientRect(), q = y.offsetParent && y.offsetParent.getBoundingClientRect(); return !!p && !!q && Math.abs(p.left - q.left) < 1 && Math.abs(p.top - q.top) < 1 && Math.abs(p.width - q.width) < 1 && Math.abs(p.height - q.height) < 1; };
+  // a pill already on screen that moves glides there (a quarter second), so nothing jumps; a new one is
+  // placed before it is first drawn (this runs in the frame it was added)
+  const glide = (o, dx, dy) => { if (o.old && (dx || dy)) o.e.animate([{ translate: `${-dx / k}px ${-dy / k}px` }, { translate: "0px 0px" }], { duration: 250, easing: "cubic-bezier(.4,0,.2,1)", composite: "add" }); };
+  let pair = [];
+  const hits = (q, but) => pills.some(o => o !== but && !pair.includes(o) && Math.min(o.q.r, q.r) - Math.max(o.q.l, q.l) > 1 && Math.min(o.q.b, q.b) - Math.max(o.q.t, q.t) > 1);
   for (let j = 1; j < pills.length; j++) for (let i = 0; i < j; i++) {
-    const a = pills[i], b = pills[j]; if (a.e.offsetParent !== b.e.offsetParent || a.e.contains(b.e) || b.e.contains(a.e)) continue;
+    const a = pills[i], b = pills[j]; if (!sameBox(a.e, b.e) || a.e.contains(b.e) || b.e.contains(a.e)) continue;
     if (Math.min(a.q.r, b.q.r) - Math.max(a.q.l, b.q.l) <= 1 || Math.min(a.q.b, b.q.b) - Math.max(a.q.t, b.q.t) <= 1) continue;
+    pair = [a, b];
+    // under the other one, if the phone has the room; else beside it (right, then left), at its own height
     const down = a.q.b - b.q.t + gap * k;
-    b.e.style.top = (b.e.offsetTop + down / k) + "px"; b.e.style.bottom = "auto";
-    b.q.t += down; b.q.b += down;
+    if (b.q.b + down <= D.bottom - edge) { b.e.style.top = (b.e.offsetTop + down / k) + "px"; b.e.style.bottom = "auto"; b.q.t += down; b.q.b += down; glide(b, 0, down); continue; }
+    const w = b.q.r - b.q.l, tries = [a.q.r + gap * k, a.q.l - gap * k - w].map(l => ({ l, r: l + w, t: b.q.t, b: b.q.b })).filter(q => q.l >= D.left + edge && q.r <= D.right - edge && !hits(q, b));
+    const shift = (o, q) => { const dx = q.l - o.q.l; o.e.style.left = (o.e.offsetLeft + dx / k) + "px"; o.e.style.right = "auto"; o.q = q; glide(o, dx, 0); };
+    if (tries.length) { shift(b, tries[0]); continue; }
+    // or both side by side around the middle of the phone (two centred messages)
+    const wa = a.q.r - a.q.l, mid = (D.left + D.right) / 2, l0 = mid - (wa + gap * k + w) / 2;
+    const qa = { l: l0, r: l0 + wa, t: a.q.t, b: a.q.b }, qb = { l: qa.r + gap * k, r: qa.r + gap * k + w, t: b.q.t, b: b.q.b };
+    if (qa.l >= D.left + edge && qb.r <= D.right - edge && !hits(qa, a) && !hits(qb, b)) { shift(a, qa); shift(b, qb); continue; }
+    b.e.style.top = (b.e.offsetTop + down / k) + "px"; b.e.style.bottom = "auto"; b.q.t += down; b.q.b += down;
     if (b.e.matches(".toastin")) keepPillIn(b.e);
   }
 }
@@ -739,7 +779,8 @@ new MutationObserver(ms => {
     });
   });
   hit.forEach(flash7);
-  if (devs.size) requestAnimationFrame(() => devs.forEach(pillsApart)); // after keepPillIn, in the same frame
+  // at once (a pill added inside a frame callback is drawn in that frame), and again after keepPillIn
+  if (devs.size) { devs.forEach(pillsApart); requestAnimationFrame(() => devs.forEach(pillsApart)); }
 }).observe(document.getElementById("canvas"), { childList: true, subtree: true, characterData: true }); // $() is defined later, in list.js
 // swap what the device shows (fullscreen video vs portrait watch page) as it turns
 // The new screen goes in underneath, fully drawn, and the old one fades off the top of it. (Both used to
@@ -922,15 +963,15 @@ def("shorts", "vis", "hide_shorts_paused_overlay_buttons hide_shorts_save_sound_
 def("nav", "style", "navigation_bar_glass navigation_bar_glass_opacity navigation_bar_glass_height navigation_bar_glass_round");
 scen("nav", "disable_auto_hide_navigation_bar", (box, on) => {
   situation("Scrolling the home feed");
-  box.innerHTML = device("port", `<div class="feedscroll" style="position:absolute;left:0;right:0;top:0;transition:transform 1s var(--ease)">${[0, 1, 2, 3, 4].map(i => `<div style="height:46px;margin:6px;background:${ART[i]};border-radius:4px"></div>`).join("")}</div><div class="nb" style="position:absolute;left:0;right:0;bottom:0;height:16px;background:#0f0f0f;border-top:1px solid #333;transition:transform .35s var(--ease)"></div>`);
+  box.innerHTML = device("port", `<div class="feedscroll" style="position:absolute;left:0;right:0;top:0;transition:transform 1s var(--ease)">${[0, 1, 2, 3, 4].map(i => `<div style="height:46px;margin:6px;background:${ART[i]};border-radius:4px"></div>`).join("")}</div>${nav7().replace('<div style="', '<div class="nb" style="transition:transform .35s var(--ease);')}`); // the bar shows its tab icons (Max, Nov 20)
   at(300, () => { box.querySelector(".feedscroll").style.transform = "translateY(-90px)"; if (!on) box.querySelector(".nb").style.transform = "translateY(100%)"; });
   return on ? "The navigation bar stays while scrolling" : "The navigation bar slides away while scrolling";
 });
 scen("nav", "navigation_bar_animations", (box, on) => {
   situation("Switching tabs");
-  box.innerHTML = device("port", `<div class="pg" style="position:absolute;inset:0 0 16px 0;background:${ART[1]};transition:${on ? "opacity .4s, transform .4s" : "none"}"></div><div style="position:absolute;left:0;right:0;bottom:0;height:16px;background:#0f0f0f;border-top:1px solid #333"></div>`);
+  box.innerHTML = device("port", `<div class="pg" style="position:absolute;inset:0 0 16px 0;background:${ART[1]};transition:${on ? "opacity .4s, transform .4s" : "none"}"></div>${nav7()}`); // the bar shows its tab icons (Max, Nov 20)
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"), pg = box.querySelector(".pg"); const W = dev.clientWidth, H = dev.clientHeight;
-  at(150, () => fingerTo(f, W * .35, H - 8)); at(400, () => tapF(f));
+  at(150, () => fingerTo(f, W * .3, H - 8)); // onto the Shorts tab at(400, () => tapF(f));
   at(450, () => { if (on) { pg.style.opacity = "0"; pg.style.transform = "translateX(-12px)"; later(() => { pg.style.transition = "none"; pg.style.background = ART[5]; pg.style.transform = "translateX(12px)"; void pg.offsetWidth; pg.style.transition = "opacity .4s, transform .4s"; pg.style.opacity = "1"; pg.style.transform = "none"; }, 400); } else pg.style.background = ART[5]; });
   return on ? "The new tab slides and fades in" : "The new tab appears instantly";
 });
@@ -1077,6 +1118,9 @@ const FOOT_OFF = new Set([
   "morphe_open_channel_of_live_avatar", // "The avatar opens the channel": the channel page opens in the phone
   "morphe_shorts_player_type", // "Opens in the Shorts player": the Off / On labels say it
   "morphe_custom_filter", // "No custom filter": the labels and the drawing say it
+  "morphe_swipe_haptic_feedback", // the buzz icon on each phone says it (Max, Nov 20)
+  "morphe_navigation_bar_animations", // the tab change is drawn (Max, Nov 20)
+  "morphe_disable_auto_hide_navigation_bar", // the bar staying or sliding away is drawn (Max, Nov 20)
 ]);
 let askOnly = false; // drawing only the default side while the other waits for a choice
 const SCN_SELF_DUO = new Set(["morphe_disable_player_popup_panels", "morphe_playback_buffer_size", "morphe_skip_silence_minimum_pause"]); // one phone that tells all values itself
@@ -1103,8 +1147,12 @@ function playScenario(k, prevValue) {
   const fn = SCN[k]; if (!fn) return;
   clock.start("scenario"); clock.stop("steps");
   const canvas = $("canvas"); const stick = $("stick");
-  const wasHidden = stick.hidden || stick.classList.contains("noscene");
-  if (wasHidden) { stick.hidden = false; stick.classList.remove("noscene"); $("stage").innerHTML = `<div style="height:320px"></div>`; }
+  // a tab with no preview opens the preview area for the comparison; stopping it closes the area again
+  // (the comparison loops now, so there is no end of story to do it)
+  if (!scClose && (stick.hidden || stick.classList.contains("noscene"))) {
+    stick.hidden = false; stick.classList.remove("noscene"); $("stage").innerHTML = `<div style="height:320px"></div>`;
+    scClose = () => { if (!SCENES[section]) { stick.hidden = !grouped; stick.classList.add("noscene"); $("stage").innerHTML = ""; } };
+  }
   // the comparison draws inside the preview as it is: the preview area never grows for it
   canvas.innerHTML = `<div class="cap"><b>${esc(shownTitle(k))}</b></div><div class="sit"></div><div class="scbox" style="display:grid;place-items:center"></div><div class="foot"></div><div class="prog"></div>`;
   canvas.classList.add("show");
@@ -1121,7 +1169,7 @@ function playScenario(k, prevValue) {
   const d = defaults[k], choices = entriesFor(k).filter(e => !sameVal(e.value, d));
   const ask = !self && PREF[k].type !== "boolean" && choices.length > 1 && sameVal(V(k), d) && (prevValue === undefined || sameVal(prevValue, d));
   const draw = () => {
-    clock.start("steps"); scStretch = stretch; scTold = toldInside(fn) || FOOT_OFF.has(k); scCollect = [];
+    clock.start("steps"); scStretch = stretch; scTold = toldInside(fn) || FOOT_OFF.has(k); scTurns = turnsPhone(fn) || SCN_TURNS.has(k); scCollect = [];
     try { drawSides(); } finally { const list = scCollect; scCollect = null; startCollected(list); }
     fitDev();
   };
@@ -1140,26 +1188,36 @@ function playScenario(k, prevValue) {
       });
     }
   };
-  const start = () => {
-    draw();
-    for (let r = 1; r < runs; r++) clock.after("scenario", SC_FADE + r * slot, draw);
-    canvas.querySelector(".prog").animate([{ width: "0%" }, { width: "100%" }], { duration: SC_TOTAL, delay: SC_FADE, fill: "forwards" });
-    clock.after("scenario", SC_FADE + SC_TOTAL, () => {
-      canvas.classList.remove("show");
-      clock.after("scenario", SC_FADE, () => { clock.stop("scenario"); clock.stop("steps"); canvas.innerHTML = ""; if (wasHidden && !SCENES[section]) { stick.hidden = !grouped; stick.classList.add("noscene"); $("stage").innerHTML = ""; } });
-    });
+  // The comparison plays over and over while its setting stays selected (Max, Nov 20); selecting
+  // another setting or leaving the tab stops it (stopScenario). The progress line shows each round.
+  const round = (first) => {
+    if (!first) draw();
+    for (let r = 1; r < runs; r++) clock.after("scenario", (first ? SC_FADE : 0) + r * slot, draw);
+    canvas.querySelector(".prog").animate([{ width: "0%" }, { width: "100%" }], { duration: SC_TOTAL, delay: first ? SC_FADE : 0, fill: "forwards" });
+    clock.after("scenario", (first ? SC_FADE : 0) + SC_TOTAL, () => round(false));
   };
+  const start = () => { draw(); round(true); };
   if (!ask) return start();
   // the default side is drawn as its first frame and held; the other side waits, empty, until a
   // choice is picked on the setting's pills in the list (which plays the comparison)
   // the default side plays its whole story and stays on its last frame (it used to freeze on its first
   // frame, which cut the story short: the Shorts quality badge never appeared)
-  askOnly = true; try { draw(); } finally { askOnly = false; }
-  const right = box.querySelectorAll(".dl7")[1];
-  right.querySelector("span").textContent = "Select an option"; right.querySelector("span").classList.add("ask");
-  const dev = box.querySelector(".dl7 .dev"), dw = dev ? dev.style.width : "92px", dh = dev ? dev.style.height : "172px"; // the size of the default side's phone
-  right.querySelector(".side").innerHTML = `<div class="ask7" style="width:${dw};height:${dh}"></div>`;
-  fitDev();
+  // (it plays again and again too, while it waits)
+  const askRound = () => {
+    askOnly = true; try { draw(); } finally { askOnly = false; }
+    const right = box.querySelectorAll(".dl7")[1];
+    // the request sits in the empty phone, not as a long label beside it (labels are beside the phones)
+    right.querySelector("span").textContent = ""; right.querySelector("span").classList.add("ask");
+    const dev = box.querySelector(".dl7 .dev"), dw = dev ? dev.style.width : "92px", dh = dev ? dev.style.height : "172px"; // the size of the default side's phone
+    right.querySelector(".side").innerHTML = `<div class="ask7" style="width:${dw};height:${dh}"><span>Select an option</span></div>`;
+    fitDev();
+    clock.after("scenario", slot, askRound);
+  };
+  askRound();
   document.querySelectorAll(`#list [data-row="${k}"] .ctl .opt`).forEach(o => { o.classList.remove("nudge7"); void o.offsetWidth; o.classList.add("nudge7"); });
 }
-function stopScenario() { clock.stop("scenario"); clock.stop("steps"); $("canvas").classList.remove("show"); }
+let scClose = null;
+function stopScenario() {
+  clock.stop("scenario"); clock.stop("steps"); $("canvas").classList.remove("show");
+  if (scClose) { const c = scClose; scClose = null; c(); }
+}

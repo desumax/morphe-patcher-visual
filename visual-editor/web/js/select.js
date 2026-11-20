@@ -57,10 +57,11 @@ function select(k, from, arrive = false) {
   focusSetting(k, { from, arrive });
   renderInspector();
   if (from === "list" && mode === "mod" && A[k] && (A[k].kind === "vis" || A[k].kind === "overlay") && !shown(k) && document.querySelector(`#stage [data-k="${k}"]`)) ghost(k);
-  if (DEMOS[k]) startDemo(k); else stopDemo();
   // any move to another setting ends a running animation (also a change made through a value pill,
-  // which selects without a "from")
-  if (SCN[k] && from) playScenario(k); else if (k !== prevSel) stopScenario();
+  // which selects without a "from"); stopped before a demo starts, as stopping may close the preview area
+  if (!(SCN[k] && from) && k !== prevSel) stopScenario();
+  if (DEMOS[k]) startDemo(k); else stopDemo();
+  if (SCN[k] && from) playScenario(k);
   const a = A[k];
   const notApplicable = a && (a.kind === "vis" || a.kind === "overlay") && a.section === section && !CUSTOM_KEYS.has(k) && !document.querySelector(`#stage [data-k="${k}"], #stage [data-also="${k}"]`);
   if (notApplicable && SCENES[section]) {
@@ -198,6 +199,7 @@ function holdRow(k) {
 }
 function afterChange(k, before) {
   if (peekKid && kidVisible(peekKid)) peekKid = null;
+  if (peekPar && sectionKeys().filter(x => PARENT_OF[x] === peekPar || DIRECT_PARENT[x] === peekPar).every(kidVisible)) peekPar = null; // unlocked: shown as usual
   const settle = holdRow(k);
   if (k === "morphe_change_form_factor") buildMembers(); // a Tablet layout brings back tablet-only settings (offDevice)
   commit(); select(k); settle();
@@ -232,7 +234,7 @@ function switchSection(id, after) {
   parts.forEach(p => { p.classList.remove("swap-in"); p.classList.add("swap-out"); });
   stopDemo(); stopScenario();
   setTimeout(() => {
-    section = id; selected = null; peekKid = null; trayOpen = false; lastTab[groupOf(id).id] = id;
+    section = id; selected = null; peekKid = null; peekPar = null; trayOpen = false; lastTab[groupOf(id).id] = id;
     $("scroller").scrollTop = 0; renderAll();
     const h1 = shown(box) ? box.offsetHeight : 0;
     if (h0 && h1 && Math.abs(h1 - h0) > 2) {

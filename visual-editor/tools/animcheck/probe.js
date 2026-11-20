@@ -265,7 +265,11 @@
       const duo = cmp.filter(s => s.sides && !s.ask);
       if (duo.length > 4) {
         if (!duo.some(s => s.sides[0] !== s.sides[1])) add("sides-same", 0, "the two phones never differ");
-        else { const last = duo[duo.length - 1]; if (last.sides[0] === last.sides[1]) add("sides-end-same", last.t, "the two phones end the same", "warn"); }
+        else {
+          // comparisons loop now (Max, Nov 20): the end is the last frame before the next round starts
+          const roundEnd = ss[0].t + SC_FADE + SC_TOTAL - 20, inRound = duo.filter(s => s.t < roundEnd), last = (inRound.length ? inRound : duo)[(inRound.length ? inRound : duo).length - 1];
+          if (last.sides[0] === last.sides[1]) add("sides-end-same", last.t, "the two phones end the same", "warn");
+        }
       }
       const first = cmp[0].t, change = cmp.find(s => s.t > first + 60 && s.muts > 0 && s.devs.length);
       // nothing moving until the story starts over is a still comparison (two pictures side by side), which is fine

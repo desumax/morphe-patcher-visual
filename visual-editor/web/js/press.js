@@ -107,6 +107,8 @@ $("list").addEventListener("keydown", e => { const inp = e.target.closest("[data
 $("list").addEventListener("click", e => {
   const res = e.target.closest("[data-res]");
   if (res) { openResult(res.dataset.res); return; }
+  const kp = e.target.closest("[data-kidpeek]");
+  if (kp) { const k = kp.dataset.kidpeek; peekPar = peekPar === k ? null : k; collapsed.delete(k); renderList(); if (peekPar) select(k); return; }
   const kb = e.target.closest("[data-kidtoggle]");
   if (kb) {
     const k = kb.dataset.kidtoggle, open = collapsed.has(k);
