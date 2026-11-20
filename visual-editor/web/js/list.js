@@ -30,7 +30,7 @@ function renderBar() {
 // Screens Max has signed off ("lock it"). Shown as a small check in the screen menu and on the tabs.
 // To remove before shipping: delete this block, the .devdone CSS rule, and the three devMark /
 // devMarkGroup calls (screen menu card, group card, tab).
-const DEV_DONE = new Set(["player", "seekbar", "fullscreen", "flyout"]); // section ids, e.g. "player"
+const DEV_DONE = new Set(["player", "seekbar", "fullscreen", "flyout", "endscreen"]); // section ids, e.g. "player"
 // settings Max approved without a preview: a tab id approves all of its settings that have none, a key one setting
 const NO_PREVIEW_OK = new Set(["fullscreen", "player", "morphe_custom_seekbar_thumb_file", "morphe_swipe_seek_sensitivity"]);
 const devMark = id => DEV_DONE.has(id) ? `<span class="devdone" title="Finished (development marker)">✓</span>` : "";

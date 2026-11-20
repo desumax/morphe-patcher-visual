@@ -360,7 +360,7 @@ Object.assign(DEMOS, {
 });
 const liveDev = (rew) => `${miniVideo(5)}<span style="position:absolute;left:8px;top:7px;font-size:8px;font-weight:700;background:#cc0000;padding:1px 4px;border-radius:2px">LIVE</span><div class="msk" style="position:absolute;left:8%;right:8%;bottom:16%;height:3px;background:rgba(255,255,255,.3)"><div class="buf" style="position:absolute;left:${rew}%;right:0;top:0;bottom:0;background:rgba(255,255,255,.35)"></div><div class="mp" style="position:absolute;left:0;top:0;bottom:0;width:100%;background:#ff0033;transition:width .9s var(--ease)"></div></div>`;
 scen("seekbar", "live_stream_dvr", (box, on) => {
-  situation("A live stream that blocks rewinding");
+  situation("A live stream that blocks rewinding", true);
   box.innerHTML = device("land", liveDev(on ? 0 : 96));
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"), mp = dev.querySelector(".mp"); const W = dev.clientWidth, H = dev.clientHeight;
   at(150, () => fingerTo(f, W * .9, H * .84)); at(450, () => { fingerTo(f, W * .35, H * .84, 900); if (on) mp.style.width = "35%"; });

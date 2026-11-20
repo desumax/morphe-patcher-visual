@@ -161,8 +161,8 @@ const SECTIONS = [
 // Experimental grouped layout: six screens, each split into tabs that sit right under the live preview.
 // A tab is one of the screens above, so switching tabs switches the preview (and its animations) too.
 const GROUPS = [
-  { id: "g_player", icon: "play", title: "Player", tabs: [["player", "Controls"], ["seekbar", "Seekbar & gestures"], ["fullscreen", "Fullscreen"], ["flyout", "Player menu"]] },
-  { id: "g_playback", icon: "speed", title: "Playback", tabs: [["playback", "Video & audio"], ["behaviour", "Behaviour"], ["endscreen", "End screen"], ["captions", "Captions"], ["miniplayer", "Miniplayer"], ["sponsorblock", "SponsorBlock"]] },
+  { id: "g_player", icon: "play", title: "Player", tabs: [["player", "Controls"], ["seekbar", "Seekbar & gestures"], ["fullscreen", "Fullscreen"], ["flyout", "Player menu"], ["miniplayer", "Miniplayer"]] },
+  { id: "g_playback", icon: "speed", title: "Playback", tabs: [["playback", "Video & audio"], ["behaviour", "Behaviour"], ["endscreen", "End screen"], ["captions", "Captions"], ["sponsorblock", "SponsorBlock"]] },
   { id: "g_watch", icon: "like", title: "Watch page", tabs: [["watch", "Actions"], ["description", "Description"], ["comments", "Comments"], ["danmaku", "Flying comments"], ["ambient", "Ambient mode"]] },
   { id: "g_feed", icon: "home", title: "Feed", tabs: [["feed", "Home"], ["shorts", "Shorts"], ["ads", "Ads"], ["dearrow", "DeArrow"]] },
   { id: "g_browse", icon: "layout", title: "Browsing", tabs: [["channel", "Channel page"], ["explore", "Explore menu"], ["nav", "Navigation"]] },

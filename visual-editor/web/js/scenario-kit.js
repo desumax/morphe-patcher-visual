@@ -51,7 +51,7 @@ const chat7 = (rows) => rows.map(([c, n, t]) => `<div style="display:flex;gap:3p
 // On: nothing happens until you pull down yourself.
 SCN_HOLD.morphe_disable_auto_feed_refresh = 4600;
 scen("feed", "disable_auto_feed_refresh", (box, on) => {
-  situation("You scrolled to a video, then left the app for a while");
+  situation("You scrolled to a video, then left the app for a while", true);
   const mark = `<span class="bm7" style="position:absolute;right:-3px;top:-3px;padding:0 3px;border-radius:3px;background:#3ea6ff;color:#000;font-size:5px;font-weight:700">YOUR SPOT</span>`;
   box.innerHTML = device("port", pageRows(feed7(`<div class="fd7" style="display:grid;gap:5px;transition:opacity .25s">${big7(3, "Building a tiny cabin")}${row7(4, "Night train to Bodø")}<div style="position:relative;outline:1.5px solid #3ea6ff;outline-offset:1px;border-radius:2px">${row7(5, "Why ice is slippery")}${mark}</div>${row7(2, "Lo-fi beats")}</div>`)));
   const dev = box.querySelector(".dev"), fd = dev.querySelector(".fd7"), f = dev.querySelector(".finger"), W = dev.clientWidth, H = dev.clientHeight;
@@ -184,7 +184,7 @@ hidePage("feed", "hide_keyword_content_comments", "Comments with filtered words"
 hidePage("ads", "hide_fullscreen_ads", "Opening a video", player7(3) + row7(2, "Up next") + row7(4, "Up next") + `<div class="tgt7" style="position:absolute;inset:0;max-height:200px;background:#fff;color:#000;display:grid;place-items:center;font-size:7px;z-index:4"><div style="text-align:center"><b>Ad · 0:05</b><div style="font-size:6px">Install Pocket Planner</div></div></div>`, { hidden: "No full-screen ad before the video" });
 hidePage("channel", "hide_channel_tab", "A channel page", top7("Fjord & Timber", ["search", "more"]) + `<div style="height:18px;border-radius:2px;background:${ART[3]}"></div><div style="display:flex;gap:6px;font-size:6px;border-bottom:1px solid #333;padding-bottom:2px"><span>Home</span><span>Videos</span>${tgt7("<span>Shorts</span>", 1)}${tgt7("<span>Store</span>", 1)}<span>Posts</span></div>` + row7(2, "Building a tiny cabin"), { hidden: "Channel tabs you filtered are removed" });
 scen("look", "disable_layout_updates", (box, on) => {
-  situation("YouTube tests a new layout on you");
+  situation("YouTube tests a new layout on you", true);
   box.innerHTML = device("port", pageRows(feed7(`<div class="ly7" style="display:grid;gap:5px;transition:opacity .3s">${big7(3, "Building a tiny cabin")}${row7(4, "Night train to Bodø")}</div>`)));
   const dev = box.querySelector(".dev"), ly = dev.querySelector(".ly7");
   toast7(dev, "Server: try layout B", "50%");
@@ -214,7 +214,7 @@ scen("look", "show_menu_icons", (box, on) => {
   return on ? "Menus show an icon next to each item" : "Text-only menu items (stock on some versions)";
 });
 scen("look", "spoof_app_version", (box, on) => {
-  situation("Pretending to be an older YouTube");
+  situation("Pretending to be an older YouTube", true);
   box.innerHTML = device("port", pageRows(top7("Settings", ["search"]) + `<div style="display:grid;gap:3px;font-size:6.5px"><div>About</div><div style="color:#aaa">App version</div><b class="v7 chg7" style="font-size:8px;transition:opacity .25s">20.44.38</b></div>` + feed7(big7(3, ""))));
   const dev = box.querySelector(".dev"), v = dev.querySelector(".v7");
   if (on) toast7(dev, "Old layout comes back", "82%");
@@ -287,7 +287,7 @@ scen("comments", "sanitize_comments_highlighted_search_links", (box, on) => {
   return on ? "Words in comments are plain text, not search links" : "YouTube turns some words into search links (stock)";
 });
 scen("shorts", "disable_shorts_resuming_on_startup", (box, on) => {
-  situation("Opening the app after watching Shorts");
+  situation("Opening the app after watching Shorts", true);
   box.innerHTML = device("port", `<div style="position:absolute;inset:0;display:grid;place-items:center;background:#000"><div style="width:24px;height:17px;border-radius:5px;background:#ff0033;display:grid;place-items:center">${ico7("play", 10)}</div></div>`);
   const dev = box.querySelector(".dev");
   at(700, () => { dev.innerHTML = on ? pageRows(feed7(big7(3, "Building a tiny cabin") + row7(4, "Night train to Bodø"))) + nav7() : `<div style="position:absolute;inset:0;background:${ART[5]}"></div><div style="position:absolute;right:4px;bottom:20px;display:grid;gap:4px">${ico7("like", 10)}${ico7("comment", 10)}${ico7("share", 10)}</div>` + nav7(); });
@@ -304,21 +304,21 @@ hidePage("shorts", "hide_shorts_video_description", "A Short", `<div style="posi
 hidePage("shorts", "hide_shorts_live_preview", "Shorts feed", `<div style="position:absolute;inset:0;background:${ART[5]}"></div>` + `<div class="tgt7" style="position:absolute;left:5px;top:10px;padding:2px 4px;border-radius:3px;background:#cc0000;font-size:6px">LIVE · Northern lights</div>`, { raw: true });
 hidePage("shorts", "hide_shorts_search_suggestions", "A Short", `<div style="position:absolute;inset:0;background:${ART[5]}"></div><div class="tgt7" style="position:absolute;left:5px;right:5px;top:12px;padding:2px 4px;border-radius:6px;background:rgba(0,0,0,.6);font-size:6px;display:flex;gap:3px;align-items:center">${ico7("search", 7)}Search “cabin roof”</div>`, { raw: true });
 scen("shorts", "shorts_autoplay_background", (box, on) => {
-  situation("A Short ends while the app is in the background");
+  situation("A Short ends while the app is in the background", true);
   box.innerHTML = device("port", `<div style="position:absolute;inset:0;background:#222;display:grid;place-items:center;font-size:6.5px;color:#aaa">Other app</div><div class="toastin" style="top:6px">${ico7("music", 7)} Playing: Short 1</div>`);
   const dev = box.querySelector(".dev");
   at(1000, () => { dev.querySelector(".toastin").innerHTML = on ? `${ico7("music", 7)} Playing: Short 2` : `${ico7("pause", 7)} Short 1 · ended`; });
   return on ? "The next Short plays in the background" : "Playback stops at the end of the Short (stock)";
 });
 scen("shorts", "shorts_disable_background_playback", (box, on) => {
-  situation("Leaving the app during a Short");
+  situation("Leaving the app during a Short", true);
   box.innerHTML = device("port", `<div style="position:absolute;inset:0;background:${ART[5]}"></div>`);
   const dev = box.querySelector(".dev");
   at(600, () => { dev.innerHTML = `<div style="position:absolute;inset:0;background:#222;display:grid;place-items:center;font-size:6.5px;color:#aaa">Home screen</div><div class="toastin" style="top:6px">${on ? `${ico7("pause", 7)} Short paused` : `${ico7("music", 7)} Short keeps playing`}</div>`; });
   return on ? "Shorts stop when you leave the app" : "Shorts keep playing in the background like videos (patched default)";
 });
 scen("shorts", "shorts_remember_playback_speed", (box, on) => {
-  situation("Changing speed on a Short, then swiping");
+  situation("Changing speed on a Short, then swiping", true);
   box.innerHTML = device("port", `<div class="sv7" style="position:absolute;inset:0;background:${ART[5]};transition:transform .4s var(--ease)"></div><div class="sp7 toastin chg7" style="top:8px">1.5×</div>`);
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
   at(500, () => fingerTo(f, W * .5, H * .7)); at(700, () => { fingerTo(f, W * .5, H * .25, 400); dev.querySelector(".sv7").style.transform = "translateY(-100%)"; });
@@ -334,7 +334,7 @@ scen("shorts", "skip_live_shorts", (box, on) => {
   return on ? "Live streams in the Shorts feed are skipped" : "Live streams show up between Shorts (stock)";
 });
 scen("fullscreen", "swipe_ignore_when_locked", (box, on) => {
-  situation("Swiping while the screen is locked");
+  situation("Swiping while the screen is locked", true);
   box.innerHTML = device("land", `<div style="position:absolute;inset:0;background:${ART[3]}"></div><div class="toastin" style="top:6px">${ico7("lock", 9)} Locked</div>`);
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
   at(300, () => fingerTo(f, W * .82, H * .7)); at(500, () => fingerTo(f, W * .82, H * .3, 500));
@@ -350,7 +350,7 @@ scen("fullscreen", "swipe_lowest_value_enable_auto_brightness", (box, on) => {
   return on ? "Below the lowest level, brightness switches to automatic" : "It stays at the lowest level (stock)";
 });
 scen("fullscreen", "swipe_save_and_restore_brightness", (box, on) => {
-  situation("Leaving fullscreen after dimming the video");
+  situation("Leaving fullscreen after dimming the video", true);
   box.innerHTML = device("land", `<div class="br7" style="position:absolute;inset:0;background:${ART[3]};filter:brightness(.45)"></div>`);
   const dev = box.querySelector(".dev");
   at(600, () => { rotate(dev, "port"); dev.innerHTML = pageRows(player7(3) + row7(2, "Up next") + row7(4, "Up next")); dev.querySelector(".pg7").style.filter = on ? "none" : "brightness(.45)"; toast7(dev, on ? "Your normal brightness is back" : "Still dimmed", "80%"); });
@@ -377,7 +377,7 @@ scen("playback", "disable_playlist_autoplay", (box, on) => {
 // Stock: the panel jumps up on its own and buries the page. On: it waits as a small bar until tapped.
 SCN_HOLD.morphe_disable_player_popup_panels = 8400;
 scen("playback", "disable_player_popup_panels", (box) => {
-  situation("1 · You open a video from a playlist");
+  situation("1 · You open a video from a playlist", true);
   const desc = `<div class="ds7" style="display:grid;gap:3px"><b style="font-size:7px" class="tt7">Night train to Bodø</b><div style="display:flex;gap:3px">${chip7("Like")}${chip7("Share")}${chip7("Save")}</div><div style="font-size:6px;color:#aaa">Comments 312</div>${chat7([[1, "ola", "this view!"], [2, "mia", "take me there"], [3, "ken", "pure calm"]])}</div>`;
   const feed = `<div class="fd7" style="display:grid;gap:5px">${top7()}${row7(2, "Road trip mix", "", "Playlist · 12 videos")}${row7(4, "Lo-fi beats")}${row7(1, "Northern lights LIVE", `<span style="position:absolute;left:1px;bottom:1px;font-size:4.5px;background:#f03;padding:0 2px;border-radius:2px">LIVE</span>`, "1.2K watching")}${row7(5, "Cabin build")}</div>`;
   const sides = duoValues("morphe_disable_player_popup_panels");
@@ -412,13 +412,13 @@ scen("playback", "disable_player_popup_panels", (box) => {
   };
   const [left, right] = box.querySelectorAll(".dev");
   story(left, sides[0][0]); story(right, sides[1][0]);
-  at(4400, () => situation("2 · Then you open a live stream"));
+  at(4400, () => situation("2 · Then you open a live stream", true));
   return `Stock panels jump open; set to ${sides.find(x => x[0] === true)[1]} they wait for your tap`;
 });
 // A long session with nobody touching the phone, shown as a run of videos with a clock.
 SCN_HOLD.morphe_continue_watching_prompt = 5200;
 scen("playback", "continue_watching_prompt", (box, v) => {
-  situation("Autoplay runs for hours, nobody touches the phone");
+  situation("Autoplay runs for hours, nobody touches the phone", true);
   const vids = [[3, "Building a tiny cabin"], [2, "Night train to Bodø"], [4, "Lo-fi beats to relax"], [5, "Rain on a tin roof"]];
   box.innerHTML = device("port", pageRows(player7(3, `<span class="tm7" style="position:absolute;left:3px;bottom:3px;font-size:5.5px;background:rgba(0,0,0,.6);padding:0 3px;border-radius:3px">0:58</span><span class="pz7" style="position:absolute;left:0;bottom:0;height:2px;background:#f03;width:0"></span>`) + `<b class="tt7" style="font-size:7px">Building a tiny cabin</b><div class="run7" style="display:flex;gap:2px;align-items:center;font-size:5.5px;color:#aaa;white-space:nowrap;overflow:hidden">${ico7("clock", 7, "#aaa")}<span class="hrs7">0 h idle</span></div>` + row7(2, "Up next · Night train") + row7(4, "Up next · Lo-fi beats")));
   const dev = box.querySelector(".dev"), pv = dev.querySelector(".pg7 > div"), pz = dev.querySelector(".pz7"), hrs = dev.querySelector(".hrs7"), run = dev.querySelector(".run7");
@@ -452,7 +452,7 @@ scen("playback", "continue_watching_prompt", (box, v) => {
   return v === "DEFAULT" ? "YouTube pauses and asks 'Continue watching?' (stock)" : v === "ALWAYS_COUNTDOWN" ? "No pause prompt; the autoplay countdown shows before every next video" : "No prompt at all: playback just keeps going";
 });
 scen("playback", "do_not_remember_loop_video", (box, on) => {
-  situation("Loop was on, then you open the next video");
+  situation("Loop was on, then you open the next video", true);
   box.innerHTML = device("port", watch7(`<span class="lp7" style="position:absolute;right:3px;top:3px;width:12px;height:12px;border-radius:50%;background:rgba(62,166,255,.9);display:grid;place-items:center">${ico7("loop", 8, "#000")}</span>`));
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
   at(300, () => fingerTo(f, W * .5, H * .45)); at(600, () => tapF(f));
@@ -463,7 +463,7 @@ scen("playback", "do_not_remember_loop_video", (box, on) => {
 // fullscreen in landscape), entering fullscreen turns the screen to landscape, and leaving it brings back
 // the orientation it had before. Stock: a tablet held upright stays upright, the video letterboxed.
 scen("playback", "force_fullscreen_landscape", (box, on) => {
-  situation("A tablet held upright: tapping fullscreen");
+  situation("A tablet held upright: tapping fullscreen", true);
   box.innerHTML = device("port", playerArea(3));
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth;
   at(300, () => fingerTo(f, W - 10, 44)); at(600, () => tapF(f));
@@ -477,7 +477,7 @@ scen("playback", "force_fullscreen_landscape", (box, on) => {
 // Morphe (FullscreenPlaylistPanelPatch): on tablets, opening the playlist panel in fullscreen keeps
 // fullscreen and shows the panel over the player. Stock: opening it leaves fullscreen first.
 scen("playback", "fullscreen_playlist_panel", (box, on) => {
-  situation("A tablet in fullscreen: opening the playlist");
+  situation("A tablet in fullscreen: opening the playlist", true);
   const list = `<b style="font-size:6px">Road trip mix · 2 / 12</b>${[1, 2, 4, 5].map(i => `<div style="display:flex;gap:3px;align-items:center;font-size:5.5px"><span style="width:16px;height:9px;flex:none;background:${ART[i]}"></span>Video ${i}</div>`).join("")}`;
   box.innerHTML = device("land", `<div class="pv7" style="position:absolute;left:0;top:0;width:100%;height:100%;background:${ART[3]};transition:all .45s var(--ease)"></div><span style="position:absolute;right:6px;top:5px;z-index:2">${ico7("plist", 9)}</span>`);
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"), pv = dev.querySelector(".pv7"); const W = dev.clientWidth;
@@ -632,7 +632,7 @@ scen("playback", "force_original_audio", (box, on) => {
 });
 // Remember live stream position: you went back in a live stream, left, and come back to it.
 scen("playback", "remember_live_stream_position", (box, on) => {
-  situation("Coming back to a live stream you rewound");
+  situation("Coming back to a live stream you rewound", true);
   const live = `<span class="lv7 badge7" style="left:3px;top:3px;background:#555">LIVE</span><span class="lag7 badge7" style="right:3px;top:3px">−12:40</span>`;
   box.innerHTML = device("port", watch7(live + prog7(62)));
   const dev = box.querySelector(".dev"), pg = dev.querySelector(".pg7");
@@ -680,7 +680,6 @@ const SIL_PAUSES = [0.8, 2.5, 0.6, 8, 1.5, 12, 4], SIL_KEEP = .4, SIL_MS = 195; 
 const silMin = v => { const m = /^(MS|S)_(\d+)$/.exec(String(v)); return m ? Number(m[2]) / (m[1] === "MS" ? 1000 : 1) : .7; };
 const silS = x => (Math.round(x * 10) / 10).toString(); // seconds, one decimal at most
 function silenceScen(box, min) {
-  situation("A talk with pauses");
   const SPEECH = 2, SW = 9, gw = p => 4 + 5 * Math.log2(1 + p); // drawn widths in phone pixels
   const cut = SIL_PAUSES.map(p => min != null && p >= min);
   const bars = i => [3, 7, 5, 9, 4, 6, 8, 5].slice(i % 4, i % 4 + 4);
@@ -726,6 +725,8 @@ function silenceScen(box, min) {
 }
 SCN_HOLD.morphe_skip_silence = SCN_HOLD.morphe_skip_silence_minimum_pause = 10200;
 scen("playback", "skip_silence", (box, on) => silenceScen(box, on ? silMin(V("morphe_skip_silence_minimum_pause")) : null));
+// Minimum pause length: one phone with the length you picked, redrawn on every pick (a default-against-
+// choice pair showed 0.5 s on its second phone whenever 0.7 s, the default, was the one picked)
 scen("playback", "skip_silence_minimum_pause", (box, v) => silenceScen(box, silMin(v)));
 // Playback buffer size: one phone cycles through every size by itself, no picking. Morphe multiplies how
 // much video is loaded ahead: Default ×1 (YouTube's own), Low ×2, Medium ×4, Maximum ×8 (memory capped).
@@ -790,7 +791,7 @@ for (const [k, net, label] of [["shorts_quality_default_mobile", "phone", "Mobil
 }
 for (const [k, what, val] of [["remember_playback_speed_last_selected", "speed", "1.5×"], ["remember_shorts_quality_last_selected", "Shorts quality", "720p"], ["remember_video_quality_last_selected", "quality", "1080p"]]) {
   scen("playback", k, (box, on) => {
-    situation(`Picking a ${what}, then opening another video`);
+    situation(`Picking a ${what}, then opening another video`, true);
     // Shorts quality on a Short (full-height video), the others on the watch page
     const rv = `<span class="rv7 badge7" style="right:3px;top:3px">${what === "speed" ? ico7("speed", 6) + " " : ""}${val}</span>`;
     const isShort = what === "Shorts quality";

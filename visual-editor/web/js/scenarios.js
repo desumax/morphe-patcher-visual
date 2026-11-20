@@ -194,8 +194,12 @@ let scTold = false;
 const toldInside = fn => /toast7\(|check7\(|toastin/.test(String(fn));
 // The situation line: the first one of a story is there with the phones (it used to fade in 160 ms
 // after them); a later, different line crossfades; the same line again (each new run) stays put.
-function situation(text) {
-  if (scSide && scSide.i) return; const el = document.querySelector("#canvas .sit"); if (!el) return;
+// The blue line over a comparison only says what the drawing can't show: time passing, the app in the
+// background, a tablet, a vibration, a step in a sequence (Max, Nov 20: every line that only named the
+// screen or the gesture drawn was redundant). Such a line passes keep = true; the rest are dropped here,
+// so a new scenario has no line unless it asks for one, and the empty line takes no room.
+function situation(text, keep) {
+  if (!keep || scSide && scSide.i) return; const el = document.querySelector("#canvas .sit"); if (!el) return;
   if (el.textContent === text) return;
   if (!el.textContent) { el.style.transition = "none"; el.textContent = text; el.style.opacity = 1; void el.offsetWidth; el.style.transition = ""; return; }
   el.style.opacity = 0; later(() => { el.textContent = text; el.style.opacity = 1; }, 160);
@@ -257,7 +261,7 @@ function haptic(eventLabel, script) {
     script.run(dev, f, () => buzz(dev, !disabled));
     // the event is the situation line; vibrates / no vibration is what the buzz icon (or the crossed-out
     // one) shows on each phone, so there is no caption repeating it under them
-    situation(eventLabel);
+    situation(eventLabel, true);
     return "";
   };
 }
@@ -349,11 +353,11 @@ scen("player", "copy_video_link_with_timestamp_button", (box, on) => {
   const toast = link => { dev.querySelectorAll(".toastin").forEach(e => e.remove()); dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:42%">Link copied<br><b style="font-weight:500;color:#9cd1ff">${link}</b><br><span style="color:#bbb">${link === timed ? "opens at 3:12" : "opens at the start"}</span></div>`); };
   const press = on => { btn.style.transform = on ? "scale(.88)" : ""; btn.style.background = on ? "rgba(62,166,255,.55)" : "rgba(0,0,0,.45)"; };
   const fade = () => dev.querySelectorAll(".toastin").forEach(e => { e.style.transition = "opacity .3s"; e.style.opacity = 0; });
-  situation("Tap the Copy link button");
+  situation("Tap the Copy link button", true);
   at(150, () => fingerTo(f, W * fx, H * fy, 350));
   at(800, () => { tapF(f); press(true); }); at(1000, () => { press(false); toast(on ? timed : plain); });
   at(2900, fade);
-  at(3300, () => situation("Tap and hold it"));
+  at(3300, () => situation("Tap and hold it", true));
   at(3500, () => { f.classList.add("hold"); press(true); });
   at(4500, () => { f.classList.remove("hold"); press(false); toast(on ? plain : timed); });
   at(6600, fade);
@@ -1017,7 +1021,7 @@ def("snackbar", "style", "custom_snackbar_theme custom_snackbar_color_dark custo
 // A short story is slowed down (up to 1.6x) and played again if there is time; a list setting
 // compares its default with the chosen value (or the first other value when it is on the default).
 const SC_TOTAL = 11000;
-const SCN_SELF_DUO = new Set(["morphe_disable_player_popup_panels", "morphe_playback_buffer_size"]); // one phone that tells all values itself
+const SCN_SELF_DUO = new Set(["morphe_disable_player_popup_panels", "morphe_playback_buffer_size", "morphe_skip_silence_minimum_pause"]); // one phone that tells all values itself
 const DUO_OTHER = { morphe_speed_tap_and_hold: 4 };
 function duoValues(k, prev) {
   const p = PREF[k];
