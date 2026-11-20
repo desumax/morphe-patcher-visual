@@ -847,13 +847,14 @@ function setSearch(on) {
 function renderSearch() {
   $("list").dataset.view = "search";
   const q = query.trim().toLowerCase();
-  const all = CAT.preferences.filter(p => inVersion(p.key));
+  // settings this device leaves out of the lists (offDevice) are still found, locked, with the reason
+  const all = CAT.preferences.filter(p => inYtVersion(p.key) && !(p.type === "screen" && offDevice(p.key)));
   if (!q) { $("list").innerHTML = `<div class="shint">Type to search all ${all.length} settings.</div>`; return; }
   const words = q.split(/\s+/).filter(Boolean);
   const hits = [];
   for (const p of all) {
-    const sec = SECTIONS.find(s => s.id === sectionOf(p.key));
-    const hay = `${title(p.key)} ${p.summary || ""} ${p.summaryOn || ""} ${p.summaryOff || ""} ${p.subScreenTitle || ""} ${placeLabel(sectionOf(p.key))} ${p.key}`.toLowerCase();
+    const sec = SECTIONS.find(s => s.id === resSection(p.key));
+    const hay = `${title(p.key)} ${p.summary || ""} ${p.summaryOn || ""} ${p.summaryOff || ""} ${p.subScreenTitle || ""} ${placeLabel(resSection(p.key))} ${p.key}`.toLowerCase();
     if (!words.every(w => hay.includes(w))) continue;
     const t = title(p.key).toLowerCase();
     hits.push({ p, sec, score: (t.startsWith(q) ? 0 : t.includes(q) ? 1 : 2) });
@@ -865,8 +866,9 @@ function renderSearch() {
   $("list").innerHTML = hits.length
     ? `<div class="sechead">${hits.length} result${hits.length > 1 ? "s" : ""}</div><div class="group">${hits.slice(0, 120).map(({ p, sec }) => {
         const par = PARENT_OF[p.key];
-        const where = p.type === "screen" ? `Screen · ${placeLabel(sectionOf(p.key))}` : `${placeLabel(sectionOf(p.key))}${par ? ` › ${title(par)}` : ""}`;
-        return `<div class="sres" data-res="${p.key}" tabindex="0"><div class="ttl">${mark(title(p.key))}</div><div class="where">${esc(where)}</div>${summaryFor(p.key) ? `<div class="sum">${esc(summaryFor(p.key))}</div>` : ""}</div>`;
+        const where = p.type === "screen" ? `Screen · ${placeLabel(resSection(p.key))}` : `${placeLabel(resSection(p.key))}${par ? ` › ${title(par)}` : ""}`;
+        const off = offDevice(p.key);
+        return `<div class="sres${off ? " soff" : ""}" data-res="${p.key}" tabindex="0"><div class="ttl">${mark(title(p.key))}${off ? I("lock", "lk") : ""}</div><div class="where">${esc(where)}</div>${off ? `<div class="sum need">${esc(deviceWhy(p.key))}</div>` : summaryFor(p.key) ? `<div class="sum">${esc(summaryFor(p.key))}</div>` : ""}</div>`;
       }).join("")}</div>`
     : `<div class="shint">No settings match “${esc(query)}”.</div>`;
 }
@@ -874,7 +876,13 @@ $("btnSearch").onclick = () => setSearch(true);
 $("qClose").onclick = () => { query = ""; setSearch(false); };
 $("q").addEventListener("input", e => { query = e.target.value; renderSearch(); });
 $("q").addEventListener("keydown", e => { if (e.key === "Escape") { query = ""; setSearch(false); } if (e.key === "Enter") { const f = $("list").querySelector("[data-res]"); if (f) openResult(f.dataset.res); } });
-function openResult(k) { setSearch(false); returnTo = null; goToSetting(k); }
+// a setting this device leaves out has no row to open: its result stays, and its reason pulses
+function openResult(k) {
+  if (offDevice(k)) { const r = $("list").querySelector(`[data-res="${k}"] .need`); if (r) r.animate([{ opacity: .35 }, { opacity: 1 }, { opacity: .35 }, { opacity: 1 }], { duration: 700 }); return; }
+  setSearch(false); returnTo = null; goToSetting(k);
+}
+// the tab a result belongs to; a setting left out on this device keeps the tab it would be in
+const resSection = k => offDevice(k) && A[k] && SECTIONS.some(s => s.id === A[k].section) ? A[k].section : sectionOf(k);
 
 function renderInspector() {
   const k = selected, p = k && PREF[k];

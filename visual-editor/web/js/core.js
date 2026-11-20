@@ -344,6 +344,9 @@ function cleanOf(k) {
   const m = CLEAN_RE.exec(t);
   if (!m) return { title: t, labels: ["Off", "On"] };
   const rest = m[2].trim(); if (!rest) return null;
+  // "Show only in fullscreen" names no object: "Only in fullscreen: Hide | Show" would read backwards
+  // (Show only = hidden elsewhere), so such a title keeps its words and Off / On
+  if (/^only\b/i.test(rest)) return { title: t, labels: ["Off", "On"] };
   const nice = rest.charAt(0).toUpperCase() + rest.slice(1);
   const verb = m[1].toLowerCase();
   const labels = verb === "hide" ? ["Show", "Hide"] : verb === "show" ? ["Hide", "Show"]

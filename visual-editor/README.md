@@ -17,6 +17,17 @@ Native Android work (stage 3) belongs in a fork of `morphe-patches`, not here: t
 repository is the patcher engine, and the settings UI lives in the patches repo's
 `extensions/shared/.../settings/preference` code.
 
+## List every caption the comparisons show
+
+```sh
+node visual-editor/tools/captions.js captions.md
+```
+
+Writes each Off / On comparison's blue line, white lines and in-phone messages by tab, flags lines that
+mostly repeat what is already on screen, and marks the ones hidden by `FOOT_OFF` in `web/js/scenarios.js`
+(the one list of white lines taken out as redundant). Static: it runs the editor's scripts in node with a
+do-nothing DOM, so nothing is rendered.
+
 ## Regenerate the catalogue
 
 ```sh

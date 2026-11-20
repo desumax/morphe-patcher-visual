@@ -260,8 +260,9 @@ function haptic(eventLabel, script) {
     const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger");
     script.run(dev, f, () => buzz(dev, !disabled));
     // the event is the situation line; vibrates / no vibration is what the buzz icon (or the crossed-out
-    // one) shows on each phone, so there is no caption repeating it under them
-    situation(eventLabel, true);
+    // one) shows on each phone, so there is no caption repeating it under them. No line when the phones
+    // already say the event (the "Release to cancel" pill, the held finger with its 2x pill)
+    if (eventLabel) situation(eventLabel, true);
     return "";
   };
 }
@@ -289,12 +290,12 @@ scen("seekbar", "disable_haptic_feedback_precise_seeking", haptic("Entering prec
   at(1500, () => { fingerTo(f, W * .62, H * .6, 1200 * scStretch); const s = dev.querySelector(".ps7s"); if (s) { s.style.transitionDuration = 1200 * scStretch + "ms"; s.style.transform = "translateX(-30%)"; } });
   at(2900, () => f.classList.remove("hold"));
 } }));
-scen("seekbar", "disable_haptic_feedback_seek_undo", haptic("Release to cancel", { run(dev, f, b) {
+scen("seekbar", "disable_haptic_feedback_seek_undo", haptic("", { run(dev, f, b) {
   const W = dev.clientWidth, H = dev.clientHeight;
   at(100, () => fingerTo(f, W * .3, H * .84)); at(300, () => { fingerTo(f, W * .7, H * .84, 700); dev.querySelector(".mp").style.width = "70%"; });
   at(1100, () => fingerTo(f, W * .7, H * .2, 500)); at(1600, () => { b(); dev.querySelector(".mp").style.width = "30%"; dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px">Release to cancel</div>`); });
 } }));
-scen("seekbar", "disable_haptic_feedback_tap_and_hold", haptic("Tap and hold for 2x", { run(dev, f, b) {
+scen("seekbar", "disable_haptic_feedback_tap_and_hold", haptic("", { run(dev, f, b) {
   const W = dev.clientWidth, H = dev.clientHeight;
   at(150, () => { fingerTo(f, W * .55, H * .45); f.classList.add("hold"); }); at(800, () => { b(); dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:8px">2x ▸▸</div>`); });
   at(2000, () => f.classList.remove("hold"));
@@ -450,7 +451,12 @@ function evalRule(expr, getter) {
   try { return !!fn(getter, ytV, deviceCheck); } catch { return true; }
 }
 // in this YouTube version and on this kind of device (offDevice): everything else leaves the lists
-const inVersion = k => { const p = PREF[k]; return !p || evalRule(p.when, () => null) && !offDevice(k); };
+const inYtVersion = k => { const p = PREF[k]; return !p || evalRule(p.when, () => null); };
+const inVersion = k => inYtVersion(k) && !offDevice(k);
+// Why this device leaves a setting out: search still lists it, locked, with this line (Max, Nov 20)
+const deviceWhy = k => DEVICE_ONLY[k] === "phone" ? "Only on phones. Tablets always use YouTube's default action bar"
+  : DEVICE_ONLY[k] === "tablet" ? "Only on tablets and large screens (600 dp or wider). Phones already open the playlist over the fullscreen player"
+  : "Only on tablets and large screens (600 dp or wider). Morphe turns it off on phones, which already open fullscreen in landscape";
 const availOk = k => { const p = PREF[k]; return !p || !p.availability || evalRule(p.availability, x => (x in PREF ? V(x) : null)); };
 // Lists Morphe builds at runtime (caption languages from YouTube's translation list, the user's own
 // custom speeds). The preview uses a representative copy.
@@ -1021,11 +1027,18 @@ def("snackbar", "style", "custom_snackbar_theme custom_snackbar_color_dark custo
 // A short story is slowed down (up to 1.6x) and played again if there is time; a list setting
 // compares its default with the chosen value (or the first other value when it is on the default).
 const SC_TOTAL = 11000;
-// The white line under the phones (a scenario's return value or setFoot) is off for every comparison
-// (Max, Nov 20: it kept repeating what the phones, their Off / On labels or a pill in them already show).
-// A story that truly can't be read without words opts in here, by key; nothing does today. Like the blue
-// situation line (keep), a new scenario gets no words unless it asks, so the redundancy can't come back.
-const FOOT_KEEP = new Set();
+// The white line under the phones is a scenario's return value or setFoot. It is hidden when the story
+// is told by a message inside the phones (toldInside) and for every key in FOOT_OFF: the one list of
+// lines taken out as redundant. tools/captions.js writes every line each comparison renders (blue line,
+// white lines per side, messages in the phones) with the ones that look like repeats flagged, so a
+// redundant line is found from that list and its key added here, instead of a blanket rule.
+const FOOT_OFF = new Set([
+  "morphe_auto_translate_additional_languages", // "More languages in the auto-translate list": the list is drawn
+  "morphe_open_channel_of_live_avatar", // "The avatar opens the channel": the channel page opens in the phone
+  "morphe_shorts_player_type", // "Opens in the Shorts player": the Off / On labels say it
+  "morphe_custom_filter", // "No custom filter": the labels and the drawing say it
+]);
+let askOnly = false; // drawing only the default side while the other waits for a choice
 const SCN_SELF_DUO = new Set(["morphe_disable_player_popup_panels", "morphe_playback_buffer_size", "morphe_skip_silence_minimum_pause"]); // one phone that tells all values itself
 const DUO_OTHER = { morphe_speed_tap_and_hold: 4 };
 function duoValues(k, prev) {
@@ -1068,7 +1081,7 @@ function playScenario(k, prevValue) {
   const d = defaults[k], choices = entriesFor(k).filter(e => !sameVal(e.value, d));
   const ask = !self && PREF[k].type !== "boolean" && choices.length > 1 && sameVal(V(k), d) && (prevValue === undefined || sameVal(prevValue, d));
   const draw = () => {
-    clock.start("steps"); scStretch = stretch; scTold = !FOOT_KEEP.has(k) || toldInside(fn); scCollect = [];
+    clock.start("steps"); scStretch = stretch; scTold = toldInside(fn) || FOOT_OFF.has(k); scCollect = [];
     try { drawSides(); } finally { const list = scCollect; scCollect = null; startCollected(list); }
     fitDev();
   };
@@ -1079,6 +1092,7 @@ function playScenario(k, prevValue) {
     } else {
       box.innerHTML = `<div class="duo7 gen">${vals.map(([, l], i) => `<div class="dl7"><span class="${NEG_WORD.has(String(l)) ? "neg" : i ? "on" : ""} ${String(l).length > 14 ? "xlong" : String(l).length > 8 ? "long" : ""}">${esc(l)}</span><div class="side"></div><div class="sf7"></div></div>`).join("")}</div>`;
       box.querySelectorAll(".dl7").forEach((cell, i) => {
+        if (i && askOnly) return; // waiting for a choice: the right phone isn't drawn (see below)
         const side = { i, foot: cell.querySelector(".sf7") };
         scSide = side;
         try { const ft = fn(cell.querySelector(".side"), vals[i][0], vals[1 - i][0]); if (ft && !scTold && !side.foot.textContent) side.foot.textContent = ft; }
@@ -1098,10 +1112,12 @@ function playScenario(k, prevValue) {
   if (!ask) return start();
   // the default side is drawn as its first frame and held; the other side waits, empty, until a
   // choice is picked on the setting's pills in the list (which plays the comparison)
-  draw(); clock.stop("steps"); // the first frame holds still
+  // the default side plays its whole story and stays on its last frame (it used to freeze on its first
+  // frame, which cut the story short: the Shorts quality badge never appeared)
+  askOnly = true; try { draw(); } finally { askOnly = false; }
   const right = box.querySelectorAll(".dl7")[1];
   right.querySelector("span").textContent = "Select an option"; right.querySelector("span").classList.add("ask");
-  const dev = right.querySelector(".dev"), dw = dev ? dev.style.width : "92px", dh = dev ? dev.style.height : "172px";
+  const dev = box.querySelector(".dl7 .dev"), dw = dev ? dev.style.width : "92px", dh = dev ? dev.style.height : "172px"; // the size of the default side's phone
   right.querySelector(".side").innerHTML = `<div class="ask7" style="width:${dw};height:${dh}"></div>`;
   fitDev();
   document.querySelectorAll(`#list [data-row="${k}"] .ctl .opt`).forEach(o => { o.classList.remove("nudge7"); void o.offsetWidth; o.classList.add("nudge7"); });

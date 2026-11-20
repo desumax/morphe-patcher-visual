@@ -560,17 +560,19 @@ def("playback", "behaviour", "remember_playback_speed_last_selected_toast rememb
 function fsMorph(fromFull, toFull) {
   const st = $("stage").firstElementChild; if (!st) return null;
   st.querySelectorAll(".fsm7").forEach(n => n.remove());
-  const fr = st.querySelector(".frame"), art = (fr && fr.style.background) || ART[0]; // the picture the preview shows now
-  const small = "left:25%;right:25%;top:0;height:50%;border-radius:0", full = "left:0;right:0;top:0;height:100%;border-radius:0";
+  // the picture the preview shows now, copied through the style object: its url() holds quotes, so it
+  // can't go into a style="..." attribute (that broke the whole overlay)
+  const fr = st.querySelector(".frame"), art = (fr && fr.style.background) || ART[0];
+  const box = full => full ? { left: "0%", right: "0%", top: "0%", height: "100%" } : { left: "25%", right: "25%", top: "0%", height: "50%" };
   const o = document.createElement("div"); o.className = "fsm7 dyn";
-  o.style.cssText = `position:absolute;inset:0;z-index:30;background:#0f0f0f;opacity:${fromFull ? 0 : 1};transition:opacity .35s`;
-  o.innerHTML = `<div class="fsv7" style="position:absolute;${fromFull ? full : small};background:${art};transition:all .55s var(--ease)"></div>
-    <div style="position:absolute;left:25%;right:25%;top:56%;display:grid;gap:6px"><i style="height:9px;width:80%;border-radius:4px;background:#2a2a2a"></i><i style="height:9px;width:55%;border-radius:4px;background:#2a2a2a"></i><i style="height:9px;width:65%;border-radius:4px;background:#2a2a2a"></i></div>`;
-  st.appendChild(o); onDemoStop(() => o.remove());
-  const v = o.querySelector(".fsv7");
+  Object.assign(o.style, { position: "absolute", inset: "0", zIndex: "30", background: "#0f0f0f", opacity: fromFull ? "0" : "1", transition: "opacity .35s" });
+  o.innerHTML = `<div style="position:absolute;left:25%;right:25%;top:56%;display:grid;gap:6px"><i style="height:9px;width:80%;border-radius:4px;background:#2a2a2a"></i><i style="height:9px;width:55%;border-radius:4px;background:#2a2a2a"></i><i style="height:9px;width:65%;border-radius:4px;background:#2a2a2a"></i></div>`;
+  const v = document.createElement("div");
+  Object.assign(v.style, { position: "absolute", background: art, transition: "left .55s var(--ease), right .55s var(--ease), height .55s var(--ease)" }, box(fromFull));
+  o.appendChild(v); st.appendChild(o); onDemoStop(() => o.remove());
   void o.offsetWidth;
-  if (fromFull && !toFull) { o.style.opacity = 1; v.style.cssText += ";" + small; }
-  if (!fromFull && toFull) { v.style.cssText += ";" + full; dT(() => { o.style.opacity = 0; }, 450); }
+  if (fromFull && !toFull) { o.style.opacity = "1"; Object.assign(v.style, box(false)); }
+  if (!fromFull && toFull) { Object.assign(v.style, box(true)); dT(() => { o.style.opacity = "0"; }, 500); }
   return o;
 }
 Object.assign(DEMOS, {

@@ -801,7 +801,7 @@ for (const [k, net, label] of [["shorts_quality_default_mobile", "phone", "Mobil
     situation(`Opening a Short on ${label.toLowerCase()}`);
     box.innerHTML = device("port", short7(5, `<span class="badge7" style="left:3px;top:3px">${ico7(net, 6)} ${label}</span>`));
     const dev = box.querySelector(".dev");
-    at(300, () => { dev.querySelector(".pg7 > div").style.background = ART[6]; dev.querySelector(".pg7").insertAdjacentHTML("beforeend", `<span class="badge7" style="right:3px;top:3px">${esc(entryLabel("morphe_" + k, v))}</span>`); });
+    at(300, () => dev.querySelector(".pg7").insertAdjacentHTML("beforeend", `<span class="badge7" style="right:3px;top:3px">${esc(entryLabel("morphe_" + k, v))}</span>`)); // the Short starts at that quality
     return "";
   });
 }
