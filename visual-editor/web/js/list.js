@@ -369,7 +369,7 @@ function blockerOf(k) {
   // prefer a setting on this screen (e.g. a DeArrow title place) over one on another screen
   return cands.find(x => sectionOf(x) === section) || cands[0] || null;
 }
-const availKeys = k => [...new Set([...(PREF[k].availabilityParents || []), ...[...String(PREF[k].availability || "").matchAll(/S\("([^"]+)"\)/g)].map(m => m[1])])].filter(x => x !== k);
+const availKeys = k => [...new Set([...(PREF[k].availabilityParents || []), ...[...String(PREF[k].availability || "").matchAll(/[SD]\("([^"]+)"\)/g)].map(m => m[1])])].filter(x => x !== k);
 const dependsOn = (k, parent) => PREF[k].parents.some(x => x.key === parent) || availKeys(k).includes(parent);
 // The setting on another screen that k was unlocked through (via the popup): k then offers "More" to reach it again.
 const borrowedParent = k => [...PREF[k].parents.map(x => x.key), ...availKeys(k)].find(x => borrowed[section] && borrowed[section].has(x) && sectionOf(x) !== section);

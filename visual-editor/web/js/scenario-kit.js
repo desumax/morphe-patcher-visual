@@ -17,10 +17,12 @@ const tgt7 = (html, w) => `<div class="tgt7${w ? " w7" : ""}">${html}</div>`;
 const SHORT_PILL = "44%";
 // A swipe to the next Short (shared): the one on screen slides up while the next slides in under the
 // finger, together, as in the app. The next one used to pop in only after the screen had gone black,
-// which read as the picture being replaced.
-function swipeShort7(dev, art, ms = 400) {
+// which read as the picture being replaced. What belongs to a Short (its speed readout, a LIVE badge)
+// is drawn inside it (inner), so it leaves and arrives with its Short: a readout that stayed in place
+// showed the old Short's value on the new one until its text was changed.
+function swipeShort7(dev, art, ms = 400, inner = "") {
   const cur = dev.querySelector(".sv7"); if (!cur) return null;
-  const nx = cur.cloneNode(false); nx.style.transition = "none"; nx.style.background = art; nx.style.transform = "translateY(100%)";
+  const nx = cur.cloneNode(false); nx.style.transition = "none"; nx.style.background = art; nx.style.transform = "translateY(100%)"; nx.innerHTML = inner;
   cur.after(nx); void nx.offsetWidth;
   const d = Math.round(ms * scStretch);
   [cur, nx].forEach(e => { e.style.transition = `transform ${d}ms var(--ease)`; });
@@ -337,18 +339,26 @@ scen("shorts", "shorts_disable_background_playback", (box, on) => {
 });
 scen("shorts", "shorts_remember_playback_speed", (box, on) => {
   situation("Changing speed on a Short, then swiping", true);
-  box.innerHTML = device("port", `<div class="sv7" style="position:absolute;inset:0;background:${ART[5]};transition:transform .4s var(--ease)"></div><div class="sp7 toastin chg7" style="top:8px">1.5×</div>`);
+  // the whole story: the Short plays at 1×, you set 1.5× on it (both phones), then swipe. The next
+  // Short brings its own readout: still 1.5× when remembered, back to 1× when not.
+  const sp = (t, cls = "") => `<div class="sp7 toastin ${cls}" style="top:8px">${t}</div>`;
+  box.innerHTML = device("port", `<div class="sv7" style="position:absolute;inset:0;background:${ART[5]};transition:transform .4s var(--ease)">${sp("1×", "chg7")}</div>`);
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
-  at(500, () => fingerTo(f, W * .5, H * .7)); at(700, () => { fingerTo(f, W * .5, H * .25, 400); swipeShort7(dev, ART[6]); });
-  at(1200, () => { f.classList.remove("show"); dev.querySelector(".sp7").textContent = on ? "1.5×" : "1×"; });
+  at(400, () => { fingerTo(f, W * .5, 13); tapF(f); });
+  at(700, () => { dev.querySelector(".sp7").textContent = "1.5×"; });
+  at(880, () => f.classList.remove("show"));
+  at(1700, () => fingerTo(f, W * .5, H * .7)); at(1900, () => { fingerTo(f, W * .5, H * .25, 400); swipeShort7(dev, ART[6], 400, sp(on ? "1.5×" : "1×")); });
+  at(2400, () => { f.classList.remove("show"); flash7([...dev.querySelectorAll(".sp7")].pop()); });
   return on ? "The next Short keeps your speed" : "Every Short starts at normal speed (stock)";
 });
 scen("shorts", "skip_live_shorts", (box, on) => {
   situation("Swiping through Shorts");
   box.innerHTML = device("port", `<div class="sv7" style="position:absolute;inset:0;background:${ART[5]};transition:transform .4s var(--ease)"></div>`);
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
-  at(400, () => fingerTo(f, W * .5, H * .7)); at(600, () => { fingerTo(f, W * .5, H * .25, 400); swipeShort7(dev, on ? ART[6] : ART[0]); });
-  at(1100, () => { f.classList.remove("show"); if (!on) dev.insertAdjacentHTML("beforeend", `<span style="position:absolute;left:5px;top:8px;background:#cc0000;font-size:6px;padding:0 3px;border-radius:2px">LIVE</span>`); else toast7(dev, "Live Short skipped", "50%"); });
+  // the LIVE badge is part of the live Short: it slides in with it
+  const live = `<span style="position:absolute;left:5px;top:8px;background:#cc0000;font-size:6px;padding:0 3px;border-radius:2px">LIVE</span>`;
+  at(400, () => fingerTo(f, W * .5, H * .7)); at(600, () => { fingerTo(f, W * .5, H * .25, 400); swipeShort7(dev, on ? ART[6] : ART[0], 400, on ? "" : live); });
+  at(1100, () => { f.classList.remove("show"); if (on) toast7(dev, "Live Short skipped", "50%"); });
   return on ? "Live streams in the Shorts feed are skipped" : "Live streams show up between Shorts (stock)";
 });
 scen("fullscreen", "swipe_ignore_when_locked", (box, on) => {
@@ -409,7 +419,7 @@ scen("playback", "disable_player_popup_panels", (box) => {
       at(t0, () => dev.insertAdjacentHTML("beforeend", bar(label)));
       if (!on) {
         // the bar buzzes with a spark, jumps open by itself, and a red frame marks the page it now covers
-        at(t0 + 700, () => { const b = dev.querySelector(".pb7"); b.insertAdjacentHTML("beforeend", `<span style="position:absolute;left:50%;top:-10px;transform:translateX(-50%);animation:pop .2s">${ico7("spark", 9, "#ffcc00")}</span>`); b.style.animation = "buzz .25s 3"; });
+        at(t0 + 700, () => { const b = dev.querySelector(".pb7"); b.insertAdjacentHTML("beforeend", `<span style="position:absolute;left:50%;top:-10px;translate:-50% 0;animation:pop .2s">${ico7("spark", 9, "#ffcc00")}</span>`); b.style.animation = "buzz .25s 3"; });
         at(t0 + 1250, () => { dev.querySelectorAll(".pb7").forEach(e => e.remove()); dev.insertAdjacentHTML("beforeend", panel(title, rows)); });
         at(t0 + 1750, () => { dev.insertAdjacentHTML("beforeend", `<div class="cv7" style="position:absolute;left:3px;right:3px;top:54px;bottom:3px;border:1.5px dashed #ff0033;border-radius:5px;z-index:5;animation:ghostin .2s"></div>`); toast7(dev, `${ico7("spark", 7, "#ffcc00")} Opened by itself`, "13%"); });
       } else {

@@ -62,24 +62,49 @@ const ENDSCREEN_SEL = new Set(["morphe_hide_autoplay_preview", "morphe_hide_end_
 function finger() { return document.querySelector("#stage .finger"); }
 function place(f, x, y, ms) { f.style.transition = ms ? `left ${ms}ms var(--ease), top ${ms}ms var(--ease), opacity 120ms` : "opacity 120ms"; f.style.left = x + "px"; f.style.top = y + "px"; f.classList.add("show"); }
 function hideF(f, after) { dT(() => { f.classList.remove("show", "hold"); }, after); }
-function tapAt(x, y) { const f = finger(); if (!f) return; place(f, x, y); f.classList.remove("tap"); void f.offsetWidth; f.classList.add("tap"); hideF(f, 520); }
+function tapAt(x, y, f = finger()) { if (!f) return; place(f, x, y); f.classList.remove("tap"); void f.offsetWidth; f.classList.add("tap"); hideF(f, 520); }
 function fmt(total, pct) { const s = Math.round(total * pct / 100); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }
 function setSeek(pct) { const p = $("played"); if (p) p.style.width = pct + "%"; ["knob", "knobRing"].forEach(id => { const k = $(id); if (k) k.style.left = pct + "%"; }); }
+// A message pill on the live preview: on the screen that is on top (a story's cover, else the preview).
 function showPill(text, ms = 1100) {
-  const st = $("stage").firstElementChild; if (!st) return;
-  const d = document.createElement("div"); d.className = "toastin dyn";
-  // never under the explanation pill in the top-left corner: sit just below it
-  const lab = st.querySelector(".demo-label.dyn"), sr = st.getBoundingClientRect();
-  d.style.top = (lab ? Math.max(14, lab.getBoundingClientRect().bottom - sr.top + 8) : 14) + "px"; d.textContent = text; st.appendChild(d);
-  // nor over a hint the scene already shows (such as "Pull up for precise seeking") or a part of the
-  // preview (badges, buttons, the time): step below it. Only small parts count, not whole panels.
-  const stArea = sr.width * sr.height || 1;
-  for (let i = 0; i < 8; i++) {
-    const a = d.getBoundingClientRect(), hit = [...st.querySelectorAll(".toastin:not(.dyn), .demo-label, .c[data-k], .chip, .badge-txt, .pbtn, .time")].find(o => { if (o === d || !o.offsetWidth || getComputedStyle(o).visibility === "hidden" || o.contains(d)) return false; { const q = o.getBoundingClientRect(); if (q.width * q.height > stArea * .2) return false; } const q = o.getBoundingClientRect(); return Math.min(a.right, q.right) - Math.max(a.left, q.left) > 2 && Math.min(a.bottom, q.bottom) - Math.max(a.top, q.top) > 2; });
-    if (!hit) break; d.style.top = (hit.getBoundingClientRect().bottom - sr.top + 6) + "px";
-  }
+  const st = covers().pop() || $("stage").firstElementChild; if (!st) return;
+  const d = document.createElement("div"); d.className = "toastin dyn"; d.textContent = text; st.appendChild(d);
+  placePill(d, st);
   flash7(d); // the same blue double pulse as a changing part in the comparisons, so the eye finds it
   dT(() => d.remove(), ms);
+}
+// Where a message pill goes: the highest spot inside the preview box where it covers nothing: no
+// button, badge, readout or other message, and no text. On a crowded screen every spot covers
+// something: then it takes the spot that covers least. It never leaves the box (stepping below one
+// part after another used to push it out under the bottom edge, where it was cut off).
+const PILL_PARTS = ".toastin, .demo-label, .c, .chip, .badge-txt, .pbtn, .time";
+function placePill(d, host) {
+  const stage = $("stage"), hr = host.getBoundingClientRect(), vr = stage.getBoundingClientRect(), k = (vr.width / (stage.offsetWidth || 1)) || 1;
+  const seen = e => { if (!e.getClientRects().length) return false; const cs = getComputedStyle(e); return cs.visibility !== "hidden" && parseFloat(cs.opacity) > .05; }; // a hidden part is no obstacle
+  const boxes = [], area = hr.width * hr.height || 1;
+  host.querySelectorAll(PILL_PARTS).forEach(e => { // only small parts count, not whole panels
+    if (e === d || e.contains(d) || !seen(e)) return;
+    const q = e.getBoundingClientRect(); if (q.width * q.height <= area * .2) boxes.push([q, 3]);
+  });
+  const walk = document.createTreeWalker(host, NodeFilter.SHOW_TEXT), range = document.createRange();
+  for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+    if (!n.nodeValue.trim() || d.contains(n) || !seen(n.parentElement)) continue;
+    range.selectNodeContents(n); const q = range.getBoundingClientRect(); if (q.width > 1 && q.height > 1) boxes.push([q, 1]);
+  }
+  const first = 14, last = (Math.min(hr.bottom, vr.bottom) - Math.max(hr.top, vr.top)) / k - d.offsetHeight - 12;
+  d.style.top = first + "px";
+  // measured with the room its pulse takes (it grows by 30% around its middle, plus the ring)
+  const a = d.getBoundingClientRect(), gx = a.width * .15 + 3 * k, gy = a.height * .15 + 3 * k;
+  let best = first, least = Infinity;
+  for (let top = first; top <= Math.max(first, last); top += 4) {
+    const dy = (top - first) * k; let cost = 0;
+    for (const [q, w] of boxes) {
+      const ox = Math.min(a.right + gx, q.right) - Math.max(a.left - gx, q.left), oy = Math.min(a.bottom + dy + gy, q.bottom) - Math.max(a.top + dy - gy, q.top);
+      if (ox > 2 && oy > 2) cost += ox * oy * w;
+    }
+    if (cost < least) { least = cost; best = top; if (!cost) break; }
+  }
+  d.style.top = best + "px";
 }
 const DEMOS = {
   morphe_tap_to_seek(on) {
@@ -553,75 +578,103 @@ Object.assign(DEMOS, {
   morphe_remember_video_quality_last_selected_toast(on) { if (on) showPill("Changed default Wi-Fi quality to: 1080p", 1300); label(on ? "A toast confirms the new default quality" : "No toast when the default quality changes", !on, 1300); },
 });
 def("playback", "behaviour", "remember_playback_speed_last_selected_toast remember_video_quality_last_selected_toast"); // skip silence: a comparison (scenario-kit.js)
-// Moving between two screens in the live preview (shared: any story that leaves the screen drawn now).
-// The other screen is the real scene of another tab (SCENES[otherId]), drawn in a layer over the stage;
-// a copy of this screen's video moves between where the video really sits on each screen (measured, not
-// guessed) while the other screen fades in or out. The same idea as the pair glide: real layouts, one
-// measured move. screenMove(otherId, true) goes to the other screen; screenMove(otherId, false) starts on
-// it and comes back here. Returns { go(), back() } to play the move (go) or return without it (back).
-function screenMove(otherId, leaving, edit = html => html, ms = 550) {
-  const st = $("stage"); st.querySelectorAll(".sm7").forEach(n => n.remove());
-  const here = st.querySelector(".frame"); if (!here || !SCENES[otherId]) return null;
-  const k = (st.getBoundingClientRect().width / (st.offsetWidth || 1)) || 1; // the stage may be drawn scaled
-  const rectIn = el => { const a = el.getBoundingClientRect(), b = st.getBoundingClientRect(); return { left: (a.left - b.left) / k, top: (a.top - b.top) / k, width: a.width / k, height: a.height / k }; };
-  const layer = document.createElement("div"); layer.className = "sm7 dyn";
-  layer.innerHTML = edit(SCENES[otherId]()).replace(/background:#0f0f0f/g, "background:var(--app-bg,#0f0f0f)");
-  layer.querySelectorAll("[id]").forEach(e => e.removeAttribute("id"));
-  layer.querySelectorAll(".c").forEach(e => e.classList.remove("c")); // not a setting target: only scenery
-  Object.assign(layer.style, { position: "absolute", left: "0", top: "0", width: st.offsetWidth + "px", zIndex: "29", pointerEvents: "none", opacity: leaving ? "0" : "1" });
-  st.appendChild(layer);
-  const there = layer.querySelector(".frame"); if (!there) { layer.remove(); return null; }
-  // where the video sits here: its layout box (the video scale transform stays on the copy) and there
-  const A = { left: here.offsetLeft, top: here.offsetTop, width: here.offsetWidth, height: here.offsetHeight };
-  let p = here.offsetParent; while (p && p !== st) { A.left += p.offsetLeft; A.top += p.offsetTop; p = p.offsetParent; }
-  const B = rectIn(there), tf = getComputedStyle(here).transform;
-  const mover = document.createElement("div"); mover.className = "sm7 dyn";
-  Object.assign(mover.style, { position: "absolute", zIndex: "30", pointerEvents: "none", background: here.style.background || getComputedStyle(here).background, right: "auto", bottom: "auto" });
-  const place = (r, t) => ({ left: r.left + "px", top: r.top + "px", width: r.width + "px", height: r.height + "px", transform: t });
-  const from = leaving ? place(A, tf) : place(B, "none"), to = leaving ? place(B, "none") : place(A, tf);
-  Object.assign(mover.style, from);
-  there.style.visibility = "hidden"; // the moving copy stands in for the other screen's video
-  st.appendChild(mover);
-  const clear = () => { layer.remove(); mover.remove(); };
-  onDemoStop(clear);
-  const fade = (el, a, b, d, delay = 0) => el.animate([{ opacity: a }, { opacity: b }], { duration: d, delay, easing: "ease", fill: "forwards" });
-  return {
-    go() {
-      mover.animate([from, to], { duration: ms, easing: "cubic-bezier(.2,0,0,1)", fill: "forwards" });
-      if (leaving) fade(layer, 0, 1, ms * .6);
-      else { fade(layer, 1, 0, ms * .6, ms * .3); dT(clear, ms + 60); } // back on this screen: the real scene shows again
-    },
-    back(d = 300) { fade(layer, Number(getComputedStyle(layer).opacity), 0, d); fade(mover, 1, 0, d); dT(clear, d + 40); },
-  };
+// Stories that leave the screen the tab draws (shared: a video opening from the feed, the player leaving
+// fullscreen, anything that goes to another screen and back). The other screens are covers: layers the
+// size of the preview box that hold another tab's real scene (coverOf) or a copy of the preview exactly
+// as it is right now (coverNow). A cover only ever moves as a whole, the way a screen does on the phone
+// (it slides in or out, or shrinks into the player): nothing is morphed between two layouts, so no part
+// can be squashed or left behind. The live preview under the covers is never touched, so ending a
+// story is removing its covers, and a story that is cut short leaves nothing to put back.
+const COVER_EASE = "cubic-bezier(.2,0,0,1)";
+function cover7(content, z) {
+  const el = document.createElement("div"); el.className = "sm7 dyn";
+  if (typeof content === "string") el.innerHTML = content.replace(/background:#0f0f0f/g, "background:var(--app-bg,#0f0f0f)"); else el.appendChild(content);
+  // scenery only: not a setting target, no message or finger of the story it was copied in
+  el.querySelectorAll("[id]").forEach(e => e.removeAttribute("id"));
+  el.querySelectorAll("[data-k], [data-also]").forEach(e => { e.removeAttribute("data-k"); e.removeAttribute("data-also"); e.classList.remove("sel", "selx", "flash", "pressing"); });
+  el.querySelectorAll(".toastin.dyn, .demo-label.dyn, .finger, .sm7").forEach(e => e.remove());
+  Object.assign(el.style, { position: "absolute", inset: "0", zIndex: String(z), overflow: "hidden", pointerEvents: "none", background: "#000" });
+  $("stage").appendChild(el);
+  return el;
 }
-// Entering and leaving fullscreen, played on the Fullscreen preview itself: the fullscreen player moves
-// into the watch page's player (the Watch page tab's real scene) or out of it. One story every three loops.
-// The watch page plays the fullscreen preview's video, so its title follows.
-const fsWatch = html => html.split(esc(VIDEOS[0].t)).join(esc(VIDEOS[2].t));
+const coverOf = (otherId, edit = html => html, z = 29) => (SCENES[otherId] && $("stage").firstElementChild ? cover7(edit(SCENES[otherId]()), z) : null);
+const coverNow = (z = 30) => { const here = $("stage").firstElementChild; return here && !here.classList.contains("sm7") ? cover7(here.cloneNode(true), z) : null; };
+const covers = () => [...$("stage").querySelectorAll(".sm7")];
+const clearCovers = () => covers().forEach(n => n.remove());
+// a cover sliding up from under the screen (a page opening) or away down (going back)
+const slide7 = (el, from, to, ms, ease = COVER_EASE) => el.animate([{ transform: `translateY(${from}%)` }, { transform: `translateY(${to}%)` }], { duration: ms, easing: ease, fill: "both" });
+// a finger of the cover's own (the preview's finger sits under the covers)
+function coverTap(cover, target) {
+  const st = $("stage"), k = (st.getBoundingClientRect().width / (st.offsetWidth || 1)) || 1, b = st.getBoundingClientRect(), r = target.getBoundingClientRect();
+  // the middle of the part of the target that is inside the preview box
+  const x = (Math.max(r.left, b.left) + Math.min(r.right, b.right)) / 2, y = (Math.max(r.top, b.top) + Math.min(r.bottom, b.bottom)) / 2;
+  const f = document.createElement("div"); f.className = "finger"; f.innerHTML = I("gesture"); cover.appendChild(f);
+  tapAt((x - b.left) / k, (y - b.top) / k, f);
+}
+// The video of the Fullscreen preview, on the other screens of its stories (same title and length).
+const fsVideo = html => html.split(esc(VIDEOS[0].t)).join(esc(VIDEOS[2].t)).split(`>${VIDEOS[0].d}<`).join(`>${VIDEOS[2].d}<`);
+// The player leaving fullscreen: a copy of the preview shrinks into the watch page's player (measured)
+// and fades into it. back = true plays it the other way (into fullscreen again).
+function fullscreenMove(watch, back, ms = 460) {
+  const st = $("stage"), copy = coverNow(30), strip = watch && watch.querySelector(".frame"); if (!copy || !strip) return 0;
+  const b = st.getBoundingClientRect(), r = strip.getBoundingClientRect(), k = (b.width / (st.offsetWidth || 1)) || 1;
+  const small = `translate(${((r.left + r.right) / 2 - (b.left + b.right) / 2) / k}px, ${(r.top - b.top) / k}px) scale(${r.height / (b.height || 1)})`;
+  copy.style.transformOrigin = "50% 0"; copy.style.background = "transparent";
+  // the fullscreen player is the picture while it moves: the watch page's own picture takes over at the end
+  const fadeAt = back ? .35 : .65, key = (x, y) => (back ? [{ opacity: y }, { opacity: x, offset: fadeAt }, { opacity: x }] : [{ opacity: x }, { opacity: x, offset: fadeAt }, { opacity: y }]);
+  copy.animate(back ? [{ transform: small }, { transform: "none" }] : [{ transform: "none" }, { transform: small }], { duration: ms, easing: COVER_EASE, fill: "both" });
+  copy.animate(key(1, 0), { duration: ms, easing: "linear", fill: "both" });
+  strip.animate(key(0, 1), { duration: ms, easing: "linear", fill: "both" });
+  return ms;
+}
 Object.assign(DEMOS, {
+  // The video reaches its end on the fullscreen preview. If the chosen option covers this (landscape)
+  // fullscreen, the player shrinks into the watch page and stays there until the next round, which
+  // starts by going fullscreen again. Otherwise a message says it stays. One story every three loops.
   morphe_exit_fullscreen(v) {
     if (demoStep % 3) return;
-    const st = $("stage"), pl = st.querySelector(".seek .played"), kn = st.querySelector(".seek .knob");
+    const st = $("stage"), root = st.firstElementChild, pl = root.querySelector(".seek .played"), kn = root.querySelector(".seek .knob"), time = root.querySelector(".time");
     const set = (w, ms) => [pl, kn].forEach(e => { if (!e) return; e.style.transition = ms ? `${e === pl ? "width" : "left"} ${ms}ms linear` : "none"; e.style[e === pl ? "width" : "left"] = w + "%"; });
-    set(88, 0); onDemoStop(() => set(52, 0));
-    dT(() => set(100, 900), 60); // the video plays to its end
-    // the preview is a landscape fullscreen: "landscape" and "portrait and landscape" leave it
-    const exits = /LANDSCAPE/.test(String(v));
+    const total = VIDEOS[2].d, clockAt = t => { if (time) time.textContent = `${t} / ${total}`; };
+    const rest = time ? time.textContent : "";
+    if (!demoStep) onDemoStop(() => { clearCovers(); set(52, 0); if (time) time.textContent = rest; });
+    // the last round ended on the watch page: back into fullscreen first, a little before the end
+    const was = covers(); set(88, was.length ? 0 : 200); clockAt("36:10");
+    let t = 260;
+    if (was.length) { const ms = fullscreenMove(was[0], true, 380); dT(clearCovers, ms + 20); t = ms + 260; }
+    dT(() => set(100, 900), t); dT(() => clockAt(total), t + 900);
+    const exits = /LANDSCAPE/.test(String(v)); // the preview is a landscape fullscreen
     dT(() => {
-      if (!exits) { showPill(String(v) === "PORTRAIT" ? "Stays: only portrait fullscreen is left" : "Stays in fullscreen", 1600); return; }
-      const m = screenMove("watch", true, fsWatch); if (!m) return;
-      m.go(); dT(() => { m.back(); set(52, 0); }, 2900);
-    }, 1050);
-    dT(() => set(52, 0), 4300);
+      if (!exits) { showPill(String(v) === "PORTRAIT" ? "Stays in landscape fullscreen" : "Stays in fullscreen", 1700); return; }
+      const watch = coverOf("watch", fsVideo, 29); if (!watch) return;
+      const played = watch.querySelector(".seek .played"); if (played) played.style.width = "100%"; // the same video, at its end
+      const ms = fullscreenMove(watch, false);
+      dT(() => { covers().forEach(n => { if (n !== watch) n.remove(); }); showPill("Leaves fullscreen", 1500); }, ms + 20);
+    }, t + 1050);
   },
+  // A video is tapped in the feed (the Feed tab's real scene) and opens: in fullscreen (the preview as
+  // it is, sliding up as a whole) or in the normal player (the Watch page tab's real scene). Each round
+  // starts by going back to the feed: the screen that is up slides away down. One story every three loops.
   morphe_open_videos_fullscreen(v) {
     if (demoStep % 3) return;
+    if (!demoStep) onDemoStop(clearCovers);
     const on = String(v) !== "DISABLED";
-    const m = screenMove("watch", false, fsWatch); if (!m) return; // a video opening on the watch page
+    const was = covers(), up = was.length ? was[was.length - 1] : coverNow(31);
+    const feed = coverOf("feed", fsVideo, 28); if (!feed || !up) { clearCovers(); return; }
+    up.style.zIndex = "31";
+    slide7(up, 0, 100, 300, "cubic-bezier(.3,0,1,1)");
+    dT(() => covers().forEach(n => { if (n !== feed) n.remove(); }), 320);
+    const card = feed.querySelector(".thumb");
+    dT(() => { if (card) coverTap(feed, card); }, 620);
     dT(() => {
-      if (on) { m.go(); dT(() => showPill(String(v) === "PORTRAIT" ? "Opens in portrait fullscreen" : "Opens in fullscreen", 1400), 600); } // once the video has filled the screen (the pill jumped while the page moved)
-      else { showPill("Opens in the normal player", 1400); dT(() => m.back(), 2200); }
-    }, 700);
+      const page = on ? coverNow(30) : coverOf("watch", fsVideo, 30); if (!page) return;
+      slide7(page, 100, 0, 420);
+      dT(() => {
+        // in fullscreen the copy has landed on the preview it was made from: the covers can go
+        if (on) clearCovers(); else feed.remove();
+        showPill(!on ? "Opens in the normal player" : String(v) === "PORTRAIT" ? "Opens in portrait fullscreen" : "Opens in landscape fullscreen", 1700);
+      }, 450);
+    }, 900);
   },
 });
 def("fullscreen", "behaviour", "exit_fullscreen open_videos_fullscreen");

@@ -448,13 +448,16 @@ const DEVICE_ONLY = {
 };
 const tabletLayout = () => previewIsTablet() || String(V("morphe_change_form_factor")) === "LARGE";
 const offDevice = k => { const d = DEVICE_ONLY[k]; return d === "tablet" ? !tabletLayout() : d === "phone" ? previewIsTablet() : needsTablet(k); };
+// D("key") in a rule: Morphe's Setting.isSetToDefault() (Change foreground colour needs a theme colour
+// that is not the default one)
+const isDefault = k => !(k in PREF) || JSON.stringify(V(k)) === JSON.stringify(defaults[k]);
 const compiled = new Map();
 function evalRule(expr, getter) {
   if (!expr) return true;
   let fn = compiled.get(expr);
-  if (fn === undefined) { try { fn = new Function("S", "V", "U", `return (${expr});`); } catch { fn = null; } compiled.set(expr, fn); }
+  if (fn === undefined) { try { fn = new Function("S", "V", "U", "D", `return (${expr});`); } catch { fn = null; } compiled.set(expr, fn); }
   if (!fn) return true;
-  try { return !!fn(getter, ytV, deviceCheck); } catch { return true; }
+  try { return !!fn(getter, ytV, deviceCheck, isDefault); } catch { return true; }
 }
 // in this YouTube version and on this kind of device (offDevice): everything else leaves the lists
 const inYtVersion = k => { const p = PREF[k]; return !p || evalRule(p.when, () => null); };
@@ -688,8 +691,17 @@ function flash7(el) {
   // added after its own transform, not as the separate scale property (which applies before it).
   const base = cs.transform && cs.transform !== "none" ? cs.transform + " " : "";
   const k = s => base ? { transform: `${base}scale(${s})` } : { scale: s };
-  el.animate([{ ...k(1), boxShadow: "0 0 0 0 rgba(62,166,255,0)" }, { ...k(1.3), boxShadow: "0 0 0 .2em rgba(62,166,255,.95)", offset: .25 },
-    { ...k(1), boxShadow: "0 0 0 .1em rgba(62,166,255,.5)", offset: .5 }, { ...k(1.3), boxShadow: "0 0 0 .2em rgba(62,166,255,.95)", offset: .75 },
+  // It grows by 30%, or by less when that would take it past the edge of its phone or of the preview
+  // box: a readout in a corner (3px from the edge) was cut on that side every time it pulsed.
+  let big = 1.3;
+  const host = el.closest(".dev") || el.closest("#stage, #canvas");
+  if (host) {
+    const r = el.getBoundingClientRect(), h = host.getBoundingClientRect(), bz = host.clientLeft * (h.width / (host.offsetWidth || 1));
+    const roomX = Math.min(r.left - h.left, h.right - r.right) - bz, roomY = Math.min(r.top - h.top, h.bottom - r.bottom) - bz;
+    if (r.width && r.height) big = Math.max(1.04, Math.min(1.3, 1 + 2 * Math.max(0, roomX - 1) / r.width, 1 + 2 * Math.max(0, roomY - 1) / r.height));
+  }
+  el.animate([{ ...k(1), boxShadow: "0 0 0 0 rgba(62,166,255,0)" }, { ...k(big), boxShadow: "0 0 0 .2em rgba(62,166,255,.95)", offset: .25 },
+    { ...k(1), boxShadow: "0 0 0 .1em rgba(62,166,255,.5)", offset: .5 }, { ...k(big), boxShadow: "0 0 0 .2em rgba(62,166,255,.95)", offset: .75 },
     { ...k(1), boxShadow: "0 0 0 0 rgba(62,166,255,0)" }], { duration: 900, easing: "ease-in-out" });
 }
 new MutationObserver(ms => {

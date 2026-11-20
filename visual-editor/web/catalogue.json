@@ -5767,7 +5767,7 @@
    "patchDescription": null,
    "sourceFile": "patches/src/main/kotlin/app/morphe/patches/youtube/layout/theme/ThemePatch.kt",
    "locationConfidence": "variable",
-   "availability": "(!U(\"isSetToDefault\") || !U(\"isSetToDefault\"))",
+   "availability": "(!D(\"morphe_theme_color_dark\") || !D(\"morphe_theme_color_light\"))",
    "availabilityParents": [
     "morphe_theme_color_dark",
     "morphe_theme_color_light"

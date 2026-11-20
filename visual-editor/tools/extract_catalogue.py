@@ -169,12 +169,19 @@ def _java_expr_to_js(expr, locals_, helpers, unknown):
         k = FIELD_TO_KEY.get(m.group(1))
         if k: return 'S("%s")' % k
         unknown.append(m.group(1)); return "null"
+    # Settings.X.isSetToDefault() -> D("key") (the editor compares the value with its default); without
+    # this the setting's name was lost and the rule could never pass
+    def is_default(m):
+        k = FIELD_TO_KEY.get(m.group(1))
+        if k: return 'D("%s")' % k
+        unknown.append(m.group(1)); return "true"
+    e = re.sub(r'\b(?:Settings|SharedYouTubeSettings|SharedSettings|BaseSettings)\.([A-Z0-9_]+)\.isSetToDefault\(\)', is_default, e)
     e = re.sub(r'\b(?:Settings|SharedYouTubeSettings|SharedSettings|BaseSettings)\.([A-Z0-9_]+)\.get\(\)', setting, e)
     # enum helper methods on a setting value, e.g. type.isModern()
     e = re.sub(r'(S\("[^"]+"\)|\(S\("[^"]+"\)\))\.(\w+)\(\)', lambda m: ENUM_METHODS[m.group(2)].replace("X", m.group(1)) if m.group(2) in ENUM_METHODS else (unknown.append(m.group(0)) or 'U("%s")' % m.group(2)), e)
     def helper(m):
         nm = m.group(1)
-        if nm in ("S", "V", "U"): return m.group(0)
+        if nm in ("S", "V", "U", "D"): return m.group(0)
         if nm in helpers and not m.group(2).strip(): return "(" + helpers[nm] + ")"
         unknown.append(nm + "()"); return 'U("%s")' % nm
     e = re.sub(r'\b(?:[A-Za-z]\w*\.)*(\w+)\(((?:[^()]|"[^"]*")*)\)', helper, e)
