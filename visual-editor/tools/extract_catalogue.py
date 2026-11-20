@@ -405,8 +405,13 @@ def load_prefs():
             base = callee.split(".")[-1]
             if base not in PREF_TYPES: continue
             key = first_string_arg(text, o, c)
-            if not key: continue
             body = text[o + 1:c]
+            # a row with no stored setting (key = null: Import / export, SponsorBlock import / export)
+            # still shows in Morphe's screen; it is named after its title string, minus "_title"
+            if not key and re.match(r'\s*key\s*=\s*null\b', body):
+                tk = named_arg(body, "titleKey")
+                key = re.sub(r'_title$', '', tk) if tk else None
+            if not key: continue
             # enclosing calls (innermost first)
             enclosing = sorted([e for e in calls if e[1] < o and e[2] > c], key=lambda e: -e[1])
             screen = sub = category = None

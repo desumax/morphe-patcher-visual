@@ -1,5 +1,5 @@
 {
- "source": "MorpheApp/morphe-patches@31234a8 2026-11-16",
+ "source": "MorpheApp/morphe-patches@31234a846 2026-11-16",
  "youtubeVersions": [
   {
    "version": "21.45.82",
@@ -36,7 +36,7 @@
  ],
  "generatedBy": "visual-editor/tools/extract_catalogue.py",
  "counts": {
-  "preferences": 759,
+  "preferences": 761,
   "settingsDeclared": 800,
   "internalOnly": 108,
   "unresolvedScreen": 5
@@ -7904,6 +7904,29 @@
    "patchDescription": "Adds option to get PoToken using an external PoToken minter app.",
    "sourceFile": "patches/src/main/kotlin/app/morphe/patches/shared/misc/potoken/PoTokenProviderPatch.kt",
    "locationConfidence": "factory"
+  },
+  {
+   "key": "morphe_pref_import_export",
+   "title": "Import / Export",
+   "summary": "Import / Export Morphe settings",
+   "summaryOn": null,
+   "summaryOff": null,
+   "widget": "TextPreference",
+   "type": null,
+   "default": null,
+   "rebootApp": false,
+   "dialog": null,
+   "parents": [],
+   "customAvailability": [],
+   "screen": "MISC",
+   "screenTitle": "Miscellaneous",
+   "subScreen": null,
+   "subScreenTitle": null,
+   "category": null,
+   "patch": null,
+   "patchDescription": null,
+   "sourceFile": "patches/src/main/kotlin/app/morphe/patches/youtube/misc/settings/SettingsPatch.kt",
+   "locationConfidence": "exact"
   },
   {
    "key": "morphe_proxy_screen",
@@ -19230,6 +19253,29 @@
      "mode": "any"
     }
    ],
+   "customAvailability": [],
+   "screen": "SPONSORBLOCK",
+   "screenTitle": "SponsorBlock",
+   "subScreen": null,
+   "subScreenTitle": null,
+   "category": "morphe_sb_general",
+   "patch": "SponsorBlock",
+   "patchDescription": "Adds options to enable and configure SponsorBlock, which can skip undesired video segments such as sponsored content.",
+   "sourceFile": "patches/src/main/kotlin/app/morphe/patches/youtube/layout/sponsorblock/SponsorBlockPatch.kt",
+   "locationConfidence": "exact"
+  },
+  {
+   "key": "morphe_sb_settings_ie",
+   "title": "Import / Export settings",
+   "summary": "Your SponsorBlock JSON configuration that can be imported / exported to Morphe and other SponsorBlock platforms",
+   "summaryOn": null,
+   "summaryOff": null,
+   "widget": "TextPreference",
+   "type": null,
+   "default": null,
+   "rebootApp": false,
+   "dialog": null,
+   "parents": [],
    "customAvailability": [],
    "screen": "SPONSORBLOCK",
    "screenTitle": "SponsorBlock",
