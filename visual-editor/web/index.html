@@ -452,9 +452,11 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .ctl.optgrid, .fallback .ctl.optgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); gap: 6px; }
 .ctl.optgrid .opt { padding: 2px 6px; height: auto; min-height: 30px; line-height: 1.15; white-space: normal; overflow-wrap: anywhere; text-align: center; }
 .ctl.optgrid.tight .opt { font-size: var(--tight-fs); padding-left: 3px; padding-right: 3px; white-space: nowrap; overflow-wrap: normal; } /* fitPills: short values kept on one line */
-/* the picked option wears the colours of its side in the comparison: green like Show / On, red for Off
+/* the picked option wears the colours of its side in the comparison: green like Show / On for any choice
+   other than the default, grey for the default, red for Off
    or Hide (NEG_WORD), the same tokens as the toggles and the Off / On labels (.dl7 > span) */
 .ctl .opt[aria-pressed="true"] { background: var(--on-green); border-color: var(--on-green); color: var(--on-green-ink); }
+.ctl .opt[aria-pressed="true"].def { background: #3a3a3a; border-color: #3a3a3a; color: #fff; } /* the default (Auto, Default): neutral, like its side in the comparison */
 .ctl .opt[aria-pressed="true"].neg { background: #5c2b2b; border-color: #5c2b2b; color: #ffd9d6; }
 .ctl input[type=range] { flex: 1; min-width: 120px; accent-color: var(--m-primary); }
 .ctl .val { font-family: var(--mono); font-size: 12px; color: var(--m-on-var); min-width: 44px; text-align: right; }
@@ -927,6 +929,17 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 /* the smaller readouts in a corner of a video (Loop 2, 1.5×): one size for all of them too */
 .dev .badge7:empty, .dev .toastin:empty { display: none; }
 .dev .badge7 { position: absolute; font-size: calc(var(--pill7) * .9 / var(--dsc, 1.7)); padding: .05em .45em; white-space: nowrap; pointer-events: none; z-index: 31; }
+/* Text centred top to bottom in every black pill (corner readouts, messages) and the Off / On labels: the
+   line box is trimmed to the capital letters and the baseline (text-box), so equal padding above and below
+   centres the letters themselves. A plain line box keeps the font's taller ascent above the letters, which
+   pushed the text up. Older engines keep the previous look. */
+@supports (text-box: trim-both cap alphabetic) {
+  .dev .badge7, .dev .toastin, .dl7 > span { text-box: trim-both cap alphabetic; }
+  .dev .badge7 { padding: .3em .45em; }
+  .dev .toastin { padding: .42em .8em; }
+  .dl7 > span { padding: .42em .75em; }
+  .dev .toastin svg, .dev .badge7 svg { vertical-align: -.12em; }
+}
 .tgt7 { transition: max-height .45s var(--ease), max-width .45s var(--ease), opacity .3s, margin .45s, padding .45s; max-height: 90px; overflow: hidden; }
 .tgt7.w7 { display: inline-flex; max-width: 90px; vertical-align: bottom; flex: none; white-space: nowrap; }
 .tgt7.gone7 { max-height: 0 !important; opacity: 0; margin-top: 0 !important; margin-bottom: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }
