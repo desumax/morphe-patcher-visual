@@ -454,9 +454,7 @@ function evalRule(expr, getter) {
 const inYtVersion = k => { const p = PREF[k]; return !p || evalRule(p.when, () => null); };
 const inVersion = k => inYtVersion(k) && !offDevice(k);
 // Why this device leaves a setting out: search still lists it, locked, with this line (Max, Nov 20)
-const deviceWhy = k => DEVICE_ONLY[k] === "phone" ? "Only on phones. Tablets always use YouTube's default action bar"
-  : DEVICE_ONLY[k] === "tablet" ? "Only on tablets and large screens (600 dp or wider). Phones already open the playlist over the fullscreen player"
-  : "Only on tablets and large screens (600 dp or wider). Morphe turns it off on phones, which already open fullscreen in landscape";
+const deviceWhy = k => DEVICE_ONLY[k] === "phone" ? "Only on phones" : "Only on tablets and large screens (600 dp or wider)";
 const availOk = k => { const p = PREF[k]; return !p || !p.availability || evalRule(p.availability, x => (x in PREF ? V(x) : null)); };
 // Lists Morphe builds at runtime (caption languages from YouTube's translation list, the user's own
 // custom speeds). The preview uses a representative copy.

@@ -357,7 +357,7 @@ function needText(k) {
   if (!classicParentsOk(k)) return "Needs " + PREF[k].parents.map(x => `“${esc(shownTitle(x.key))}” set to ${stateWord(x.key, x.mode !== "not")}${whereOf(x.key)}`).join(", ");
   const av = String(PREF[k].availability || ""), sk = [...new Set([...av.matchAll(/S\("([^"]+)"\)/g)].map(m => m[1]))].filter(x => PREF[x] && inVersion(x));
   if (sk.length > 1 && av.includes("||")) return `Available once one of these is set: ${sk.map(x => `“${esc(shownTitle(x))}”${PREF[x].type === "boolean" ? " " + stateWord(x, true) : ""}${whereOf(x)}`).join(", ")}`;
-  if (needsTablet(k)) return "Only on tablets and large screens (600 dp or wider). Morphe turns it off on phones, which already open fullscreen in landscape";
+  if (needsTablet(k)) return deviceWhy(k); // one wording for every device lock
   const ap = (PREF[k].availabilityParents || []).filter(x => PREF[x]);
   return ap.length ? `Not available with the current ${ap.map(x => `“${esc(shownTitle(x))}”`).join(", ")}` : "Not available here";
 }
