@@ -650,8 +650,9 @@ function keepPillIn(t) {
 // below, so a scenario only has to change the text. The first drawing of a phone never flashes.
 const CHG_SEL = ".badge7, .chg7";
 function flash7(el) {
-  if (!el.isConnected || el._flashAt && performance.now() - el._flashAt < 300) return;
+  if (!el || !el.isConnected || el._flashAt && performance.now() - el._flashAt < 300) return;
   el._flashAt = performance.now();
+  if (getComputedStyle(el).borderTopLeftRadius === "0px") el.style.borderRadius = ".35em"; // plain text (a time readout): a rounded ring
   el.animate([{ scale: 1, boxShadow: "0 0 0 0 rgba(62,166,255,0)" }, { scale: 1.3, boxShadow: "0 0 0 .2em rgba(62,166,255,.95)", offset: .25 },
     { scale: 1, boxShadow: "0 0 0 .1em rgba(62,166,255,.5)", offset: .5 }, { scale: 1.3, boxShadow: "0 0 0 .2em rgba(62,166,255,.95)", offset: .75 },
     { scale: 1, boxShadow: "0 0 0 0 rgba(62,166,255,0)" }], { duration: 900, easing: "ease-in-out" });

@@ -78,6 +78,7 @@ function showPill(text, ms = 1100) {
     const a = d.getBoundingClientRect(), hit = [...st.querySelectorAll(".toastin:not(.dyn), .demo-label, .c[data-k], .chip, .badge-txt, .pbtn, .time")].find(o => { if (o === d || !o.offsetWidth || getComputedStyle(o).visibility === "hidden" || o.contains(d)) return false; { const q = o.getBoundingClientRect(); if (q.width * q.height > stArea * .2) return false; } const q = o.getBoundingClientRect(); return Math.min(a.right, q.right) - Math.max(a.left, q.left) > 2 && Math.min(a.bottom, q.bottom) - Math.max(a.top, q.top) > 2; });
     if (!hit) break; d.style.top = (hit.getBoundingClientRect().bottom - sr.top + 6) + "px";
   }
+  flash7(d); // the same blue double pulse as a changing part in the comparisons, so the eye finds it
   dT(() => d.remove(), ms);
 }
 const DEMOS = {
@@ -553,7 +554,7 @@ Object.assign(DEMOS, {
   morphe_skip_silence(on) {
     const t = $("pbTime"); if (!t) return;
     t.textContent = "3:12 / 18:42"; label(on ? "A quiet pause: skipped" : "A quiet pause: plays through (stock)", !on, 1300);
-    if (on) dT(() => { t.style.transition = "color .2s"; t.style.color = "#3ea6ff"; t.textContent = "3:14 / 18:42"; showPill("Skipped 2 s of silence", 900); dT(() => { t.style.color = ""; }, 600); }, 500);
+    if (on) dT(() => { t.textContent = "3:14 / 18:42"; flash7(t); showPill("Skipped 2 s of silence", 1300); }, 500);
   },
 });
 def("playback", "behaviour", "remember_playback_speed_last_selected_toast remember_video_quality_last_selected_toast skip_silence");
