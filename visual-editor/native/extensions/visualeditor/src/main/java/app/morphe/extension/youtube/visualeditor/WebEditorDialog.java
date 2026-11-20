@@ -129,6 +129,19 @@ final class WebEditorDialog extends Dialog {
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 return !request.getUrl().toString().startsWith(ORIGIN); // no navigation away
             }
+
+            // The page itself could not load: back to the regular list, saying why.
+            @Override
+            public void onReceivedError(WebView view, WebResourceRequest request, android.webkit.WebResourceError error) {
+                if (request != null && request.isForMainFrame()) fail();
+            }
+
+            // The WebView's renderer crashed or was killed: same, and YouTube keeps running.
+            @Override
+            public boolean onRenderProcessGone(WebView view, android.webkit.RenderProcessGoneDetail detail) {
+                fail();
+                return true;
+            }
         });
         root.addView(web, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         setContentView(root);
@@ -298,7 +311,7 @@ final class WebEditorDialog extends Dialog {
         public void fallback() {
             Utils.runOnMainThread(() -> {
                 VisualEditorEntry.webViewTooOld = true;
-                dismiss();
+                fail();
             });
         }
 
@@ -422,6 +435,13 @@ final class WebEditorDialog extends Dialog {
         } catch (Throwable ignored) {
         }
         backCallback = null;
+    }
+
+    /** The redesign can't run here: close it, show the regular list, and say why (once per visit). */
+    private void fail() {
+        if (destroyed) return;
+        VisualEditorEntry.unsupported(activity);
+        dismiss();
     }
 
     private void js(String code) {
