@@ -553,52 +553,73 @@ Object.assign(DEMOS, {
   morphe_remember_video_quality_last_selected_toast(on) { if (on) showPill("Changed default Wi-Fi quality to: 1080p", 1300); label(on ? "A toast confirms the new default quality" : "No toast when the default quality changes", !on, 1300); },
 });
 def("playback", "behaviour", "remember_playback_speed_last_selected_toast remember_video_quality_last_selected_toast"); // skip silence: a comparison (scenario-kit.js)
-// Entering and leaving fullscreen, played on the Fullscreen preview itself (Max, Nov 20: no separate
-// phones). The fullscreen player shrinks into the watch page's player, or grows out of it, using what the
-// preview shows at that moment; a choice that doesn't apply to it (portrait only, while the preview is a
-// landscape fullscreen) says so and the player stays. One story every three loops (4.5 s).
-function fsMorph(fromFull, toFull) {
-  const st = $("stage").firstElementChild; if (!st) return null;
-  st.querySelectorAll(".fsm7").forEach(n => n.remove());
-  // the picture the preview shows now, copied through the style object: its url() holds quotes, so it
-  // can't go into a style="..." attribute (that broke the whole overlay)
-  const fr = st.querySelector(".frame"), art = (fr && fr.style.background) || ART[0];
-  const box = full => full ? { left: "0%", right: "0%", top: "0%", height: "100%" } : { left: "25%", right: "25%", top: "0%", height: "50%" };
-  const o = document.createElement("div"); o.className = "fsm7 dyn";
-  Object.assign(o.style, { position: "absolute", inset: "0", zIndex: "30", background: "#0f0f0f", opacity: fromFull ? "0" : "1", transition: "opacity .35s" });
-  o.innerHTML = `<div style="position:absolute;left:25%;right:25%;top:56%;display:grid;gap:6px"><i style="height:9px;width:80%;border-radius:4px;background:#2a2a2a"></i><i style="height:9px;width:55%;border-radius:4px;background:#2a2a2a"></i><i style="height:9px;width:65%;border-radius:4px;background:#2a2a2a"></i></div>`;
-  const v = document.createElement("div");
-  Object.assign(v.style, { position: "absolute", background: art, transition: "left .55s var(--ease), right .55s var(--ease), height .55s var(--ease)" }, box(fromFull));
-  o.appendChild(v); st.appendChild(o); onDemoStop(() => o.remove());
-  void o.offsetWidth;
-  if (fromFull && !toFull) { o.style.opacity = "1"; Object.assign(v.style, box(false)); }
-  if (!fromFull && toFull) { Object.assign(v.style, box(true)); dT(() => { o.style.opacity = "0"; }, 500); }
-  return o;
+// Moving between two screens in the live preview (shared: any story that leaves the screen drawn now).
+// The other screen is the real scene of another tab (SCENES[otherId]), drawn in a layer over the stage;
+// a copy of this screen's video moves between where the video really sits on each screen (measured, not
+// guessed) while the other screen fades in or out. The same idea as the pair glide: real layouts, one
+// measured move. screenMove(otherId, true) goes to the other screen; screenMove(otherId, false) starts on
+// it and comes back here. Returns { go(), back() } to play the move (go) or return without it (back).
+function screenMove(otherId, leaving, ms = 550) {
+  const st = $("stage"); st.querySelectorAll(".sm7").forEach(n => n.remove());
+  const here = st.querySelector(".frame"); if (!here || !SCENES[otherId]) return null;
+  const k = (st.getBoundingClientRect().width / (st.offsetWidth || 1)) || 1; // the stage may be drawn scaled
+  const rectIn = el => { const a = el.getBoundingClientRect(), b = st.getBoundingClientRect(); return { left: (a.left - b.left) / k, top: (a.top - b.top) / k, width: a.width / k, height: a.height / k }; };
+  const layer = document.createElement("div"); layer.className = "sm7 dyn";
+  layer.innerHTML = SCENES[otherId]().replace(/background:#0f0f0f/g, "background:var(--app-bg,#0f0f0f)");
+  layer.querySelectorAll("[id]").forEach(e => e.removeAttribute("id"));
+  layer.querySelectorAll(".c").forEach(e => e.classList.remove("c")); // not a setting target: only scenery
+  Object.assign(layer.style, { position: "absolute", left: "0", top: "0", width: st.offsetWidth + "px", zIndex: "29", pointerEvents: "none", opacity: leaving ? "0" : "1" });
+  st.appendChild(layer);
+  const there = layer.querySelector(".frame"); if (!there) { layer.remove(); return null; }
+  // where the video sits here: its layout box (the video scale transform stays on the copy) and there
+  const A = { left: here.offsetLeft, top: here.offsetTop, width: here.offsetWidth, height: here.offsetHeight };
+  let p = here.offsetParent; while (p && p !== st) { A.left += p.offsetLeft; A.top += p.offsetTop; p = p.offsetParent; }
+  const B = rectIn(there), tf = getComputedStyle(here).transform;
+  const mover = document.createElement("div"); mover.className = "sm7 dyn";
+  Object.assign(mover.style, { position: "absolute", zIndex: "30", pointerEvents: "none", background: here.style.background || getComputedStyle(here).background, right: "auto", bottom: "auto" });
+  const place = (r, t) => ({ left: r.left + "px", top: r.top + "px", width: r.width + "px", height: r.height + "px", transform: t });
+  const from = leaving ? place(A, tf) : place(B, "none"), to = leaving ? place(B, "none") : place(A, tf);
+  Object.assign(mover.style, from);
+  there.style.visibility = "hidden"; // the moving copy stands in for the other screen's video
+  st.appendChild(mover);
+  const clear = () => { layer.remove(); mover.remove(); };
+  onDemoStop(clear);
+  const fade = (el, a, b, d, delay = 0) => el.animate([{ opacity: a }, { opacity: b }], { duration: d, delay, easing: "ease", fill: "forwards" });
+  return {
+    go() {
+      mover.animate([from, to], { duration: ms, easing: "cubic-bezier(.2,0,0,1)", fill: "forwards" });
+      if (leaving) fade(layer, 0, 1, ms * .6);
+      else { fade(layer, 1, 0, ms * .6, ms * .3); dT(clear, ms + 60); } // back on this screen: the real scene shows again
+    },
+    back(d = 300) { fade(layer, Number(getComputedStyle(layer).opacity), 0, d); fade(mover, 1, 0, d); dT(clear, d + 40); },
+  };
 }
+// Entering and leaving fullscreen, played on the Fullscreen preview itself: the fullscreen player moves
+// into the watch page's player (the Watch page tab's real scene) or out of it. One story every three loops.
 Object.assign(DEMOS, {
   morphe_exit_fullscreen(v) {
     if (demoStep % 3) return;
-    const st = $("stage").firstElementChild, pl = st && st.querySelector(".seek .played"), kn = st && st.querySelector(".seek .knob");
-    st && st.querySelectorAll(".fsm7").forEach(n => n.remove());
+    const st = $("stage"), pl = st.querySelector(".seek .played"), kn = st.querySelector(".seek .knob");
     const set = (w, ms) => [pl, kn].forEach(e => { if (!e) return; e.style.transition = ms ? `${e === pl ? "width" : "left"} ${ms}ms linear` : "none"; e.style[e === pl ? "width" : "left"] = w + "%"; });
     set(88, 0); onDemoStop(() => set(52, 0));
     dT(() => set(100, 900), 60); // the video plays to its end
-    const exits = /LANDSCAPE/.test(String(v)); // the preview is a landscape fullscreen
+    // the preview is a landscape fullscreen: "landscape" and "portrait and landscape" leave it
+    const exits = /LANDSCAPE/.test(String(v));
     dT(() => {
-      if (exits) fsMorph(true, false);
-      else showPill(String(v) === "PORTRAIT" ? "Stays: only portrait fullscreen is left" : "Stays in fullscreen", 1600);
+      if (!exits) { showPill(String(v) === "PORTRAIT" ? "Stays: only portrait fullscreen is left" : "Stays in fullscreen", 1600); return; }
+      const m = screenMove("watch", true); if (!m) return;
+      m.go(); dT(() => { m.back(); set(52, 0); }, 2900);
     }, 1050);
-    dT(() => { st && st.querySelectorAll(".fsm7").forEach(n => n.remove()); set(52, 0); }, 4200);
+    dT(() => set(52, 0), 4300);
   },
   morphe_open_videos_fullscreen(v) {
     if (demoStep % 3) return;
     const on = String(v) !== "DISABLED";
-    const o = fsMorph(false, false); if (!o) return; // a video opening in the watch page's player
+    const m = screenMove("watch", false); if (!m) return; // a video opening on the watch page
     dT(() => {
-      if (on) { fsMorph(false, true); showPill(String(v) === "PORTRAIT" ? "Opens in portrait fullscreen" : "Opens in fullscreen", 1400); }
-      else showPill("Opens in the normal player", 1400);
+      if (on) { m.go(); showPill(String(v) === "PORTRAIT" ? "Opens in portrait fullscreen" : "Opens in fullscreen", 1400); }
+      else { showPill("Opens in the normal player", 1400); dT(() => m.back(), 2200); }
     }, 700);
-    dT(() => { const st = $("stage").firstElementChild; st && st.querySelectorAll(".fsm7").forEach(n => n.remove()); }, 4200);
   },
 });
 def("fullscreen", "behaviour", "exit_fullscreen open_videos_fullscreen");
