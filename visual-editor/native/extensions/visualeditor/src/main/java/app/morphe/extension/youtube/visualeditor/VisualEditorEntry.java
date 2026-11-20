@@ -190,6 +190,20 @@ public final class VisualEditorEntry {
         }
     }
 
+    static final String UNSUPPORTED = "Redesign unsupported on this device";
+    private static WeakReference<Activity> unsupportedShownIn = new WeakReference<>(null);
+
+    /**
+     * Says why the regular settings list opened instead of the redesign. Every fallback path calls
+     * it (no WebView, the WebView failing to start or load, a WebView too old for the page); it
+     * shows once per visit to Morphe settings.
+     */
+    static void unsupported(@Nullable Activity activity) {
+        if (activity != null && unsupportedShownIn.get() == activity) return;
+        unsupportedShownIn = new WeakReference<>(activity);
+        Utils.showToastShort(UNSUPPORTED);
+    }
+
     static void show(@Nullable Activity activity) {
         if (activity == null || activity.isFinishing()) return;
         // Fail safe: if anything in the editor goes wrong on this YouTube or Morphe build, the
@@ -203,10 +217,11 @@ public final class VisualEditorEntry {
                     Logger.printException(() -> "Visual editor: WebView editor failed, using the list editor", ex);
                 }
             }
+            unsupported(activity); // no WebView, or it failed to start
             new VisualEditorDialog(activity).show();
         } catch (Throwable ex) {
             Logger.printException(() -> "Visual editor could not open", ex);
-            Utils.showToastShort("The visual editor isn't available on this version. Use the regular settings.");
+            unsupported(activity);
         }
     }
 }
