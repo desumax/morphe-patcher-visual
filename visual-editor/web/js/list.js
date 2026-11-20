@@ -379,6 +379,16 @@ function linkFor(k) {
   const m = /Tap here to open ([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+)/.exec(String(PREF[k].summary || "")); if (!m) return "";
   return `<div class="ctl"><a class="opt linkbtn" href="https://${esc(m[1])}" target="_blank" rel="noopener noreferrer">${I("link")}Open ${esc(m[1])}</a></div>`;
 }
+// A sub-option that has sub-options of its own (Audio pitch controls > Audio time stretching): its own
+// dependents sit right under it inside the parent's group, so it gets the same pill as a top-level parent,
+// a lock with the count while they are hidden and the count while they show (no folding of its own).
+function deepKidPill(k) {
+  if (!PARENT_OF[k]) return "";
+  const dk = sectionKeys().filter(x => DIRECT_PARENT[x] === k); if (!dk.length) return "";
+  const shown = dk.filter(x => kidVisible(x) || x === peekKid).length;
+  return shown ? `<span class="kidbtn kidin" aria-expanded="true" aria-label="${shown} sub-settings, shown below">${shown}${I("expand")}</span>`
+    : `<span class="kidbtn kidoff" title="Sub-settings hidden while this is off" aria-label="${dk.length} sub-settings, hidden">${dk.length}${I("lock")}</span>`;
+}
 function rowHTML(k, live) {
   const p = PREF[k]; const a = A[k];
   const dis = !parentsOk(k);
@@ -417,7 +427,8 @@ function rowHTML(k, live) {
   const tags = "";
   const kids = KIDS[k] ? KIDS[k].filter(x => kidVisible(x) || x === peekKid).length : 0;
   const kidbtn = kids ? `<button class="kidbtn" data-kidtoggle="${k}" aria-expanded="${!collapsed.has(k)}" aria-label="${kids} sub-options">${kids}${I("expand")}</button>`
-    : KIDS[k] ? `<span class="kidbtn kidoff" title="Sub-settings hidden while this is off" aria-label="${KIDS[k].length} sub-settings, hidden">${KIDS[k].length}${I("lock")}</span>` : ""; // same footprint as the open/close button, so the card never changes width
+    : KIDS[k] ? `<span class="kidbtn kidoff" title="Sub-settings hidden while this is off" aria-label="${KIDS[k].length} sub-settings, hidden">${KIDS[k].length}${I("lock")}</span>`
+    : deepKidPill(k); // same footprint as the open/close button, so the card never changes width
   const over = /^(hide|show) in /i.test(title(k)) && p.subScreenTitle ? `<div class="over">${esc(p.subScreenTitle)}</div>` : "";
   return `<div class="${cls.join(" ")}" data-row="${k}" data-k="${k}" tabindex="0">
     <div class="txt">${over}${lreset ? '<div class="ttlrow">' : ""}<div class="ttl">${ttlHTML(shownTitle(k), (dis ? I("lock", "lk") : "") + tags + kidbtn)}</div>${lreset ? lreset + "</div>" : ""}
