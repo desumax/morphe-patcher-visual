@@ -199,6 +199,7 @@ function holdRow(k) {
 function afterChange(k, before) {
   if (peekKid && kidVisible(peekKid)) peekKid = null;
   const settle = holdRow(k);
+  if (k === "morphe_change_form_factor") buildMembers(); // a Tablet layout brings back tablet-only settings (offDevice)
   commit(); select(k); settle();
   // the whole preview only pulses when nothing in it stands for this setting
   const sb = document.querySelector(".stagebox"); if (sb && !document.querySelector(`#stage [data-k="${k}"], #stage [data-also="${k}"]`) && !proxyEls(k).length) { sb.classList.remove("changed"); void sb.offsetWidth; sb.classList.add("changed"); }

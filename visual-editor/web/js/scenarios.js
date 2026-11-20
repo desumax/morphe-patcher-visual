@@ -423,6 +423,20 @@ const unknownAssume = name => !/spoof/i.test(name); // device checks pass; "is s
 const previewIsTablet = () => { const a = document.getElementById("app"); return !a || Math.min(a.clientWidth, a.clientHeight) >= 600; };
 const deviceCheck = name => name === "isTablet" ? previewIsTablet() : unknownAssume(name);
 const needsTablet = k => /U\("isTablet"\)/.test(String(PREF[k]?.availability || "")) && !previewIsTablet();
+// Settings that only do something on one kind of device are left out where they do nothing (Max, Nov 20),
+// so the list matches the phone or tablet the editor runs on, and they come back when the size changes.
+// A rule Morphe states itself (availability on Utils.isTablet, such as Force landscape) is read from the
+// catalogue (needsTablet). DEVICE_ONLY names the ones Morphe ties to a device size in its code or text
+// without stating a rule; an unknown key is never hidden, so upstream changes can't remove a setting.
+const DEVICE_ONLY = {
+  // FullscreenPlaylistPanelPatch: "Playlist panel exits fullscreen on tablets"; phones already open it
+  // over the fullscreen player (YouTube's own overlay). Also counts with Device layout set to Tablet.
+  morphe_fullscreen_playlist_panel: "tablet",
+  // RestoreOldVideoActionBarPatch: tablets always use YouTube's default action bar, whatever is picked
+  morphe_video_action_bar_layout: "phone",
+};
+const tabletLayout = () => previewIsTablet() || String(V("morphe_change_form_factor")) === "LARGE";
+const offDevice = k => { const d = DEVICE_ONLY[k]; return d === "tablet" ? !tabletLayout() : d === "phone" ? previewIsTablet() : needsTablet(k); };
 const compiled = new Map();
 function evalRule(expr, getter) {
   if (!expr) return true;
@@ -431,7 +445,8 @@ function evalRule(expr, getter) {
   if (!fn) return true;
   try { return !!fn(getter, ytV, deviceCheck); } catch { return true; }
 }
-const inVersion = k => { const p = PREF[k]; return !p || evalRule(p.when, () => null); };
+// in this YouTube version and on this kind of device (offDevice): everything else leaves the lists
+const inVersion = k => { const p = PREF[k]; return !p || evalRule(p.when, () => null) && !offDevice(k); };
 const availOk = k => { const p = PREF[k]; return !p || !p.availability || evalRule(p.availability, x => (x in PREF ? V(x) : null)); };
 // Lists Morphe builds at runtime (caption languages from YouTube's translation list, the user's own
 // custom speeds). The preview uses a representative copy.

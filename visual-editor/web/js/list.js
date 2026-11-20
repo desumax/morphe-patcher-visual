@@ -1014,8 +1014,8 @@ var progScrollUntil = 0;
 // landscape still hide it). Based on the app's own size, so the in-app WebView follows the device.
 const barStays = () => { const a = $("app"); return a.clientWidth >= 600 && a.clientHeight >= 600; };
 window.addEventListener("resize", () => { if (barStays()) $("app").classList.remove("barhidden"); });
-// crossing the tablet size changes which settings Morphe offers (Utils.isTablet): redraw the list then
-{ let wasTab = null; window.addEventListener("resize", () => { const t = previewIsTablet(); if (wasTab !== null && t !== wasTab) { renderList(); renderInspector(); } wasTab = t; }); }
+// crossing the tablet size changes which settings Morphe offers or that do anything (offDevice): rebuild the lists then
+{ let wasTab = null; window.addEventListener("resize", () => { const t = previewIsTablet(); if (wasTab !== null && t !== wasTab) { buildMembers(); renderBar(); renderList(); renderInspector(); } wasTab = t; }); }
 {
   let lastY = 0, acc = 0, barMoveUntil = 0;
   $("scroller").addEventListener("scroll", () => {
