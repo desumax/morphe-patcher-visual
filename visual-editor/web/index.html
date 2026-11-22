@@ -165,26 +165,26 @@ button { font: inherit; color: inherit; }
 .theme-yt .tab7 { background: #272727; color: #f1f1f1; }
 .theme-yt .tab7[aria-selected="true"] { background: #f1f1f1; color: #0f0f0f; }
 .pgroups .pick .ps + .ps { opacity: .7; }
-/* Group cards (screen menu, tabs layout): name tab top left, icon top right, a line per tab, count
-   tab bottom left. "html #pickGrid" outranks the in-app card rules, so the app shows the same card. */
+/* Group cards (screen menu, tabs layout), design D (Max, Nov 22): a rail on the left with the icon and
+   the settings count, the name and a line per tab on the right. "html #pickGrid" outranks the in-app
+   card rules, so the app shows the same card. */
 html #pickGrid .pg.pgroups.pvis:not(.nx) { flex: none; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: 8px; } /* one height for every card: the tallest one's */
-html #pickGrid .pg.pgroups.pvis:not(.nx) .pick.gcard { --gc-bg: var(--m-c-high, #262626); --gc-tab: var(--m-c-highest, #383838); display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 0; padding: 0; min-height: 0; border-radius: 20px; overflow: hidden; background: var(--gc-bg); text-align: left; color: var(--m-on, #f1f1f1); }
+html #pickGrid .pg.pgroups.pvis:not(.nx) .pick.gcard { --gc-bg: var(--m-c-high, #262626); --gc-tab: var(--m-c-highest, #383838); display: grid; grid-template-columns: 50px minmax(0, 1fr); align-items: stretch; gap: 0; padding: 0; min-height: 134px; border-radius: 20px; overflow: hidden; background: var(--gc-bg); text-align: left; color: var(--m-on, #f1f1f1); position: relative; }
 .theme-yt #pickGrid .pg.pgroups.pvis:not(.nx) .pick.gcard { --gc-bg: #262626; --gc-tab: #3a3a3a; }
-html #pickGrid .pg.pgroups.pvis:not(.nx) .pick.gcard { position: relative; }
 html #pickGrid .pg.pgroups.pvis:not(.nx) .pick.gcard[aria-current="true"] { background: var(--gc-bg); box-shadow: none; }
-/* the current card's outline is drawn over the tabs, not under them */
+/* the current card's outline is drawn over the rail, not under it */
 .gcard[aria-current="true"]::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 2px var(--m-primary, #3ea6ff); pointer-events: none; z-index: 2; }
 html #pickGrid .pg.pgroups.pvis:not(.nx) .pick.gcard:hover { filter: brightness(1.08); }
-.gcard .gc-h { display: flex; align-items: stretch; justify-content: space-between; gap: 8px; }
-.gcard .gc-t { min-width: 0; display: flex; align-items: center; padding: 0 13px 0 12px; height: 31px; border-radius: 0 0 12px 0; background: var(--gc-tab); font-size: 15px; font-weight: 600; line-height: 1.1; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-html #pickGrid .pg.pgroups.pvis:not(.nx) .gcard .pi { flex: none; width: 38px; height: 31px; margin: 0; border-radius: 0 0 0 12px; background: var(--gc-tab); display: grid; place-items: center; }
-html #pickGrid .pg.pgroups.pvis:not(.nx) .gcard .pi svg { width: 18px; height: 18px; fill: var(--m-on, #f1f1f1); }
-.gcard .gc-tabs { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; gap: 0; padding: 6px 12px 8px 16px; }
-.gcard .gc-tabs span { font-size: 13.5px; line-height: 1.32; color: var(--m-on-var, #aaa); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* the count pill sits in the bottom right corner, beside the last tab when both fit, else on its own line below it */
-.gcard .gc-tabs span.gc-last { flex: 1 0 auto; display: flex; flex-wrap: wrap; align-content: stretch; overflow: visible; margin-right: -12px; margin-bottom: -8px; } /* fills the card to its bottom: the tab name stays at the top of the line, the count drops to the corner */
-.gcard .gc-last > span:first-child { align-self: flex-start; flex: 0 1 auto; min-width: 0; max-width: calc(100% - 12px); overflow: hidden; text-overflow: ellipsis; margin-bottom: 8px; }
-.gcard .gc-tabs .gc-n { align-self: flex-end; flex: none; margin-left: auto; padding: 3px 10px 4px 11px; border-radius: 12px 0 0 0; background: var(--gc-tab); font-size: 11px; line-height: 1.25; color: var(--m-on-var, #aaa); }
+.gcard .gc-rail { background: var(--gc-tab); display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 12px 0 11px; }
+html #pickGrid .pg.pgroups.pvis:not(.nx) .gcard .pi { width: auto; height: auto; margin: 0; background: none; display: block; }
+html #pickGrid .pg.pgroups.pvis:not(.nx) .gcard .pi svg { width: 23px; height: 23px; display: block; fill: var(--m-on, #f1f1f1); } /* 15% larger than the 20 px of the design (Max, Nov 22) */
+.gcard .gc-n { text-align: center; line-height: 1; }
+.gcard .gc-n b { display: block; font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.gcard .gc-n small { font-size: 9.5px; color: var(--m-on-var, #aaa); letter-spacing: .02em; }
+.gcard .gc-body { min-width: 0; padding: 11px 10px 8px 11px; display: flex; flex-direction: column; }
+.gcard .gc-t { font-size: 15px; font-weight: 700; line-height: 1.25; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gcard .gc-tabs { display: flex; flex-direction: column; }
+.gcard .gc-tabs span { font-size: 12.5px; line-height: 16.5px; color: var(--m-on-var, #aaa); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* the frame's line is drawn on top of the preview (::after), not as a border around it: the clipped
    preview bled into a real border's anti-aliased corners and made them look thin and grey. The box
    itself doesn't clip (that cut the line's own edge pixels); the preview and canvas clip just inside the
