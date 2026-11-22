@@ -249,27 +249,31 @@ function markFixed(st) {
 // flash and ghost dashes belong to the card, not to the full-width wrapper, so move the card's margins
 // (and its corner radius) onto the wrapper. Layout stays the same.
 const MARGINS = ["marginTop", "marginRight", "marginBottom", "marginLeft"];
+// Performance (Max, Nov 22): every card is read first and changed after, so the preview is laid out once
+// instead of once per card (a read after a change makes the browser redo the layout).
 function hugComponents(root) {
+  const moves = [];
   root.querySelectorAll(".c").forEach(c => {
     if (c.children.length !== 1 || c.childNodes.length > 1 && [...c.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return;
     const ch = c.firstElementChild, cs = ch.style;
     if (!MARGINS.some(m => cs[m]) || c.style.padding || c.style.background) return;
     const own = getComputedStyle(ch);
-    MARGINS.forEach(m => { if (own[m] && own[m] !== "0px" && own[m] !== "auto") { c.style[m] = own[m]; ch.style[m] = "0px"; } });
-    if (own.borderTopLeftRadius !== "0px") c.style.borderRadius = own.borderTopLeftRadius;
+    moves.push([c, ch, MARGINS.map(m => own[m]), own.borderTopLeftRadius]);
+  });
+  moves.forEach(([c, ch, ms, rad]) => {
+    MARGINS.forEach((m, i) => { if (ms[i] && ms[i] !== "0px" && ms[i] !== "auto") { c.style[m] = ms[i]; ch.style[m] = "0px"; } });
+    if (rad !== "0px") c.style.borderRadius = rad;
   });
   // a left-aligned card narrower than its block wrapper: shrink the wrapper to the card
-  root.querySelectorAll(".c.blk, div.c").forEach(hugWidth);
+  [...root.querySelectorAll(".c.blk, div.c")].filter(hugsNarrow).forEach(c => { c.style.width = "fit-content"; });
 }
-function hugWidth(c) {
-  {
-    if (c.children.length !== 1 || c.style.width) return;
-    const r = c.getBoundingClientRect(), q = c.firstElementChild.getBoundingClientRect();
-    if (!r.width || q.width > r.width - 6 || Math.abs(q.left - r.left) > 1) return;
-    const cs = getComputedStyle(c); if (cs.display !== "block" || getComputedStyle(c.parentElement).display.includes("flex")) return;
-    c.style.width = "fit-content";
-  }
+function hugsNarrow(c) {
+  if (c.children.length !== 1 || c.style.width) return false;
+  const r = c.getBoundingClientRect(), q = c.firstElementChild.getBoundingClientRect();
+  if (!r.width || q.width > r.width - 6 || Math.abs(q.left - r.left) > 1) return false;
+  const cs = getComputedStyle(c); return cs.display === "block" && !getComputedStyle(c.parentElement).display.includes("flex");
 }
+function hugWidth(c) { if (hugsNarrow(c)) c.style.width = "fit-content"; }
 
 function stateChip(k) {
   const a = A[k], p = PREF[k], v = V(k);
@@ -743,11 +747,18 @@ function syncLocked(k) {
 let optCtx = null;
 // Every pill in a box gets the width of the one with the longest text. When an even row would stretch
 // them far past that (a few long options, one per line), they keep that width instead of filling the line.
-function fitPills(box, pills, textOf, chrome, tight = false) {
-  box.classList.remove("tight"); box.style.removeProperty("--tight-fs");
-  const W = box.clientWidth; if (!W || !pills.length) return;
-  const cs = getComputedStyle(pills[0]), gap = parseFloat(getComputedStyle(box).columnGap) || 6;
-  optCtx = optCtx || document.createElement("canvas").getContext("2d"); optCtx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+// What fitPills reads from the page, read for every box before any box is changed: reading after each
+// write made the browser lay the whole list out again once per box (Max, Nov 22: performance).
+function pillsMeasure(box, pills) {
+  const W = box.clientWidth; if (!W || !pills.length) return null;
+  const cs = getComputedStyle(pills[0]);
+  return { W, fontSize: cs.fontSize, font: `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`, gap: parseFloat(getComputedStyle(box).columnGap) || 6 };
+}
+function fitPills(box, pills, textOf, chrome, tight = false, pre) {
+  if (!pre) { box.classList.remove("tight"); box.style.removeProperty("--tight-fs"); pre = pillsMeasure(box, pills); }
+  if (!pre) return;
+  const { W, gap } = pre, cs = { fontSize: pre.fontSize };
+  optCtx = optCtx || document.createElement("canvas").getContext("2d"); optCtx.font = pre.font;
   let need = Math.ceil(Math.max(...pills.map(o => optCtx.measureText(textOf(o)).width)) + chrome);
   // A few long labels (Chinese (Simplified)) take two lines when that gains a column, so one long name
   // does not halve the grid (Max, Nov 20). Each label's best two-line width is its widest half.
@@ -784,9 +795,13 @@ function fitPills(box, pills, textOf, chrome, tight = false) {
   box.style.justifyContent = fill ? "" : "center"; // pills that don't fill the line sit in its middle
 }
 function fitOpts(root = $("list")) {
-  root.querySelectorAll(".ctl.optgrid").forEach(box => fitPills(box, [...box.querySelectorAll(".opt")], o => o.textContent, 2 * OPT_PAD + 2, true));
-  // list chips (speeds, words): text, then the remove button; the add field takes its own line
-  root.querySelectorAll(".ctl.lst").forEach(box => fitPills(box, [...box.querySelectorAll(".lchip")], o => o.firstChild ? o.firstChild.textContent : "", LCHIP_CHROME));
+  const jobs = [...root.querySelectorAll(".ctl.optgrid")].map(box => [box, [...box.querySelectorAll(".opt")], o => o.textContent, 2 * OPT_PAD + 2, true])
+    // list chips (speeds, words): text, then the remove button; the add field takes its own line
+    .concat([...root.querySelectorAll(".ctl.lst")].map(box => [box, [...box.querySelectorAll(".lchip")], o => o.firstChild ? o.firstChild.textContent : "", LCHIP_CHROME, false]));
+  // all writes undone, then all reads, then all writes: one layout for the whole list instead of one per box
+  jobs.forEach(([box]) => { box.classList.remove("tight"); box.style.removeProperty("--tight-fs"); });
+  const pre = jobs.map(([box, pills]) => pillsMeasure(box, pills));
+  jobs.forEach((j, i) => { if (pre[i]) fitPills(...j, pre[i]); });
 }
 const OPT_PAD = 6; // the least room beside a pill's text
 const LCHIP_CHROME = 8 + 2 + 22 + 2; // left padding, gap, remove button, right padding (4 speeds a row in a ~300px card)
@@ -948,6 +963,8 @@ function openResult(k) {
 const resSection = k => offDevice(k) && A[k] && SECTIONS.some(s => s.id === A[k].section) ? A[k].section : sectionOf(k);
 
 function renderInspector() {
+  // the in-app editor never shows the inspector (app.css): drawing it there was a third of every change's work
+  if (document.documentElement.classList.contains("inapp")) return;
   const k = selected, p = k && PREF[k];
   if (!p) $("selCard").innerHTML = `<h2>Selected</h2><p>Nothing selected. Tap a component in the preview or a row in the list.</p>`;
   else {

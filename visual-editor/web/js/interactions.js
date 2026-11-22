@@ -32,8 +32,11 @@ function touchSel(k) { if (selected === k) return; if (ghosts.has(selected)) ung
 const afterBusy = fn => requestAnimationFrame(() => requestAnimationFrame(fn));
 function unfold(el) { afterBusy(() => { if (el.isConnected && el.classList.contains("long") && el.closest(".row.sel")) el.classList.add("open"); }); }
 function fitSums(root = $("list"), keep = new Set()) {
-  root.querySelectorAll(".row > .txt > .sum:not(.need)").forEach(el => {
-    const lh = parseFloat(getComputedStyle(el).lineHeight) || 17.5, full = el.scrollHeight;
+  // every description measured first, then marked: one layout for the list, not one per row (performance)
+  const els = [...root.querySelectorAll(".row > .txt > .sum:not(.need)")];
+  const sizes = els.map(el => [parseFloat(getComputedStyle(el).lineHeight) || 17.5, el.scrollHeight]);
+  els.forEach((el, i) => {
+    const [lh, full] = sizes[i];
     el.classList.toggle("long", full > lh * 2 + 3); el.style.setProperty("--full", full + "px");
     const want = el.classList.contains("long") && !!el.closest(".row.sel");
     if (!want) el.classList.remove("open"); else if (keep.has(el)) el.classList.add("open"); else if (!el.classList.contains("open")) unfold(el);
@@ -203,19 +206,30 @@ function fitOutline(el) { fitRing(el); watchRing(el); wakeRings(); }
 // a part scrolled under a header shows no ring there, and one sitting against that edge has its
 // ring drawn just inside it.
 const RING_ROOM = 6;
-let ringRAF = 0, ringQuiet = 0, ringKey = "";
+let ringRAF = 0, ringQuiet = 0, ringKey = "", ringQuick = "", ringEls = [];
 function wakeRings() { ringQuiet = 0; if (!ringRAF) ringRAF = requestAnimationFrame(ringTick); }
 function ringTick() {
   ringRAF = 0;
   ringQuiet = syncRings() ? 0 : ringQuiet + 1;
   if (ringQuiet < 45) ringRAF = requestAnimationFrame(ringTick);
 }
+// The boxes around el that clip it (overflow other than visible), up to stop. The ring layer asks every
+// frame while a part moves; which boxes clip does not change from one frame to the next, so the list is
+// kept for a moment instead of reading every ancestor's style each frame (Max, Nov 22: performance).
+const clipCache = new WeakMap();
+function clipChain(el, stop) {
+  const now = performance.now(), c = clipCache.get(el);
+  if (c && c.stop === stop && now - c.at < 400) return c.list;
+  const list = [];
+  for (let p = el.parentElement; p && p !== stop; p = p.parentElement) {
+    const cs = getComputedStyle(p); if (cs.overflowX !== "visible" || cs.overflowY !== "visible") list.push(p);
+  }
+  clipCache.set(el, { stop, at: now, list }); return list;
+}
 // the box that actually clips el: the frame, narrowed by any scroller inside it
 function clipEdges(el, F) {
   let l = F.left, t = F.top, r = F.right, b = F.bottom;
-  for (let p = el.parentElement; p && p !== $("stage"); p = p.parentElement) {
-    const cs = getComputedStyle(p);
-    if (cs.overflowX === "visible" && cs.overflowY === "visible") continue;
+  for (const p of clipChain(el, $("stage"))) {
     const q = p.getBoundingClientRect();
     l = Math.max(l, q.left); t = Math.max(t, q.top); r = Math.min(r, q.right); b = Math.min(b, q.bottom);
   }
@@ -252,17 +266,26 @@ function ringGeom(el, F, frameR) {
 function syncRings() {
   const st = $("stage"), layer = $("ringLayer");
   if (!st || !layer) return false;
-  const live = st.offsetParent ? [...st.querySelectorAll(".c.sel")] : [];
   st.querySelectorAll(".selx:not(.sel)").forEach(e => e.classList.remove("selx"));
-  const L = layer.getBoundingClientRect(), F = st.getBoundingClientRect(), sb = getComputedStyle(st.parentElement);
+  // nothing selected in the preview, or the preview hidden: no ring to place, and no layout to read
+  // (asking whether the preview is shown is itself a layout, so it comes second; Max, Nov 22: performance)
+  const sel = [...st.querySelectorAll(".c.sel")], live = sel.length && st.offsetParent ? sel : [];
+  if (!live.length) { if (layer.firstChild) layer.replaceChildren(); ringQuick = ""; const k = ""; const ch = k !== ringKey; ringKey = k; return ch; }
+  const L = layer.getBoundingClientRect(), F = st.getBoundingClientRect();
+  // nothing moved since the last frame (the same parts, at the same places, the frame and the layer
+  // where they were): the rings stay as drawn, without reading any styles (performance)
+  const rk = q => `${q.left},${q.top},${q.width},${q.height}`;
+  const quick = [rk(L), rk(F), innerWidth, innerHeight, ...live.map(el => rk(el.getBoundingClientRect()) + el.className + el.getAttribute("style"))].join("|");
+  if (quick === ringQuick && live.length === ringEls.length && live.every((el, i) => el === ringEls[i])) return false;
+  ringQuick = quick; ringEls = live;
+  const sb = getComputedStyle(st.parentElement);
   const frameR = Math.max(0, parseFloat(sb.borderTopLeftRadius) - parseFloat(sb.borderTopWidth) || 0);
   const out = [];
   // what of the ring layer can be seen: the screen and every clipping box around the preview. A ring
   // that would run past it (the preview pinned at the top of the screen after scrolling, its edge on the
   // screen's edge) is drawn just inside instead, so no side of it ever disappears (Max, Nov 20)
   const V = { l: 0, t: 0, r: innerWidth, b: innerHeight };
-  for (let a = layer.parentElement; a && a !== document.documentElement; a = a.parentElement) {
-    const cs = getComputedStyle(a); if (cs.overflowX === "visible" && cs.overflowY === "visible") continue;
+  for (const a of clipChain(layer, document.documentElement)) {
     const q = a.getBoundingClientRect(); V.l = Math.max(V.l, q.left); V.t = Math.max(V.t, q.top); V.r = Math.min(V.r, q.right); V.b = Math.min(V.b, q.bottom);
   }
   let key = `${Math.round(F.left)},${Math.round(F.top)},${Math.round(V.t)},${Math.round(V.b)}`;
@@ -287,7 +310,8 @@ function syncRings() {
 }
 // anything that moves or resizes the selected part wakes the ring layer for a moment
 ["scroll", "animationstart", "animationiteration", "transitionrun"].forEach(t => document.addEventListener(t, e => {
-  const st = $("stage"); if (st && e.target instanceof Element && (st.contains(e.target) || e.target.contains(st))) wakeRings();
+  // a comparison or demo playing over the preview (#canvas) moves nothing a ring follows
+  const st = $("stage"); if (st && e.target instanceof Element && (st.contains(e.target) || e.target.contains(st)) && !e.target.closest("#canvas")) wakeRings();
 }, { capture: true, passive: true }));
 window.addEventListener("resize", wakeRings);
 // the pop grows away from a clipping edge the part sits against, so it is never cut off there

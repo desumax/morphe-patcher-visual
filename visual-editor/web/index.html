@@ -342,8 +342,10 @@ html #pickGrid .pg.pgroups.pvis:not(.nx) .gcard .pi svg { width: 23px; height: 2
 .dev .dv-below i { display: block; height: 8px; border-radius: 3px; background: #2a2a2a; }
 .dev .dv-below i:nth-child(2) { width: 70%; }
 .dev.land .dv-below { opacity: 0; }
-.canvas .prog { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--m-primary); width: 0; }
-.dev { position: relative; background: #111; border: 3px solid #555; border-radius: 14px; overflow: hidden; transition: width .5s var(--ease), height .5s var(--ease), transform .5s var(--ease), scale .5s var(--ease); flex: none; }
+.canvas .prog { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--m-primary); width: 100%; transform: scaleX(0); transform-origin: 0 50%; }
+.dev { position: relative; background: #111; border: 3px solid #555; border-radius: 14px; overflow: hidden; transition: width .5s var(--ease), height .5s var(--ease), transform .5s var(--ease), scale .5s var(--ease); flex: none; contain: size layout paint; }
+/* every phone has its own width and height and clips its drawing, so what moves inside it (a finger, a
+   progress bar, a panel sliding in) is laid out within the phone alone, not the whole page (performance) */
 .scbox { transition: width .5s var(--ease), height .5s var(--ease); position: relative; flex: none; }
 /* the phone is centred on its scaled box, so scaling it never pushes it off-centre */
 .scbox > .dev, .scbox > .duo7 { position: absolute; left: 50%; top: 50%; translate: -50% -50%; }
@@ -577,7 +579,9 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .dbtn.primary.neg { background: #8c1d18; color: #ffdad6; }
 .restarting { position: absolute; inset: 0; background: #000; z-index: 80; display: grid; place-items: center; opacity: 0; pointer-events: none; transition: opacity 300ms var(--ease); }
 .restarting.on { opacity: 1; pointer-events: auto; }
-.restarting .logo { width: 72px; height: 72px; border-radius: 20px; background: linear-gradient(135deg, var(--m-brand-1), var(--m-brand-2)); animation: pulse 0.9s var(--ease) infinite alternate; }
+.restarting .logo { width: 72px; height: 72px; border-radius: 20px; background: linear-gradient(135deg, var(--m-brand-1), var(--m-brand-2)); }
+/* the logo pulses only while the restart screen is up: hidden, it kept the phone drawing frames forever (performance) */
+.restarting.on .logo { animation: pulse 0.9s var(--ease) infinite alternate; }
 @keyframes pulse { from { transform: scale(.9); opacity: .7; } to { transform: scale(1.05); opacity: 1; } }
 .exitflash { animation: exitflash 700ms var(--ease); }
 @keyframes exitflash { 0% { transform: none; opacity: 1; } 45% { transform: translateX(40px); opacity: 0; } 55% { transform: translateX(-30px); opacity: 0; } 100% { transform: none; opacity: 1; } }

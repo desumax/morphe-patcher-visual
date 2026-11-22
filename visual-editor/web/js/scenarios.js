@@ -24,7 +24,18 @@ function device(orient, inner, extra = "") {
 const playerArea = (i, overlay = "") => `<div class="dv-video" style="background:${ART[i]}">${overlay}</div><div class="dv-below"><i></i><i></i><i></i></div>`;
 function setOrient(dev, orient) { const [w, h] = DEV_SIZE[orient]; dev.classList.remove("port", "land"); dev.classList.add(orient); dev.style.width = w + "px"; dev.style.height = h + "px"; }
 // in a pair, a phone changing shape re-lays out the pair, and everything glides there (see fitDev)
-function rotate(dev, orient) { const g = dev.closest(".duo7.gen"); if (g) { g._turn = true; g._was = g._was || pairSnap(g); } setOrient(dev, orient); fitDev(orient); }
+function rotate(dev, orient) { const g = dev.closest(".duo7.gen"); if (g) { g._turn = true; g._was = g._was || pairSnap(g); } setOrient(dev, orient); fitDevSoon(orient); }
+// Performance (Max, Nov 22): a phone turning and its caption changing in the same step, or both phones
+// changing at the same moment, re-lay out the pair once, at the end of that step and before it is drawn,
+// instead of once per change (each one measured the whole pair again). While a comparison is being
+// drawn nothing is laid out until both phones are there (draw lays them out once at its end).
+let fitQueue = null, scDrawing = false;
+function fitDevSoon(orient, after) {
+  if (scDrawing) return;
+  if (!fitQueue) { fitQueue = { orient, after: [] }; queueMicrotask(() => { const q = fitQueue; fitQueue = null; fitDev(q.orient); q.after.forEach(f => f()); }); }
+  else if (orient) fitQueue.orient = orient;
+  if (after) fitQueue.after.push(after);
+}
 // The phone in a scenario is drawn at a fixed small size (so all coordinates stay simple) and then
 // scaled up to fill the space the canvas has, between the caption line and the footer.
 function fitScale(w, h) {
@@ -37,22 +48,33 @@ function fitScale(w, h) {
 // The pair is measured, not estimated: an invisible copy with every transition switched off shows
 // the final size of everything in it (a phone that is still turning, a caption that wraps to more
 // lines, a long label), laid out side by side and stacked.
+// Performance (Max, Nov 22): a phone's drawing never changes the pair's size (each .dev has its own
+// width and height), so the copy is made without it, and a pair whose labels, captions, phone sizes
+// and label scale are unchanged reuses the last measurement: a comparison asks many times a second.
 function measurePair(gen) {
-  const probe = gen.cloneNode(true);
-  probe.removeAttribute("data-fit"); probe.classList.add("probe7");
-  probe.querySelectorAll("[id]").forEach(e => e.removeAttribute("id")); probe.querySelectorAll(".glide7").forEach(e => e.remove()); probe.classList.remove("capgo");
-  gen.parentElement.appendChild(probe);
+  const devs = [...gen.querySelectorAll(".dev")], cap = c => c.textContent;
+  const key = [devs.map(d => d.style.width + "x" + d.style.height).join(), [...gen.querySelectorAll(":scope > .dl7 > span")].map(cap).join("|"),
+    [...gen.querySelectorAll(":scope > .dl7 > .sf7")].map(cap).join("|"), gen.style.getPropertyValue("--dsc"), gen.querySelectorAll(".ask7").length, gen.parentElement.clientWidth].join("#");
+  if (gen._measured && gen._measured.key === key) return gen._measured.m;
+  const base = gen.cloneNode(true);
+  base.querySelectorAll(".dev").forEach(d => d.replaceChildren());
+  base.removeAttribute("data-fit"); base.classList.add("probe7");
+  base.querySelectorAll("[id]").forEach(e => e.removeAttribute("id")); base.querySelectorAll(".glide7").forEach(e => e.remove()); base.classList.remove("capgo");
+  // one copy per layout, all laid out together and read after: the page is laid out once for the four
+  // instead of once per layout tried (Max, Nov 22: performance)
   // labels beside the phones (labout side by side, labright stacked): see the CSS
-  const size = (dir, side = false, top = false) => { probe.classList.toggle("capside", side); probe.classList.toggle("labright", dir === "column" && !top); probe.classList.toggle("labout", dir === "row" && !top); probe.style.flexDirection = dir; return [probe.offsetWidth, probe.offsetHeight]; };
+  const variant = (dir, side = false, top = false) => { const v = base.cloneNode(true); v.classList.toggle("capside", side); v.classList.toggle("labright", dir === "column" && !top); v.classList.toggle("labout", dir === "row" && !top); v.style.flexDirection = dir; return v; };
   // captions beside the phones: only for portrait pairs (landscape phones are already wide)
-  const portrait = !probe.querySelector(".dev.land");
-  const rowWH = size("row"), colWH = size("column");
-  const sideWH = portrait ? size("row", true) : null;
+  const portrait = !base.querySelector(".dev.land");
   // labels above the phones, side by side: taken only when it draws the phones clearly larger (a wide,
   // short preview gives the width to the labels beside; a tall one can spare a line on top; Max, Nov 20)
-  const topWH = size("row", false, true);
-  probe.remove();
-  return { rowWH, colWH, sideWH, topWH };
+  const probes = [variant("row"), variant("column"), portrait ? variant("row", true) : null, variant("row", false, true)];
+  probes.forEach(v => v && gen.parentElement.appendChild(v));
+  const [rowWH, colWH, sideWH, topWH] = probes.map(v => v ? [v.offsetWidth, v.offsetHeight] : null);
+  probes.forEach(v => v && v.remove());
+  const m = { rowWH, colWH, sideWH, topWH };
+  gen._measured = { key, m };
+  return m;
 }
 // where an element sits inside the pair, in the pair's own unscaled pixels (whatever its scale is right
 // now), measured from the pair's centre: the pair is centred in the preview, so when it changes size its
@@ -71,6 +93,7 @@ const moveEase = (() => { // cubic-bezier(.4, 0, .2, 1), the CSS --ease
 // where a caption ends up once the phones have finished turning: an untransitioned copy of the pair
 function finalCapPlaces(gen) {
   const probe = gen.cloneNode(true); probe.removeAttribute("data-fit"); probe.classList.add("probe7");
+  probe.querySelectorAll(".dev").forEach(d => d.replaceChildren()); // sizes only (see measurePair)
   probe.querySelectorAll("[id]").forEach(e => e.removeAttribute("id")); probe.querySelectorAll(".glide7").forEach(e => e.remove());
   probe.classList.remove("capgo"); probe.classList.toggle("capside", gen.dataset.lay === "side"); probe.classList.toggle("labright", gen.classList.contains("labright")); probe.classList.toggle("labout", gen.classList.contains("labout"));
   gen.parentElement.appendChild(probe);
@@ -238,8 +261,9 @@ function setFoot(text) {
     // new words fade up in place (no gap); if the layout changes with them, fitDev flows it to its new place
     const shown = gen && f.textContent && gen.dataset.fit && performance.now() - Number(gen.dataset.fit) > 250;
     if (gen) gen._was = gen._was || pairSnap(gen); // the phones glide if the new words change the layout
-    f.textContent = text; if (gen) fitDev();
-    if (shown && !f._gliding) f.animate([{ opacity: .35 }, { opacity: 1 }], { duration: 260, easing: "ease-out" });
+    f.textContent = text;
+    const fade = () => { if (shown && !f._gliding) f.animate([{ opacity: .35 }, { opacity: 1 }], { duration: 260, easing: "ease-out" }); };
+    if (gen) fitDevSoon(undefined, fade); else fade();
     return;
   } const el = document.querySelector("#canvas .foot"); if (el) el.textContent = text; }
 // A vibration: the phone trembles fast with a tiny amplitude (a big slow shake read as "no"), arcs
@@ -270,7 +294,16 @@ const atNow = (ms, f, side) => clock.after("steps", ms * scStretch, () => { cons
 const LEAD_MS = 300;
 let scCollect = null;
 const at = (ms, f) => { if (scCollect) { scCollect.push([ms, f, scSide]); return; } return atNow(ms, f, scSide); };
-function startCollected(list) { const lead = list.length ? Math.max(0, Math.min(...list.map(x => x[0])) - LEAD_MS) : 0; list.forEach(([ms, f, side]) => atNow(ms - lead, f, side)); }
+// steps due at the same moment (the two phones' turns, say) run in one timer, in the order they were
+// written, so their layout work is done once for both (see fitDevSoon)
+function startCollected(list) {
+  const lead = list.length ? Math.max(0, Math.min(...list.map(x => x[0])) - LEAD_MS) : 0, due = new Map();
+  list.forEach(([ms, f, side]) => { const t = ms - lead; if (!due.has(t)) due.set(t, []); due.get(t).push([f, side]); });
+  due.forEach((steps, t) => clock.after("steps", t * scStretch, () => steps.forEach(([f, side]) => {
+    const p = scSide; scSide = side;
+    try { f(); } catch (e) { setTimeout(() => { throw e; }); } finally { scSide = p; }
+  })));
+}
 function fingerTo(f, x, y, ms = 0) { f.style.transition = ms ? `left ${ms}ms var(--ease), top ${ms}ms var(--ease), opacity 120ms` : "opacity 120ms"; f.style.left = x + "px"; f.style.top = y + "px"; f.classList.add("show"); }
 function tapF(f) { f.classList.remove("tap"); void f.offsetWidth; f.classList.add("tap"); }
 const miniSeek = (pct = 30, marks = []) => `<div class="msk" style="position:absolute;left:8%;right:8%;bottom:16%;height:3px;background:rgba(255,255,255,.3)"><div class="mp" style="position:absolute;left:0;top:0;bottom:0;width:${pct}%;background:#ff0033;transition:width .9s linear"></div>${marks.map(m => `<i style="position:absolute;left:${m}%;top:-1px;width:2px;height:5px;background:#000"></i>`).join("")}</div>`;
@@ -1183,7 +1216,8 @@ function playScenario(k, prevValue) {
   const ask = !self && PREF[k].type !== "boolean" && choices.length > 1 && sameVal(V(k), d) && (prevValue === undefined || sameVal(prevValue, d));
   const draw = () => {
     clock.start("steps"); scStretch = stretch; scTold = toldInside(fn) || FOOT_OFF.has(k); scTurns = turnsPhone(fn) || SCN_TURNS.has(k); scCollect = [];
-    try { drawSides(); } finally { const list = scCollect; scCollect = null; startCollected(list); }
+    scDrawing = true;
+    try { drawSides(); } finally { scDrawing = false; const list = scCollect; scCollect = null; startCollected(list); }
     fitDev();
   };
   const drawSides = () => {
@@ -1206,7 +1240,7 @@ function playScenario(k, prevValue) {
   const round = (first) => {
     if (!first) draw();
     for (let r = 1; r < runs; r++) clock.after("scenario", (first ? SC_FADE : 0) + r * slot, draw);
-    canvas.querySelector(".prog").animate([{ width: "0%" }, { width: "100%" }], { duration: SC_TOTAL, delay: first ? SC_FADE : 0, fill: "forwards" });
+    canvas.querySelector(".prog").animate([{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }], { duration: SC_TOTAL, delay: first ? SC_FADE : 0, fill: "forwards" });
     clock.after("scenario", (first ? SC_FADE : 0) + SC_TOTAL, () => round(false));
   };
   const start = () => { draw(); round(true); };
