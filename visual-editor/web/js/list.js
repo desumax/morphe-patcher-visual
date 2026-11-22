@@ -24,7 +24,8 @@ function renderBar() {
     + `<div class="themerow"><div class="themetog" data-theme-toggle role="menuitemcheckbox" aria-checked="${theme === "m3"}"><span class="pi">${I("palette")}</span><div class="tt">Morphe design</div><span class="sw" role="presentation" aria-checked="${theme === "m3"}"></span></div>`
     + `<button class="ordreset" data-order-reset ${customOrder ? "" : "disabled"} title="Hold a screen to move it. This restores Morphe's order.">${I("reset")}Reset order</button></div>`
     + `<div class="themerow simrow"><div class="themetog" data-group-toggle role="menuitemcheckbox" aria-checked="${grouped}"><span class="pi">${I("layers")}</span><div class="tt">Group screens into tabs<small>Six screens instead of ${SECTIONS.length}. Each one has tabs right under the live preview, and every tab brings its own preview.</small></div><span class="sw" role="presentation" aria-checked="${grouped}"></span></div></div>`
-    + `<div class="themerow designrow"><div class="dcol"><div class="dsg"><span class="pi">${I("list")}</span><div class="tt">Settings list design</div></div><div class="seg3" role="radiogroup" aria-label="Settings list design">${[["classic", "Morphe"], ["toggles", "Switches"], ["clean", "Clean"]].map(([id, t]) => `<button role="radio" data-design="${id}" aria-checked="${design === id}">${t}</button>`).join("")}</div></div><button class="offnew" data-editor-off>${I("power")}Disable new design</button></div>`;
+    + `<div class="themerow designrow"><div class="dcol"><div class="dsg"><span class="pi">${I("list")}</span><div class="tt">Settings list design</div></div><div class="drow"><div class="seg3" role="radiogroup" aria-label="Settings list design"><i class="seg3-th"></i>${[["classic", "Morphe"], ["toggles", "Switches"], ["clean", "Clean"]].map(([id, t]) => `<button role="radio" data-design="${id}" aria-checked="${design === id}">${t}</button>`).join("")}</div><button class="offnew" data-editor-off>${I("power")}Disable new design</button></div></div></div>`;
+  placeSeg3();
   $("btnReset").disabled = mode !== "mod" || !Object.keys(PREF).some(k => JSON.stringify(state[k]) !== JSON.stringify(defaults[k]));
 }
 // ---- DEV ONLY: "finished" checkmarks -------------------------------------------------------------
@@ -176,6 +177,7 @@ $("pickGrid").addEventListener("contextmenu", e => { if (e.target.closest(".pick
 function setPicker(open) {
   pickerOpen = open;
   $("picker").classList.toggle("open", open); $("pickScrim").classList.toggle("open", open);
+  if (open) placeSeg3(); // drawn while hidden: its thumb is placed once it can be measured
   $("secPill").setAttribute("aria-expanded", String(open));
 }
 
@@ -1055,6 +1057,17 @@ function pendingDialog(saved = []) {
   $("dGo").onclick = closeDialog;
   $("dReset").onclick = () => resetConfirm(keys.length, false, () => pendingDialog(saved));
 }
+// The list design's three-way toggle: one thumb slides to the picked design (Max, Nov 22). The picker
+// is drawn again on every change, so the thumb starts from where the old one was (seg3From) and glides.
+let seg3From = null;
+function placeSeg3() {
+  const seg = document.querySelector("#pickGrid .seg3"), th = seg && seg.querySelector(".seg3-th"), on = seg && seg.querySelector('[aria-checked="true"]');
+  if (!th || !on || !on.offsetWidth) return; // hidden: the picked button keeps its own fill (CSS)
+  const to = [on.offsetLeft, on.offsetWidth];
+  seg.classList.add("th"); // shown first, so its starting place is drawn and the move animates
+  if (seg3From) { th.style.transition = "none"; th.style.left = seg3From[0] + "px"; th.style.width = seg3From[1] + "px"; void th.offsetWidth; th.style.transition = ""; }
+  th.style.left = to[0] + "px"; th.style.width = to[1] + "px"; seg3From = null;
+}
 function storeBaseline() { try { localStorage.setItem(LS + "-baseline", JSON.stringify(baseline)); } catch { /* storage unavailable */ } }
 // with the search bar open, the back arrow closes search (like its cross), it doesn't leave the editor;
 // this runs before any other handler of the arrow, the in-app one too
@@ -1122,6 +1135,8 @@ const barStays = () => { const a = $("app"); return a.clientWidth >= 600 && a.cl
 window.addEventListener("resize", () => { if (barStays()) $("app").classList.remove("barhidden"); });
 // crossing the tablet size changes which settings Morphe offers or that do anything (offDevice): rebuild the lists then
 { let wasTab = null; window.addEventListener("resize", () => { const t = previewIsTablet(); if (wasTab !== null && t !== wasTab) { buildMembers(); renderBar(); renderList(); renderInspector(); } wasTab = t; }); }
+// the editor sits one bar lower than the top (see .app > .editor): keep --abh at the bar's real height
+{ const bar = document.querySelector(".appbar"); if (bar && window.ResizeObserver) new ResizeObserver(() => $("app").style.setProperty("--abh", bar.offsetHeight + "px")).observe(bar); }
 {
   let lastY = 0, acc = 0, barMoveUntil = 0;
   $("scroller").addEventListener("scroll", () => {

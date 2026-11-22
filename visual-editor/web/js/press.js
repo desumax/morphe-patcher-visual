@@ -212,7 +212,7 @@ $("pickScrim").onclick = () => setPicker(false);
 $("pickGrid").addEventListener("click", e => {
   if (pickSuppress) return;
   const dz = e.target.closest("[data-design]");
-  if (dz) { design = dz.dataset.design; renderBar(); renderList(); store.save(); return; }
+  if (dz) { const th = document.querySelector("#pickGrid .seg3.th .seg3-th"); seg3From = th ? [th.offsetLeft, th.offsetWidth] : null; design = dz.dataset.design; renderBar(); renderList(); store.save(); return; }
   if (e.target.closest("[data-group-toggle]")) { grouped = !grouped; renderBar(); renderStage(); store.save(); if (grouped) tutOnce("groups"); return; }
   const gb = e.target.closest("[data-group]");
   if (gb) { const g = GROUPS.find(x => x.id === gb.dataset.group), tabs = tabsOf(g); setPicker(false); returnTo = null; switchSection(lastTab[g.id] && tabs.some(([t]) => t === lastTab[g.id]) ? lastTab[g.id] : tabs[0][0]); return; }

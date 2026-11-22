@@ -195,6 +195,12 @@ html #pickGrid .pg.pgroups.pvis:not(.nx) .gcard .pi svg { width: 23px; height: 2
 .stagebox.changed::after { animation: framepulse .7s var(--ease); }
 @keyframes framepulse { 0% { border-color: var(--ring-on); box-shadow: inset 0 0 0 3px rgba(76,199,100,.35); } 100% { } }
 .stick { box-shadow: 0 1px 0 var(--m-outline, #444), 0 6px 10px -6px rgba(0,0,0,.6); }
+/* a strip above the preview that stays when it is pinned to the top of the screen: the selection ring
+   around the preview's edge has room there, so it is drawn outside the frame before and after
+   scrolling (Max, Nov 22). The preview's own top margin used to collapse out of the stick, so it
+   vanished when pinned; padding keeps it inside, and the two add up to the old 9.5 px. */
+.stick { padding-top: 4px; }
+.stick > .stagebox { margin-top: 5.5px; }
 .ptools { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 14px; font-size: 12px; color: var(--m-on-var); }
 .ptools .hint { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ptools label { display: flex; gap: 6px; align-items: center; cursor: pointer; flex: none; }
@@ -204,7 +210,8 @@ html #pickGrid .pg.pgroups.pvis:not(.nx) .gcard .pi svg { width: 23px; height: 2
 @keyframes axisin { from { opacity: 0; transform: translateX(calc(var(--dir, 24px) * -1)); } to { opacity: 1; transform: none; } }
 @container ed (min-width: 600px) {
   .content { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 0 var(--sp-l); padding: 0 var(--sp-l); align-items: start; }
-  .stick { top: var(--sp-l); margin-top: var(--sp-l); border-radius: var(--r-l); overflow: hidden; box-shadow: none; }
+  .stick { top: var(--sp-l); margin-top: var(--sp-l); padding-top: 0; border-radius: var(--r-l); overflow: hidden; box-shadow: none; }
+  .stick > .stagebox { margin-top: 9.5px; }
   .list { padding-top: var(--sp-s); }
 }
 @container ed (min-width: 1000px) { .content { grid-template-columns: minmax(0, 560px) minmax(0, 560px); justify-content: center; } }
@@ -736,8 +743,16 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 .app.searching #btnSearch, .app.searching #btnReset, .app.searching .seg { opacity: 0; pointer-events: none; }
 #btnReset:disabled { opacity: .35; cursor: default; }
 /* the top bar slides away while you scroll down the list and comes back when you scroll up */
-.appbar { transition: margin-top 260ms var(--ease), opacity 200ms var(--ease); }
-.app.barhidden .appbar { margin-top: calc(-1 * var(--abh, 56px)); opacity: 0; pointer-events: none; }
+/* It moves with translate only, so hiding or showing it re-lays out nothing: the bar floats over the top
+   of the editor, the editor sits one bar lower and slides up with it (the margin-top this replaced
+   resized the editor and the list on every frame, the hitch Max saw, Nov 22). The editor stays the
+   app's full height, so its last bar's height is below the screen while the bar shows: the list has
+   that much room at its end. */
+.app > .appbar { position: absolute; left: 0; right: 0; top: 0; transition: translate 260ms var(--ease), opacity 200ms var(--ease); }
+.app > .editor { translate: 0 var(--abh, 56px); transition: translate 260ms var(--ease); }
+.app > .editor .scroller { padding-bottom: var(--abh, 56px); box-sizing: border-box; }
+.app.barhidden > .appbar { translate: 0 -100%; opacity: 0; pointer-events: none; }
+.app.barhidden > .editor { translate: 0 0; }
 .dlg .choice { display: grid; gap: 2px; margin: 4px 0 6px; }
 .dlg .choice button { display: flex; justify-content: space-between; align-items: center; gap: 10px; text-align: left; padding: 12px 10px; border: 0; border-radius: 8px; background: transparent; color: inherit; font: inherit; font-size: 14px; cursor: pointer; }
 .dlg .choice button:hover:not(:disabled) { background: rgba(255,255,255,.06); }
@@ -816,13 +831,18 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 .designrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .designrow .dsg { display: flex; align-items: center; gap: 10px; }
 .designrow { align-items: flex-end; flex-wrap: nowrap; }
-.designrow .dcol { display: grid; gap: 8px; justify-items: start; flex: none; }
+.designrow .dcol { display: grid; gap: 8px; justify-items: start; flex: 1; min-width: 0; }
+/* "Disable new design" sits beside the three-way toggle, centred on it (Max, Nov 22) */
+.designrow .drow { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; }
 .offnew { flex: none; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,.18); background: transparent; color: var(--m-on-var, #aaa); font: inherit; font-size: 12.5px; font-weight: 600; padding: 6px 12px 6px 10px; border-radius: 16px; cursor: pointer; text-align: left; line-height: 1.2; max-width: 128px; }
 .offnew svg { width: 16px; height: 16px; fill: currentColor; }
 .offnew:hover, .offnew:focus-visible { color: #ffb4ab; border-color: rgba(255,180,171,.5); }
-.seg3 { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--m-c-highest, #303134); }
-.seg3 button { border: 0; background: transparent; color: var(--m-on-var, #aaa); font: inherit; font-size: 12.5px; font-weight: 600; padding: 6px 12px; border-radius: 999px; cursor: pointer; }
-.seg3 button[aria-checked="true"] { background: var(--m-primary, #3ea6ff); color: var(--m-on-primary, #062e6f); }
+.seg3 { display: inline-flex; flex: none; padding: 3px; border-radius: 999px; background: var(--m-c-highest, #303134); position: relative; isolation: isolate; }
+.seg3 button { border: 0; background: transparent; color: var(--m-on-var, #aaa); font: inherit; font-size: 12.5px; font-weight: 600; padding: 6px 12px; border-radius: 999px; cursor: pointer; transition: color 300ms var(--ease); }
+.seg3 button[aria-checked="true"] { color: var(--m-on-primary, #062e6f); }
+.seg3:not(.th) button[aria-checked="true"] { background: var(--m-primary, #3ea6ff); } /* until the thumb is placed */
+.seg3-th { position: absolute; z-index: -1; top: 3px; bottom: 3px; left: 3px; width: 0; border-radius: 999px; background: var(--m-primary, #3ea6ff); transition: left 300ms var(--ease), width 300ms var(--ease); }
+.seg3:not(.th) .seg3-th { display: none; }
 .kidbtn { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 20px; min-width: 51px; padding: 0 8px; margin-left: 6px; border-radius: 10px; border: 0; background: var(--m-c-highest); color: var(--m-on-var); font-size: 11px; line-height: 1; font-weight: 600; cursor: pointer; vertical-align: 2px; }
 .kidbtn svg { display: block; width: 16px; height: 16px; fill: currentColor; transition: transform 280ms var(--ease); }
 .kidbtn[aria-expanded="true"] svg { transform: rotate(180deg); }
@@ -929,7 +949,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 @container ed (min-width: 600px) {
   .content.stacked { grid-template-columns: minmax(0, 1fr); max-width: 980px; margin: 0 auto; }
   .content.stacked .stagebox { max-width: 720px; margin: 0 auto; }
-  .content.stacked .stick { border-radius: 0; margin-top: 0; top: 0; }
+  .content.stacked .stick { border-radius: 0; margin-top: 0; padding-top: 4px; top: 0; }
   /* two newspaper-style columns: each card sits right under the one above it in its column, so a tall
      card (a parent with its sub-options open) no longer leaves a hole beside it the way grid rows did */
   .content.stacked .group { display: block; column-count: 2; column-gap: 12px; column-fill: balance; }
