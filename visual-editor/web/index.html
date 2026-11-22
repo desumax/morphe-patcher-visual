@@ -853,12 +853,91 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 /* unlock */
 .row.unlock { animation: unlockbg 900ms var(--ease); }
 @keyframes unlockbg { 0% { background: rgba(144,216,137,0); } 25% { background: rgba(144,216,137,.16); } 100% { background: rgba(144,216,137,0); } }
-.ulk { position: absolute; right: 74px; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 0; border-radius: 50%; background: var(--m-success-c, #1f3a1f); display: grid; place-items: center; pointer-events: none; z-index: 3; animation: ulkpop 900ms var(--ease) forwards; }
-.ulk.onctl { left: 50%; top: 50%; right: auto; margin: -20px 0 0 -20px; }
-.ulk svg { width: 22px; height: 22px; fill: var(--m-success); }
-.ulk .sh { transform-origin: 70% 50%; animation: ulkopen 900ms var(--ease) forwards; }
-@keyframes ulkpop { 0% { transform: scale(.4); opacity: 0; } 18% { transform: scale(1.08); opacity: 1; } 30% { transform: scale(1); } 70% { opacity: 1; transform: scale(1); } 100% { transform: scale(.8) translateY(-10px); opacity: 0; } }
-@keyframes ulkopen { 0%, 25% { transform: none; } 45% { transform: translateY(-3px) rotate(-18deg); } 100% { transform: translateY(-3px) rotate(-18deg); } }
+/* Locked (Max, Nov 23): the control is greyed out under a cover that shows only the gold lock, the colour
+   of the "Parent setting must be..." line. Unlocking breaks the lock and opens the cover from the middle
+   to both ends, in the unlock's .95 s (ULK_MS). Three designs to pick from (dev): a Doors, b Shatter, c Trace. */
+:root { --lk-grey: var(--m-c-highest, #303134); --lk-veil: rgba(30,31,34,.88); --lk-gold: var(--m-warning, #F5BD48); --lk-glow: rgba(245,189,72,.75); }
+.theme-yt { --lk-grey: #272727; }
+.side > :has(> .lk7), .txt > .ctl:has(> .lk7) { position: relative; }
+.row.dis .side > :has(> .lk7), .row.dis .txt > .ctl:has(> .lk7) { opacity: 1; }
+.lk7 { position: absolute; inset: 0; z-index: 4; border-radius: inherit; display: grid; place-items: center; pointer-events: none; color: var(--lk-gold); background: var(--lk-grey); font-weight: inherit; }
+.ctl > .lk7 { border-radius: 12px; background: var(--lk-veil); }
+.sw > .lk7 { inset: -2px; } /* over the switch's border too */
+.theme-yt .sw > .lk7 { inset: -2px -4px; border-radius: 12px; } /* its thumb is wider than the track */
+.lki { display: block; width: 17px; height: 17px; overflow: visible; }
+.ctl > .lk7 .lki { width: 22px; height: 22px; }
+.lki .lks { fill: none; stroke: var(--lk-gold); stroke-width: 2.4; stroke-linecap: round; transform-box: fill-box; }
+.lki .lkb { fill: var(--lk-gold); }
+.lki .lkk { fill: var(--lk-grey); }
+.ctl > .lk7 .lkk { fill: #1e1f22; }
+/* the opening: two halves of the cover, each holding its half of the lock, plus the design's effects */
+.lk7.go { background: none; }
+.lk7.go .lkh { position: absolute; top: 0; bottom: 0; width: calc(50% + .5px); overflow: hidden; background: var(--lk-grey); }
+.ctl > .lk7.go .lkh { background: var(--lk-veil); }
+.lk7.go .lkh.l { left: 0; border-top-left-radius: inherit; border-bottom-left-radius: inherit; }
+.lk7.go .lkh.r { right: 0; border-top-right-radius: inherit; border-bottom-right-radius: inherit; }
+.lk7.go .lkc { position: absolute; top: 0; bottom: 0; width: calc(200% - 1px); display: grid; place-items: center; }
+.lk7.go .lkh.l .lkc { left: 0; }
+.lk7.go .lkh.r .lkc { right: 0; }
+.lk7.go * { animation-duration: 950ms; animation-fill-mode: both; animation-timing-function: cubic-bezier(.4,0,.2,1); }
+/* a Doors: the shackle pops off, the lock cracks down the middle, and its halves slide out to both ends with the grey */
+.lk7.go.da { overflow: hidden; }
+.lk7.da .lks { transform-origin: 100% 100%; animation-name: lkA-sh; }
+.lk7.da .lki { animation-name: lkA-pop; }
+.lk7.da .lkh.l { animation-name: lkA-l; }
+.lk7.da .lkh.r { animation-name: lkA-r; }
+.lk7.da .lkc { animation-name: lkA-fade; }
+@keyframes lkA-sh { 0% { transform: none; opacity: 1; } 10% { transform: translateY(1.5px); } 26% { transform: translateY(-4px) rotate(-30deg); opacity: 1; } 40% { transform: translateY(-10px) rotate(-70deg); opacity: 0; } 100% { transform: translateY(-10px) rotate(-70deg); opacity: 0; } }
+@keyframes lkA-pop { 0% { transform: none; } 12% { transform: scale(1.16); } 26%, 100% { transform: none; } }
+@keyframes lkA-l { 0%, 32% { transform: none; } 40% { transform: translateX(-2.5px); animation-timing-function: cubic-bezier(.55,0,.2,1); } 100% { transform: translateX(-101%); } }
+@keyframes lkA-r { 0%, 32% { transform: none; } 40% { transform: translateX(2.5px); animation-timing-function: cubic-bezier(.55,0,.2,1); } 100% { transform: translateX(101%); } }
+@keyframes lkA-fade { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
+/* b Shatter: the lock shakes and bursts into gold shards; a gold seam opens in the middle and its two glowing
+   edges sweep to the ends, wiping the grey away; the control's outline glints gold as it is revealed */
+.lk7.db .lks { transform-origin: 0% 100%; animation-name: lkB-sh; }
+.lk7.db .lki { animation-name: lkB-shake; }
+.lk7.db .lkh.l { animation-name: lkB-l; }
+.lk7.db .lkh.r { animation-name: lkB-r; }
+.lk7.db .lkrun { position: absolute; inset: 0; pointer-events: none; }
+.lk7.db .lkrun i { position: absolute; left: 50%; top: 3px; bottom: 3px; width: 3px; margin-left: -1.5px; border-radius: 2px; background: var(--lk-gold); box-shadow: 0 0 8px 2px var(--lk-glow); }
+.lk7.db .lkrun.l { animation-name: lkB-runl; }
+.lk7.db .lkrun.r { animation-name: lkB-runr; }
+.lk7.db::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1.5px var(--lk-gold), 0 0 10px var(--lk-glow); opacity: 0; animation: lkB-glint 950ms both; }
+.lk7.db .lkshards { position: absolute; left: 50%; top: 50%; }
+.lk7.db .lkshards i { position: absolute; width: 5px; height: 5px; margin: -2.5px; background: var(--lk-gold); clip-path: polygon(50% 0, 100% 100%, 0 75%); animation-name: lkB-shard; animation-timing-function: cubic-bezier(.1,.6,.3,1); }
+.lk7.db .lkshards i:nth-child(3n) { width: 4px; height: 4px; }
+@keyframes lkB-sh { 0% { transform: none; } 24%, 100% { transform: translateY(-2.5px) rotate(18deg); } }
+@keyframes lkB-shake { 0% { transform: none; opacity: 1; } 6% { transform: rotate(-13deg); } 12% { transform: rotate(11deg); } 18% { transform: rotate(-8deg); } 24% { transform: rotate(5deg); } 30% { transform: scale(1.08); opacity: 1; } 37% { transform: scale(1.4); opacity: 0; } 100% { transform: scale(1.4); opacity: 0; } }
+@keyframes lkB-l { 0%, 34% { clip-path: inset(0 0 0 0); animation-timing-function: cubic-bezier(.45,0,.25,1); } 100% { clip-path: inset(0 100% 0 0); } }
+@keyframes lkB-r { 0%, 34% { clip-path: inset(0 0 0 0); animation-timing-function: cubic-bezier(.45,0,.25,1); } 100% { clip-path: inset(0 0 0 100%); } }
+@keyframes lkB-runl { 0%, 33% { transform: none; opacity: 0; } 34% { transform: none; opacity: 1; animation-timing-function: cubic-bezier(.45,0,.25,1); } 90% { opacity: 1; } 100% { transform: translateX(-50%); opacity: 0; } }
+@keyframes lkB-runr { 0%, 33% { transform: none; opacity: 0; } 34% { transform: none; opacity: 1; animation-timing-function: cubic-bezier(.45,0,.25,1); } 90% { opacity: 1; } 100% { transform: translateX(50%); opacity: 0; } }
+@keyframes lkB-glint { 0%, 78% { opacity: 0; } 88% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes lkB-shard { 0%, 33% { transform: rotate(var(--a)) translateX(0) scale(.6); opacity: 0; } 35% { opacity: 1; } 75% { opacity: .9; } 100% { transform: rotate(var(--a)) translateX(calc(20px + var(--d) * 6px)) rotate(240deg) scale(1); opacity: 0; } }
+/* c Trace: the shackle swings open, the lock melts into a gold dot that stretches into a line; the line
+   runs to both ends while the grey fades, and the gold wraps round the control as an outline, then fades */
+.lk7.dc .lks { transform-origin: 0% 100%; animation-name: lkC-sh; }
+.lk7.dc .lki { animation-name: lkC-melt; }
+.lk7.dc .lkh.l { animation-name: lkC-l; }
+.lk7.dc .lkh.r { animation-name: lkC-r; }
+.lk7.dc .lkdot { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px; border-radius: 50%; background: var(--lk-gold); box-shadow: 0 0 8px 2px var(--lk-glow); animation-name: lkC-dot; }
+.lk7.dc .lkline { position: absolute; left: 8px; right: 8px; top: 50%; height: 2px; margin-top: -1px; border-radius: 1px; background: var(--lk-gold); box-shadow: 0 0 8px 1px var(--lk-glow); animation-name: lkC-line; }
+.lk7.dc .lkout { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.lk7.dc .lkout path { fill: none; stroke: var(--lk-gold); stroke-width: 2; stroke-linecap: round; stroke-dasharray: 100 100; filter: drop-shadow(0 0 3px var(--lk-glow)); animation: lkC-trace 950ms both cubic-bezier(.4,0,.2,1); }
+@keyframes lkC-sh { 0% { transform: none; } 26%, 100% { transform: translateY(-3px) rotate(-32deg); } }
+@keyframes lkC-melt { 0%, 28% { transform: none; opacity: 1; } 34% { transform: scale(1.12); opacity: 1; } 46% { transform: scale(.15); opacity: 0; } 100% { transform: scale(.15); opacity: 0; } }
+@keyframes lkC-dot { 0%, 40% { transform: scale(0); opacity: 0; } 46% { transform: scale(1); opacity: 1; } 52% { transform: scaleX(2.2) scaleY(.6); opacity: 1; } 56%, 100% { transform: scale(0); opacity: 0; } }
+@keyframes lkC-line { 0%, 49% { transform: scaleX(0); opacity: 0; } 51% { transform: scaleX(.04); opacity: 1; } 64% { transform: scaleX(1); opacity: 1; } 74%, 100% { transform: scaleX(1); opacity: 0; } }
+@keyframes lkC-l { 0%, 50% { clip-path: inset(0 0 0 0); opacity: 1; animation-timing-function: cubic-bezier(.4,0,.2,1); } 72% { opacity: .6; } 84%, 100% { clip-path: inset(0 100% 0 0); opacity: 0; } }
+@keyframes lkC-r { 0%, 50% { clip-path: inset(0 0 0 0); opacity: 1; animation-timing-function: cubic-bezier(.4,0,.2,1); } 72% { opacity: .6; } 84%, 100% { clip-path: inset(0 0 0 100%); opacity: 0; } }
+@keyframes lkC-trace { 0%, 57% { stroke-dashoffset: 100; opacity: 0; } 58% { stroke-dashoffset: 100; opacity: 1; } 86% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0; } }
+/* DEV ONLY: the unlock animation picker in the screen menu */
+.ulkrow { display: flex !important; flex-direction: column; align-items: stretch !important; gap: 8px !important; }
+.ulkrow .dsg { display: flex; align-items: center; gap: 12px; padding: 0 8px; }
+.ulkpick { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 8px 4px; }
+.ulkpick button { display: inline-flex; align-items: center; gap: 4px; border: 1px solid rgba(255,255,255,.18); background: transparent; color: inherit; border-radius: 999px; padding: 6px 12px; font: 600 12.5px var(--font, inherit); cursor: pointer; }
+.ulkpick button[aria-pressed="true"] { background: var(--m-primary, #3ea6ff); color: var(--m-on-primary, #062e6f); border-color: transparent; }
+.ulkpick button svg { width: 16px; height: 16px; fill: currentColor; }
 
 /* live preview: no scrollbars (space is scarce), scrolling still works */
 .stage *, .canvas *, .phone, .phone * { scrollbar-width: none !important; }
