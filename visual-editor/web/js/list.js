@@ -24,9 +24,7 @@ function renderBar() {
     + `<div class="themerow"><div class="themetog" data-theme-toggle role="menuitemcheckbox" aria-checked="${theme === "m3"}"><span class="pi">${I("palette")}</span><div class="tt">Morphe design</div><span class="sw" role="presentation" aria-checked="${theme === "m3"}"></span></div>`
     + `<button class="ordreset" data-order-reset ${customOrder ? "" : "disabled"} title="Hold a screen to move it. This restores Morphe's order.">${I("reset")}Reset order</button></div>`
     + `<div class="themerow simrow"><div class="themetog" data-group-toggle role="menuitemcheckbox" aria-checked="${grouped}"><span class="pi">${I("layers")}</span><div class="tt">Group screens into tabs<small>Six screens instead of ${SECTIONS.length}. Each one has tabs right under the live preview, and every tab brings its own preview.</small></div><span class="sw" role="presentation" aria-checked="${grouped}"></span></div></div>`
-    + `<div class="themerow designrow"><div class="dcol"><div class="dsg"><span class="pi">${I("list")}</span><div class="tt">Settings list design</div></div><div class="drow"><div class="seg3" role="radiogroup" aria-label="Settings list design"><i class="seg3-th"></i>${[["classic", "Morphe"], ["toggles", "Switches"], ["clean", "Clean"]].map(([id, t]) => `<button role="radio" data-design="${id}" aria-checked="${design === id}">${t}</button>`).join("")}</div><button class="offnew" data-editor-off>${I("power")}Disable new design</button></div></div></div>`
-    // DEV ONLY: unlock animation designs (Max, Nov 23)
-    + `<div class="themerow ulkrow"><div class="dsg"><span class="pi">${I("lock")}</span><div class="tt">Unlock animation<small>Development: pick one, then Play shows it on the settings on screen</small></div></div><div class="ulkpick">${ULK_DESIGNS.map(([id, t]) => `<button data-ulkd="${id}" aria-pressed="${ulkDesign === id}">${t}</button>`).join("")}<button data-ulkplay>${I("play")}Play</button></div></div>`;
+    + `<div class="themerow designrow"><div class="dcol"><div class="dsg"><span class="pi">${I("list")}</span><div class="tt">Settings list design</div></div><div class="drow"><div class="seg3" role="radiogroup" aria-label="Settings list design"><i class="seg3-th"></i>${[["classic", "Morphe"], ["toggles", "Switches"], ["clean", "Clean"]].map(([id, t]) => `<button role="radio" data-design="${id}" aria-checked="${design === id}">${t}</button>`).join("")}</div><button class="offnew" data-editor-off>${I("power")}Disable new design</button></div></div></div>`;
   placeSeg3();
   $("btnReset").disabled = mode !== "mod" || !Object.keys(PREF).some(k => JSON.stringify(state[k]) !== JSON.stringify(defaults[k]));
 }
@@ -891,10 +889,10 @@ function unlockFx(row, out = false) {
     // the locked cover comes back on the now unlocked control and plays its opening (lockOpening)
     const host = lockHost(row); if (!host) { setTimeout(() => row.classList.remove("unlock"), ULK_MS - el); return; }
     const u = lockOpening(host);
-    u.getAnimations({ subtree: true }).forEach(a => { a.currentTime = el; });
+    host.getAnimations({ subtree: true }).filter(a => /^lk/.test(a.animationName || "")).forEach(a => { a.currentTime = el; });
     // locked again mid-animation (the parent tapped off): the badge fades from where it is, no jump
-    if (out) { unlocking.delete(k); u.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150, fill: "forwards" }).onfinish = () => { u.remove(); row.classList.remove("unlock"); }; return; }
-    setTimeout(() => { u.remove(); row.classList.remove("unlock"); }, ULK_MS - el);
+    if (out) { unlocking.delete(k); u.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150, fill: "forwards" }).onfinish = () => { lockClosed(host, u); row.classList.remove("unlock"); }; return; }
+    setTimeout(() => { lockClosed(host, u); row.classList.remove("unlock"); }, ULK_MS - el);
   };
   if (!moving.length) return go();
   let done = false; const once = () => { if (!done) { done = true; go(); } };
@@ -920,34 +918,21 @@ const LOCK_COVER = `<b class="lk7" aria-hidden="true">${LOCK_SVG}</b>`;
 // the cover goes inside the control's own box (a toggle, a switch, a state chip, a box of options)
 const withLock = html => html.replace(/<\/(\w+)>\s*$/, `${LOCK_COVER}</$1>`);
 const lockHost = row => row.querySelector(".side > .lt7, .side > .sw, .side > .state") || row.querySelector(".txt > .ctl");
-// DEV ONLY: three designs to choose from (Max, Nov 23), picked in the screen menu
-const ULK_DESIGNS = [["a", "Doors"], ["b", "Shatter"], ["c", "Trace"]];
-let ulkDesign = (() => { try { return localStorage.getItem(LS + "-ulkdesign") || "a"; } catch { return "a"; } })();
-// The opening, in ULK_MS like the rest of the unlock. Every design: the lock breaks first, then the
-// grey cover opens from the middle to both ends and shows the control.
-//  a "Doors": the shackle pops off, the lock cracks down the middle and its halves slide out to both
-//    ends with the grey, like sliding doors
-//  b "Shatter": the lock shakes and bursts into gold shards; a gold seam opens in the middle and its
-//    two glowing edges sweep to the ends, wiping the grey away
-//  c "Trace": the shackle swings open, the lock melts into a gold dot that stretches into a line; the
-//    line runs to both ends and wraps round the control as a gold outline, which then fades
+// The opening (Max, Nov 23: design A "Doors"), in ULK_MS like the rest of the unlock: the shackle pops off,
+// the lock cracks down the middle and its two halves slide out to both ends with the grey, like sliding
+// doors. As they part, each door casts a shadow on the control behind it and shows a lit edge, and the
+// control comes forward from a little back and darker, so the doors read as in front of it.
 function lockOpening(host) {
-  const d = ulkDesign, u = document.createElement("b");
-  u.className = `lk7 go d${d}`; u.setAttribute("aria-hidden", "true");
+  const u = document.createElement("b");
+  u.className = "lk7 go"; u.setAttribute("aria-hidden", "true");
   const half = side => `<span class="lkh ${side}"><span class="lkc">${LOCK_SVG}</span></span>`;
-  let fx = "";
-  if (d === "b") fx = `<span class="lkrun l"><i></i></span><span class="lkrun r"><i></i></span><span class="lkshards">${Array.from({ length: 9 }, (_, i) => `<i style="--a:${i * 40 + 12}deg;--d:${i % 3}"></i>`).join("")}</span>`;
-  if (d === "c") {
-    const W = host.offsetWidth, H = host.offsetHeight, r = Math.min(H / 2, parseFloat(getComputedStyle(host).borderTopLeftRadius) || H / 2, W / 2), m = 1, cx = W / 2;
-    // two strokes from the middle of the top edge, round the ends, to the middle of the bottom edge
-    const path = dir => `M${cx} ${m} H${dir > 0 ? W - r : r} A${r - m} ${r - m} 0 0 ${dir > 0 ? 1 : 0} ${dir > 0 ? W - r : r} ${H - m} H${cx}`;
-    fx = `<span class="lkline"></span><span class="lkdot"></span><svg class="lkout" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><path pathLength="100" d="${path(1)}"/><path pathLength="100" d="${path(-1)}"/></svg>`;
-  }
-  u.innerHTML = half("l") + half("r") + fx;
+  u.innerHTML = half("l") + half("r");
+  host.classList.add("lkbehind");
   host.appendChild(u);
   return u;
 }
-const stripUnlock = root => { root.querySelectorAll(".ulk, .lk7.go").forEach(e => e.remove()); (root.matches?.(".row") ? [root] : []).concat([...root.querySelectorAll(".row")]).forEach(r => { r.classList.remove("unlock"); delete r.dataset.ulk; }); };
+const lockClosed = (host, u) => { u.remove(); host.classList.remove("lkbehind"); };
+const stripUnlock = root => { root.querySelectorAll(".ulk, .lk7.go").forEach(e => e.remove()); root.querySelectorAll(".lkbehind").forEach(e => e.classList.remove("lkbehind")); (root.matches?.(".row") ? [root] : []).concat([...root.querySelectorAll(".row")]).forEach(r => { r.classList.remove("unlock"); delete r.dataset.ulk; }); };
 
 // ------------------------------------------------------------------ search
 let searching = false, query = "";

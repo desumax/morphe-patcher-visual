@@ -213,19 +213,6 @@ $("pickGrid").addEventListener("click", e => {
   if (pickSuppress) return;
   const dz = e.target.closest("[data-design]");
   if (dz) { const th = document.querySelector("#pickGrid .seg3.th .seg3-th"); seg3From = th ? [th.offsetLeft, th.offsetWidth] : null; design = dz.dataset.design; renderBar(); renderList(); store.save(); return; }
-  // DEV ONLY: unlock animation designs. Play locks up to four settings on screen for a moment, then
-  // unlocks them with the picked design
-  const ud = e.target.closest("[data-ulkd]");
-  if (ud) { ulkDesign = ud.dataset.ulkd; try { localStorage.setItem(LS + "-ulkdesign", ulkDesign); } catch { /* storage unavailable */ } renderBar(); return; }
-  if (e.target.closest("[data-ulkplay]")) {
-    setPicker(false);
-    setTimeout(() => {
-      const H = innerHeight, rows = [...document.querySelectorAll("#list .row:not(.dis):not(.hide)")].filter(r => { const q = r.getBoundingClientRect(); return q.top > 60 && q.bottom < H - 10 && lockHost(r); }).slice(0, 4);
-      rows.forEach(r => { r.querySelectorAll(".lk7").forEach(x => x.remove()); lockHost(r).insertAdjacentHTML("beforeend", LOCK_COVER); });
-      setTimeout(() => rows.forEach(r => { if (r.isConnected) { unlocking.delete(r.dataset.row); delete r.dataset.ulk; unlockFx(r); } }), 900);
-    }, 450);
-    return;
-  }
   if (e.target.closest("[data-group-toggle]")) { grouped = !grouped; renderBar(); renderStage(); store.save(); if (grouped) tutOnce("groups"); return; }
   const gb = e.target.closest("[data-group]");
   if (gb) { const g = GROUPS.find(x => x.id === gb.dataset.group), tabs = tabsOf(g); setPicker(false); returnTo = null; switchSection(lastTab[g.id] && tabs.some(([t]) => t === lastTab[g.id]) ? lastTab[g.id] : tabs[0][0]); return; }
