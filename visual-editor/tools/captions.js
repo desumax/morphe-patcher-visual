@@ -41,7 +41,7 @@ src += `
 CAT = ${fs.readFileSync(W + "catalogue.json", "utf8")};
 CAT.preferences.push(...SB_CATS.map(([k, t, d]) => ({ key: "morphe_sb_" + k, title: t, widget: "ListPreference", type: "string", default: d, parents: [{ key: "morphe_sb_enabled", mode: "all" }], customAvailability: [], screen: "SPONSORBLOCK", subScreen: null, synthetic: true, entries: SB_BEHAVIOUR })).filter(p => !CAT.preferences.some(x => x.key === p.key)));
 for (const p of CAT.preferences) { PREF[p.key] = p; defaults[p.key] = initialValue(p); }
-Object.assign(state, defaults);
+setPrefs(defaults);
 buildMembers();
 situation = (t, keep) => __rec.sit.push({ t: String(t), keep: !!keep, i: scSide ? scSide.i : 0 });
 setFoot = t => { if (t) __rec.foot[scSide ? scSide.i : 0].push(String(t)); };

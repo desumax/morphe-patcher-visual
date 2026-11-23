@@ -5,8 +5,9 @@ settings editor"), used in Morphe Manager next to the official Morphe Patches bu
 on no patch object of the official bundle, so nothing runs twice and no patch name clashes. From
 test 3 on, the editor is the web preview itself (`../web`, plus `../app` for in-app mode) hosted in
 a WebView and bridged to the real settings (`WebEditorDialog`), so the app looks and animates
-exactly like the preview. The native list editor (`VisualEditorDialog`) stays as the fallback when
-no WebView is available.
+exactly like the preview. When no WebView is available (or it fails to start, or is too old for the
+page), the regular Morphe settings list stays and a short message says why; there is no second,
+native editor to keep in sync.
 
 This folder is the starting point for turning the web prototype (`../web`) into a real Morphe
 patch. Its folders mirror [morphe-patches](https://github.com/MorpheApp/morphe-patches), so each
@@ -28,10 +29,12 @@ The editor is a *wrapper* around the existing settings, or more exactly an alter
   `get`, `save`, `isAvailable`, `resetToDefault`), the same calls the regular screens make
   (`SettingsBridge`). Parent rules such as "only while X is on" are the developer's own
   `isAvailable()` logic, so they stay right when the developer changes them.
-- **The only thing the editor adds is a map of hints**: which preview, and which kind of
-  animation, a known setting belongs to (`morphe_visual_editor_preview_map.json`). It is never
-  the source of truth: an entry whose setting no longer exists is skipped, and a setting the map
-  doesn't know is still listed as a plain row under "More settings".
+- **Morphe's own list decides which rows exist.** `LiveSettings.meta()` sends one entry per row
+  the installed list shows (a setting whose patch was left out has no row, so no entry), and the
+  web editor builds its list from those entries alone (`adaptCatalogue` in `../app/app-pre.js`).
+- **The only thing the editor adds is preview hints** (`../web`): which preview, and which kind of
+  animation, a known setting belongs to. They are never the source of truth: a hint whose setting
+  no longer exists is never drawn, and a setting without hints is still listed as a plain row.
 
 ### Why this matters
 
@@ -59,26 +62,25 @@ The trade-off is that the on switch sits one tap in, inside the "Visual settings
 rather than as a bare switch on the root list. A bare switch there would need a five-line accessor
 added to `SettingsPatch.kt`, which is exactly the kind of upstream change this design avoids.
 
-## Keeping the map current
+## Keeping the hints current
 
-`../tools/check_preview_map.py` compares the map with any Morphe release. Make a catalogue of the
-release with `../tools/extract_catalogue.py`, then run the check. It lists the map entries whose
-setting is gone and the settings the map doesn't know yet, and exits with 1 when the map is stale.
-This can run automatically in CI after each upstream release. Updating the map is the only
-recurring maintenance, and the editor keeps working while it waits.
+`../tools/check_drift.py` compares the web editor's hints with any Morphe release. Make a catalogue
+of the release with `../tools/extract_catalogue.py`, then run the check. It lists the settings the
+editor names that the release no longer has, and exits with 1 when something is out of date. This
+can run automatically in CI after each upstream release. Updating the hints is the only recurring
+maintenance, and the editor keeps working while it waits.
 
 ## Files
 
 | Path | What it does |
 | --- | --- |
 | `patches/.../misc/visualeditor/VisualSettingsEditorPatch.kt` | The patch. Depends on no other patch object; in finalize it adds one call at the end of Morphe's settings fragment `initialize()`. |
-| `preview_map.json` | Hints: which preview and animation kind each known setting uses, in preview order, plus the six groups for the tabbed layout. Built into `PreviewMapData.java` by `../bundle/gen_preview_map_data.py`, so the patch adds no resources. |
 | `extensions/visualeditor/.../VisualEditorEntry.java` | Adds the "Visual settings editor" switch and "Open visual editor" row above About, and opens the editor when settings open while the switch is on. |
-| `extensions/visualeditor/.../VisualEditorDialog.java` | The editor: top bar (screen picker, search, design, reset), preview placeholder, tabs, list. |
-| `extensions/visualeditor/.../CleanTitle.java` | The Clean design's titles and two-state labels (same rules as the web preview). |
+| `extensions/visualeditor/.../WebEditorDialog.java` | Hosts the editor (the web page, packed into `WebAssets.java` at build time) in a WebView, and the `MorpheApp` bridge it talks to. |
+| `extensions/visualeditor/.../LiveSettings.java` | The rows of the installed settings list, one entry per row, with types, defaults, availability and translated text. The only place that decides which rows the editor has. |
+| `extensions/visualeditor/.../PendingChanges.java` | Changes that wait for an app restart, kept across visits. |
 | `extensions/visualeditor/.../PreferenceTree.java` | Reads the live settings list from `morphe_prefs.xml`. |
 | `extensions/visualeditor/.../SettingsBridge.java` | Reads, changes and resets real settings through the `Setting` API, with Morphe's own confirmations and restart flag. |
-| `extensions/visualeditor/.../PreviewMap.java` | Loads the hints, skips entries the installed build doesn't have, and lists the settings it doesn't know. |
 | `extensions/visualeditor/.../VisualEditorSettings.java` | The editor's own settings (on, grouped tabs, design). |
 
 ## Two ways to ship it

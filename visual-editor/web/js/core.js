@@ -259,7 +259,22 @@ const KIND_ICON = { vis: "eye", overlay: "layers", gesture: "gesture", layout: "
 const KIND_NAME = { vis: "VisibilityPreview", overlay: "OverlayPreview", gesture: "GesturePreview", layout: "LayoutPreview", style: "StylePreview", behaviour: "BehaviourPreview", fallback: "FallbackPreference", list: "FallbackPreference" };
 
 // ------------------------------------------------------------------ state
-let CAT, PREF = {}, state = {}, mode = "mod", section = "player", selected = null;
+let CAT, PREF = {}, mode = "mod", section = "player", selected = null;
+// Setting values. THE ONE WAY a value changes is setPref(k, v) (or setPrefs for several): it records
+// the key in changedPrefs. In the app, every save sends exactly those keys to Morphe and empties
+// the set (app-post.js); the preview saves all its changed values to localStorage (boot.js). loadPrefs() is for values that come from outside (the
+// defaults at start, saved values, a value Morphe kept): they are not changes to send back.
+// `state` reads like a plain object (state[k], { ...state }, for...in), but writing state[k]
+// directly throws, so no change can skip the save path.
+const prefValues = {};
+const changedPrefs = new Set();
+const state = new Proxy(prefValues, {
+  set(t, k) { throw new TypeError(`Change settings with setPref(${JSON.stringify(String(k))}, value), not state[k] = value`); },
+  deleteProperty(t, k) { throw new TypeError(`Settings can't be deleted (${String(k)})`); },
+});
+function setPref(k, v) { if (prefValues[k] === v && k in prefValues) return; prefValues[k] = v; changedPrefs.add(k); }
+function setPrefs(values) { for (const k in values) setPref(k, values[k]); }
+function loadPrefs(values) { for (const k in values) prefValues[k] = values[k]; }
 const ghosts = new Set();
 // Settings whose preview acts on an element another setting can hide. While one of them is selected,
 // that element is drawn as a ghost (dimmed, dashed) even when your settings hide it, so the demo

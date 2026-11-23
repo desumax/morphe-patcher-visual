@@ -567,7 +567,7 @@ function applyVersion() {
     const target = nd !== undefined ? nd : defaults[k];
     const fix = v => { let x = v === defaults[k] ? target : v; if (vals.length && !vals.includes(String(x))) x = vals.includes(String(target)) ? target : vals[0]; return x; };
     if (nd !== undefined || (p.entryVariants && vals.length)) {
-      state[k] = coerceVal(k, fix(state[k])); baseline[k] = coerceVal(k, fix(baseline[k]));
+      setPref(k, coerceVal(k, fix(state[k]))); baseline[k] = coerceVal(k, fix(baseline[k]));
       defaults[k] = coerceVal(k, vals.length && !vals.includes(String(target)) ? vals[0] : target);
       if (nd !== undefined) STOCK[k] = defaults[k];
     }

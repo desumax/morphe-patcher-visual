@@ -56,14 +56,13 @@ developer works in, would break or conflict nearly every week.
   catalogue only adds preview hints (drawing, animation, order, grouping). If Morphe's values can't
   be read, the editor closes and the regular Morphe list is used.
 
-### 2. The preview map is hints, never truth
+### 2. Preview hints, never truth
 
-`morphe_visual_editor_preview_map.json` says which preview and animation kind a known setting
-uses. At runtime:
+The web editor's scenes and animations name the settings they draw (`../web/js`). At runtime:
 
-- An entry whose key is not in the installed build is skipped. That covers renamed, removed and
+- A hint whose setting has no row in the installed build is never drawn. That covers renamed, removed and
   version-gated settings.
-- A setting with no entry is shown as a plain row under "More settings", grouped by its Morphe
+- A setting with no hint is shown as a plain row under "More settings", grouped by its Morphe
   screen. A new setting is therefore usable on day one, just without its animation.
 - The worst case after an upstream change is a missing animation, never a missing setting or a
   crash.
@@ -117,13 +116,13 @@ from 21.29, and the channel moving into the action bar on newer builds.
 
 ## Keeping it current
 
-The only recurring work is updating the preview map and drawings when YouTube or Morphe changes
+The only recurring work is updating the hints and drawings when YouTube or Morphe changes
 something visible. That work belongs to whoever maintains the editor, never to the Morphe
 developer.
 
-- `../tools/check_preview_map.py` compares the map with any Morphe release. Build a catalogue of the
-  release with `../tools/extract_catalogue.py`, then run the check. It lists hints whose setting is
-  gone and settings with no hint yet, and exits with 1 when the map is stale.
+- `../tools/check_drift.py` compares the hints with any Morphe release. Build a catalogue of the
+  release with `../tools/extract_catalogue.py`, then run the check. It lists the settings the
+  editor names that are gone, and exits with 1 when the hints are stale.
 - This can run in CI on each upstream release. The editor keeps working while an update waits.
 
 ## What to tell the maintainers (PR summary)

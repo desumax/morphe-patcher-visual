@@ -86,8 +86,6 @@ def main():
     constants.write_text(constants_src, encoding="utf-8")
     shutil.copytree(NATIVE / "extensions" / "visualeditor", repo / "extensions" / "visualeditor")
     shutil.copytree(OVERLAY, repo, dirs_exist_ok=True)
-    run([sys.executable, HERE / "gen_preview_map_data.py", NATIVE / "preview_map.json",
-         repo / "extensions/visualeditor/src/main/java/app/morphe/extension/youtube/visualeditor/PreviewMapData.java"])
 
     # The designed editor: the web preview plus the in-app scripts, packed into the extension.
     appweb = work / "appweb"

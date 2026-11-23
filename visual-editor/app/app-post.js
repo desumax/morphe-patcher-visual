@@ -2,17 +2,20 @@
 // In-app mode, part 2 (loaded after boot.js). Every change the editor stores is sent to Morphe's
 // own settings; Back and Restart go to the app.
 if (INAPP) {
-  let sent = null;
-  const snapshot = () => { const o = {}; for (const k in PREF) o[k] = JSON.stringify(state[k]); return o; };
+  // Every change goes through setPref (core.js), which lists the key in changedPrefs; each save
+  // sends exactly those keys to Morphe. The first save only ends the start-up (values the editor
+  // fitted to this YouTube version are not changes the user made).
+  let started = false;
   const fileSave = store.save;
   store.save = function () {
+    const keys = [...changedPrefs];
+    changedPrefs.clear();
     fileSave();
     if (!Object.keys(PREF).length) return;
-    if (!sent) { sent = snapshot(); carryPending(); return; }
-    for (const k in PREF) {
+    if (!started) { started = true; carryPending(); return; }
+    for (const k of keys) {
       if (!(k in LIVE.values)) continue;
-      const j = JSON.stringify(state[k]);
-      if (j !== sent[k]) { sent[k] = j; try { MorpheApp.set(k, j); } catch (e) { /* ignore */ } }
+      try { MorpheApp.set(k, JSON.stringify(state[k])); } catch (e) { /* ignore */ }
     }
   };
   // Changes saved earlier that still wait for a restart (Morphe keeps the values YouTube runs with):
@@ -32,16 +35,15 @@ if (INAPP) {
   };
   // "Reset": every change waiting for a restart goes back to the value YouTube runs with.
   window.resetPendingChanges = () => {
-    for (const k of pendingRestart()) state[k] = baseline[k];
+    // Morphe puts the values back itself (resetPending), so they are loaded, not sent again
+    loadPrefs(Object.fromEntries(pendingRestart().map(k => [k, baseline[k]])));
     try { MorpheApp.resetPending(); } catch (e) { /* older app */ }
-    if (sent) for (const k in PREF) sent[k] = JSON.stringify(state[k]);
     commit();
   };
   // Morphe kept another value (a confirmation was declined, or the value was refused).
   window.morpheSetValue = (k, json) => {
     if (!(k in PREF)) return;
-    try { state[k] = JSON.parse(json); } catch (e) { return; }
-    if (sent) sent[k] = json;
+    try { loadPrefs({ [k]: JSON.parse(json) }); } catch (e) { return; }
     commit();
   };
   // Availability as Morphe's own list has it. Available natively: unlocked whatever the catalogue's

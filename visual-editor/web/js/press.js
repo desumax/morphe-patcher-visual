@@ -61,7 +61,7 @@ $("list").addEventListener("change", e => {
   const k = inp.dataset.file, file = inp.files[0];
   if (pickedFiles[k]) URL.revokeObjectURL(pickedFiles[k]);
   pickedFiles[k] = URL.createObjectURL(file);
-  const before = state[k]; state[k] = file.name; afterChange(k, before);
+  const before = state[k]; setPref(k, file.name); afterChange(k, before);
 });
 ["stage", "list"].forEach(id => {
   const el = $(id);
@@ -98,7 +98,7 @@ $("list").addEventListener("click", e => {
     openDialog(`<div class="di">${I("reset")}</div><h2 id="dlgTitle">Restore the default list?</h2><p>${esc(shownTitle(k))} goes back to Morphe's own list${def.length ? ":" : "."}</p>${def.length ? `<p class="t2">${def.map(t => esc(t) + (num ? "×" : "")).join(", ")}</p>` : ""}<div class="acts"><button class="dbtn tonal" data-dlg-cancel>Cancel</button><button class="dbtn primary" data-dlg-ok>Restore</button></div>`);
     $("dlgBox").onclick = null;
     $("dlgBox").querySelector("[data-dlg-cancel]").onclick = closeDialog;
-    $("dlgBox").querySelector("[data-dlg-ok]").onclick = () => { closeDialog(); if (listJSON(k)) { ensureMod(); touchSel(k); const before = state[k]; state[k] = defaults[k] ?? ""; afterChange(k, before); } else listSet(k, def); };
+    $("dlgBox").querySelector("[data-dlg-ok]").onclick = () => { closeDialog(); if (listJSON(k)) { ensureMod(); touchSel(k); const before = state[k]; setPref(k, defaults[k] ?? ""); afterChange(k, before); } else listSet(k, def); };
     return;
   }
   const add = e.target.closest("[data-ladd]"); if (add) { const k = add.dataset.ladd, inp = document.querySelector(`[data-lin="${k}"]`); listMsg(k, listAdd(k, inp ? inp.value : "")); }
@@ -143,7 +143,7 @@ $("list").addEventListener("click", e => {
   const sw = e.target.closest("[data-sw]");
   if (sw) { const k = sw.dataset.sw; if (A[k]) { touchSel(k); toggle(k); } else { select(k); toggle(k); } return; }
   const opt = e.target.closest("button.opt[data-set]");
-  if (opt) { ensureMod(); const k = opt.dataset.set; touchSel(k); const before = state[k]; optSnap(opt); state[k] = coerce(k, opt.dataset.val); afterChange(k, before); optGlide(); }
+  if (opt) { ensureMod(); const k = opt.dataset.set; touchSel(k); const before = state[k]; optSnap(opt); setPref(k, coerce(k, opt.dataset.val)); afterChange(k, before); optGlide(); }
 });
 $("list").addEventListener("input", e => {
   const t = e.target; const k = t.dataset && t.dataset.set; if (!k || t.tagName === "SELECT") return;
@@ -153,7 +153,7 @@ $("list").addEventListener("input", e => {
   if (t.type === "range" || t.type === "color" || num) {
     ensureMod();
     if (!("before" in t.dataset)) t.dataset.before = JSON.stringify(state[k] ?? null);
-    state[k] = t.type === "color" ? fromColor(k, t.value) : Number(t.value);
+    setPref(k, t.type === "color" ? fromColor(k, t.value) : Number(t.value));
     const lab = document.querySelector(`[data-val-of="${k}"]`); if (lab) lab.textContent = t.value;
     // redrawn without the selection pop: it flashed the preview on every step of the slider
     // a slider with a live overlay (swipe overlay look, zone sizes) redraws only that overlay: redrawing
@@ -166,7 +166,7 @@ $("list").addEventListener("change", e => {
   const t = e.target; const k = t.dataset && t.dataset.set; if (!k) return;
   ensureMod();
   const before = "before" in t.dataset ? JSON.parse(t.dataset.before) : state[k]; delete t.dataset.before;
-  state[k] = t.type === "range" || t.type === "number" ? Number(t.value) : t.type === "color" ? fromColor(k, t.value) : coerce(k, t.value);
+  setPref(k, t.type === "range" || t.type === "number" ? Number(t.value) : t.type === "color" ? fromColor(k, t.value) : coerce(k, t.value));
   if (t.type === "range" || t.type === "color") { commit(); select(k); if (returnTo) afterChange(k, before); } else afterChange(k, before);
 });
 

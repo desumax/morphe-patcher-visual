@@ -1,7 +1,7 @@
 "use strict";
 // In-app mode, part 1 (loaded after core.js, before boot.js). Active only inside YouTube, where the
 // visual editor patch provides window.MorpheApp. The preview then edits the real Morphe settings:
-//   - the catalogue keeps only the settings this Morphe build has, and only the installed YouTube version
+//   - the list holds exactly the rows Morphe's own list has (adaptCatalogue), at the installed YouTube version
 //   - the starting values are the live values, not localStorage
 const INAPP = typeof window.MorpheApp !== "undefined";
 let LIVE = { values: {}, version: "" };
@@ -18,40 +18,33 @@ if (INAPP) {
   }
   try { localStorage.removeItem(LS + "-baseline"); } catch (e) { /* storage unavailable */ }
   const cmpV = (a, b) => { const x = String(a).split(".").map(Number), y = String(b).split(".").map(Number); for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d; } return 0; };
-  const nativeFetch = window.fetch.bind(window);
-  window.fetch = async (url, opts) => {
-    const r = await nativeFetch(url, opts);
-    if (!/catalogue\.json$/.test(String(url))) return r;
-    const cat = await r.json();
-    const live = LIVE.values || {};
-    // keep what this Morphe build has: its settings, and its action rows (import / export, logs, links)
-    // The installed preference rows decide what shows: a setting Morphe has (all are loaded) but
-    // whose row is not in its list (its patch was left out) is not shown. SponsorBlock builds its
-    // category rows in code, so they follow SponsorBlock's own row. Without row data (an older
-    // patch) every setting with a value shows, as before.
-    const meta = LIVE.meta || {};
-    const hasRows = Object.values(meta).some(m => m && m.ui && m.type !== "action");
-    const isAction = k => meta[k] && meta[k].type === "action";
-    const sbOn = !hasRows || !!(meta.morphe_sb_enabled && meta.morphe_sb_enabled.ui);
-    const shown = k => {
-      if (isAction(k)) return true;
-      if (!(k in live)) return false;
-      if (!hasRows || (meta[k] && meta[k].ui)) return true;
-      return k.startsWith("morphe_sb_") && sbOn;
-    };
-    if (Object.keys(live).length) cat.preferences = cat.preferences.filter(p => shown(p.key));
-    // The preview adds SponsorBlock's category rows after this; only the ones this build has, and
-    // none without SponsorBlock, so every control shown can be saved.
-    if (Object.keys(live).length && typeof SB_CATS !== "undefined") {
-      for (let i = SB_CATS.length - 1; i >= 0; i--) if (!sbOn || !(("morphe_sb_" + SB_CATS[i][0]) in live)) SB_CATS.splice(i, 1);
-    }
+  // THE ONE PLACE that decides which rows the in-app editor has. boot.js calls it once the
+  // preview's own rows are assembled (the catalogue, then SponsorBlock's categories).
+  //   - Morphe decides: LIVE.meta holds one entry per row its own list shows (LiveSettings.meta),
+  //     settings and action rows alike. A setting without an entry is not in this build's list
+  //     (its patch was left out), so it is not in the editor either.
+  //   - The one exception: SponsorBlock builds its category rows in code, so they have no entry of
+  //     their own; they are in while SponsorBlock's screen is (morphe_sb_enabled has an entry) and
+  //     this build has their setting.
+  //   - Every row's facts come from Morphe (applyLive); the catalogue adds only preview hints.
+  //   - Rows Morphe has that the catalogue doesn't know are added as plain rows.
+  // Elsewhere the editor only leaves out rows that do nothing on this device (offDevice, a design
+  // rule). The App view's stand-in (MorpheApp.preview) keeps the preview's catalogue.
+  window.adaptCatalogue = cat => {
+    if (MorpheApp.preview || window.MORPHE_STOP) return;
+    const meta = LIVE.meta || {}, values = LIVE.values || {};
+    const sbScreen = "morphe_sb_enabled" in meta;
+    const sbKeys = new Set(SB_CATS.map(([c]) => "morphe_sb_" + c));
+    const exists = k => k in meta || (sbScreen && sbKeys.has(k) && k in values);
+    cat.preferences = cat.preferences.filter(p => exists(p.key));
+    // the SponsorBlock scene draws only the categories this build has
+    for (let i = SB_CATS.length - 1; i >= 0; i--) if (!exists("morphe_sb_" + SB_CATS[i][0])) SB_CATS.splice(i, 1);
     applyLive(cat);
+    // the installed YouTube version picks the preview's layout (the newest one at or below it)
     if (Array.isArray(cat.youtubeVersions) && cat.youtubeVersions.length && LIVE.version) {
       const vs = cat.youtubeVersions.slice().sort((a, b) => cmpV(b.version, a.version));
-      const pick = vs.find(v => cmpV(v.version, LIVE.version) <= 0) || vs[vs.length - 1];
-      cat.youtubeVersions = [pick];
+      cat.youtubeVersions = [vs.find(v => cmpV(v.version, LIVE.version) <= 0) || vs[vs.length - 1]];
     }
-    return new Response(JSON.stringify(cat), { headers: { "Content-Type": "application/json" } });
   };
   // Live data: what this Morphe build says (LIVE.meta, from the regular settings rows and the
   // Setting API) wins over the catalogue; the catalogue keeps only preview hints (element,
@@ -68,6 +61,7 @@ if (INAPP) {
     const FAMILY = { boolean: "switch", enum: "text", string: "text", integer: "number", long: "number", float: "number" };
     for (const p of cat.preferences) {
       const m = meta[p.key]; if (!m) continue;
+      delete p.when; // Morphe shows this row in this build, whatever YouTube version the catalogue rule names
       // Morphe changed the setting's type (a switch became a list, say): its type and widget win,
       // so the control and the value format match what Morphe saves.
       // Within one family (integer / long / float, string / enum) only the value format follows, so
@@ -99,7 +93,7 @@ if (INAPP) {
     }
     // Settings this build has that the catalogue doesn't know: plain rows under Misc, so nothing is hidden.
     for (const [k, m] of Object.entries(meta)) {
-      if (known.has(k) || !m.ui || !TYPE_WIDGET[m.type] || /^morphe_visual_editor_/.test(k)) continue;
+      if (known.has(k) || !TYPE_WIDGET[m.type] || /^morphe_visual_editor_/.test(k)) continue;
       const entries = Array.isArray(m.entries) && m.entries.length ? m.entries.map(([label, value]) => ({ label, value })) : undefined;
       cat.preferences.push({ key: k, title: m.title || "", summary: m.summary ?? null, summaryOn: m.summaryOn ?? null, summaryOff: m.summaryOff ?? null,
         widget: entries ? "ListPreference" : TYPE_WIDGET[m.type], type: m.type === "action" ? null : m.type, default: m.default, rebootApp: !!m.rebootApp, parents: [], customAvailability: [],

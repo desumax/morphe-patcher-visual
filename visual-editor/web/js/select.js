@@ -116,10 +116,10 @@ function toggle(k) {
   if (mode === "orig") setMode("mod");
   if (!parentsOk(k)) { pointToParents(k); snack(needText(k)); return; }
   const before = state[k];
-  if (OFF_LIST.has(k)) { if (String(state[k]) === "off") state[k] = offListPick[k] || entriesFor(k).find(e => e.value !== "off" && e.value !== "en").value; else { offListPick[k] = state[k]; state[k] = "off"; } }
-  else if (p.type === "boolean") state[k] = !state[k];
-  else if (entriesFor(k).length && !p.entries) { const vals = entriesFor(k).map(e => e.value); const i = vals.findIndex(x => String(x) === String(state[k]) || Number(x) === Number(state[k])); state[k] = coerce(k, vals[(i + 1) % vals.length]); }
-  else if (p.entries && p.entries.length) { const vals = entriesFor(k).map(e => e.value); const i = vals.indexOf(String(state[k])); state[k] = coerce(k, vals[(i + 1) % vals.length]); }
+  if (OFF_LIST.has(k)) { if (String(state[k]) === "off") setPref(k, offListPick[k] || entriesFor(k).find(e => e.value !== "off" && e.value !== "en").value); else { offListPick[k] = state[k]; setPref(k, "off"); } }
+  else if (p.type === "boolean") setPref(k, !state[k]);
+  else if (entriesFor(k).length && !p.entries) { const vals = entriesFor(k).map(e => e.value); const i = vals.findIndex(x => String(x) === String(state[k]) || Number(x) === Number(state[k])); setPref(k, coerce(k, vals[(i + 1) % vals.length])); }
+  else if (p.entries && p.entries.length) { const vals = entriesFor(k).map(e => e.value); const i = vals.indexOf(String(state[k])); setPref(k, coerce(k, vals[(i + 1) % vals.length])); }
   else { focusControl(k); return; }
   const visual = A[k] && (A[k].kind === "vis" || A[k].kind === "overlay");
   const wasShown = visual ? (isHideKey(k) ? !before : !!before) : null;

@@ -7,10 +7,11 @@ async function boot() {
   try { const r = await fetch("catalogue.json"); CAT = await r.json(); }
   catch (err) { $("list").innerHTML = `<div class="secnote" style="padding:20px 16px">Could not load catalogue.json. Serve this folder over HTTP (for example <code>python3 -m http.server</code>) and reload.</div>`; return; }
   CAT.preferences.push(...SB_CATS.map(([k, t, d]) => ({ key: "morphe_sb_" + k, title: t, summary: "What SponsorBlock does with this kind of segment", widget: "ListPreference", type: "string", default: d, rebootApp: false, parents: [{ key: "morphe_sb_enabled", mode: "all" }], customAvailability: [], screen: "SPONSORBLOCK", subScreen: null, synthetic: true, entries: SB_BEHAVIOUR })).filter(p => !CAT.preferences.some(x => x.key === p.key)));
+  if (typeof adaptCatalogue === "function") adaptCatalogue(CAT); // in the app: Morphe's own rows decide (app-pre.js)
   for (const p of CAT.preferences) { PREF[p.key] = p; defaults[p.key] = initialValue(p); }
-  Object.assign(state, defaults);
+  loadPrefs(defaults);
   const saved = store.load();
-  if (saved.state) for (const k in saved.state) if (k in PREF) state[k] = saved.state[k];
+  if (saved.state) for (const k in saved.state) if (k in PREF) loadPrefs({ [k]: saved.state[k] });
   baseline = { ...state };
   try { const b = JSON.parse(localStorage.getItem(LS + "-baseline") || "null"); if (b) for (const k in b) if (k in PREF) baseline[k] = b[k]; } catch { /* storage unavailable */ }
   if (saved.section && SECTIONS.some(s => s.id === saved.section)) section = saved.section;

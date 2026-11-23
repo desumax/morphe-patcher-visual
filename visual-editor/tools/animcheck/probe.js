@@ -124,24 +124,24 @@
     if (String(state[k]) === String(v)) return "same";
     const opt = q(`#list button.opt[data-set="${k}"]`).find(o => String(o.dataset.val) === String(v));
     if (opt) { opt.click(); if (String(state[k]) === String(v)) return "pill"; }
-    ensureMod(); touchSel(k); const before = state[k]; state[k] = coerce(k, v); afterChange(k, before); return "afterChange()";
+    ensureMod(); touchSel(k); const before = state[k]; setPref(k, coerce(k, v)); afterChange(k, before); return "afterChange()";
   }
   // Where a run starts and ends: every setting on its default, except that the settings this one depends
   // on are switched the way it needs (its card is locked otherwise, and a user could not change it).
   function unlock(k, depth = 0) {
     const p = PREF[k]; if (!p || depth > 4) return;
     const ps = p.parents || [], any = ps.filter(x => x.mode === "any");
-    for (const x of ps) { if (!(x.key in state) || x.mode === "any") continue; unlock(x.key, depth + 1); state[x.key] = x.mode !== "not"; }
-    if (any.length && !any.some(x => state[x.key])) { unlock(any[0].key, depth + 1); state[any[0].key] = true; }
+    for (const x of ps) { if (!(x.key in state) || x.mode === "any") continue; unlock(x.key, depth + 1); setPref(x.key, x.mode !== "not"); }
+    if (any.length && !any.some(x => state[x.key])) { unlock(any[0].key, depth + 1); setPref(any[0].key, true); }
     // a rule of Morphe's own (availability): try each setting it reads, one value at a time
     if (!availOk(k)) for (const x of [...(p.availabilityParents || []), ...availKeys(k)]) {
       if (!(x in PREF) || x === k) continue;
       const was = state[x], tries = PREF[x].type === "boolean" ? [!was] : entriesFor(x).map(e => e.value).filter(v => String(v) !== String(was));
-      if (tries.some(v => { state[x] = coerce(x, v); return availOk(k); })) { unlock(x, depth + 1); break; }
-      state[x] = was;
+      if (tries.some(v => { setPref(x, coerce(x, v)); return availOk(k); })) { unlock(x, depth + 1); break; }
+      setPref(x, was);
     }
   }
-  function rest0(k) { Object.keys(state).forEach(x => { if (x in defaults) state[x] = defaults[x]; }); unlock(k); }
+  function rest0(k) { Object.keys(state).forEach(x => { if (x in defaults) setPref(x, defaults[x]); }); unlock(k); }
   // bring a card into the free space under the preview by scrolling the editor's own list (scrollIntoView
   // would also scroll the page around the editor, and the preview with it)
   function showRow(row) {

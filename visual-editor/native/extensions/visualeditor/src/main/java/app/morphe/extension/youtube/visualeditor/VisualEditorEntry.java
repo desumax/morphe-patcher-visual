@@ -214,11 +214,10 @@ public final class VisualEditorEntry {
                     new WebEditorDialog(activity).show();
                     return;
                 } catch (Throwable ex) {
-                    Logger.printException(() -> "Visual editor: WebView editor failed, using the list editor", ex);
+                    Logger.printException(() -> "Visual editor: WebView editor failed, showing the regular list", ex);
                 }
             }
-            unsupported(activity); // no WebView, or it failed to start
-            new VisualEditorDialog(activity).show();
+            unsupported(activity); // no WebView, or it failed to start: the regular Morphe list stays
         } catch (Throwable ex) {
             Logger.printException(() -> "Visual editor could not open", ex);
             unsupported(activity);

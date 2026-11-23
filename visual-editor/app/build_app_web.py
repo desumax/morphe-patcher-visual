@@ -21,6 +21,12 @@ out = outdir.fresh(Path(sys.argv[1]))
 html = (WEB / "index.html").read_text(encoding="utf-8")
 # No network inside YouTube: Roboto is the system font on Android.
 html = re.sub(r'<link[^>]+fonts\.(googleapis|gstatic)\.com[^>]*>\s*', "", html)
+# The page's style files (web/css), inlined in their order: the app opens on one file, as before
+# the styles were split, with no extra requests before the first frame.
+def inline_css(m):
+    return "<style>\n" + (WEB / m.group(1)).read_text(encoding="utf-8") + "</style>"
+html = re.sub(r'<link rel="stylesheet" href="(css/[a-z0-9-]+\.css)">', inline_css, html)
+assert 'href="css/' not in html, "a style file was not inlined"
 # After the page's own styles, so the in-app rules win.
 html = html.replace('<script src="js/core.js"></script>', '<link rel="stylesheet" href="app.css">\n<script src="js/core.js"></script>', 1)
 if not html.lstrip().lower().startswith("<!doctype"):

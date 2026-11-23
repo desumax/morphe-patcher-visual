@@ -474,10 +474,10 @@ function listAdd(k, raw) {
 function listRemove(k, i) {
   if (!listJSON(k)) { const items = listItems(k); items.splice(i, 1); return listSet(k, items); }
   const es = jsonEntries(V(k)).filter(e => e.name || e.id); es.splice(i, 1);
-  ensureMod(); touchSel(k); const before = state[k]; state[k] = es.length ? JSON.stringify(es) : ""; afterChange(k, before);
+  ensureMod(); touchSel(k); const before = state[k]; setPref(k, es.length ? JSON.stringify(es) : ""); afterChange(k, before);
 }
-function listSet(k, items) { if (listJSON(k)) { ensureMod(); touchSel(k); const before = state[k]; state[k] = items.length ? JSON.stringify(items.map(n => ({ id: n, name: n }))) : ""; afterChange(k, before); return; }
-  ensureMod(); touchSel(k); const before = state[k]; state[k] = items.join("\n"); afterChange(k, before); requestAnimationFrame(() => document.querySelector(`[data-lin="${k}"]`)?.focus({ preventScroll: true })); }
+function listSet(k, items) { if (listJSON(k)) { ensureMod(); touchSel(k); const before = state[k]; setPref(k, items.length ? JSON.stringify(items.map(n => ({ id: n, name: n }))) : ""); afterChange(k, before); return; }
+  ensureMod(); touchSel(k); const before = state[k]; setPref(k, items.join("\n")); afterChange(k, before); requestAnimationFrame(() => document.querySelector(`[data-lin="${k}"]`)?.focus({ preventScroll: true })); }
 const whereOf = x => { const s = sectionOf(x); return s !== section ? ` (${esc(SECTIONS.find(z => z.id === s)?.title || "Miscellaneous")})` : ""; };
 function shortNeed(k) {
   if (!classicParentsOk(k)) { const b = PREF[k].parents.find(x => x.mode === "not" ? !!state[x.key] : !state[x.key]) || PREF[k].parents[0]; return `Parent setting must be ${stateWord(b.key, b.mode !== "not")}`; }
@@ -1354,7 +1354,7 @@ function renderInspector() {
   const cp = $("copyJson");
   if (cp) cp.onclick = () => { const txt = JSON.stringify(ch, null, 1); (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => snack("Copied changed settings"), () => selectPre()); };
   const rs = $("resetAll");
-  if (rs) rs.onclick = () => { const before = { ...state }; Object.assign(state, defaults); commit(); snack("Reset all settings to defaults", () => { Object.assign(state, before); commit(); }); };
+  if (rs) rs.onclick = () => { const before = { ...state }; setPrefs(defaults); commit(); snack("Reset all settings to defaults", () => { setPrefs(before); commit(); }); };
 }
 function selectPre() { const pre = $("json"); if (!pre) return; const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(r); snack("Press Ctrl+C to copy"); }
 
@@ -1374,7 +1374,7 @@ const nSettings = n => `${n} setting${n > 1 ? "s" : ""}`;
 const leaveHost = {
   restart() { $("restarting").classList.add("on"); setTimeout(() => { baseline = { ...state }; storeBaseline(); savedPending(null); renderBar(); $("restarting").classList.remove("on"); snack("YouTube restarted. All changes are applied."); }, 1400); },
   saveForLater() { savedPending(pendingRestart()); webLeave("Saved. They apply the next time YouTube restarts"); },
-  reset(leaving) { for (const k of pendingRestart()) state[k] = baseline[k]; savedPending(null); commit(); if (leaving) webLeave("Changes reset"); else snack("Changes reset"); },
+  reset(leaving) { for (const k of pendingRestart()) setPref(k, baseline[k]); savedPending(null); commit(); if (leaving) webLeave("Changes reset"); else snack("Changes reset"); },
 };
 function webLeave(msg) {
   const app = $("app"); app.classList.remove("exitflash"); void app.offsetWidth; app.classList.add("exitflash");
@@ -1479,10 +1479,10 @@ function borrowPopup(k, target) {
   box.onclick = e => {
     if (e.target.id === "dDone") return closeDialog();
     const sw = e.target.closest("[data-sw]"), opt = e.target.closest("button.opt[data-set]");
-    if (sw) { ensureMod(); state[target] = !state[target]; after(); }
-    else if (opt) { ensureMod(); optSnap(opt); state[target] = coerce(target, opt.dataset.val); after(); optGlide(); }
+    if (sw) { ensureMod(); setPref(target, !state[target]); after(); }
+    else if (opt) { ensureMod(); optSnap(opt); setPref(target, coerce(target, opt.dataset.val)); after(); optGlide(); }
   };
-  box.onchange = e => { const t = e.target; if (!t.dataset || t.dataset.set !== target) return; ensureMod(); state[target] = t.type === "range" || t.type === "number" ? Number(t.value) : coerce(target, t.value); after(); };
+  box.onchange = e => { const t = e.target; if (!t.dataset || t.dataset.set !== target) return; ensureMod(); setPref(target, t.type === "range" || t.type === "number" ? Number(t.value) : coerce(target, t.value)); after(); };
 }
 // Reset sits next to search and asks whether to reset this preview's screen or every setting.
 const changedKeys = keys => keys.filter(k => JSON.stringify(state[k]) !== JSON.stringify(defaults[k]));
@@ -1490,10 +1490,10 @@ const screenChanges = () => changedKeys([...new Set([...sectionKeys(), ...(borro
 const allChanges = () => changedKeys(Object.keys(PREF));
 function doReset(keys, all, label) {
   if (!keys.length) return;
-  const before = {}; keys.forEach(k => { before[k] = state[k]; state[k] = defaults[k]; });
+  const before = {}; keys.forEach(k => { before[k] = state[k]; setPref(k, defaults[k]); });
   const lent = all ? { ...borrowed } : { [section]: borrowed[section] };
   if (all) Object.keys(borrowed).forEach(x => delete borrowed[x]); else delete borrowed[section];
-  commit(); snack(`Reset ${keys.length} setting${keys.length > 1 ? "s" : ""} ${label}`, () => { Object.assign(state, before); Object.entries(lent).forEach(([x, v]) => { if (v) borrowed[x] = v; }); commit(); });
+  commit(); snack(`Reset ${keys.length} setting${keys.length > 1 ? "s" : ""} ${label}`, () => { setPrefs(before); Object.entries(lent).forEach(([x, v]) => { if (v) borrowed[x] = v; }); commit(); });
 }
 $("btnReset").onclick = () => {
   const scr = screenChanges(), all = allChanges(), name = SECTIONS.find(x => x.id === section)?.title || "this screen";

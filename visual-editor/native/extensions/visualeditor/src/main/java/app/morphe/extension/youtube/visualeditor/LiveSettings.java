@@ -37,10 +37,13 @@ import app.morphe.extension.shared.settings.Setting;
 import app.morphe.extension.shared.settings.StringSetting;
 
 /**
- * What the installed Morphe build says about each setting, for the web editor: type, default,
- * availability, and the translated title, summaries and list entries of its row in the live
- * settings list (the regular Morphe screen), or in morphe_prefs.xml when the live list is gone.
- * The editor's catalogue is then only a source of preview hints.
+ * The rows of the installed Morphe settings list, for the web editor: one entry per row, and only
+ * for rows that exist. A setting gets an entry when Morphe's list shows it (the live list, or
+ * morphe_prefs.xml when the live list is gone): Morphe loads every Setting whatever patches were
+ * picked, so a setting whose patch was left out has no row and no entry. Action rows (import /
+ * export, links...) are entries too. Each entry carries the type, default, availability and the
+ * translated title, summaries and list entries. The web editor builds its list from these entries
+ * alone (adaptCatalogue in app-pre.js); its catalogue only adds preview hints.
  */
 final class LiveSettings {
 
@@ -61,16 +64,17 @@ final class LiveSettings {
         for (Setting<?> s : Setting.allLoadedSettings()) {
             settingKeys.add(s.key);
             try {
+                Row r = rows.get(s.key);
+                PreferenceTree.Node n = r == null ? tree.node(s.key) : null;
+                if (r == null && n == null) continue; // no row in this build: not in the editor
                 JSONObject m = new JSONObject();
                 m.put("type", typeOf(s));
                 m.put("available", s.isAvailable());
                 m.put("rebootApp", s.rebootApp);
                 Object d = s.defaultValue;
                 m.put("default", d instanceof Enum<?> e ? e.name() : (d instanceof Boolean || d instanceof Number) ? d : String.valueOf(d));
-                Row r = rows.get(s.key);
                 if (r != null) {
                     Preference p = r.pref;
-                    m.put("ui", true);
                     putText(m, "title", p.getTitle());
                     if (p instanceof TwoStatePreference t) {
                         putText(m, "summaryOn", t.getSummaryOn());
@@ -81,13 +85,9 @@ final class LiveSettings {
                     putText(m, "screenTitle", r.screen);
                     putText(m, "subScreenTitle", r.sub);
                 } else {
-                    PreferenceTree.Node n = tree.node(s.key);
-                    if (n != null) {
-                        m.put("ui", true);
-                        putText(m, "title", n.title);
-                        if (n.entries == null) putText(m, "summary", n.summary);
-                        putEntries(m, n.entries, n.entryValues);
-                    }
+                    putText(m, "title", n.title);
+                    if (n.entries == null) putText(m, "summary", n.summary);
+                    putEntries(m, n.entries, n.entryValues);
                 }
                 out.put(s.key, m);
             } catch (Exception ex) {
@@ -122,7 +122,6 @@ final class LiveSettings {
             try {
                 JSONObject m = new JSONObject();
                 m.put("type", "action");
-                m.put("ui", true);
                 m.put("available", p.isEnabled());
                 putText(m, "title", p.getTitle());
                 putText(m, "summary", p.getSummary());

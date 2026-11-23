@@ -17,6 +17,30 @@ Native Android work (stage 3) belongs in a fork of `morphe-patches`, not here: t
 repository is the patcher engine, and the settings UI lives in the patches repo's
 `extensions/shared/.../settings/preference` code.
 
+## Where things are, and the three rules that keep it in one piece
+
+| Folder | What it holds |
+| --- | --- |
+| `web/index.html` | The page's markup only. |
+| `web/css/*.css` | The styles, in load order: `base` (layout, device frames, picker), `preview` (live preview, scenario phones), `list` (cards, controls, dialogs, tutorial), `workbench` (inspector, search, top bar, locks), `theme-youtube`, `glass`, `motion` (glides, scenario kit). Later files win. The in-app build inlines them into one page. |
+| `web/js/*.js` | 13 classic scripts sharing one scope, loaded in the order `index.html` lists them (core first, boot last). |
+| `app/` | The in-app layer: `app-pre.js` (runs before boot), `app-post.js` (after), `app.css`, and the builders. |
+| `native/` | The Android patch and extension: entry rows, the WebView host and bridge, live rows, saving. |
+| `bundle/` | Builds the standalone test bundle. |
+| `tools/` | Catalogue extractor, drift check, animation check, captions report. |
+
+1. **Which settings exist** is decided in one place. In the app, Morphe's own list does it:
+   `LiveSettings.meta()` sends one entry per row, and `adaptCatalogue` (`app/app-pre.js`) builds the
+   editor's rows from those entries alone. The catalogue only adds preview hints. The preview (no
+   app) shows the whole catalogue. The only other filter is `offDevice`, a design rule that leaves
+   out settings that do nothing on this kind of device.
+2. **A setting's value changes only through `setPref(key, value)`** (or `setPrefs`), in `core.js`.
+   It records the key; in the app each save sends exactly those keys to Morphe. `state[k]` reads
+   as usual, but writing it directly throws, so no change can skip the save path. Values that come
+   from outside (start-up, Morphe's answer) use `loadPrefs`.
+3. **Fix a problem once, in shared code** (`paint`, `glideRun`, the glass role lists, the scenario
+   kit): a report about one element is a report about every element of its kind.
+
 ## List every caption the comparisons show
 
 ```sh
