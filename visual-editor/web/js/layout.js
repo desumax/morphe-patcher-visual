@@ -52,7 +52,7 @@ function glassTierApply() {
   if (typeof glassForced === "number") glassTier = glassForced;
   else if (glassTier === null) glassTier = Math.min(glassForced === "w" ? 0 : glassTierDetect(), glassCap);
   $("phone").dataset.gt = glassTier;
-  glassArt(); glassArtPlace(); lensR = new WeakMap(); liquidSoon();
+  glassArtPlace(); lensR = new WeakMap(); liquidSoon();
 }
 const GLASS_TIER_NAMES = ["Flat glass", "Light glass", "Full glass"];
 // Glass where it can't run (Max, Nov 23): no backdrop-filter at all, or an Android older than
@@ -89,32 +89,14 @@ function glassSlowWarn() {
     <div class="acts"><button class="dbtn primary" id="dOk">OK</button></div>`);
   $("dOk").onclick = closeDialog;
 }
-// ---------- the backdrop of design 1 ----------
-// The lab's art (gradient, five colour blobs, stars, light bars, faint words, hills at the foot), drawn
-// once into an image, since glass is clear and needs something to show. The phone paints it from its top
-// left corner at the phone's width; whatever hides the list paints the same image shifted by its own
-// place (--g-art-x/-top, here; --g-art-y adds the top bar in index.html), so the two meet without a seam.
-let glassArtDone = false;
-function glassArt() {
-  if (glassArtDone) return; glassArtDone = true;
-  const W = 412, H = 960, k = Math.min(2, Math.max(1, Math.round(devicePixelRatio || 1))), c = document.createElement("canvas"); c.width = W * k; c.height = H * k;
-  const x = c.getContext("2d"); if (!x) return; x.scale(k, k);
-  let s = 7; const rnd = () => (s = (s * 9301 + 49297) % 233280) / 233280;
-  const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, "#1a1440"); g.addColorStop(.42, "#3b1f5c"); g.addColorStop(.72, "#0f3b4a"); g.addColorStop(1, "#071a24");
-  x.fillStyle = g; x.fillRect(0, 0, W, H);
-  [[70, 300, 170, "rgba(255,80,160,.55)"], [340, 470, 180, "rgba(40,200,255,.45)"], [220, 640, 190, "rgba(255,170,60,.42)"], [60, 780, 150, "rgba(120,255,170,.32)"], [330, 880, 160, "rgba(150,90,255,.5)"], [300, 110, 150, "rgba(90,120,255,.4)"]]
-    .forEach(([cx, cy, r, col]) => { const rg = x.createRadialGradient(cx, cy, 0, cx, cy, r); rg.addColorStop(0, col); rg.addColorStop(1, "rgba(0,0,0,0)"); x.fillStyle = rg; x.fillRect(0, 0, W, H); });
-  for (let i = 0; i < 170; i++) { x.fillStyle = `rgba(255,255,255,${.25 + rnd() * .6})`; const r = rnd() * 1.4 + .3; x.beginPath(); x.arc(rnd() * W, rnd() * H, r, 0, 7); x.fill(); }
-  x.save(); x.globalAlpha = .1; x.fillStyle = "#fff"; for (let i = -4; i < 16; i++) { x.save(); x.translate(i * 46, 260); x.rotate(-.5); x.fillRect(0, 0, 6, 1000); x.restore(); } x.restore();
-  x.save(); x.font = "900 74px system-ui, sans-serif"; x.fillStyle = "rgba(255,255,255,.1)"; ["MORPHE", "VISUAL", "GLASS", "MORPHE"].forEach((t, i) => x.fillText(t, -6 + (i % 2) * 40, 400 + i * 120)); x.restore();
-  ["#2a1f55", "#1b1540"].forEach((col, j) => { x.fillStyle = col; x.beginPath(); x.moveTo(0, H); let y = H - 60 + j * 26; for (let px = 0; px <= W; px += 18) { y += (rnd() - .5) * 34; y = Math.max(H - 90 + j * 20, Math.min(H + j * 30, y)); x.lineTo(px, y); } x.lineTo(W, H); x.fill(); });
-  const set = u => $("phone").style.setProperty("--g-art", `url("${u}")`);
-  try { if (c.toBlob) c.toBlob(b => set(b ? URL.createObjectURL(b) : c.toDataURL()), "image/webp", .9); else set(c.toDataURL("image/jpeg", .9)); } catch { /* a canvas that can't be read: the gradient stays */ }
-}
+// ---------- the backdrop ----------
+// The darker original glows (index.html --g-bg-img), drawn at the phone's own size in px: the phone paints
+// them from its top left corner; whatever hides the list paints the same glows shifted by its own place
+// (--g-art-x/-top here; --g-art-y adds the top bar in index.html), so the copies meet without a seam.
 function glassArtPlace() {
   const ph = $("phone"), app = $("app"), st = $("stick"); if (!ph || !app || theme !== "glass") return;
   const pr = ph.getBoundingClientRect(), k = pr.width / (ph.offsetWidth || 1) || 1, top = pr.top + ph.clientTop * k, left = pr.left + ph.clientLeft * k;
-  ph.style.setProperty("--g-art-w", ph.clientWidth + "px");
+  ph.style.setProperty("--g-art-w", ph.clientWidth + "px"); ph.style.setProperty("--g-art-h", ph.clientHeight + "px");
   ph.style.setProperty("--g-art-top", Math.round((app.getBoundingClientRect().top - top) / k) + "px");
   if (st && st.offsetWidth) ph.style.setProperty("--g-art-x", Math.round((st.getBoundingClientRect().left - left) / k) + "px");
 }
@@ -124,21 +106,22 @@ if (window.ResizeObserver) { const ro = new ResizeObserver(() => glassArtPlace()
 // AGSL lens. For each surface size a displacement map is baked once in a canvas: inside a band B from the
 // rounded edge, every point is pushed inward along the edge normal by (1 - sqrt(1 - u²)) × A, u = 1 - depth/B.
 // The map feeds feDisplacementMap through backdrop-filter: url(#…), then a saturation lift; in Full, dialogs
-// and the top bar add a slight colour fringe (red, green and blue bent by ×1, ×1.1, ×1.2). Maps are cached by
-// size, corner and recipe. The recipes are the lab's (chrome, ctl, thumb, dlg). What bends, by tier:
+// add a slight colour fringe (red, green and blue bent by ×1, ×1.1, ×1.2: three passes, so only there). Maps
+// are cached by size, corner and recipe. The recipes are the lab's (chrome, ctl, thumb, dlg). What bends:
 //   2 Full:  top bar, tabs, dialogs, menu, snackbar, and up to LENS_CAP chosen thumbs on screen;
 //   1 Light: top bar, tabs, dialogs, menu, snackbar;
 //   0 Flat:  nothing.
 // Cards and tracks never bend: they scroll, and each would be sampled again on every frame of a scroll
 // (that is what made Full glass slow on a flagship). Only what is on screen gets a lens.
 const LENS = {
-  chrome: { band: 16, amount: 26, sat: 1.6, blur: 2.5 }, chromeFull: { band: 16, amount: 26, chroma: .12, sat: 1.6, blur: 2.5 },
+  chrome: { band: 16, amount: 26, sat: 1.6, blur: 2.5 }, menu: { band: 20, amount: 30, sat: 1.6, blur: 6 },
   dlg: { band: 20, amount: 30, sat: 1.6, blur: 6 }, dlgFull: { band: 20, amount: 30, chroma: .1, sat: 1.6, blur: 6 },
   ctl: { band: 8, amount: 12, sat: 1.5 }, thumb: { band: 9, amount: 14, sat: 1.8 },
 };
 const LENS_ROLES = [
   { sel: ".appbar > .iconbtn, .secpill, .seg, .snack", L: "chrome", tier: 1 },
-  { sel: ".dlg, html:not(.inapp) #picker", L: "dlg", tier: 1 },
+  { sel: ".dlg", L: "dlg", tier: 1 },
+  { sel: "html:not(.inapp) #picker", L: "menu", tier: 1 },
   { sel: ".tab7:not([aria-selected=\"true\"])", L: "ctl", tier: 1 },
   { sel: ".tab7[aria-selected=\"true\"]", L: "thumb", tier: 1 },
   { sel: ".seg3.th > .seg3-th, .lt7 > i, .ctl .opt[aria-pressed=\"true\"]", L: "thumb", tier: 2, cap: true },
@@ -211,7 +194,8 @@ function liquidSoon() { if (!lensRaf && theme === "glass") lensRaf = requestAnim
   const mc = new MutationObserver(() => { liquidSoon(); setTimeout(liquidSoon, 420); }); // again once it has faded in or out
   ["dlg", "picker", "snack", "app"].forEach(id => { const e = $(id); if (e) mc.observe(e, { attributes: true, attributeFilter: ["class"] }); });
   mo.observe($("phone"), { attributes: true, attributeFilter: ["data-gt", "class"] });
-  let st = 0; document.addEventListener("scroll", () => { clearTimeout(st); st = setTimeout(liquidSoon, 120); }, { capture: true, passive: true });
+  // only Full has glass in the list (chosen thumbs), so only Full looks again after a scroll
+  let st = 0; document.addEventListener("scroll", () => { if ($("phone").dataset.gt !== "2") return; clearTimeout(st); st = setTimeout(liquidSoon, 120); }, { capture: true, passive: true });
   addEventListener("resize", liquidSoon);
 }
 // Frame watch (rebuilt Nov 23 evening, after a Snapdragon 8 Gen 5 was told it was too slow): 90 frames

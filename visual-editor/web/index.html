@@ -1073,9 +1073,10 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
      thumb  = what is chosen: a translucent tone (on, off, blue, white) with a bright rim and a soft shadow
      dlg    = dialogs and the screen menu (radius 30)
      fill   = the slider's fill; lock = the cover with the gold lock; press = what gives under the finger
-   Backdrop: the lab's art (gradient, colour blobs, stars, light bars, faint words), drawn once by glassArt()
-   (layout.js) into an image on the phone. What hides the list (the sticky preview area, the app's menu,
-   the editor behind a back swipe) paints the same image at the same place (--g-art-*), so nothing blurs.
+   Backdrop: the darker original (Max, Nov 23 evening: not the lab's busy art): four soft colour glows on
+   near black, drawn at the phone's size (--g-art-w/-h, layout.js glassArtPlace). What hides the list (the
+   sticky preview area, the app's menu, the editor behind a back swipe) paints the same glows at the same
+   place, so the two meet without a seam and nothing has to blur.
    Cost (Max, Nov 23 evening: a Snapdragon 8 Gen 5 got the slow warning): nothing large samples what is
    behind it while the list scrolls; cards, tracks and locks are plain paint. Tiers only change what
    liquidSync bends and the --gx-* fallbacks:
@@ -1091,35 +1092,44 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   --g-ctl: rgba(255,255,255,.06);
   --g-ctl-edge: inset 0 0 0 1px rgba(255,255,255,.2), inset 0 1px 0 rgba(255,255,255,.4);
   --g-thumb-edge: inset 0 0 0 1px rgba(255,255,255,.3), inset 0 1px 0 rgba(255,255,255,.6), 0 4px 12px rgba(0,0,0,.3);
-  --g-on: rgba(43,92,52,.72); --g-off: rgba(92,43,43,.72); --g-blue: rgba(30,90,168,.78); --g-white: rgba(255,255,255,.82); --g-knob: rgba(255,255,255,.18); --g-def: rgba(70,72,84,.62);
+  --g-on: rgba(43,92,52,.72); --g-off: rgba(92,43,43,.72); --g-blue: rgba(30,90,168,.78); --g-white: rgba(255,255,255,.82); --g-def: rgba(70,72,84,.62);
   --g-fill: rgba(62,166,255,.8);
+  /* the slider knob: light bent by a clear pill (Max: "refract more light"): a hot spot under the top edge,
+     the bright lens band at both ends, light gathered along the bottom edge, a blue glow from the fill,
+     a crisp rim; painted, so it costs the same in every tier */
+  --g-knob-paint: radial-gradient(70% 38% at 50% 10%, rgba(255,255,255,.85), rgba(255,255,255,0) 72%), radial-gradient(80% 50% at 50% 104%, rgba(205,232,255,.6), rgba(205,232,255,0) 70%), linear-gradient(90deg, rgba(255,255,255,.4), rgba(255,255,255,0) 26%, rgba(255,255,255,0) 74%, rgba(255,255,255,.4)), rgba(190,220,255,.16);
+  --g-knob-edge: inset 0 0 0 1px rgba(255,255,255,.62), inset 0 1px 1px rgba(255,255,255,.95), inset 0 -2px 3px rgba(190,225,255,.45), inset 0 0 7px rgba(120,190,255,.4), 0 0 10px rgba(62,166,255,.35), 0 4px 12px rgba(0,0,0,.35);
   --g-dlg: rgba(22,22,30,.4);
   --g-dlg-edge: inset 0 0 0 1px rgba(255,255,255,.24), inset 0 1.5px 0 rgba(255,255,255,.55), 0 20px 50px rgba(0,0,0,.5);
   --g-press: rgba(255,255,255,.16); --g-line: rgba(255,255,255,.1);
-  /* the backdrop image and where it sits (glassArtPlace, layout.js); until it is drawn, its gradient */
-  --g-art-bg: #1b1540;
-  --g-art-paint: var(--g-art, linear-gradient(#1a1440, #3b1f5c 45%, #0f3b4a 75%, #071a24)) calc(-1 * var(--g-art-x, 0px)) calc(-1 * var(--g-art-y, 0px)) / var(--g-art-w, 100%) auto no-repeat, var(--g-art-bg);
+  /* the backdrop: glows sized to the phone in px, so every copy of it lines up (glassArtPlace, layout.js) */
+  --g-bg: #07090f;
+  --g-bg-img: radial-gradient(120% 55% at 0% 0%, rgba(72,112,255,.46), transparent 62%), radial-gradient(90% 50% at 100% 28%, rgba(0,186,176,.32), transparent 62%), radial-gradient(110% 60% at 22% 100%, rgba(150,78,255,.36), transparent 64%), radial-gradient(80% 45% at 100% 92%, rgba(255,110,150,.2), transparent 60%);
   /* Flat: nothing bends, so what floats over the list is near opaque */
   --gx-dlg: rgba(24,22,36,.95); --gx-menu: rgba(24,22,36,.95); --gx-snack: rgba(24,22,36,.92); --gx-float-fx: none; --gx-dlg-fx: none; --gx-knob-fx: none;
-  --gx-tut: rgba(8,10,18,.86); --gx-tut-fx: none;
   --m-bg: #0a0c14; --m-surface: #0a0c14; --m-c-lowest: rgba(0,0,0,.25); --m-c: rgba(255,255,255,.035); --m-c-high: rgba(255,255,255,.09); --m-c-highest: rgba(255,255,255,.14);
   --m-on: #f4f6fc; --m-on-var: rgba(236,240,252,.74); --m-outline: rgba(255,255,255,.32); --m-outline-var: rgba(255,255,255,.16);
   --m-primary: #9fcaff; --m-on-primary: #05213f; --m-primary-c: rgba(120,170,255,.22); --m-on-primary-c: #dcebff; --m-secondary-c: rgba(255,255,255,.12);
   --lk-grey: rgba(28,28,38,.9); --lk-veil: rgba(28,28,38,.84); --r-l: 22px; --r-li: 24px;
-  background: var(--g-art, linear-gradient(#1a1440, #3b1f5c 45%, #0f3b4a 75%, #071a24)) 0 0 / var(--g-art-w, 100%) auto no-repeat, var(--g-art-bg);
+  background-color: var(--g-bg); background-image: var(--g-bg-img); background-size: var(--g-art-w, 100%) var(--g-art-h, 100%); background-position: 0 0; background-repeat: no-repeat;
 }
 .phone.theme-glass .app { --g-art-y: calc(var(--g-art-top, 0px) + var(--abh, 56px)); }
 .phone.theme-glass .app.barhidden { --g-art-y: var(--g-art-top, 0px); }
 /* Light and Full: dialogs, the menu and the snackbar are clear glass with the lens (blur where SVG lenses are missing) */
 .phone.theme-glass:is([data-gt="1"], [data-gt="2"]) {
   --gx-dlg: var(--g-dlg); --gx-menu: rgba(22,22,30,.5); --gx-snack: var(--g-chrome); --gx-float-fx: blur(2.5px) saturate(1.6); --gx-dlg-fx: blur(6px) saturate(1.6);
-  --gx-tut: rgba(8,10,18,.6); --gx-tut-fx: blur(12px) saturate(1.6); }
-/* Full: the slider knob brightens and lifts the colour under it (a CSS stand-in: a lens can't reach a native thumb) */
-.phone.theme-glass[data-gt="2"] { --gx-knob-fx: saturate(1.8) brightness(1.2); }
+  --gx-knob-fx: saturate(1.9) brightness(1.3); } /* the knob lifts the colour under it: per pixel, no neighbours read, so cheap */
 
-/* the backdrop, painted again where the list must hide (the sticky preview follows the bar as it hides) */
-.theme-glass .stick, html.inapp .phone.theme-glass #picker, html.inapp.peekback .phone.theme-glass .editor { background: var(--g-art-paint); box-shadow: none; }
-.theme-glass .stick { transition: background-position 260ms var(--ease); }
+/* the backdrop, painted again where the list must hide. The sticky preview carries it on a layer of its own,
+   one bar taller than itself, that slides by the bar's height as the bar hides: a composited move, nothing
+   is painted again, and the layer is only as big as the preview area */
+.theme-glass .stick { background: none; box-shadow: none; overflow: clip; }
+.theme-glass .stick::before { content: ""; position: absolute; left: 0; top: 0; z-index: -1; width: 100%; height: calc(100% + var(--abh, 56px)); pointer-events: none;
+  background-color: var(--g-bg); background-image: var(--g-bg-img); background-size: var(--g-art-w, 100%) var(--g-art-h, 100%); background-repeat: no-repeat;
+  background-position: calc(-1 * var(--g-art-x, 0px)) calc(-1 * var(--g-art-top, 0px));
+  translate: 0 calc(-1 * var(--abh, 56px)); transition: translate 260ms var(--ease); }
+.theme-glass .app.barhidden .stick::before { translate: 0 0; }
+html.inapp .phone.theme-glass #picker, html.inapp.peekback .phone.theme-glass .editor { background-color: var(--g-bg); background-image: var(--g-bg-img); background-size: var(--g-art-w, 100%) var(--g-art-h, 100%); background-position: 0 calc(-1 * var(--g-art-y, 0px)); background-repeat: no-repeat; }
 .theme-glass .status, .theme-glass .appbar { background: transparent; }
 
 /* role: chrome */
@@ -1134,9 +1144,9 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 
 /* role: card */
 .theme-glass .group { background: none; margin: 0 10px 2px; overflow: visible; }
-.theme-glass .group > :is(.row, .unit, .zgrid) { background-color: var(--g-card); border-radius: 22px; margin-bottom: 8px; overflow: hidden; }
+.theme-glass .group > :is(.row, .unit, .zgrid) { background-color: var(--g-card); border-radius: 22px; margin-bottom: 2px; overflow: hidden; } /* close together, only a hair apart (Max, Nov 23 evening) */
 .theme-glass .group > .row { box-shadow: var(--g-card-edge); }
-.theme-glass .group > :is(.unit, .zgrid) { position: relative; }
+.theme-glass .group > :is(.unit, .zgrid) { position: relative; isolation: isolate; } /* isolate: the rim stays under the sticky preview and the menus */
 .theme-glass .group > :is(.unit, .zgrid)::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: var(--g-card-edge); pointer-events: none; z-index: 6; } /* the rim over the rows inside */
 .theme-glass .group > .row, .theme-glass .group > .unit > .row:first-child, .theme-glass .group > .zgrid, .theme-glass .group > * + .zgrid, .theme-glass .zgrid + * { border-top: 0; }
 .theme-glass .group > .row.sel::before, .theme-glass .group > .unit > .row.sel:first-child::before { top: 14px; bottom: 14px; }
@@ -1182,12 +1192,12 @@ html.inapp .phone.theme-glass #picker { border-radius: 0; -webkit-backdrop-filte
 .theme-glass .ctl input[type=range] { -webkit-appearance: none; appearance: none; height: 28px; background: transparent; }
 .theme-glass .ctl input[type=range]::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--g-fill) var(--pct, 0%), var(--g-ctl) var(--pct, 0%)); box-shadow: var(--g-ctl-edge); }
 .theme-glass .ctl input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 34px; height: 24px; margin-top: -8px; border-radius: 12px; border: 0;
-  background: radial-gradient(90% 70% at 50% 0%, rgba(255,255,255,.34), rgba(255,255,255,0) 70%), var(--g-knob); box-shadow: var(--g-thumb-edge);
+  background: var(--g-knob-paint); box-shadow: var(--g-knob-edge);
   -webkit-backdrop-filter: var(--gx-knob-fx); backdrop-filter: var(--gx-knob-fx); transition: transform .18s var(--ease); }
 .theme-glass .ctl input[type=range]:active::-webkit-slider-thumb { transform: scale(1.22); }
 .theme-glass .ctl input[type=range]::-moz-range-track { height: 8px; border-radius: 4px; background: var(--g-ctl); box-shadow: var(--g-ctl-edge); }
 .theme-glass .ctl input[type=range]::-moz-range-progress { height: 8px; border-radius: 4px; background: var(--g-fill); }
-.theme-glass .ctl input[type=range]::-moz-range-thumb { width: 34px; height: 24px; border-radius: 12px; border: 0; background: var(--g-knob); box-shadow: var(--g-thumb-edge); transition: transform .18s var(--ease); }
+.theme-glass .ctl input[type=range]::-moz-range-thumb { width: 34px; height: 24px; border-radius: 12px; border: 0; background: var(--g-knob-paint); box-shadow: var(--g-knob-edge); transition: transform .18s var(--ease); }
 .theme-glass .ctl input[type=range]:active::-moz-range-thumb { transform: scale(1.22); }
 
 /* role: lock (plain paint: a cover never samples what is behind it) */
@@ -1209,7 +1219,7 @@ html.inapp .phone.theme-glass #picker { border-radius: 0; -webkit-backdrop-filte
 .theme-glass .row.sel { background: linear-gradient(90deg, rgba(150,195,255,.2), rgba(150,195,255,.06)); }
 .theme-glass .tut .tseg, .theme-glass .tut .tseg3, .theme-glass .tut .ttabs span:not(.on) { background-color: rgba(255,255,255,.08); }
 .theme-glass .stagebox { box-shadow: 0 0 0 1px rgba(255,255,255,.14), 0 8px 24px rgba(0,0,0,.4); }
-.theme-glass .tut { background: var(--gx-tut); -webkit-backdrop-filter: var(--gx-tut-fx); backdrop-filter: var(--gx-tut-fx); }
+.theme-glass .tut { background: rgba(8,10,18,.84); } /* a full-screen cover: no blur in any tier */
 .theme-glass .tut .tlist.sel { background-color: rgba(150,195,255,.18); }
 /* ---------- end of Glass ---------- */
 .themerow.uirow { padding: 8px 8px 6px 12px !important; }
