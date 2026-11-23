@@ -44,8 +44,8 @@ function renderBar() {
     + `<div class="themerow simrow"><div class="themetog" data-group-toggle role="menuitemcheckbox" aria-checked="${grouped}"><span class="pi">${I("layers")}</span><div class="tt">Group screens into tabs<small>Six screens instead of ${SECTIONS.length}. Each one has tabs right under the live preview, and every tab brings its own preview.</small></div><span class="sw" role="presentation" aria-checked="${grouped}"></span></div></div>`
     // UI design sits right above the list design (Max, Nov 23)
     // one line: the title on the left, its toggle on the right (Max, Nov 23 PM)
-    + `<div class="themerow uirow"><span class="pi">${I("palette")}</span><div class="tt">UI design${theme === "glass" && glassTier !== null ? `<small>${GLASS_TIER_NAMES[glassTier]}${glassForced ? " (forced)" : ""}</small>` : ""}</div>${seg3("UI design", "ui", UI_DESIGNS, theme)}</div>`
-    + `<div class="themerow designrow"><div class="dcol"><div class="dsg"><span class="pi">${I("list")}</span><div class="tt">Settings list design</div></div><div class="drow">${seg3("Settings list design", "design", [["classic", "Morphe"], ["toggles", "Switches"], ["clean", "Clean"]], design)}<button class="offnew" data-editor-off>${I("power")}Disable new design</button></div>${designPreview()}</div></div>`);
+    + `<div class="themerow uirow"><span class="pi">${I("palette")}</span><div class="tt">UI design${theme === "glass" && glassTier !== null ? `<small>${GLASS_TIER_NAMES[glassTier]}${typeof glassForced === "number" ? " (forced)" : ""}</small>` : ""}</div>${seg3("UI design", "ui", UI_DESIGNS, theme, uiOff())}</div>`
+    + `<div class="themerow designrow"><div class="dcol"><div class="dsg"><span class="pi">${I("list")}</span><div class="tt">Settings list design</div></div><div class="drow">${seg3("Settings list design", "design", LIST_DESIGNS, design)}<button class="offnew" data-editor-off>${I("power")}Disable new design</button></div></div></div>`);
   placeSeg3();
   $("btnReset").disabled = mode !== "mod" || !Object.keys(PREF).some(k => JSON.stringify(state[k]) !== JSON.stringify(defaults[k]));
 }
@@ -318,7 +318,17 @@ function stateChip(k) {
   }
   return "";
 }
-function summaryFor(k) { const p = PREF[k]; const v = V(k); if (p.type === "boolean") return fmtSum(k, (v ? p.summaryOn : p.summaryOff) || p.summary || ""); return fmtSum(k, p.summary || ""); }
+function summaryFor(k) { const p = PREF[k]; const v = V(k); if (p.type === "boolean") return cleanSum(k, fmtSum(k, (v ? p.summaryOn : p.summaryOff) || p.summary || "")); return fmtSum(k, p.summary || ""); }
+// "Disable X" reads "X" in the clean design, with On on the left and Off on the right, but Morphe's
+// description still tells what turning it on does ("Disables playlist and live chat panels from opening
+// automatically" under "Player popup panels: On | Off" said the opposite of the toggle; Max, Nov 23, again).
+// One rule for every such setting: the description names the state it describes ("Off: disables ...").
+// A setting with its own On and Off descriptions keeps them.
+function cleanSum(k, t) {
+  const p = PREF[k], c = design === "clean" && cleanOf(k);
+  if (!t || !c || c.labels[0] !== "On" || p.summaryOn || p.summaryOff) return t;
+  return `${c.labels[1]}: ${t.charAt(0).toLowerCase()}${t.slice(1)}`;
+}
 // Morphe fills some descriptions at run time (String.format: "Saved videos: %s"). The preview fills the
 // same slots, in every place a description shows, so a raw %s never reaches the screen: the setting's own
 // value when it has one, else a stand-in from FMT_FILL (slot 1, 2, ...), else an ellipsis.
@@ -488,7 +498,8 @@ function rowHTML(k, live) {
     : KIDS[k] ? kidLock(k, KIDS[k].length)
     : deepKidPill(k); // same footprint as the open/close button, so the card never changes width
   const over = /^(hide|show) in /i.test(title(k)) && p.subScreenTitle ? `<div class="over">${esc(p.subScreenTitle)}</div>` : "";
-  return `<div class="${cls.join(" ")}" data-row="${k}" data-k="${k}" tabindex="0">
+  const segCol = sbColor(k); if (segCol) cls.push("segcol");
+  return `<div class="${cls.join(" ")}" data-row="${k}" data-k="${k}" tabindex="0"${segCol ? ` style="--seg-col:${segCol};--seg-ink:${inkOn(segCol)}"` : ""}>
     <div class="txt">${over}${lreset ? '<div class="ttlrow">' : ""}<div class="ttl">${ttlHTML(shownTitle(k), (dis ? I("lock", "lk") : "") + tags + kidbtn)}</div>${lreset ? lreset + "</div>" : ""}
       ${sum ? `<div class="sum">${esc(sum)}</div>` : ""}${ctl}</div>${right || goto || need ? `<div class="side">${right}${need}${goto}</div>` : ""}</div>`;
 }
@@ -551,6 +562,8 @@ const RELATED = [
   ["video_quality_default_wifi", "video_quality_default_mobile", "remember_video_quality_last_selected", "video_quality_prioritize", "advanced_video_quality_menu", "hide_premium_video_quality"],
   ["shorts_quality_default_wifi", "shorts_quality_default_mobile", "remember_shorts_quality_last_selected"],
   ["video_delay", "video_delay_bluetooth_only"],
+  // Watch page: Ambient mode first, its fullscreen switch next to it, then Enhanced (which replaces it) with its options
+  ["disable_ambient_mode", "bypass_ambient_mode_restrictions", "disable_fullscreen_ambient_mode", "enhanced_ambient_mode"],
   // Behaviour
   ["do_not_remember_loop_video", "loop_count", "loop_count_clear"],
   ["download_force_4k", "download_mode"],
@@ -704,13 +717,7 @@ function renderList() {
     const was = swWas.get(x.dataset.sw), now = [x.getAttribute("aria-checked"), x.dataset.at, x.dataset.tone];
     if (!was || was[0] === now[0]) return;
     const put = v => { x.setAttribute("aria-checked", v[0]); if (v[1]) x.dataset.at = v[1]; else delete x.dataset.at; if (v[2]) x.dataset.tone = v[2]; else delete x.dataset.tone; };
-    const th = x.matches(".lt7") && x.querySelector(":scope > i");
-    if (!th) { put(was); x.classList.add("still"); void x.offsetWidth; x.classList.remove("still"); requestAnimationFrame(() => put(now)); return; }
-    // the two-way toggle: its thumb's colour glides like every other choice (glideRun)
-    x.classList.add("still"); put(was); const f = gRect(th, x), fromBg = getComputedStyle(th).backgroundColor;
-    put(now); const t = gRect(th, x), cs0 = getComputedStyle(th), bg = cs0.backgroundColor, rad = parseFloat(cs0.borderTopLeftRadius) || 0; // read now: the style object is live
-    put(was); void x.offsetWidth; x.classList.remove("still"); void x.offsetWidth; put(now); // the labels' colour still eases
-    glideRun(x, f, t, { bg, fromBg, radius: rad, z: -1 });
+    toggleGlide(x, was, now, put); // a switch or the two-way toggle: the thumb glides like every other choice
   });
   closingOld.forEach((old, grp) => {
     // the parent's sub-options pill keeps its count until the fold is over, then turns into the
@@ -954,6 +961,11 @@ function glideRun(box, f, t, o) {
   const STEP = 1000 / 60, frames = [];
   for (let d = 0; d < M.end; d += STEP) frames.push(M.draw(f, t, d));
   frames.push([{ x: t.x, y: t.y, w: t.w, h: t.h }]);
+  // the goo filter turns a see-through colour (a glass switch's off thumb) to nothing: the blobs are
+  // drawn opaque and the layer carries the colour's own see-through instead
+  const split = c => { const m = /^rgba?\(([^,]+),([^,]+),([^,)]+)(?:,\s*([\d.]+))?\)$/.exec(String(c || "").replace(/\s/g, "")); return m ? [`rgb(${m[1]},${m[2]},${m[3]})`, m[4] === undefined ? 1 : +m[4]] : [c, 1]; };
+  const [bgO, aTo] = split(o.bg), [fromO, aFrom] = o.fromBg ? split(o.fromBg) : [null, aTo];
+  if (goo && (aTo < 1 || aFrom < 1)) o = { ...o, bg: bgO, fromBg: fromO, alpha: [aFrom, aTo] };
   const layer = document.createElement("span"); layer.className = "glayer"; layer.setAttribute("aria-hidden", "true");
   layer.style.cssText = `z-index:${o.z ?? 0};width:${box.scrollWidth}px;height:${box.scrollHeight}px${goo ? `;filter:url(#${goo})` : ""}`;
   const n = Math.max(...frames.map(fr => fr.length)), R = o.radius ?? 999, last = frames.length - 1, mid = Math.round(last * .4);
@@ -968,10 +980,49 @@ function glideRun(box, f, t, o) {
     });
     anims.push(e.animate(kf, { duration: last * STEP, easing: "linear", fill: "forwards" }));
   }
+  if (o.alpha) anims.push(layer.animate([{ opacity: o.alpha[0] }, { opacity: o.alpha[1], offset: .4 }, { opacity: o.alpha[1] }], { duration: last * STEP, fill: "forwards" }));
   box.prepend(layer); box.classList.add("gliding");
   const g = box._glide = { layer, anims, done: o.done };
   // the control's own fill comes back without its transitions (done turns them off for a frame)
   anims[0].onfinish = () => { if (box._glide !== g) return; box._glide = null; if (o.done) o.done(false); box.classList.remove("gliding"); void box.offsetWidth; layer.remove(); };
+}
+// Every two-state toggle glides like the other choices (Max, Nov 23: "Group screens into tabs" and the
+// Original/Morphe toggle still slid on their own). One helper for all of them: a switch (.sw, its thumb is
+// ::after), the Original/Morphe toggle (.seg and the tutorial's .tseg, ::before) and the two-way toggle
+// (.lt7 > i). put(v) sets the control to a state; was and now are the two states. Used by the list, the
+// screen menu, the top bar and the tutorial.
+function thumbBox(x) {
+  const th = x.matches(".lt7") && x.querySelector(":scope > i");
+  const cs = th ? getComputedStyle(th) : getComputedStyle(x, x.matches(".seg, .tseg") ? "::before" : "::after");
+  let r;
+  if (th) r = gRect(th, x);
+  else { const m = cs.transform && cs.transform !== "none" ? new window.DOMMatrixReadOnly(cs.transform) : null; r = { x: parseFloat(cs.left) + (m ? m.e : 0), y: parseFloat(cs.top) + (m ? m.f : 0), w: parseFloat(cs.width), h: parseFloat(cs.height) }; }
+  return { r, bg: cs.backgroundColor, rad: parseFloat(cs.borderTopLeftRadius) || 0 };
+}
+function toggleGlide(x, was, now, put) {
+  if (!x || !x.isConnected || !x.offsetWidth || String(was) === String(now)) { put(now); return; }
+  const running = glideNow(x); glideStop(x);
+  x.classList.add("still"); put(was); void x.offsetWidth; const f = thumbBox(x);
+  put(now); void x.offsetWidth; const t = thumbBox(x); // read at once: the style object is live
+  if (running) f.r = running;
+  put(was); void x.offsetWidth; x.classList.remove("still"); void x.offsetWidth; put(now); // the labels' colour still eases
+  glideRun(x, f.r, t.r, { bg: t.bg, fromBg: f.bg, radius: t.rad, z: x.matches(".sw") ? 1 : -1 });
+}
+// The Original/Morphe toggle in the top bar
+function modeButtons(was, now) {
+  toggleGlide(document.querySelector(".appbar .seg"), was, now, m => { $("btnOrig").setAttribute("aria-pressed", String(m === "orig")); $("btnMod").setAttribute("aria-pressed", String(m === "mod")); });
+}
+// A row of choices whose picked one carries the fill itself (the tutorial's small menu pickers and tabs):
+// pickSnap before the change, pickGlide after it.
+function pickSnap(box, sel = ".on") {
+  const o = box && box.querySelector(`:scope > ${sel}`); if (!o) return null;
+  const cs = getComputedStyle(o), r = glideNow(box) || gRect(o, box); glideStop(box);
+  return { r, bg: cs.backgroundColor, rad: parseFloat(cs.borderTopLeftRadius) || 0 };
+}
+function pickGlide(box, f, sel = ".on", z = -1) {
+  const n = box && box.querySelector(`:scope > ${sel}`); if (!f || !n) return;
+  n.style.transition = "none"; const bg = getComputedStyle(n).backgroundColor; void n.offsetWidth; n.style.transition = "";
+  glideRun(box, f.r, gRect(n, box), { bg, fromBg: f.bg, radius: f.rad, z });
 }
 // Option pills: optSnap runs before the state changes (the grid is redrawn), optGlide once the new grid
 // is laid out, in every option grid (list rows and the "needs" popup).
@@ -1187,7 +1238,7 @@ function renderInspector() {
   else {
     const a = A[k];
     const src = p.sourceFile ? `<a href="https://github.com/MorpheApp/morphe-patches/blob/main/${esc(p.sourceFile)}" target="_blank" rel="noopener">${esc(p.sourceFile.split("/").pop())}</a>` : "–";
-    $("selCard").innerHTML = `<h2>Selected</h2><h3>${esc(shownTitle(k))}</h3><p>${esc(fmtSum(k, p.summary || "") || summaryFor(k) || "")}</p>
+    $("selCard").innerHTML = `<h2>Selected</h2><h3>${esc(shownTitle(k))}</h3><p>${esc(cleanSum(k, fmtSum(k, p.summary || "")) || summaryFor(k) || "")}</p>
       <dl class="kv">
         <dt>Key</dt><dd>${esc(k)}</dd>
         <dt>Adapter</dt><dd><span class="pill">${a ? (a.kind === "scenario" ? "ScenarioAnimation" : KIND_NAME[a.kind]) : KIND_NAME.fallback}</span></dd>
@@ -1293,34 +1344,43 @@ function pendingDialog(saved = []) {
 }
 // The menu's three-way toggles: one thumb slides to the picked option (Max, Nov 22). The picker
 // is drawn again on every change, so the thumb starts from where the old one was (seg3From) and glides.
-// Under "Settings list design": a real card of the list drawn in the picked design (Max, Nov 23 PM: the
-// choice showed no preview of what it does). Two settings, so a switch and a choice both show; it is drawn
-// by rowHTML itself, so it always matches the list. It doesn't react to taps.
+// Picking a Settings list design opens a sample of it in a popup (Max, Nov 23 PM: the sample under the
+// toggle showed all the time; it now shows when the design is picked, says what it is, and closes with
+// OK). A real card of the list drawn in the picked design: two settings, so a switch and a choice both
+// show; it is drawn by rowHTML itself, so it always matches the list. It doesn't react to taps.
 const DESIGN_SAMPLE = ["morphe_hide_cast_button", "morphe_hide_autoplay_button"];
-let designMorph = false;
+const LIST_DESIGNS = [["classic", "Morphe"], ["toggles", "Switches"], ["clean", "Clean"]];
 function designPreview() {
   const ks = DESIGN_SAMPLE.filter(k => PREF[k] && inVersion(k));
   if (!ks.length) return "";
   let rows = ks.map(k => rowHTML(k, true)).join("");
   rows = rows.replace(/\s(data-row|data-k|data-also|data-set|data-sw|tabindex|data-kidtoggle|data-goto)="[^"]*"/g, "").replace(/\b(sel|dis|peek)\b(?=[^"]*")/g, "");
-  const m = designMorph; designMorph = false;
-  return `<div class="dprev${m ? " morph" : ""}" aria-hidden="true" inert><div class="group">${rows}</div></div>`;
+  return `<div class="dprev" aria-hidden="true" inert><div class="group">${rows}</div></div>`;
+}
+function designPopup() {
+  const name = (LIST_DESIGNS.find(([id]) => id === design) || [, design])[1], sample = designPreview();
+  if (!sample) return;
+  openDialog(`<div class="di">${I("list")}</div><h2 id="dlgTitle">${esc(name)} list design</h2>
+    <p>A sample of how settings look in the list with this design. These two are examples only and can't be changed here.</p>
+    ${sample}
+    <div class="acts"><button class="dbtn primary" id="dOk">OK</button></div>`);
+  $("dOk").onclick = closeDialog;
 }
 // Every three-way toggle in the menu (UI design, Settings list design) works the same way.
-const seg3 = (label, attr, opts, cur) => `<div class="seg3" role="radiogroup" aria-label="${label}" data-seg="${attr}"><i class="seg3-th"></i>${opts.map(([id, t]) => `<button role="radio" data-${attr}="${id}" aria-checked="${cur === id}">${t}</button>`).join("")}</div>`;
+// off: choices this device can't use, drawn greyed out; tapping one says why instead of picking it
+const seg3 = (label, attr, opts, cur, off = []) => `<div class="seg3" role="radiogroup" aria-label="${label}" data-seg="${attr}"><i class="seg3-th"></i>${opts.map(([id, t]) => `<button role="radio" data-${attr}="${id}" aria-checked="${cur === id}"${off.includes(id) ? ' aria-disabled="true"' : ""}>${t}</button>`).join("")}</div>`;
 let seg3From = {};
-function seg3Snap() { seg3From = {}; document.querySelectorAll("#pickGrid .seg3.th").forEach(seg => { const th = seg.querySelector(".seg3-th"), now = glideNow(seg); seg3From[seg.dataset.seg] = now ? [now.x, now.w] : [th.offsetLeft, th.offsetWidth]; glideStop(seg); }); }
-function placeSeg3() {
-  document.querySelectorAll("#pickGrid .seg3").forEach(seg => {
+function seg3Snap(root = $("pickGrid")) { root.querySelectorAll(".seg3.th").forEach(seg => { const th = seg.querySelector(".seg3-th"), now = glideNow(seg); seg3From[seg.dataset.seg] = now ? [now.x, now.w] : [th.offsetLeft, th.offsetWidth]; glideStop(seg); }); }
+function placeSeg3(root = $("pickGrid")) {
+  root.querySelectorAll(".seg3").forEach(seg => {
     const th = seg.querySelector(".seg3-th"), on = seg.querySelector('[aria-checked="true"]');
     if (!th || !on || !on.offsetWidth) return; // hidden: the picked button keeps its own fill (CSS)
-    const to = [on.offsetLeft, on.offsetWidth], from = seg3From[seg.dataset.seg];
+    const to = [on.offsetLeft, on.offsetWidth], from = seg3From[seg.dataset.seg]; delete seg3From[seg.dataset.seg];
     seg.classList.add("th"); // shown first, so its starting place is drawn and the move animates
     th.style.transition = "none"; th.style.left = to[0] + "px"; th.style.width = to[1] + "px";
     if (from) { const cs = getComputedStyle(th), y = th.offsetTop, h = th.offsetHeight; glideRun(seg, { x: from[0], y, w: from[1], h }, { x: to[0], y, w: to[1], h }, { bg: cs.backgroundColor, radius: parseFloat(cs.borderTopLeftRadius) || 0, z: -1 }); }
     requestAnimationFrame(() => { th.style.transition = ""; });
   });
-  seg3From = {};
 }
 function storeBaseline() { try { localStorage.setItem(LS + "-baseline", JSON.stringify(baseline)); } catch { /* storage unavailable */ } }
 // with the search bar open, the back arrow closes search (like its cross), it doesn't leave the editor;

@@ -45,7 +45,7 @@ function runTutorial(startAt) {
           <div class="tpfoot"><div class="tprow">Group screens into tabs<span class="sw" id="tGsw" aria-checked="${grouped}"></span></div>
             <div class="tprow">List design<span class="tseg3">${[["classic", "Morphe"], ["toggles", "Switches"], ["clean", "Clean"]].map(([d, n]) => `<b data-d="${d}" class="${d === design ? "on" : ""}">${n}</b>`).join("")}</span></div></div></div></div>
       <div class="ttabs" id="tTabs">${playerTabs.map((n, i) => `<span class="${i ? "" : "on"}">${esc(n)}</span>`).join("")}</div>
-      <div class="tstyle" id="tStyle"><div class="tsrow"><span>UI design</span>${seg3("UI design", "tui", UI_DESIGNS, theme)}</div><div class="tsrow"><span>List design</span>${seg3("List design", "tld", [["classic", "Morphe"], ["toggles", "Switches"], ["clean", "Clean"]], design)}</div></div>
+      <div class="tstyle" id="tStyle"><div class="tsrow"><span>UI design</span>${seg3("UI design", "tui", UI_DESIGNS, theme, uiOff())}</div><div class="tsrow"><span>List design</span>${seg3("List design", "tld", [["classic", "Morphe"], ["toggles", "Switches"], ["clean", "Clean"]], design)}</div></div>
       <div class="tlist" id="tlist">${tutRowHTML(design)}</div>
       <div class="tres" id="tRes"><div class="tres-hint" id="tHint">Type to search all ${total} settings</div>
         <div class="tres-n">1 result</div><div class="tsres" id="tSres"><div class="ttl" id="tSttl"></div><div class="where">${castWhere}</div></div></div>
@@ -62,7 +62,7 @@ function runTutorial(startAt) {
   let step = Math.max(0, pages.indexOf(startAt)); const seen = new Set();
   const cast = $("tbCast"), f = $("tFinger"), ring = $("tring"), row = $("tlist"), stage = $("tStage"), demo = t.querySelector(".tdemo");
   let rowDesign = design, sw = $("tlSw");
-  const setRowDesign = d => { if (d === rowDesign) return; const h = sw.getAttribute("aria-checked") === "true"; rowDesign = d; row.innerHTML = tutRowHTML(d); sw = $("tlSw"); setHidden(h, true); row.classList.remove("morph"); void row.offsetWidth; row.classList.add("morph"); t.querySelectorAll(".tseg3 b").forEach(b => b.classList.toggle("on", b.dataset.d === d)); };
+  const setRowDesign = d => { if (d === rowDesign) return; const h = sw.getAttribute("aria-checked") === "true"; rowDesign = d; row.innerHTML = tutRowHTML(d); sw = $("tlSw"); setHidden(h, true); row.classList.remove("morph"); void row.offsetWidth; row.classList.add("morph"); const ts3 = t.querySelector(".tseg3"), f3 = pickSnap(ts3, "b.on"); t.querySelectorAll(".tseg3 b").forEach(b => b.classList.toggle("on", b.dataset.d === d)); pickGlide(ts3, f3, "b.on"); };
   const box = t.getBoundingClientRect.bind(t);
   // pages 1 and 5 play 30% slower (Max: they were rushed); every step and move on them stretches evenly
   let tk = 1;
@@ -76,11 +76,16 @@ function runTutorial(startAt) {
     if (onCast) { ring.classList.add("go"); cast.classList.add("charging"); } else $("tlBar").classList.add("go");
     at2(LONG, () => { f.classList.remove("hold"); ring.classList.remove("go"); cast.classList.remove("charging"); $("tlBar")?.classList.remove("go"); fn(); });
   };
-  const setHidden = (h, still) => {
-    if (still) sw.classList.add("still");
+  const putHidden = h => {
     sw.setAttribute("aria-checked", String(h)); // the description stays as in the list; only the toggle changes
     if (rowDesign === "clean") { sw.dataset.at = h ? "l" : "r"; sw.dataset.tone = h ? "neg" : "pos"; }
     if (rowDesign === "classic") { sw.className = "state " + (h ? "off" : "on"); sw.textContent = h ? "Hidden" : "Shown"; }
+  };
+  // the switch and the two-way toggle glide like the ones in the list (toggleGlide)
+  const setHidden = (h, still) => {
+    if (!still && rowDesign !== "classic") return toggleGlide(sw, sw.getAttribute("aria-checked") === "true", h, putHidden);
+    if (still) { glideStop(sw); sw.classList.add("still"); }
+    putHidden(h);
     if (still) { void sw.offsetWidth; sw.classList.remove("still"); }
   };
   // where a finger taps to show or hide the setting from its card
@@ -89,9 +94,13 @@ function runTutorial(startAt) {
   // the top bar has no screen title: the menu button shows the screen's icon and an arrow
   const setPill = g => { $("tPill").innerHTML = I(g.icon) + I("expand"); };
   const setView = v => { stage.dataset.view = v || ""; };
-  const setTabs = (names, on) => t.querySelectorAll("#tTabs span").forEach((s, i) => { s.textContent = names[i] || ""; s.style.display = names[i] ? "" : "none"; s.classList.toggle("on", i === on); });
-  const setGrouped = g => { $("tGsw").setAttribute("aria-checked", String(g)); demo.classList.toggle("grouped", g); $("tPg").innerHTML = g ? pickGroups : pickScreens; $("tPg").classList.toggle("many", !g); };
-  const setMode = orig => { $("tOrig").classList.toggle("on", orig); $("tMorphe").classList.toggle("on", !orig); stage.classList.toggle("stock", orig); };
+  const setTabs = (names, on) => {
+    const tb = $("tTabs"), same = [...tb.children].map(s => s.textContent).join("|") === [...tb.children].map((s, i) => names[i] || "").join("|"), f = same && pickSnap(tb, "span.on");
+    tb.querySelectorAll("span").forEach((s, i) => { s.textContent = names[i] || ""; s.style.display = names[i] ? "" : "none"; s.classList.toggle("on", i === on); });
+    if (f) pickGlide(tb, f, "span.on", 0); // the same tabs: the fill glides to the new one, like the editor's tabs (over the other tabs' own fill)
+  };
+  const setGrouped = g => { const gs = $("tGsw"); toggleGlide(gs, gs.getAttribute("aria-checked") === "true", g, v => gs.setAttribute("aria-checked", String(v))); demo.classList.toggle("grouped", g); $("tPg").innerHTML = g ? pickGroups : pickScreens; $("tPg").classList.toggle("many", !g); };
+  const setMode = orig => { toggleGlide($("tOrig").parentElement, $("tOrig").classList.contains("on"), orig, o => { $("tOrig").classList.toggle("on", o); $("tMorphe").classList.toggle("on", !o); }); stage.classList.toggle("stock", orig); };
   const pageSub = id => id === "change" && design === "classic" ? "Here the button gets hidden"
     : id === "find" && design === "classic" ? "An outline shows where it was. Hold it to show it or hide it again" : TUT_PAGES[id].sub;
   // the caption area keeps the height of the tallest page, so the demo below never jumps
@@ -191,6 +200,7 @@ function runTutorial(startAt) {
       cast.className = "tb"; setHidden(false, true); f.classList.remove("show"); row.classList.remove("pre");
       t.querySelectorAll("[data-tui]").forEach(b => b.setAttribute("aria-checked", String(b.dataset.tui === theme)));
       t.querySelectorAll("[data-tld]").forEach(b => b.setAttribute("aria-checked", String(b.dataset.tld === design)));
+      requestAnimationFrame(() => placeSeg3($("tStyle"))); // the same sliding thumb as the screen menu's toggles
     }
     if (id === "custom") { // the screen menu's own settings: tabs off and on again, then each list design
       cast.className = "tb"; setHidden(false, true); move($("tPill"), 0, 0, 60);
@@ -218,9 +228,10 @@ function runTutorial(startAt) {
   });
   $("tStyle").addEventListener("click", e => {
     const u = e.target.closest("[data-tui]"), l = e.target.closest("[data-tld]");
-    if (u && u.dataset.tui !== theme) { theme = u.dataset.tui; applyTheme(); renderBar(); store.save(); glassSample(); }
+    if (u || l) seg3Snap($("tStyle"));
+    if (u && u.dataset.tui !== theme) uiPick(u.dataset.tui);
     if (l && l.dataset.tld !== design) { design = l.dataset.tld; setRowDesign(design); renderBar(); renderList(); store.save(); }
-    if (u || l) t.querySelectorAll("#tStyle [role=radio]").forEach(b => b.setAttribute("aria-checked", String((b.dataset.tui || b.dataset.tld) === (b.dataset.tui ? theme : design))));
+    if (u || l) { t.querySelectorAll("#tStyle [role=radio]").forEach(b => b.setAttribute("aria-checked", String((b.dataset.tui || b.dataset.tld) === (b.dataset.tui ? theme : design)))); placeSeg3($("tStyle")); }
   });
   $("tutOk").onclick = () => { if (single || step === pages.length - 1) return close(); step++; show(); };
 }

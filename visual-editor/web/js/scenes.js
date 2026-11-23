@@ -462,16 +462,28 @@ SCENES.description = () => {
     </div></div>`;
 };
 
+// Ambient mode (Max, Nov 23 PM: the old drawing read poorly): a watch page with a film in the player
+// (black bars above and below it). Ambient mode: a soft glow of the film's colours spills from under the
+// player onto the page. Disabled: a plain dark page. Enhanced: the whole page and the black bars are lit
+// with the film itself, as bright as Light strength, as soft as Light blur (0 keeps its shapes), with a
+// shade behind the text when Keep text readable is on.
+const AMB_ART = "radial-gradient(circle at 72% 38%,#ffd36b 0 9%,transparent 10%),linear-gradient(180deg,#ff8a3d 0%,#e2456f 45%,#3b2a7a 100%)";
+const AMB_GLOW = "radial-gradient(ellipse at 50% 30%,rgba(255,138,61,.85) 0%,rgba(226,69,111,.55) 38%,transparent 70%)";
 SCENES.ambient = () => {
-  const off = !!V("morphe_disable_ambient_mode");
   const enh = !!V("morphe_enhanced_ambient_mode");
-  const strength = enh ? Number(V("morphe_enhanced_ambient_mode_strength")) / 100 : .55;
-  const blur = enh ? 30 + Number(V("morphe_enhanced_ambient_mode_blur")) : 40;
-  return `<div style="background:#0f0f0f;height:300px;position:relative;overflow:hidden;padding:26px 30px">
-    ${C("disable_ambient_mode", `<div style="position:absolute;inset:0;background:${ART[0]};filter:blur(${blur}px) saturate(1.6);opacity:${strength};transform:scale(1.1)"></div>`, { style: "position:absolute;left:10px;right:10px;top:6px;height:200px" })}
-    <div style="position:relative;border-radius:12px;overflow:hidden">${thumb(0, "border-radius:0")}</div>
-    <div style="position:relative;margin-top:14px"><div class="t1">${esc(VIDEOS[0].t)}</div><div class="t2">${VIDEOS[0].v} · ${VIDEOS[0].a}</div></div>
-    ${enh ? `<div class="demo-label" style="top:auto;bottom:8px">Enhanced ambient mode</div>` : ""}${off ? "" : ""}
+  const strength = Math.max(0, Math.min(1, Number(V("morphe_enhanced_ambient_mode_strength") ?? 100) / 100));
+  const blur = Math.max(0, Number(V("morphe_enhanced_ambient_mode_blur")) || 0);
+  const readable = enh && !!V("morphe_enhanced_ambient_mode_readable_text");
+  const light = enh ? `<div style="position:absolute;inset:-30px;background:${AMB_ART};background-size:100% 70%;background-repeat:no-repeat;filter:blur(${6 + blur * .6}px) saturate(1.3);opacity:${(.35 + .5 * strength).toFixed(2)}"></div><div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(15,15,15,0) 0%,rgba(15,15,15,.25) 55%,rgba(15,15,15,.5) 100%)"></div>` : "";
+  return `<div style="background:#0f0f0f;height:300px;position:relative;overflow:hidden">
+    ${C("enhanced_ambient_mode", light, { also: "enhanced_ambient_mode_strength enhanced_ambient_mode_blur enhanced_ambient_mode_smoothing enhanced_ambient_mode_dim_while_scrolling enhanced_ambient_mode_dim_duration", cls: "shade", style: "position:absolute;inset:0" })}
+    ${C("disable_ambient_mode", enh ? "" : `<div style="position:absolute;inset:0;background:${AMB_GLOW};filter:blur(14px)"></div>`, { also: "bypass_ambient_mode_restrictions", cls: "shade", style: "position:absolute;left:-12%;right:-12%;top:104px;height:130px" })}
+    <div style="position:relative;z-index:1;height:150px;background:${enh ? "transparent" : "#000"}"><div style="position:absolute;left:0;right:0;top:24px;bottom:24px;background:${AMB_ART}"></div></div>
+    ${C("enhanced_ambient_mode_readable_text", `<div style="padding:12px 14px 0">
+      <div class="t1">${esc(VIDEOS[0].t)}</div><div class="t2">${VIDEOS[0].v} · ${VIDEOS[0].a}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:10px">${av(0, 26)}<div class="t1" style="flex:1;font-size:13px">${VIDEOS[0].c}</div><span class="chip" style="background:#f1f1f1;color:#0f0f0f;height:28px">Subscribe</span></div>
+      <div style="display:flex;gap:6px;margin-top:10px">${["Like", "Share", "Save", "Clip"].map(t => `<span class="chip" style="height:28px;background:rgba(255,255,255,.12)">${t}</span>`).join("")}</div>
+    </div>`, { style: `position:relative;z-index:1;${readable ? "background:linear-gradient(180deg,rgba(0,0,0,.45),rgba(0,0,0,.6));border-radius:12px;margin:6px 6px 0;padding-bottom:10px" : ""}` })}
   </div>`;
 };
 
@@ -530,7 +542,7 @@ SCENES.explore = () => {
 // Extra adapters on existing scenes, for coverage
 def("description", "vis", DESC.map(d => d[0]).join(" ") + " hide_subscribe_button");
 def("ambient", "vis", "disable_ambient_mode");
-def("ambient", "style", "enhanced_ambient_mode enhanced_ambient_mode_strength enhanced_ambient_mode_blur");
+def("ambient", "style", "enhanced_ambient_mode enhanced_ambient_mode_strength enhanced_ambient_mode_blur enhanced_ambient_mode_readable_text");
 def("danmaku", "behaviour", "niconico_comments");
 def("danmaku", "style", "niconico_comments_font_size niconico_comments_opacity niconico_comments_display_area niconico_comments_travel_duration");
 def("channel", "vis", "hide_links_preview hide_subscribe_button_in_channel_page hide_join_button hide_store_button hide_community_button hide_filter_bar_in_channel_page hide_members_shelf hide_members_only_chip hide_posts_shelf");

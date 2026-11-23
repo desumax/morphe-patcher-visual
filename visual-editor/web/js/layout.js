@@ -7,6 +7,7 @@
 let theme = "yt";
 const UI_DESIGNS = [["yt", "Original"], ["m3", "Morphe"], ["glass", "Glass"]];
 function applyTheme() {
+  if (theme === "glass" && glassUnsupported()) theme = "m3"; // saved from a device where it ran, or pretended
   const ph = $("phone");
   ph.classList.toggle("theme-yt", theme === "yt"); ph.classList.toggle("theme-m3", theme !== "yt"); ph.classList.toggle("theme-glass", theme === "glass");
   if (theme === "glass") glassTierApply(); else { ph.removeAttribute("data-gt"); liquidSync(); }
@@ -24,7 +25,7 @@ function applyTheme() {
 // quarters of the frames take longer than 24 ms the tier drops one step, and the device remembers it.
 let glassTier = null, glassCap = null;
 // the preview's own page can force a level, to see each one on any computer (Max, Nov 23 PM); the app never does
-let glassForced = null; try { const f = localStorage.getItem(LS + "-glassforce"); if (f !== null && /^[012]$/.test(f)) glassForced = +f; } catch { /* storage unavailable */ }
+let glassForced = null; try { const f = localStorage.getItem(LS + "-glassforce"); if (f !== null && /^[012]$/.test(f)) glassForced = +f; else if (f === "x" || f === "w") glassForced = f; } catch { /* storage unavailable */ }
 function glassTierDetect() {
   const sup = q => { try { return CSS.supports(q); } catch { return false; } };
   const mq = q => { try { return matchMedia(q).matches; } catch { return false; } };
@@ -38,12 +39,45 @@ function glassTierDetect() {
 }
 function glassTierApply() {
   if (glassCap === null) { glassCap = 2; try { const c = parseInt(localStorage.getItem(LS + "-glass"), 10); if (c >= 0 && c <= 2) glassCap = c; } catch { /* storage unavailable */ } }
-  if (glassForced !== null) glassTier = glassForced;
-  else if (glassTier === null) glassTier = Math.min(glassTierDetect(), glassCap);
+  if (typeof glassForced === "number") glassTier = glassForced;
+  else if (glassTier === null) glassTier = Math.min(glassForced === "w" ? 0 : glassTierDetect(), glassCap);
   $("phone").dataset.gt = glassTier;
   liquidSoon();
 }
 const GLASS_TIER_NAMES = ["Flat glass", "Light glass", "Full glass"];
+// Glass where it can't run (Max, Nov 23): no backdrop-filter at all, or an Android older than
+// GLASS_MIN_ANDROID. Its button in UI design is greyed out; tapping it says why (a message, not a choice).
+// The preview's Glass level menu can pretend the device is one of these ("Unsupported" there).
+const GLASS_MIN_ANDROID = 10;
+function glassUnsupported() {
+  if (glassForced === "x") return true;
+  const sup = q => { try { return CSS.supports(q); } catch { return false; } };
+  if (!(sup("backdrop-filter: blur(1px)") || sup("-webkit-backdrop-filter: blur(1px)"))) return true;
+  const a = /Android (\d+)/.exec(navigator.userAgent);
+  return !!a && +a[1] < GLASS_MIN_ANDROID;
+}
+const uiOff = () => glassUnsupported() ? ["glass"] : [];
+// a greyed-out choice: says why and is not picked (true)
+function uiNo(id) { if (id !== "glass" || !glassUnsupported()) return false; snack("Unsupported on this Android version"); return true; }
+// picking a UI design, from the screen menu or the tutorial
+function uiPick(id) {
+  if (uiNo(id)) return false;
+  theme = id; applyTheme(); renderBar(); store.save(); glassSample();
+  if (theme === "glass" && glassLowEnd()) setTimeout(glassSlowWarn, 450); // after the thumb has moved
+  return true;
+}
+// A device that is too weak for glass, found by detection (2 GB or 2 cores) or by slow frames while glass
+// is on: a popup says so once, in the dialog look of the rest (Max, Nov 23). Each new finding warns again.
+const GLASS_SLOW_MSG = "Your device is not powerful enough for this glass design, please switch to alternatives for best performance!";
+function glassLowEnd() { if (glassForced === "w") return true; const m = navigator.deviceMemory || 4, c = navigator.hardwareConcurrency || 4; return m <= 2 || c <= 2; }
+function glassSlowWarn() {
+  if (theme !== "glass" || typeof openDialog !== "function") return;
+  if ($("dlg").classList.contains("open")) { setTimeout(glassSlowWarn, 1500); return; } // after the dialog that is open now
+  openDialog(`<div class="di">${I("warning")}</div><h2 id="dlgTitle">Glass design</h2>
+    <p>${GLASS_SLOW_MSG}</p>
+    <div class="acts"><button class="dbtn primary" id="dOk">OK</button></div>`);
+  $("dOk").onclick = closeDialog;
+}
 // ---------- Liquid Glass lens (Max, Nov 23: glass design 1) ----------
 // Clear glass that bends what is behind it at its edges, with no frost: the web port of ntvien/liquid-glass's
 // AGSL lens. For each surface size a displacement map is baked once in a canvas: inside a band B from the
@@ -136,7 +170,7 @@ function liquidSoon() { if (!lensRaf && theme === "glass") lensRaf = requestAnim
 let glassWatch = null;
 function glassSample() {
   setTimeout(liquidSoon, 40); // a menu or dialog opening: its glass gets its lens once it shows
-  if (theme !== "glass" || !glassTier || glassWatch || glassForced !== null) return;
+  if (theme !== "glass" || !glassTier || glassWatch || typeof glassForced === "number") return;
   const dts = []; let last = 0;
   glassWatch = requestAnimationFrame(function f(t) {
     if (last) { const dt = t - last; if (dt < 250) dts.push(dt); } // a hidden tab's gap isn't a slow frame
@@ -149,12 +183,14 @@ function glassSample() {
       try { localStorage.setItem(LS + "-glass", String(glassCap)); } catch { /* storage unavailable */ }
       $("phone").dataset.gt = glassTier;
       if (typeof renderBar === "function" && $("picker").classList.contains("open")) renderBar();
+      glassSlowWarn(); // slow frames: the device can't keep up with this much glass
     }
   });
 }
 document.addEventListener("scroll", glassSample, { capture: true, passive: true });
 function setGlassForce(v) {
-  glassForced = v === "" || v === null ? null : +v; glassTier = null;
+  glassForced = v === "" || v === null ? null : v === "x" || v === "w" ? v : +v; glassTier = null;
+  if (glassForced === "x" && theme === "glass") theme = "m3"; // pretending glass can't run here: it can't stay on
   try { if (glassForced === null) localStorage.removeItem(LS + "-glassforce"); else localStorage.setItem(LS + "-glassforce", String(glassForced)); } catch { /* storage unavailable */ }
   applyTheme(); renderBar();
 }

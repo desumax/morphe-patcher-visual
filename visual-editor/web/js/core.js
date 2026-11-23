@@ -97,6 +97,7 @@ const P = {
   back: "M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z",
   expand: "M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z",
   phone: "M17 1.01 7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z",
+  warning: "M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z",
   restart: "M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z",
   list: "M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z",
 };
@@ -267,6 +268,7 @@ const SEEKBAR_USERS = "tap_to_seek slide_to_seek seekbar_thumbnail_preview hide_
 const NEEDS = Object.fromEntries(SEEKBAR_USERS.split(" ").map(k => ["morphe_" + k, ["morphe_hide_seekbar"]]));
 NEEDS.morphe_swap_save_and_queue_actions = ["morphe_save_to_watch_later_button"];
 NEEDS.morphe_video_quality_dialog_button_resolution = ["morphe_video_quality_dialog_button"];
+NEEDS.morphe_sb_create_new_segment_step = ["morphe_sb_create_new_segment"]; // the step acts in the editor that button opens
 const lentTo = (k, x) => !!k && (NEEDS[k] || []).includes(x) && !shown(x);
 const LS = "morphe-visual-editor-v1";
 const store = {

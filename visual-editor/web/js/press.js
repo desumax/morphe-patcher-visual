@@ -213,10 +213,17 @@ $("pickScrim").onclick = () => setPicker(false);
 $("pickGrid").addEventListener("click", e => {
   if (pickSuppress) return;
   const dz = e.target.closest("[data-design]");
-  if (dz) { if (dz.dataset.design === design) return; seg3Snap(); designMorph = true; design = dz.dataset.design; renderBar(); renderList(); store.save(); return; }
+  if (dz) { if (dz.dataset.design === design) return; seg3Snap(); design = dz.dataset.design; renderBar(); renderList(); store.save(); setTimeout(designPopup, 420); return; } // after the thumb has moved
   const ui = e.target.closest("[data-ui]");
-  if (ui) { if (ui.dataset.ui === theme) return; seg3Snap(); theme = ui.dataset.ui; applyTheme(); renderBar(); store.save(); glassSample(); return; }
-  if (e.target.closest("[data-group-toggle]")) { grouped = !grouped; renderBar(); renderStage(); store.save(); if (grouped) tutOnce("groups"); return; }
+  if (ui) { if (ui.dataset.ui === theme || uiNo(ui.dataset.ui)) return; seg3Snap(); uiPick(ui.dataset.ui); return; }
+  if (e.target.closest("[data-group-toggle]")) {
+    const y0 = e.target.closest("[data-group-toggle]").getBoundingClientRect().top;
+    const was = grouped; grouped = !grouped; renderBar();
+    const tog = document.querySelector("#pickGrid [data-group-toggle]"), sw = tog && tog.querySelector(".sw"); // drawn again: it glides from the old state
+    if (tog) $("picker").scrollTop += tog.getBoundingClientRect().top - y0; // the list of screens above changed length: the toggle stays under the finger
+    if (sw) toggleGlide(sw, String(was), String(grouped), v => sw.setAttribute("aria-checked", v));
+    renderStage(); store.save(); if (grouped) tutOnce("groups"); return;
+  }
   const gb = e.target.closest("[data-group]");
   if (gb) { const g = GROUPS.find(x => x.id === gb.dataset.group), tabs = tabsOf(g); setPicker(false); returnTo = null; switchSection(lastTab[g.id] && tabs.some(([t]) => t === lastTab[g.id]) ? lastTab[g.id] : tabs[0][0]); return; }
   // leaves the new design for Morphe's own settings screen; in the app the patch's switch at the top
@@ -240,8 +247,8 @@ $("pickGrid").addEventListener("click", e => {
   const b = e.target.closest("[data-sec]"); if (!b) return; setPicker(false); returnTo = null; switchSection(b.dataset.sec); });
 document.addEventListener("keydown", e => { if (e.key === "Escape") { setPicker(false); closeDialog(); if (searching) { query = ""; setSearch(false); } } });
 function setMode(m) {
-  mode = m;
-  $("btnOrig").setAttribute("aria-pressed", String(m === "orig")); $("btnMod").setAttribute("aria-pressed", String(m === "mod"));
+  const was = mode; mode = m;
+  modeButtons(was, m); // glides like every other toggle
   commit(); if (selected) select(selected);
 }
 // a two-way toggle: a tap anywhere on it switches between Original and Morphe

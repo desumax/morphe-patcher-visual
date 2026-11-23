@@ -271,13 +271,50 @@ scen("look", "custom_filter", (box, on) => {
 hidePage("look", "series_tracker", "Watching a series", player7(3, `<span style="position:absolute;left:3px;bottom:3px;font-size:5.5px;background:rgba(0,0,0,.7);padding:0 3px;border-radius:2px">Ep 4</span>`) + tgt7(`<div style="display:flex;gap:3px;align-items:center;font-size:6px;padding:3px;border-radius:3px;background:#1b1b1b">${ico7("list", 7)}Cabin build · 3 of 12 watched${bar7(20, "#3ea6ff", 3)}</div>`) + row7(2, "Episode 5"), { invert: true, shown: "Your progress through a series is tracked", hidden: "No series tracker (stock)" });
 hidePage("nav", "disable_toolbar_navigation_tabs", "The top bar on a tablet", `<div style="display:flex;gap:6px;align-items:center;font-size:6.5px"><b>YouTube</b>${tgt7(`<span style="display:inline-flex;gap:5px"><span>Home</span><span>Shorts</span><span>Subs</span></span>`, 1)}<span style="flex:1"></span>${ico7("search")}</div>` + big7(3, "Building a tiny cabin"), { dev: "land", hidden: "No navigation tabs in the top bar" });
 hidePage("nav", "hide_toolbar_microphone_button", "The search bar", search7("", "").replace(ico7("mic"), tgt7(ico7("mic"), 1)) + `<div style="display:grid;gap:3px">${item7("clock", "cabin build")}${item7("clock", "lo-fi beats")}</div>`);
+// A small watch page for the Ambient mode comparisons: the film's glow under the player (.amg7), or with
+// enhanced: the whole page lit (.aml7). Same film and colours as the live preview (AMB_ART, AMB_GLOW).
+const ambPage = (enh) => `<div class="pg7" style="position:absolute;inset:0;background:#0f0f0f;overflow:hidden">${enh ? `<div class="aml7" style="position:absolute;inset:-12px;background:${AMB_ART};background-size:100% 60%;background-repeat:no-repeat;filter:blur(6px) saturate(1.3);opacity:.8;transition:opacity .45s"></div>` : `<div class="amg7" style="position:absolute;left:-15%;right:-15%;top:30px;height:60px;background:${AMB_GLOW};filter:blur(5px);transition:opacity .45s"></div>`}<div style="position:relative;height:44px;background:${enh ? "transparent" : "#000"}"><div style="position:absolute;left:0;right:0;top:7px;bottom:7px;background:${AMB_ART}"></div></div><div style="position:relative;padding:5px 6px;display:grid;gap:4px;font-size:7px;color:#ddd"><b style="font-size:7px">Building a tiny cabin</b><div style="display:flex;gap:3px">${chip7("Like")}${chip7("Share")}${chip7("Save")}</div>${row7(2, "Up next · Night train")}${row7(4, "Up next · Lo-fi beats")}${row7(1, "Up next · Rain on a roof")}</div></div>`;
+// Bypass Ambient mode restrictions: battery saver comes on. Stock turns the glow off to save power; on, it stays.
+scen("ambient", "bypass_ambient_mode_restrictions", (box, on) => {
+  situation("Battery saver turns on");
+  box.innerHTML = device("port", ambPage(false));
+  const dev = box.querySelector(".dev");
+  at(500, () => { dev.insertAdjacentHTML("beforeend", `<span class="badge7" style="right:3px;top:3px;z-index:3">${ico7("power", 6, "#ffcc00")} Battery saver</span>`); });
+  at(900, () => { if (!on) dev.querySelector(".amg7").style.opacity = 0; toast7(dev, on ? "The glow stays on" : "The glow is switched off", "80%"); });
+  return "";
+});
+// Dim while scrolling (enhanced): the page scrolls; the light dims while it moves, then comes back.
+scen("ambient", "enhanced_ambient_mode_dim_while_scrolling", (box, on) => {
+  situation("Scrolling the watch page");
+  box.innerHTML = device("port", ambPage(true));
+  const dev = box.querySelector(".dev"), lit = dev.querySelector(".aml7"), f = box.querySelector("#scFinger"), W = dev.clientWidth, H = dev.clientHeight;
+  at(250, () => fingerTo(f, W * .5, H * .75)); at(500, () => fingerTo(f, W * .5, H * .4, 600));
+  at(550, () => { if (on) lit.style.opacity = .25; toast7(dev, on ? "The light dims while you scroll" : "The light stays bright", "80%"); });
+  at(1200, () => { f.classList.remove("show"); });
+  at(1700, () => { lit.style.opacity = .8; });
+  return "";
+});
 scen("ambient", "disable_fullscreen_ambient_mode", (box, on) => {
   situation("Ambient glow in fullscreen");
-  box.innerHTML = device("land", `<div class="am7" style="position:absolute;inset:0;background:radial-gradient(circle at 50% 50%, ${ART[5].match(/#[0-9a-f]{6}/i)?.[0] || "#345"}aa, #000 70%);transition:opacity .5s"></div><div style="position:absolute;left:28%;right:28%;top:14%;bottom:14%;background:${ART[5]};border-radius:2px"></div>`);
+  box.innerHTML = device("land", `<div class="am7" style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,rgba(255,138,61,.8) 0%,rgba(226,69,111,.5) 35%,#000 68%);transition:opacity .5s"></div><div style="position:absolute;left:28%;right:28%;top:14%;bottom:14%;background:${AMB_ART};border-radius:2px"></div>`); // the film of the live preview
   const dev = box.querySelector(".dev");
   toast7(dev, on ? "Plain black around the video" : "Colours glow around the video", "86%");
   at(300, () => { if (on) dev.querySelector(".am7").style.opacity = 0; });
   return on ? "No ambient glow in fullscreen" : "Ambient glow in fullscreen too (stock)";
+});
+// Auto captions visibility (Max, Nov 23 PM): a video with auto-generated captions starts muted, then the
+// sound comes on. The caption line shows in the part of the story the choice allows: always, never, only
+// with sound, or only while muted.
+scen("captions", "auto_captions_style", (box, v) => {
+  situation("A video starts muted, then the sound comes on");
+  const show = muted => v === "BOTH_ENABLED" || (muted ? v === "WITHOUT_VOLUME_ONLY" : v === "WITH_VOLUME_ONLY");
+  box.innerHTML = device("port", watch7(`<span class="snd7 badge7" style="left:3px;top:3px">${ico7("mute", 6)} Muted</span><span class="cap7" style="position:absolute;left:50%;bottom:6px;transform:translateX(-50%);font-size:6px;background:rgba(8,8,8,.78);padding:0 3px;border-radius:2px;white-space:nowrap;transition:opacity .3s;opacity:${show(true) ? 1 : 0}">so today we start the roof</span>`));
+  const dev = box.querySelector(".dev"), cap = dev.querySelector(".cap7");
+  at(1100, () => {
+    dev.querySelector(".snd7").innerHTML = `${ico7("vol", 6)} Sound on`;
+    cap.textContent = "first the rafters go up"; cap.style.opacity = show(false) ? 1 : 0;
+  });
+  return "";
 });
 scen("captions", "auto_translate_additional_languages", (box, on) => {
   situation("Auto-translate menu in captions");
@@ -705,12 +742,31 @@ scen("playback", "video_delay_bluetooth_only", (box, on) => {
   // (LEAD_MS), which is what cut it short before (Max, Nov 20, twice)
   // the video plays on through the headphones part, so the phones never sit still
   at(0, () => {});
-  [300, 700, 1100, 1500, 1900].forEach((t, i) => at(t, () => { dev.querySelector(".skp7").style.width = 38 + i * 6 + "%"; }));
-  at(2000, () => {
+  [150, 350, 550, 750, 950].forEach((t, i) => at(t, () => { dev.querySelector(".skp7").style.width = 38 + i * 6 + "%"; }));
+  at(1000, () => { // twice as fast as before (Max, Nov 23)
     dev.querySelector(".out7").innerHTML = `${ico7("vol", 6)} Speaker`;
     if (on) dev.querySelector(".dl8").textContent = "No delay";
     const t = dev.querySelector(".toastin"); if (t) t.innerHTML = sync(on);
   });
+  return "";
+});
+// Use normal speed for music: your speed is 2×. A video plays at 2× on both phones, then a music video
+// comes up next: Off keeps it at 2× (the song runs fast), On plays it at 1× (Max, Nov 23: video vs music).
+scen("playback", "disable_playback_speed_music", (box, on) => {
+  situation("Your speed is 2×: a video, then a music video");
+  box.innerHTML = device("port", watch7(`<span class="kd7 badge7" style="left:3px;top:3px">${ico7("play", 6)} Travel video</span><span class="sp7 badge7" style="right:3px;top:3px">${ico7("speed", 6)} 2×</span>` + prog7(10)));
+  const dev = box.querySelector(".dev"), bar = () => dev.querySelector(".skp7");
+  toast7(dev, "The video plays at 2×", "78%");
+  at(0, () => {}); // the video part is held, not pulled forward (see Only delay with Bluetooth audio)
+  [200, 400, 600, 800].forEach((t, i) => at(t, () => { bar().style.width = 22 + i * 12 + "%"; })); // 2×: big steps
+  at(1000, () => {
+    const b = bar(); b.style.transition = "none"; b.style.width = "4%"; void b.offsetWidth; b.style.transition = "";
+    dev.querySelector(".kd7").innerHTML = `${ico7("music", 6)} Music video`;
+    const title = dev.querySelector('b[style*="font-size:7px"]'); if (title) title.textContent = "Northern Lights · Midnight Tapes";
+    if (on) dev.querySelector(".sp7").innerHTML = `${ico7("speed", 6)} 1×`;
+    const t = dev.querySelector(".toastin"); if (t) t.innerHTML = on ? "Music plays at normal speed" : "The song plays at 2× too";
+  });
+  [1250, 1500, 1750, 2000].forEach((t, i) => at(t, () => { bar().style.width = 4 + (i + 1) * (on ? 6 : 12) + "%"; })); // 1× moves half as fast
   return "";
 });
 // Prioritize video quality: the network gets slow.
@@ -906,6 +962,10 @@ const MANUAL_PARENT = {
   morphe_navigation_bar_style: { key: "morphe_navigation_bar_glass", mode: "not" },
 };
 const NOT_PARENT = { morphe_navigation_bar_glass: "morphe_navigation_bar_style" }; // avoid a loop with the line above
+// Two settings that are alternatives, not a setting and its sub-option: the second stays its own row,
+// greyed out (with its lock) while the first is on. Enhanced Ambient mode takes the place of Ambient mode,
+// so nesting "Ambient mode" under "Enhanced Ambient mode" read as one of Enhanced's options (Max, Nov 23 PM).
+const NO_NEST = new Set(["morphe_disable_ambient_mode"]);
 let DIRECT_PARENT = {};
 let PARENT_OF = {}, KIDS = {};
 function buildKids() {
@@ -937,7 +997,7 @@ function buildKids() {
       const ps = (PREF[k].parents || []).map(x => x.key).filter(ok);
       const near = ps.find(x => ps.some(y => y !== x && (PREF[x]?.parents || []).some(z => z.key === y))) || ps[0];
       const par = MANUAL_PARENT[k] && set.has(MANUAL_PARENT[k].key) ? MANUAL_PARENT[k].key : near || (shared ? null : avKeys[0]);
-      if (par) PARENT_OF[k] = par;
+      if (par && !NO_NEST.has(k)) PARENT_OF[k] = par;
     }
   }
   DIRECT_PARENT = { ...PARENT_OF };

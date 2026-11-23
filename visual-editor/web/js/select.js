@@ -219,7 +219,7 @@ function afterChange(k, before) {
 }
 // Colour inputs only take #RRGGBB; keep the alpha byte of Morphe's #AARRGGBB values.
 function fromColor(k, hex) { const cur = String(state[k] || ""); const alpha = cur.length === 9 ? cur.slice(1, 3) : ""; return ("#" + alpha + hex.slice(1)).toUpperCase(); }
-function ensureMod() { if (mode === "orig") { mode = "mod"; $("btnOrig").setAttribute("aria-pressed", "false"); $("btnMod").setAttribute("aria-pressed", "true"); } }
+function ensureMod() { if (mode === "orig") { mode = "mod"; modeButtons("orig", "mod"); } }
 function coerce(k, v) { const t = PREF[k].type; if (t === "integer" || t === "long" || t === "float") return Number(v); if (t === "boolean") return v === true || v === "true"; return v; }
 
 function switchSection(id, after) {

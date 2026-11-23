@@ -690,6 +690,17 @@ SECTIONS.splice(SECTIONS.findIndex(s => s.id === "captions") + 1, 0, { id: "spon
 P.skip = "M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z";
 // Segment categories: Morphe builds these rows in code (not in the patch's preference list), so the
 // catalogue misses them. Keys, defaults and colours follow Settings.java.
+// A segment category's colour (its own colour setting, else SponsorBlock's), and an ink that reads on it:
+// the category's choices are filled with it in the list (Max, Nov 23: the colour showcased in its toggle)
+function sbColor(k) {
+  const c = SB_CATS.find(x => "morphe_sb_" + x[0] === k); if (!c) return null;
+  const v = String(V(k + "_color") || c[3]).replace(/^#..(......)$/, "#$1");
+  return /^#[0-9a-f]{6}$/i.test(v) ? v : c[3];
+}
+function inkOn(hex) {
+  const n = parseInt(hex.slice(1), 16), lin = v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; };
+  return .2126 * lin(n >> 16) + .7152 * lin((n >> 8) & 255) + .0722 * lin(n & 255) > .2 ? "#111" : "#fff";
+}
 const SB_BEHAVIOUR = [{ label: "Skip automatically", value: "skip" }, { label: "Skip automatically once", value: "skip-once" }, { label: "Show a skip button", value: "manual-skip" }, { label: "Show in seekbar", value: "seekbar-only" }, { label: "Disable", value: "ignore" }];
 const SB_CATS = [["sponsor", "Sponsor", "skip-once", "#00d400"], ["selfpromo", "Unpaid/Self promotion", "manual-skip", "#ffff00"], ["interaction", "Interaction reminder", "manual-skip", "#cc00ff"], ["highlight", "Highlight", "manual-skip", "#ff1684"], ["hook", "Hook/Greetings", "ignore", "#395699"], ["intro", "Intermission/Intro animation", "manual-skip", "#00ffff"], ["outro", "Endcards/Credits", "manual-skip", "#0202ed"], ["preview", "Preview/Recap", "ignore", "#008fd6"], ["filler", "Filler tangent/Jokes", "ignore", "#7300ff"], ["music_offtopic", "Music: Non-music section", "manual-skip", "#ff9900"]];
 const SB_SEGS = { sponsor: [8, 9], selfpromo: [46, 5], interaction: [30, 3], intro: [0, 3], outro: [88, 12], highlight: [60, 1], filler: [70, 6], music_offtopic: [20, 4], preview: [3, 2], hook: [36, 2] };
@@ -701,8 +712,8 @@ SCENES.sponsorblock = () => {
   const noseg = !!V("morphe_sb_video_length_without_segments");
   const segs = on ? SB_CATS.filter(([k]) => SB_SEGS[k] && V("morphe_sb_" + k) !== "ignore").map(([k, , , col]) => `<i data-seg="${k}" style="position:absolute;left:${SB_SEGS[k][0]}%;width:${SB_SEGS[k][1]}%;top:0;bottom:0;background:${String(V("morphe_sb_" + k + "_color") || col).replace(/^#..(......)$/, "#$1")}"></i>`).join("") : "";
   return `<div class="video">${videoFrame(2)}<div class="scrim" style="opacity:.35"></div>
-    <div style="position:absolute;right:8px;top:6px;display:flex;gap:4px">
-      ${on ? C("sb_create_new_segment", `<div class="pbtn" style="width:34px;height:34px;border-radius:${sq ? 4 : 17}px;background:rgba(0,0,0,.35)">${I("plus")}</div>`) : ""}
+    <div style="position:absolute;right:14px;top:12px;display:flex;gap:6px">
+      ${on ? C("sb_create_new_segment", `<div class="pbtn" style="width:34px;height:34px;border-radius:${sq ? 4 : 17}px;background:rgba(0,0,0,.35)">${I("plus")}</div>`, { also: "sb_create_new_segment_step" }) : ""}
       ${on ? C("sb_voting_button", `<div class="pbtn" style="width:34px;height:34px;border-radius:${sq ? 4 : 17}px;background:rgba(0,0,0,.35)">${I("like")}</div>`) : ""}
     </div>
     ${on ? C("sb_compact_skip_button", `<div class="sbskip" style="display:flex;align-items:center;gap:6px;height:34px;padding:0 ${compact ? 10 : 14}px;border-radius:${r}px;background:rgba(0,0,0,.72);border:1px solid rgba(255,255,255,.25);font-size:12.5px;font-weight:500">${I("skip", "ico", 'style="width:18px;height:18px"')}${compact ? "Skip" : "Skip sponsor"}</div>`, { style: "position:absolute;right:12px;bottom:46px", also: "sb_square_layout" }) : ""}
@@ -810,16 +821,38 @@ function flash7(el) {
   const k = s => base ? { transform: `${base}scale(${s})` } : { scale: s };
   // It grows by 30%, or by less when that would take it past the edge of its phone or of the preview
   // box: a readout in a corner (3px from the edge) was cut on that side every time it pulsed.
-  let big = 1.3;
+  // The room is measured to whatever clips the part (the phone's screen, a scrolling sheet), not only to
+  // the phone: a menu sheet sitting on the screen's bottom edge lost its bottom and side ring (Max, Nov 23:
+  // Open Advanced quality menu). With no room for the ring on some side, it is drawn inside the part.
+  let big = 1.3, ring = "0 0 0 .2em", half = "0 0 0 .1em";
   const host = el.closest(".dev") || el.closest("#stage, #canvas");
   if (host) {
-    const r = el.getBoundingClientRect(), h = host.getBoundingClientRect(), bz = host.clientLeft * (h.width / (host.offsetWidth || 1));
+    const r = el.getBoundingClientRect(); let clip = host;
+    for (let a = el.parentElement; a && a !== host; a = a.parentElement) { const o = getComputedStyle(a); if (o.overflowX !== "visible" || o.overflowY !== "visible") { clip = a; break; } }
+    const h = clip.getBoundingClientRect(), bz = clip.clientLeft * (h.width / (clip.offsetWidth || 1));
     const roomX = Math.min(r.left - h.left, h.right - r.right) - bz, roomY = Math.min(r.top - h.top, h.bottom - r.bottom) - bz;
     if (r.width && r.height) big = Math.max(1.04, Math.min(1.3, 1 + 2 * Math.max(0, roomX - 1) / r.width, 1 + 2 * Math.max(0, roomY - 1) / r.height));
+    const ringPx = .2 * parseFloat(cs.fontSize) * (r.width / (el.offsetWidth || r.width || 1));
+    if (Math.min(roomX, roomY) < ringPx + (big - 1) * Math.min(r.width, r.height) / 2) {
+      big = 1; ring = "inset 0 0 0 .2em"; half = "inset 0 0 0 .1em";
+      // a part flush with a rounded edge of what clips it (a sheet on the screen's bottom edge) takes that
+      // edge's rounding for the flash, so the inside ring follows the corners instead of being cut there
+      const sc = (el.offsetWidth || 1) / (r.width || 1), oc = getComputedStyle(clip), near = 1.5;
+      const inner = c => Math.max(0, parseFloat(oc[`border${c}Radius`]) - clip.clientLeft) * (h.width / (clip.offsetWidth || 1)) * sc;
+      const edge = { Top: r.top - h.top, Bottom: h.bottom - r.bottom, Left: r.left - h.left, Right: h.right - r.right };
+      const saved = {};
+      for (const [v, hz] of [["Top", "Left"], ["Top", "Right"], ["Bottom", "Left"], ["Bottom", "Right"]]) {
+        if (edge[v] - bz > near || edge[hz] - bz > near) continue;
+        const prop = `border${v}${hz}Radius`, want = inner(v + hz);
+        if (want > parseFloat(cs[prop])) { saved[prop] = el.style[prop]; el.style[prop] = want + "px"; }
+      }
+      if (Object.keys(saved).length) setTimeout(() => Object.assign(el.style, saved), 950);
+    }
   }
-  el.animate([{ ...k(1), boxShadow: "0 0 0 0 rgba(62,166,255,0)" }, { ...k(big), boxShadow: "0 0 0 .2em rgba(62,166,255,.95)", offset: .25 },
-    { ...k(1), boxShadow: "0 0 0 .1em rgba(62,166,255,.5)", offset: .5 }, { ...k(big), boxShadow: "0 0 0 .2em rgba(62,166,255,.95)", offset: .75 },
-    { ...k(1), boxShadow: "0 0 0 0 rgba(62,166,255,0)" }], { duration: 900, easing: "ease-in-out" });
+  const off = ring.startsWith("inset") ? "inset 0 0 0 0" : "0 0 0 0";
+  el.animate([{ ...k(1), boxShadow: `${off} rgba(62,166,255,0)` }, { ...k(big), boxShadow: `${ring} rgba(62,166,255,.95)`, offset: .25 },
+    { ...k(1), boxShadow: `${half} rgba(62,166,255,.5)`, offset: .5 }, { ...k(big), boxShadow: `${ring} rgba(62,166,255,.95)`, offset: .75 },
+    { ...k(1), boxShadow: `${off} rgba(62,166,255,0)` }], { duration: 900, easing: "ease-in-out" });
 }
 // Parts that differ between the two phones from the first frame flash once the phones are up, on both
 // sides (Max, Nov 23: the audio track badge of Force original audio language never flashed, after the
@@ -1276,8 +1309,10 @@ const FOOT_OFF = new Set([
   "morphe_continue_watching_prompt", // the prompt, the countdown and the phone's own message say it (Max, Nov 20)
   "morphe_disable_auto_hide_navigation_bar", // the bar staying or sliding away is drawn (Max, Nov 20)
   "morphe_disable_player_popup_panels", // the panels jumping open or waiting, and the phones' messages, say it (Max, Nov 23)
+  "morphe_download_force_4k", "morphe_sb_auto_hide_skip_button", "morphe_disable_fullscreen_ambient_mode", // the phones say it (Max, Nov 23 PM)
 ]);
 let askOnly = false; // drawing only the default side while the other waits for a choice
+const SCN_NO_FLASH = new Set(["morphe_disable_drc_audio"]); // its differences are the whole text card: no blue flash (Max, Nov 23)
 const SCN_SELF_DUO = new Set(["morphe_disable_player_popup_panels", "morphe_playback_buffer_size", "morphe_skip_silence_minimum_pause"]); // one phone that tells all values itself
 const DUO_OTHER = { morphe_speed_tap_and_hold: 4 };
 // Short words beside the phones where Morphe's option names don't read as a contrast on their own
@@ -1336,7 +1371,7 @@ function playScenario(k, prevValue) {
     scDrawing = true;
     try { drawSides(); } finally { scDrawing = false; const list = scCollect; scCollect = null; startCollected(list); }
     fitDev();
-    if (!self) diffFlash(box);
+    if (!self && !SCN_NO_FLASH.has(k)) diffFlash(box);
   };
   const drawSides = () => {
     if (self) {

@@ -862,6 +862,9 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 .seg3:not(.th) button[aria-checked="true"] { background: var(--m-primary, #3ea6ff); } /* until the thumb is placed */
 .seg3-th { position: absolute; z-index: -1; top: 3px; bottom: 3px; left: 3px; width: 0; border-radius: 999px; background: var(--m-primary, #3ea6ff); transition: left 300ms var(--ease), width 300ms var(--ease); }
 .seg3:not(.th) .seg3-th { display: none; }
+/* SponsorBlock categories: the picked choice is filled with the segment's own colour, in every UI design */
+.row.segcol .ctl .opt[aria-pressed="true"]:not(.neg, [data-val="ignore"]), .theme-glass .row.segcol .ctl .opt[aria-pressed="true"]:not(.neg, [data-val="ignore"]) { background-color: var(--seg-col); border-color: var(--seg-col); color: var(--seg-ink); }
+.seg3 button[aria-disabled="true"] { opacity: .38; cursor: not-allowed; } /* a choice this device can't use (Glass on an old Android) */
 .kidbtn { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 20px; min-width: 51px; padding: 0 8px; margin-left: 6px; border-radius: 10px; border: 0; background: var(--m-c-highest); color: var(--m-on-var); font-size: 11px; line-height: 1; font-weight: 600; cursor: pointer; vertical-align: 2px; }
 .kidbtn svg { display: block; width: 16px; height: 16px; fill: currentColor; transition: transform 280ms var(--ease); }
 .kidbtn[aria-expanded="true"] svg { transform: rotate(180deg); }
@@ -945,8 +948,10 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 [data-icons] .pbtn svg path { transition: all .25s var(--ease); }
 /* Thin: YouTube's older thin player icons; Bold matches Automatic on the bold player; the other styles draw the real icon set (iconstyles.js) */
 [data-icons="REGULAR"] .pbtn svg:not(.sty) path { fill: none; stroke: #fff; stroke-width: .9; stroke-linejoin: round; }
-.sbedit { position: absolute; left: 8px; right: 8px; top: 44px; display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; z-index: 25; animation: sheetup .25s var(--ease) reverse; }
-.sbedit .chip { height: 26px; font-size: 11px; padding: 0 8px; background: rgba(0,0,0,.75); border: 1px solid rgba(255,255,255,.2); }
+/* the segment editor and the voting menu open from their button (top right, inset so the button's
+   selection or preview outline is never cut by the edge of the video): right under it, right-aligned */
+.sbedit { position: absolute; left: 14px; right: 14px; top: 56px; display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; z-index: 25; animation: sheetup .25s var(--ease) reverse; }
+.sbedit .chip { height: 24px; font-size: 10.5px; padding: 0 7px; gap: 3px; background: rgba(0,0,0,.78); border: 1px solid rgba(255,255,255,.2); }
 .row.nudge { animation: nudge .6s var(--ease); }
 @keyframes nudge { 0%,100% { background: transparent; } 30% { background: rgba(62,166,255,.18); } }
 #thumbBubble { transition: opacity .2s; }
@@ -1187,15 +1192,20 @@ html.inapp.peekback .phone.theme-glass .editor { background: #0a0c14; }
 .uirow .tt small { display: block; }
 .uirow .seg3 { margin-left: auto; }
 /* the list design's live sample: a small real card under its toggle */
-.designrow .dprev { width: 100%; pointer-events: none; }
-.designrow .dprev .group { margin: 2px 0 0; }
-.designrow .dprev .row { min-height: 44px; padding-top: 8px; padding-bottom: 8px; }
-.designrow .dprev .row .sum { display: none; }
-.designrow .dprev.morph .row > * { animation: tmorph .35s var(--ease); }
+.dprev { width: 100%; pointer-events: none; margin: 0 0 16px; text-align: left; }
+.dprev .group { margin: 0; }
+.dprev .row { min-height: 44px; padding-top: 8px; padding-bottom: 8px; }
+.dprev .row .sum { display: none; }
 /* glideRun (list.js): the blobs that carry a choice's colour, over the box and under its labels */
 .glayer { position: absolute; left: 0; top: 0; pointer-events: none; }
 .glayer > i { position: absolute; left: 0; top: 0; contain: layout style; will-change: transform; }
 .seg3.gliding .seg3-th, .lt7.gliding > i { visibility: hidden; }
+/* the two-state toggles (toggleGlide) and the tutorial's small pickers (pickGlide) */
+.sw.gliding::after, .seg.gliding::before, .tut .tseg.gliding::before { visibility: hidden; }
+.seg.still::before, .tut .tseg.still::before { transition: none; }
+.sw > .glayer > i { box-shadow: 0 1px 3px rgba(0,0,0,.35); }
+.tut .tseg3, .tut .ttabs { position: relative; isolation: isolate; }
+.tut .tseg3.gliding > b.on, .tut .ttabs.gliding > span.on { background: transparent; transition: none; }
 .tabs7 { position: relative; isolation: isolate; }
 .tab7 > .ol { position: relative; z-index: 1; }
 .tabs7.gliding > .tab7[aria-selected="true"] { background: transparent !important; box-shadow: none !important; }
@@ -1239,6 +1249,12 @@ html.inapp.peekback .phone.theme-glass .editor { background: #0a0c14; }
 .tgt7.instant7 { transition: none !important; }
 .pg7 > .tgt7.gone7 { margin-bottom: -5px !important; }
 .tgt7.mark7 { outline: 1.5px dashed #ff0033; outline-offset: 1px; border-radius: 3px; animation: mark7 .9s ease-in-out infinite alternate; }
+/* a target that is one part (a pill centred in its line, a button): the outline hugs that part, not the
+   whole line around it (Max, Nov 23 PM: 'Sync to video' button). Every hidden-element comparison. */
+.tgt7.mark7:has(> :only-child) { outline-color: transparent; animation: none; }
+.tgt7.mark7:not(.gone7):has(> :only-child) { overflow: visible; }
+.tgt7.mark7 > :only-child { outline: 1.5px dashed #ff0033; outline-offset: 1px; animation: mark7 .9s ease-in-out infinite alternate; }
+.tgt7.mark7 > :only-child:not([style*="border-radius"]) { border-radius: 3px; }
 @keyframes mark7 { from { outline-color: rgba(255,0,51,.35); } to { outline-color: #ff0033; } }
 .x7 { position: absolute; z-index: 32; display: grid; place-items: center; background: rgba(0,0,0,.35); border-radius: 50%; animation: pop .25s var(--ease); pointer-events: none; }
 .clock7 { position: absolute; inset: 0; z-index: 32; display: grid; place-content: center; justify-items: center; gap: 4px; background: rgba(0,0,0,.72); font-size: 7px; color: #fff; animation: ghostin .2s; }
@@ -1341,7 +1357,7 @@ html.inapp.peekback .phone.theme-glass .editor { background: #0a0c14; }
       <h2>Device</h2>
       <div class="btnrow" id="devBtns"></div>
       <div class="btnrow devonly"><a class="btn" style="display:inline-flex;align-items:center;text-decoration:none;color:inherit" href="appview.html" title="The page the app's editor loads: card menu, full screen, no frame">App view</a></div>
-      <label class="scale" title="Glass design only. Auto picks the level this device can afford, as the app does; the others force one level to see it on this computer.">Glass level <select id="glassForce"><option value="">Auto</option><option value="0">Flat</option><option value="1">Light</option><option value="2">Full</option></select></label>
+      <label class="scale" title="Glass design only. Auto picks the level this device can afford, as the app does; the others force one level to see it on this computer.">Glass level <select id="glassForce"><option value="">Auto</option><option value="0">Flat</option><option value="1">Light</option><option value="2">Full</option><option value="w">Low-end device</option><option value="x">Unsupported Android</option></select></label>
       <label class="scale" title="How every chosen option, toggle and tab moves its colour (the five glide iterations). Saved in this browser.">Glide style <select id="glideStyle"></select></label>
       <label class="scale">UI scale <input type="range" id="uiScale" min="75" max="125" step="5" value="100"><output id="uiScaleOut">100%</output></label>
     </div>
