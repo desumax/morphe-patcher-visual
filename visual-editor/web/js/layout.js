@@ -9,7 +9,7 @@ const UI_DESIGNS = [["yt", "Original"], ["m3", "Morphe"], ["glass", "Glass"]];
 function applyTheme() {
   const ph = $("phone");
   ph.classList.toggle("theme-yt", theme === "yt"); ph.classList.toggle("theme-m3", theme !== "yt"); ph.classList.toggle("theme-glass", theme === "glass");
-  if (theme === "glass") glassTierApply(); else ph.removeAttribute("data-gt");
+  if (theme === "glass") glassTierApply(); else { ph.removeAttribute("data-gt"); liquidSync(); }
   applyAppColors();
 }
 // Glass adapts to the device, after ntvien/liquid-glass's device tiers: the same design is drawn with as
@@ -33,7 +33,7 @@ function glassTierDetect() {
   const mem = navigator.deviceMemory || 4, cores = navigator.hardwareConcurrency || 4;
   if (mem <= 2 || cores <= 2) return 0;
   const chromium = !!(window.chrome || /\bChrome\/\d/.test(navigator.userAgent));
-  if (chromium && mem >= 6 && cores >= 6 && sup("backdrop-filter: url(#lgRefract)") && !mq("(prefers-reduced-motion: reduce)")) return 2;
+  if (chromium && mem >= 6 && cores >= 6 && sup("backdrop-filter: url(#lens)") && !mq("(prefers-reduced-motion: reduce)")) return 2;
   return 1;
 }
 function glassTierApply() {
@@ -41,12 +41,101 @@ function glassTierApply() {
   if (glassForced !== null) glassTier = glassForced;
   else if (glassTier === null) glassTier = Math.min(glassTierDetect(), glassCap);
   $("phone").dataset.gt = glassTier;
-  if (glassTier === 2 && !$("lgDefs")) document.body.insertAdjacentHTML("beforeend", '<svg id="lgDefs" width="0" height="0" style="position:absolute;width:0;height:0" aria-hidden="true" focusable="false"><filter id="lgRefract" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.011 0.016" numOctaves="2" seed="11" result="n"/><feGaussianBlur in="n" stdDeviation="2.5" result="w"/><feDisplacementMap in="SourceGraphic" in2="w" scale="26" xChannelSelector="R" yChannelSelector="G"/></filter></svg>');
+  liquidSoon();
 }
 const GLASS_TIER_NAMES = ["Flat glass", "Light glass", "Full glass"];
+// ---------- Liquid Glass lens (Max, Nov 23: glass design 1) ----------
+// Clear glass that bends what is behind it at its edges, with no frost: the web port of ntvien/liquid-glass's
+// AGSL lens. For each surface size a displacement map is baked once in a canvas: inside a band B from the
+// rounded edge, every point is pushed inward along the edge normal by (1 - sqrt(1 - u²)) × A, u = 1 - depth/B.
+// The map feeds feDisplacementMap through backdrop-filter: url(#…), then a saturation lift; floats add a slight
+// colour fringe (red, green and blue bent by ×1, ×1.12, ×1.24). Maps are cached by size, corner and recipe.
+// What bends, by tier (the --gx-* variables in index.html draw the rest):
+//   2 Full:  floats (sticky preview, menu, dialogs, snackbar) with fringe, cards, tracks, chosen thumbs;
+//   1 Light: floats and chosen thumbs only, at most LENS_CAP thumbs on screen (as the repo caps real glass
+//            per screen); cards keep rim and tint without sampling anything;
+//   0 Flat:  no lens and no backdrop-filter at all: translucent fill, a top-left sheen and a 1px stroke.
+// Only what is on screen gets a lens; the rest is cleared, so the cost follows what is visible.
+const LENS = {
+  float: { band: 16, amount: 26, sat: 1.6, blur: 2.5 }, floatFull: { band: 16, amount: 26, chroma: .12, sat: 1.6, blur: 2.5 },
+  dlg: { band: 20, amount: 30, sat: 1.6, blur: 6 }, dlgFull: { band: 20, amount: 30, chroma: .1, sat: 1.6, blur: 6 },
+  card: { band: 12, amount: 18, sat: 1.4 }, track: { band: 8, amount: 12, sat: 1.5 }, picked: { band: 9, amount: 14, sat: 1.8 },
+};
+const LENS_ROLES = [
+  { sel: ".stick, html:not(.inapp) #picker, .snack", L: "float", tier: 1 },
+  { sel: ".dlg", L: "dlg", tier: 1 },
+  { sel: ".group", L: "card", tier: 2 },
+  { sel: ".seg, .seg3, .lt7, .tab7:not([aria-selected=\"true\"])", L: "track", tier: 2 },
+  { sel: ".seg3.th > .seg3-th, .lt7 > i, .ctl .opt[aria-pressed=\"true\"], .tab7[aria-selected=\"true\"]", L: "picked", tier: 1, cap: true },
+];
+const LENS_CAP = 8;
+const lensOK = (() => { try { return CSS.supports("backdrop-filter", "url(#x)") || CSS.supports("-webkit-backdrop-filter", "url(#x)"); } catch { return false; } })();
+const lensMaps = new Map(); let lensN = 0;
+function lensSd(px, py, hw, hh, r) { const qx = Math.abs(px) - hw + r, qy = Math.abs(py) - hh + r; return Math.min(Math.max(qx, qy), 0) + Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) - r; }
+function lensFilter(w, h, r, L) {
+  w = Math.max(2, Math.round(w)); h = Math.max(2, Math.round(h)); r = Math.min(r, w / 2, h / 2);
+  const key = [w, h, Math.round(r), L.band, L.amount, L.chroma || 0, L.blur || 0, L.sat].join(); if (lensMaps.has(key)) return lensMaps.get(key);
+  const cv = document.createElement("canvas"); cv.width = w; cv.height = h; const cx = cv.getContext("2d"), im = cx.createImageData(w, h), D = im.data;
+  const hw = w / 2, hh = h / 2, gr = Math.min(r * 1.5, hw, hh), B = L.band, A = L.amount, S = 2 * (A + 1);
+  for (let i = 0; i < w * h; i++) { D[i * 4] = D[i * 4 + 1] = D[i * 4 + 2] = 128; D[i * 4 + 3] = 255; }
+  // only the band at the edge moves: rows and columns deeper than B are skipped
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (x >= B && x < w - B && y >= B && y < h - B && x >= r && x < w - r) { x = w - Math.max(B, r) - 1; continue; }
+    const px = x + .5 - hw, py = y + .5 - hh, dep = -lensSd(px, py, hw, hh, r); if (dep >= B || dep <= -1) continue;
+    const u = 1 - Math.max(0, dep) / B, d = (1 - Math.sqrt(Math.max(0, 1 - u * u))) * A, e = .5;
+    let gx = lensSd(px + e, py, hw, hh, gr) - lensSd(px - e, py, hw, hh, gr), gy = lensSd(px, py + e, hw, hh, gr) - lensSd(px, py - e, hw, hh, gr); const l = Math.hypot(gx, gy) || 1;
+    const ox = Math.max(-x, Math.min(w - 1 - x, -gx / l * d)), oy = Math.max(-y, Math.min(h - 1 - y, -gy / l * d)), i = (y * w + x) * 4;
+    D[i] = Math.round((.5 + ox / S) * 255); D[i + 1] = Math.round((.5 + oy / S) * 255);
+  }
+  cx.putImageData(im, 0, 0);
+  const id = "lens" + (lensN++), src = L.blur ? "b" : "SourceGraphic", ca = L.chroma || 0;
+  let body = `<feImage href="${cv.toDataURL()}" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="none" result="m"/>` + (L.blur ? `<feGaussianBlur in="SourceGraphic" stdDeviation="${L.blur}" result="b"/>` : "");
+  if (!ca) body += `<feDisplacementMap in="${src}" in2="m" scale="${S}" xChannelSelector="R" yChannelSelector="G" result="d"/>`;
+  else {
+    const ch = ["1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0", "0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0", "0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 1 0"];
+    [1, 1 + ca, 1 + 2 * ca].forEach((k, i) => { body += `<feDisplacementMap in="${src}" in2="m" scale="${S * k}" xChannelSelector="R" yChannelSelector="G" result="d${i}"/><feColorMatrix in="d${i}" values="${ch[i]}" result="c${i}"/>`; });
+    body += `<feComposite in="c0" in2="c1" operator="arithmetic" k2="1" k3="1" result="c01"/><feComposite in="c01" in2="c2" operator="arithmetic" k2="1" k3="1" result="d"/>`;
+  }
+  body += `<feColorMatrix in="d" type="saturate" values="${L.sat}"/>`;
+  let defs = $("lensDefs"); if (!defs) { document.body.insertAdjacentHTML("beforeend", '<svg id="lensDefs" width="0" height="0" style="position:absolute;width:0;height:0" aria-hidden="true" focusable="false"><defs></defs></svg>'); defs = $("lensDefs"); }
+  defs.firstChild.insertAdjacentHTML("beforeend", `<filter id="${id}" x="0" y="0" width="${w}" height="${h}" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" color-interpolation-filters="sRGB">${body}</filter>`);
+  lensMaps.set(key, id); return id;
+}
+let lensOn = new Set(), lensRaf = 0;
+function lensClear(e) { e.style.backdropFilter = ""; e.style.webkitBackdropFilter = ""; }
+function liquidSync() {
+  lensRaf = 0;
+  const ph = $("phone"), tier = theme === "glass" && lensOK ? +(ph.dataset.gt || 0) : 0;
+  if (!tier) { lensOn.forEach(lensClear); lensOn = new Set(); return; }
+  const vh = innerHeight, vw = innerWidth, want = [], seen = new Set();
+  // reads first, then writes (one layout)
+  for (let i = LENS_ROLES.length - 1; i >= 0; i--) { // later roles win (a chosen tab is picked, not track)
+    const R = LENS_ROLES[i]; if (tier < R.tier) continue;
+    let n = 0;
+    ph.querySelectorAll(R.sel).forEach(e => {
+      if (seen.has(e)) return; seen.add(e);
+      const b = e.getBoundingClientRect(); if (b.width < 4 || b.height < 4 || b.bottom < 0 || b.top > vh || b.right < 0 || b.left > vw) return;
+      if (e.checkVisibility && !e.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true, opacityProperty: true, visibilityProperty: true })) return; // a closed menu or dialog
+      if (R.cap && tier === 1 && ++n > LENS_CAP) return;
+      want.push([e, e.offsetWidth || b.width, e.offsetHeight || b.height, parseFloat(getComputedStyle(e).borderTopLeftRadius) || 0, LENS[R.L + (tier === 2 && LENS[R.L + "Full"] ? "Full" : "")]]);
+    });
+  }
+  const next = new Set();
+  want.forEach(([e, w, h, r, L]) => { const v = `url(#${lensFilter(w, h, r, L)})`; if (e.style.backdropFilter !== v) { e.style.backdropFilter = v; e.style.webkitBackdropFilter = v; } next.add(e); });
+  lensOn.forEach(e => { if (!next.has(e)) lensClear(e); }); lensOn = next;
+}
+function liquidSoon() { if (!lensRaf && theme === "glass") lensRaf = requestAnimationFrame(() => requestAnimationFrame(liquidSync)); }
+// redraws, choices, resizes and scrolls all ask for one sync on the next frames
+{
+  const ph = $("phone");
+  new MutationObserver(liquidSoon).observe(ph, { childList: true, subtree: true, attributes: true, attributeFilter: ["aria-pressed", "aria-selected", "data-at", "data-gt"] });
+  let st = 0; document.addEventListener("scroll", () => { clearTimeout(st); st = setTimeout(liquidSoon, 120); }, { capture: true, passive: true });
+  addEventListener("resize", liquidSoon);
+}
 // frame-time watch: a short window of frames after a scroll or an opening menu or dialog
 let glassWatch = null;
 function glassSample() {
+  setTimeout(liquidSoon, 40); // a menu or dialog opening: its glass gets its lens once it shows
   if (theme !== "glass" || !glassTier || glassWatch || glassForced !== null) return;
   const dts = []; let last = 0;
   glassWatch = requestAnimationFrame(function f(t) {

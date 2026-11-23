@@ -880,8 +880,8 @@ function fitOpts(root = $("list")) {
 // A tap during a glide carries on from where the colour is (glideNow).
 // The motions are the five iterations from Nov 23 (option-glide/iterations); the preview page can switch
 // between them (inspector, "Glide style").
-const GLIDE_STYLES = [["goo", "Goo drop"], ["spring", "Spring slide"], ["lens", "Liquid lens"], ["worm", "Worm"], ["grow", "Grow in place"]];
-let glideStyle = (() => { try { const v = localStorage.getItem(LS + "-glide"); return GLIDE_STYLES.some(s => s[0] === v) ? v : "goo"; } catch { return "goo"; } })();
+const GLIDE_STYLES = [["pour", "Smooth pour (D1, chosen)"], ["goo", "Goo drop"], ["spring", "Spring slide"], ["lens", "Liquid lens"], ["worm", "Worm"], ["grow", "Grow in place"]];
+let glideStyle = (() => { try { const v = localStorage.getItem(LS + "-glide"); return GLIDE_STYLES.some(s => s[0] === v) ? v : "pour"; } catch { return "pour"; } })();
 function setGlideStyle(v) { glideStyle = v; try { localStorage.setItem(LS + "-glide", v); } catch { /* storage unavailable */ } }
 const GLIDE_REDUCED = matchMedia("(prefers-reduced-motion: reduce)");
 // a damped spring from 0 to 1 after t ms: [position, speed] (k stiffness, z damping ratio)
@@ -893,6 +893,18 @@ function gSpring(t, k, z) {
 const gLerp = (a, b, p) => a + (b - a) * p;
 // each motion: the blobs at d ms from the old place f to the new place t ({x, y, w, h} in the box)
 const GLIDE_MOTION = {
+  // D1 "Smooth pour" (Max chose it, Nov 23): a critically damped spring, so no bounce at the end; the old
+  // fill drains into a drop as it leaves and the drop melts into the new fill as it lands, so the colour
+  // is always somewhere. Its goo neck is a little wider than goo's (stdDeviation 7, alpha 18 -7).
+  pour: { goo: [7, 18, -7], end: 800, draw: (f, t, d) => {
+    const sm = x => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
+    const [p, v0] = gSpring(d, 150, 1), v = v0 * 1.6, oldK = 1 - sm(p / .55), newK = sm((p - .4) / .57);
+    const fx = f.x + f.w / 2, fy = f.y + f.h / 2, tx = t.x + t.w / 2, ty = t.y + t.h / 2, hor = Math.abs(tx - fx) >= Math.abs(ty - fy);
+    const bell = Math.pow(Math.max(0, 1 - Math.abs(2 * p - 1)), .35), s0 = Math.min(f.h, t.h) * .95 * bell, sp = Math.min(1, Math.abs(v) * .6);
+    const dw = s0 * (hor ? 1 + sp * .8 : 1 - sp * .2), dh = s0 * (hor ? 1 - sp * .2 : 1 + sp * .8), on = p > .005 && p < .995 ? 1 : 0;
+    return [{ x: t.x + t.w * (1 - newK) / 2, y: t.y + t.h * (1 - newK) / 2, w: t.w * newK, h: t.h * newK },
+      { x: gLerp(fx, tx, p) - dw * on / 2, y: gLerp(fy, ty, p) - dh * on / 2, w: dw * on, h: dh * on },
+      { x: f.x + f.w * (1 - oldK) / 2, y: f.y + f.h * (1 - oldK) / 2, w: f.w * oldK, h: f.h * oldK }]; } },
   spring: { end: 520, draw: (f, t, d) => { const [p] = gSpring(d, 560, .78); return [{ x: gLerp(f.x, t.x, p), y: gLerp(f.y, t.y, p), w: gLerp(f.w, t.w, p), h: gLerp(f.h, t.h, p) }]; } },
   lens: { end: 600, draw: (f, t, d) => {
     const [p, v] = gSpring(d, 480, .74), lift = Math.max(0, Math.min(1, Math.abs(v) * 1.2)), dist = Math.hypot(t.x - f.x, t.y - f.y), hor = Math.abs(t.x - f.x) >= Math.abs(t.y - f.y) || !dist;
@@ -905,7 +917,7 @@ const GLIDE_MOTION = {
     return [{ x: l, y: tp, w: r - l, h: bt - tp }]; } },
   // metaball liquid: the old fill shrinks, a drop pulls away from it, travels stretched by its speed and
   // melts into the new fill as it swells (the blobs are joined by the goo filter on the layer)
-  goo: { goo: true, end: 620, draw: (f, t, d) => {
+  goo: { goo: [5, 20, -8], end: 620, draw: (f, t, d) => {
     const [p, v] = gSpring(d, 400, .82), old = Math.max(0, 1 - Math.pow(Math.min(1, d / 270), 1.3)), nw = gSpring(Math.max(0, d - 70), 520, .72)[0];
     const fx = f.x + f.w / 2, fy = f.y + f.h / 2, tx = t.x + t.w / 2, ty = t.y + t.h / 2, hor = Math.abs(tx - fx) >= Math.abs(ty - fy);
     const s0 = Math.min(f.h, t.h) * .9, sp = Math.min(1, Math.abs(v) * .6), dw = s0 * (hor ? 1 + sp * 1.4 : 1 - sp * .25), dh = s0 * (hor ? 1 - sp * .25 : 1 + sp * 1.4), on = p < .97 ? 1 : 0;
@@ -918,10 +930,11 @@ const GLIDE_MOTION = {
     return [{ x: t.x + (t.w - w) / 2, y: t.y + (t.h - h) / 2, w, h, r: gLerp(t.h * .2, t.h / 2, Math.min(1, d / 260)) },
       { x: f.x + f.w * (1 - out) * .15, y: f.y + f.h * (1 - out) * .15, w: f.w * (1 - (1 - out) * .3), h: f.h * (1 - (1 - out) * .3), o: out }]; } },
 };
-let gooReady = false;
-function gooFilter() {
-  if (gooReady) return; gooReady = true;
-  document.body.insertAdjacentHTML("beforeend", `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="gGoo" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur in="SourceGraphic" stdDeviation="5"/><feColorMatrix mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -8" result="g"/><feComposite in="SourceGraphic" in2="g" operator="atop"/></filter></svg>`);
+// the goo filter of a motion ([blur, alpha gain, alpha offset]), made once per motion
+function gooFilter([sd, a, b]) {
+  const id = `gGoo${sd}_${a}_${-b}`;
+  if (!document.getElementById(id)) document.body.insertAdjacentHTML("beforeend", `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="${id}" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur in="SourceGraphic" stdDeviation="${sd}"/><feColorMatrix mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 ${a} ${b}" result="g"/><feComposite in="SourceGraphic" in2="g" operator="atop"/></filter></svg>`);
+  return id;
 }
 // a part's place in a box, in the box's own coordinates (padding box, scrolled content included)
 function gRect(el, box) { const b = box.getBoundingClientRect(), r = el.getBoundingClientRect(); return { x: r.left - b.left - box.clientLeft + box.scrollLeft, y: r.top - b.top - box.clientTop + box.scrollTop, w: r.width, h: r.height }; }
@@ -937,12 +950,12 @@ function glideStop(box) { const g = box._glide; if (g) { box._glide = null; g.an
 function glideRun(box, f, t, o) {
   const prev = box._glide; glideStop(box); if (prev && prev.done) prev.done(true);
   if (GLIDE_REDUCED.matches || Math.hypot(t.x - f.x, t.y - f.y) < 1 && Math.abs(t.w - f.w) < 1) { if (o.done) o.done(false); return; }
-  const M = GLIDE_MOTION[glideStyle] || GLIDE_MOTION.goo; if (M.goo) gooFilter();
+  const M = GLIDE_MOTION[glideStyle] || GLIDE_MOTION.pour, goo = M.goo && gooFilter(M.goo);
   const STEP = 1000 / 60, frames = [];
   for (let d = 0; d < M.end; d += STEP) frames.push(M.draw(f, t, d));
   frames.push([{ x: t.x, y: t.y, w: t.w, h: t.h }]);
-  const layer = document.createElement("span"); layer.className = "glayer" + (M.goo ? " goo" : ""); layer.setAttribute("aria-hidden", "true");
-  layer.style.cssText = `z-index:${o.z ?? 0};width:${box.scrollWidth}px;height:${box.scrollHeight}px`;
+  const layer = document.createElement("span"); layer.className = "glayer"; layer.setAttribute("aria-hidden", "true");
+  layer.style.cssText = `z-index:${o.z ?? 0};width:${box.scrollWidth}px;height:${box.scrollHeight}px${goo ? `;filter:url(#${goo})` : ""}`;
   const n = Math.max(...frames.map(fr => fr.length)), R = o.radius ?? 999, last = frames.length - 1, mid = Math.round(last * .4);
   const anims = [];
   for (let i = 0; i < n; i++) {
