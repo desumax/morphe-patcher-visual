@@ -865,7 +865,7 @@ function mergeZonePreview(list) {
 // One unlock animation per setting, on one clock. Every tap redraws the list, which threw the running
 // badge away with the old rows (it vanished, or a stale copy of the row brought it back from the start:
 // the flicker on a quick second tap). Now a redraw picks the animation up where it was instead.
-const ULK_MS = 950, unlocking = new Map(); // setting -> when its unlock animation started
+const ULK_MS = 855, unlocking = new Map(); // setting -> when its unlock animation started
 function unlockFx(row, out = false) {
   const k = row.dataset.row, t0 = unlocking.get(k), resume = t0 !== undefined && performance.now() - t0 < ULK_MS;
   if (!resume) unlocking.set(k, performance.now());
@@ -918,21 +918,21 @@ const LOCK_COVER = `<b class="lk7" aria-hidden="true">${LOCK_SVG}</b>`;
 // the cover goes inside the control's own box (a toggle, a switch, a state chip, a box of options)
 const withLock = html => html.replace(/<\/(\w+)>\s*$/, `${LOCK_COVER}</$1>`);
 const lockHost = row => row.querySelector(".side > .lt7, .side > .sw, .side > .state") || row.querySelector(".txt > .ctl");
-// The opening (Max, Nov 23: design A "Doors"), in ULK_MS like the rest of the unlock: the shackle pops off,
-// the lock cracks down the middle and its two halves slide out to both ends with the grey, like sliding
-// doors. As they part, each door casts a shadow on the control behind it and shows a lit edge, and the
-// control comes forward from a little back and darker, so the doors read as in front of it.
+// The opening (Max, Nov 23: design A "Doors"), in ULK_MS like the rest of the unlock: the shackle swings
+// open on the left door, the lock cracks down the middle and its two halves slide out to both ends with
+// the grey, like sliding doors. As they part, each door casts a shadow on the control behind it and shows
+// a lit edge, and a shade over the control lifts, so the doors read as in front of it. The control itself
+// is never moved, scaled or filtered: that made it settle and shift at the end (Max, Nov 23).
 function lockOpening(host) {
   const u = document.createElement("b");
   u.className = "lk7 go"; u.setAttribute("aria-hidden", "true");
   const half = side => `<span class="lkh ${side}"><span class="lkc">${LOCK_SVG}</span></span>`;
-  u.innerHTML = half("l") + half("r");
-  host.classList.add("lkbehind");
+  u.innerHTML = `<span class="lkshade"></span>` + half("l") + half("r");
   host.appendChild(u);
   return u;
 }
-const lockClosed = (host, u) => { u.remove(); host.classList.remove("lkbehind"); };
-const stripUnlock = root => { root.querySelectorAll(".ulk, .lk7.go").forEach(e => e.remove()); root.querySelectorAll(".lkbehind").forEach(e => e.classList.remove("lkbehind")); (root.matches?.(".row") ? [root] : []).concat([...root.querySelectorAll(".row")]).forEach(r => { r.classList.remove("unlock"); delete r.dataset.ulk; }); };
+const lockClosed = (host, u) => u.remove();
+const stripUnlock = root => { root.querySelectorAll(".ulk, .lk7.go").forEach(e => e.remove()); (root.matches?.(".row") ? [root] : []).concat([...root.querySelectorAll(".row")]).forEach(r => { r.classList.remove("unlock"); delete r.dataset.ulk; }); };
 
 // ------------------------------------------------------------------ search
 let searching = false, query = "";
