@@ -42,8 +42,11 @@ function fitScale(w, h) {
   // the preview keeps its size during a comparison, so use all of it: room for the title, the
   // situation line, and the bottom caption only when there is one
   const canvas = $("canvas"), sit = canvas.querySelector(".sit"), foot = canvas.querySelector(".foot");
-  const availW = canvas.clientWidth - 8, availH = canvas.clientHeight - (canvas.querySelector(".cap") ? 30 : 8) - (foot && foot.textContent.trim() ? 24 : 0) - (sit ? sit.offsetHeight + 6 : 0) - 6;
-  return Math.max(.35, Math.min(3, availW / (w + 6), availH / (h + 6)));
+  // only a few px of black stay above, below and beside the phones (Max, Nov 23: the phones take the room);
+  // a story where a phone turns keeps a little more, for the corners of the phone while it is mid-turn
+  const t = scTurns ? 6 : 0;
+  const availW = canvas.clientWidth - 6 - t, availH = canvas.clientHeight - (canvas.querySelector(".cap") ? 30 : 4) - (foot && foot.textContent.trim() ? 24 : 0) - (sit ? sit.offsetHeight + 4 : 0) - 2 - t;
+  return Math.max(.35, Math.min(3, availW / (w + 2 + t), availH / (h + 2 + t)));
 }
 // The pair is measured, not estimated: an invisible copy with every transition switched off shows
 // the final size of everything in it (a phone that is still turning, a caption that wraps to more
@@ -191,7 +194,9 @@ function fitDev(orient) {
     const cur = gen.dataset.lay, curSc = parseFloat(gen.style.scale) || 0;
     if (!first && cur && S[cur] && S[pick] < S[cur] * 1.1) pick = cur;
     let sc = S[pick];
-    if (!first && pick === cur && Math.abs(sc - curSc) / curSc < .06 && sc > curSc * .97) sc = Math.min(curSc, sc * 1.03);
+    // (never larger than what fits: with only a few px of black left around the phones, the old 3% of
+    // slack cut a turning phone or a longer caption at the preview's edge)
+    if (!first && pick === cur && Math.abs(sc - curSc) / curSc < .06 && sc > curSc * .97) sc = Math.min(curSc, sc);
     const [w0, h0] = WH[pick], w = w0, h = h0;
     // a layout change (a phone turning mid-story): each caption flows from its old place to the new one
     // while its box, font and line breaks morph into the new shape, in step with the phones resizing.

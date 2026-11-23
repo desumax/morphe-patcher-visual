@@ -191,16 +191,17 @@ html #pickGrid .pg.pgroups.pvis:not(.nx) .gcard .pi svg { width: 23px; height: 2
    line, so the line's corners blend only with the page */
 .stagebox > .stage, .stagebox > .canvas { border-radius: 14px; clip-path: inset(.75px round 13.25px); }
 .stagebox::after { content: ""; position: absolute; inset: 0; border: 1.5px solid var(--m-outline, #5f6368); border-radius: inherit; pointer-events: none; z-index: 50; transition: border-color .25s; }
-.stagebox { position: relative; margin: 9.5px 6.5px 7.5px; border-radius: 14px; box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 4px 14px rgba(0,0,0,.45); transition: border-color .25s; }
+.stagebox { position: relative; margin: 4px 3.5px 4px; border-radius: 14px; box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 4px 14px rgba(0,0,0,.45); transition: border-color .25s; }
 .stagebox.changed::after { animation: framepulse .7s var(--ease); }
 @keyframes framepulse { 0% { border-color: var(--ring-on); box-shadow: inset 0 0 0 3px rgba(76,199,100,.35); } 100% { } }
 .stick { box-shadow: 0 1px 0 var(--m-outline, #444), 0 6px 10px -6px rgba(0,0,0,.6); }
 /* a strip above the preview that stays when it is pinned to the top of the screen: the selection ring
    around the preview's edge has room there, so it is drawn outside the frame before and after
    scrolling (Max, Nov 22). The preview's own top margin used to collapse out of the stick, so it
-   vanished when pinned; padding keeps it inside, and the two add up to the old 9.5 px. */
-.stick { padding-top: 4px; }
-.stick > .stagebox { margin-top: 5.5px; }
+   vanished when pinned; padding keeps it inside. The black around the preview is kept to a few px on
+   every side, enough for the ring, so the preview itself gets the room (Max, Nov 23). */
+.stick { padding-top: 2px; }
+.stick > .stagebox { margin-top: 2px; }
 .ptools { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 14px; font-size: 12px; color: var(--m-on-var); }
 .ptools .hint { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ptools label { display: flex; gap: 6px; align-items: center; cursor: pointer; flex: none; }
@@ -211,7 +212,7 @@ html #pickGrid .pg.pgroups.pvis:not(.nx) .gcard .pi svg { width: 23px; height: 2
 @container ed (min-width: 600px) {
   .content { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 0 var(--sp-l); padding: 0 var(--sp-l); align-items: start; }
   .stick { top: var(--sp-l); margin-top: var(--sp-l); padding-top: 0; border-radius: var(--r-l); overflow: hidden; box-shadow: none; }
-  .stick > .stagebox { margin-top: 9.5px; }
+  .stick > .stagebox { margin-top: 4px; }
   .list { padding-top: var(--sp-s); }
 }
 @container ed (min-width: 1000px) { .content { grid-template-columns: minmax(0, 560px) minmax(0, 560px); justify-content: center; } }
@@ -317,9 +318,9 @@ html #pickGrid .pg.pgroups.pvis:not(.nx) .gcard .pi svg { width: 23px; height: 2
 .demo-label.bad { background: rgba(120,0,0,.85); }
 
 /* scenario canvas: standard black stage for animations of settings the live preview cannot show */
-.canvas { position: absolute; inset: 0; background: #000; z-index: 45; opacity: 0; transition: opacity var(--dur) var(--ease); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 26px 0 4px; overflow: hidden; pointer-events: none; }
+.canvas { position: absolute; inset: 0; background: #000; z-index: 45; opacity: 0; transition: opacity var(--dur) var(--ease); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 26px 0 2px; overflow: hidden; pointer-events: none; }
 .canvas.show { opacity: 1; pointer-events: auto; }
-.canvas.nocap { padding-top: 6px; }
+.canvas.nocap { padding-top: 2px; }
 .canvas .cap { position: absolute; top: 8px; left: 10px; right: 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 11.5px; color: #ddd; }
 .canvas .cap b { color: #fff; font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .canvas .cap .st { flex: none; font-size: 10.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #2b2b2b; }
@@ -859,11 +860,11 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 .kidbtn svg { display: block; width: 16px; height: 16px; fill: currentColor; transition: transform 280ms var(--ease); }
 .kidbtn[aria-expanded="true"] svg { transform: rotate(180deg); }
 /* unlock */
-.row.unlock { animation: unlockbg 810ms var(--ease); } /* 10% faster with the lock (Max, Nov 23) */
+.row.unlock { animation: unlockbg 665ms var(--ease); } /* in step with the lock, now .7 s (Max, Nov 23) */
 @keyframes unlockbg { 0% { background: rgba(144,216,137,0); } 25% { background: rgba(144,216,137,.16); } 100% { background: rgba(144,216,137,0); } }
 /* Locked (Max, Nov 23): the control is greyed out under a cover that shows only the gold lock, the colour
    of the "Parent setting must be..." line. Unlocking breaks the lock and opens the cover from the middle
-   to both ends like sliding doors, in the unlock's .95 s (ULK_MS). */
+   to both ends like sliding doors, in the unlock's .7 s (ULK_MS). */
 :root { --lk-grey: var(--m-c-highest, #303134); --lk-veil: rgba(30,31,34,.88); --lk-gold: var(--m-warning, #F5BD48); --lk-glow: rgba(245,189,72,.75); }
 .theme-yt { --lk-grey: #272727; }
 .side > :has(> .lk7), .txt > .ctl:has(> .lk7) { position: relative; }
@@ -887,11 +888,12 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 .lk7.go .lkc { position: absolute; top: 0; bottom: 0; width: calc(200% - 1px); display: grid; place-items: center; }
 .lk7.go .lkh.l .lkc { left: 0; }
 .lk7.go .lkh.r .lkc { right: 0; }
-.lk7.go * { animation-duration: 855ms; animation-fill-mode: both; animation-timing-function: cubic-bezier(.4,0,.2,1); }
+.lk7.go * { animation-duration: 700ms; animation-fill-mode: both; animation-timing-function: cubic-bezier(.4,0,.2,1); }
 /* Doors: the shackle swings open and stays on the left door, the lock cracks down the middle, and its halves
    slide out to both ends with the grey. As they part, each door casts a shadow on the control behind and
    shows a lit inner edge, and a shade over the control lifts, so the doors read as in front of it.
-   .855 s (ULK_MS), 10% faster than first (Max, Nov 23). */
+   .7 s (ULK_MS; Max, Nov 23). The doors' shadows fade out as they leave, so nothing is left to vanish
+   when the cover is removed (they used to sit on the control at full strength until the last frame). */
 .lk7.go { overflow: hidden; }
 .lk7.go .lks { transform-origin: 0% 100%; animation-name: lkA-sh; }
 .lk7.go .lki { animation-name: lkA-pop; }
@@ -903,8 +905,8 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 @keyframes lkA-sh { 0% { transform: none; } 10% { transform: translateY(1.5px); } 28%, 100% { transform: translateY(-1.5px) rotate(-75deg); } }
 @keyframes lkA-pop { 0% { transform: none; } 12% { transform: scale(1.16); } 26%, 100% { transform: none; } }
 /* the doors crack open a little, hold for a beat with the gap showing the toggle deep behind, then slide */
-@keyframes lkA-l { 0%, 30% { transform: none; box-shadow: none; } 38% { transform: translateX(-5px) scale(1.03); box-shadow: 7px 0 10px -3px rgba(0,0,0,.85), inset -1.5px 0 0 rgba(255,255,255,.22); } 46% { transform: translateX(-7px) scale(1.04); box-shadow: 8px 0 12px -3px rgba(0,0,0,.85), inset -1.5px 0 0 rgba(255,255,255,.22); animation-timing-function: cubic-bezier(.55,0,.25,1); } 100% { transform: translateX(-104%) scale(1.04); box-shadow: 10px 0 14px -3px rgba(0,0,0,.7), inset -1.5px 0 0 rgba(255,255,255,.22); } }
-@keyframes lkA-r { 0%, 30% { transform: none; box-shadow: none; } 38% { transform: translateX(5px) scale(1.03); box-shadow: -7px 0 10px -3px rgba(0,0,0,.85), inset 1.5px 0 0 rgba(255,255,255,.22); } 46% { transform: translateX(7px) scale(1.04); box-shadow: -8px 0 12px -3px rgba(0,0,0,.85), inset 1.5px 0 0 rgba(255,255,255,.22); animation-timing-function: cubic-bezier(.55,0,.25,1); } 100% { transform: translateX(104%) scale(1.04); box-shadow: -10px 0 14px -3px rgba(0,0,0,.7), inset 1.5px 0 0 rgba(255,255,255,.22); } }
+@keyframes lkA-l { 0%, 30% { transform: none; box-shadow: none; } 38% { transform: translateX(-5px) scale(1.03); box-shadow: 7px 0 10px -3px rgba(0,0,0,.85), inset -1.5px 0 0 rgba(255,255,255,.22); } 46% { transform: translateX(-7px) scale(1.04); box-shadow: 8px 0 12px -3px rgba(0,0,0,.85), inset -1.5px 0 0 rgba(255,255,255,.22); animation-timing-function: cubic-bezier(.55,0,.25,1); } 100% { transform: translateX(-104%) scale(1.04); box-shadow: 10px 0 14px -3px rgba(0,0,0,0), inset -1.5px 0 0 rgba(255,255,255,0); } }
+@keyframes lkA-r { 0%, 30% { transform: none; box-shadow: none; } 38% { transform: translateX(5px) scale(1.03); box-shadow: -7px 0 10px -3px rgba(0,0,0,.85), inset 1.5px 0 0 rgba(255,255,255,.22); } 46% { transform: translateX(7px) scale(1.04); box-shadow: -8px 0 12px -3px rgba(0,0,0,.85), inset 1.5px 0 0 rgba(255,255,255,.22); animation-timing-function: cubic-bezier(.55,0,.25,1); } 100% { transform: translateX(104%) scale(1.04); box-shadow: -10px 0 14px -3px rgba(0,0,0,0), inset 1.5px 0 0 rgba(255,255,255,0); } }
 @keyframes lkA-fade { 0%, 74% { opacity: 1; } 100% { opacity: 0; } }
 /* the shade over the control behind lifts as the doors clear it */
 @keyframes lkA-shade { 0%, 36% { opacity: 1; } 90%, 100% { opacity: 0; } }

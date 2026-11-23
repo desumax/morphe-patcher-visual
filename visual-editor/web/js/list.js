@@ -933,7 +933,7 @@ function mergeZonePreview(list) {
 // One unlock animation per setting, on one clock. Every tap redraws the list, which threw the running
 // badge away with the old rows (it vanished, or a stale copy of the row brought it back from the start:
 // the flicker on a quick second tap). Now a redraw picks the animation up where it was instead.
-const ULK_MS = 855, unlocking = new Map(); // setting -> when its unlock animation started
+const ULK_MS = 700, unlocking = new Map(); // setting -> when its unlock animation started
 function unlockFx(row, out = false) {
   const k = row.dataset.row, t0 = unlocking.get(k), resume = t0 !== undefined && performance.now() - t0 < ULK_MS;
   if (!resume) unlocking.set(k, performance.now());
