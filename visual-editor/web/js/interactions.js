@@ -36,7 +36,7 @@ const afterBusy = fn => requestAnimationFrame(() => requestAnimationFrame(fn));
 function unfold(el) { afterBusy(() => { if (el.isConnected && el.classList.contains("long") && el.closest(".row.sel")) el.classList.add("open"); }); }
 function fitSums(root = $("list"), keep = new Set()) {
   // every description measured first, then marked: one layout for the list, not one per row (performance)
-  const els = [...root.querySelectorAll(".row > .txt > .sum:not(.need)")];
+  const els = (Array.isArray(root) ? root : [root]).flatMap(r => [...r.querySelectorAll(":scope > .txt > .sum:not(.need), .row > .txt > .sum:not(.need)")]); // one box, or the cards just drawn
   const sizes = els.map(el => [parseFloat(getComputedStyle(el).lineHeight) || 17.5, el.scrollHeight]);
   els.forEach((el, i) => {
     const [lh, full] = sizes[i];

@@ -14,12 +14,72 @@ const $ = id => document.getElementById(id);
 // (greyed parts faded on every redraw). Phones inside comparisons are not painted this way: their
 // stories draw and then change on purpose, on their own clock.
 function paint(el, html, ...marks) {
+  el.__cards = false; // drawn whole: paintList has nothing of its own to keep here
   el.classList.add("painting");
   el.innerHTML = html;
   for (const m of marks) m(el);
   void el.offsetHeight;
   el.classList.remove("painting");
   return el;
+}
+// The settings list's own paint (Nov 23 evening): the same steps as paint(), but a card whose markup is the
+// same as last time, and that nothing has touched since it was drawn, stays where it is. A tap used to
+// replace every card of the screen and lay all of them out again (most of a redraw's time); now only the
+// cards that changed are new, and the rest keep their layout, their focus and their running state.
+// A card = a row, or a parent with its sub-options, directly inside a .group (the swipe zones block is put
+// together from its rows after each draw, so those few are always new).
+// A card is kept only when all of this holds, otherwise it is drawn new exactly as before:
+//   - the list showed this same screen (not search results, not another tab);
+//   - its new markup equals the markup it was made from (__src), so every value it shows is unchanged;
+//   - nothing changed it after it settled: no class, attribute, style or child (listSeen, a mutation
+//     observer), and nothing in it is animating. A selection, a flash, a fold or a glide touches it;
+//   - it holds no locked setting (those are hidden, shown and unlocked by steps that expect a new card).
+// Headings are always new (they are tiny, and fold by their own rules). Returns the new cards: the steps
+// that only measure what was just drawn (fitOpts, fitSums) go over those alone.
+const listTouched = new Set();
+const cardOf = n => { let e = n.nodeType === 1 ? n : n.parentElement; while (e && e.__src === undefined) e = e.parentElement; return e || null; };
+const listNote = recs => recs.forEach(r => { const c = cardOf(r.target); if (c) listTouched.add(c); });
+const listSeen = new MutationObserver(listNote);
+listSeen.observe($("list"), { subtree: true, childList: true, attributes: true, characterData: true });
+// a step that only finishes how new cards are drawn (fitting pills, clamping descriptions): what it sets is
+// part of the card as drawn, not a change to it; anything noticed before it still counts
+function listQuiet(fn) { listNote(listSeen.takeRecords()); const r = fn(); listSeen.takeRecords(); return r; }
+// renderList hands over the screen in pieces, so an unchanged card is recognised from its text alone and is
+// neither parsed nor compared in the page: a heading's markup, or a group as an array of its cards' markup.
+const cardKey = e => e.matches(".unit") ? "u:" + (e.firstElementChild?.dataset.row || "") : e.dataset.row ? "r:" + e.dataset.row : e.dataset.h !== undefined ? "h:" + e.dataset.h : e.className;
+const srcKey = t => { const r = /data-row="([^"]+)"/.exec(t); if (r) return (t.startsWith('<div class="unit"') ? "u:" : "r:") + r[1]; const h = /data-h="([^"]*)"/.exec(t); return h ? "h:" + h[1] : t.slice(0, 48); };
+const lockedCard = c => c.matches(".row.dis") || (c.matches(".unit") && !!c.firstElementChild?.matches(".dis"));
+function paintList(list, parts, ...marks) {
+  const same = list.__cards === true && list.dataset.view === section;
+  listNote(listSeen.takeRecords());
+  if (same) list.getAnimations({ subtree: true }).forEach(a => { const t = a.effect && a.effect.target, c = t && cardOf(t); if (c) listTouched.add(c); });
+  else list.textContent = "";
+  const fresh = [], tpl = document.createElement("template");
+  const make = t => { tpl.innerHTML = t; const n = tpl.content.firstElementChild; n.__src = t; n.classList.add("painting"); fresh.push(n); return n; };
+  const isGroup = e => e.classList.contains("group");
+  // one level: what left the screen goes, what is unchanged stays, the rest is made new in its place
+  const walk = (box, items, keep) => {
+    const keys = new Set(items.map(t => Array.isArray(t) ? "" : srcKey(t)));
+    let cur = box.firstElementChild;
+    for (const t of items) {
+      while (cur && !isGroup(cur) && !keys.has(cardKey(cur))) { const nx = cur.nextElementSibling; cur.remove(); cur = nx; }
+      if (Array.isArray(t)) {
+        if (cur && isGroup(cur)) { walk(cur, t, true); cur = cur.nextElementSibling; }
+        else { const g = document.createElement("div"); g.className = "group"; t.forEach(c => g.appendChild(make(c))); box.insertBefore(g, cur); }
+        continue;
+      }
+      if (keep && cur && cur.__src === t && !listTouched.has(cur) && !lockedCard(cur) && !cur.matches(".subhead")) { cur = cur.nextElementSibling; continue; } // kept
+      const n = make(t);
+      if (cur && !isGroup(cur) && cardKey(cur) === cardKey(n)) { const nx = cur.nextElementSibling; cur.replaceWith(n); cur = nx; } else box.insertBefore(n, cur);
+    }
+    while (cur) { const nx = cur.nextElementSibling; cur.remove(); cur = nx; }
+  };
+  walk(list, parts, false);
+  for (const m of marks) m(list);
+  void list.offsetHeight;
+  fresh.forEach(n => n.classList.remove("painting"));
+  list.__cards = true; listTouched.clear(); listSeen.takeRecords(); // the draw itself is not a change
+  return fresh;
 }
 const secInfo = () => SECTIONS.find(s => s.id === section);
 
@@ -638,7 +698,7 @@ const collapsed = new Set();
 function renderList() {
   if (searching) return renderSearch();
   const m = MEMBERS[section];
-  let html = "";
+  const parts = []; // a heading's markup, or a group as an array of its cards' markup (see paintList)
   const isLive = k => m.live.includes(k);
   const wantOpen = new Set();
   const withKids = k => {
@@ -664,7 +724,7 @@ function renderList() {
     const ordered0 = byPosition(top), ordered = [...ordered0.filter(k => !cleanBroken(k)), ...ordered0.filter(cleanBroken)];
     const rest = m.misc.filter(k => !PARENT_OF[k]);
     relate(ordered, rest);
-    let live = "";
+    let live = [];
     const lay = LAYOUT[section];
     if (lay) {
       // screens with a lot of related settings get small captions so it is clear what belongs together
@@ -673,15 +733,15 @@ function renderList() {
       caps.forEach(([, inSec]) => inSec.forEach(x => { const i = rest.indexOf(x); if (i >= 0) rest.splice(i, 1); }));
       caps.forEach(([, inSec]) => inSec.forEach(x => used.add(x)));
       // settings not in a caption join the related ones (see placeDependents); only the rest go first
-      const left = placeDependents(caps.map(c => c[1]), ordered.filter(x => !used.has(x))).map(withKids).join("");
+      const left = placeDependents(caps.map(c => c[1]), ordered.filter(x => !used.has(x))).map(withKids);
       for (const [cap, inSec] of caps) {
-        const body = inSec.map(withKids).join("");
-        if (body) live += `<div class="subhead" data-h="${esc(cap)}">${esc(cap)}</div>${body}`;
+        const body = inSec.map(withKids);
+        if (body.length) live.push(`<div class="subhead" data-h="${esc(cap)}">${esc(cap)}</div>`, ...body);
       }
-      if (left) live = left + live;
-    } else live = ordered.map(withKids).join("");
-    if (live) html += `<div class="group">${live}</div>`;
-    if (rest.length) html += `${ordered.length ? `<div class="sechead" data-h="more">More settings<span class="nolive">No live preview or animation</span></div>` : ""}<div class="group">${rest.map(withKids).join("")}</div>`;
+      live = [...left, ...live];
+    } else live = ordered.map(withKids);
+    if (live.length) parts.push(live);
+    if (rest.length) { if (ordered.length) parts.push(`<div class="sechead" data-h="more">More settings<span class="nolive">No live preview or animation</span></div>`); parts.push(rest.map(withKids)); }
   } else {
     const groups = {};
     for (const k of m.misc) {
@@ -690,7 +750,7 @@ function renderList() {
       const g = (p.screenTitle || "Unplaced") + (p.subScreenTitle ? " › " + p.subScreenTitle : "");
       (groups[g] = groups[g] || []).push(k);
     }
-    for (const g of Object.keys(groups).sort()) html += `<div class="gtitle" data-h="${esc(g)}">${esc(g)} · <span class="gn">${groups[g].length}</span></div><div class="group">${groups[g].map(withKids).join("")}</div>`;
+    for (const g of Object.keys(groups).sort()) parts.push(`<div class="gtitle" data-h="${esc(g)}">${esc(g)} · <span class="gn">${groups[g].length}</span></div>`, groups[g].map(withKids));
   }
   const list = $("list");
   // sub-options that are about to fold away keep their old look (no locks popping in) while they
@@ -714,9 +774,8 @@ function renderList() {
   // a locked card that unlocks loses its "Take me there" and its "needs ..." line: the card eases to its new
   // height and the two fade where they were, instead of the card snapping shorter (Max, Nov 23)
   const lockedWas = new Map(); if (list.dataset.view === section) list.querySelectorAll(".row.dis[data-row]").forEach(r => { const sd = r.querySelector(":scope > .side"); if (!sd || !r.offsetHeight || sd.offsetParent !== r) return; lockedWas.set(r.dataset.row, { h: r.offsetHeight, side: sd.cloneNode(true), x: sd.offsetLeft, y: sd.offsetTop, w: sd.offsetWidth }); });
-  paint(list, html, mergeZonePreview); list.dataset.view = section;
-  fitOpts(list);
-  const goneNow = hideLocked(list);
+  const fresh = paintList(list, parts, mergeZonePreview); list.dataset.view = section;
+  const goneNow = listQuiet(() => { fitOpts(fresh); return hideLocked(list); });
   midFold.forEach((h, grp) => {
     const box = list.querySelector(`[data-kids-of="${grp}"]`), left = (foldingKids.get(grp)?.until ?? 0) - performance.now(); if (!box || left < 30) return;
     box.classList.remove("open");
@@ -737,14 +796,15 @@ function renderList() {
       setTimeout(() => { const cur = list.querySelector(`[data-row="${grp}"] .kidbtn`); if (cur && !list.querySelector(`[data-kids-of="${grp}"]`)?.classList.contains("open")) { cur.outerHTML = fresh; const n = list.querySelector(`[data-row="${grp}"] .kidbtn`); n?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160 }); } }, Math.max(0, fold.until - performance.now()) + 20);
     }
     const kin = list.querySelector(`[data-kids-of="${grp}"] > .kin`); if (!kin) return;
-    const fresh = kin.innerHTML; kin.innerHTML = old; stripUnlock(kin);
+    // (taken clean: a card that stayed through this redraw may still wear an unlock that is playing)
+    const now = kin.cloneNode(true); stripUnlock(now); const fresh = now.innerHTML; kin.innerHTML = old; stripUnlock(kin);
     kin.querySelectorAll(".row").forEach(r => r.classList.remove("sel", "attn", "nudge"));
     const left = Math.max(0, (foldingKids.get(grp)?.until ?? now0) - performance.now());
     setTimeout(() => { if (kin.isConnected && !kin.parentElement.classList.contains("open")) kin.innerHTML = fresh; }, left + 20);
   });
   const keepOpen = [...list.querySelectorAll(".row > .txt > .sum")].filter(e => wasOpen.has(e.closest(".row").dataset.row));
   keepOpen.forEach(e => { e.style.transition = "none"; e.style.maxHeight = wasOpen.get(e.closest(".row").dataset.row) + "px"; });
-  fitSums(list, new Set(keepOpen));
+  listQuiet(() => fitSums(fresh, new Set(keepOpen)));
   // the unfold carries on once the redraw and everything after it is done (two frames on), so it
   // doesn't start inside that busy stretch and skip its first frames
   if (keepOpen.length) { void list.offsetHeight; afterBusy(() => keepOpen.forEach(e => { e.style.transition = ""; e.style.maxHeight = ""; })); }
@@ -878,9 +938,10 @@ function fitPills(box, pills, textOf, chrome, tight = false, pre) {
   box.style.justifyContent = fill ? "" : "center"; // pills that don't fill the line sit in its middle
 }
 function fitOpts(root = $("list")) {
-  const jobs = [...root.querySelectorAll(".ctl.optgrid")].map(box => [box, [...box.querySelectorAll(".opt")], o => o.textContent, 2 * OPT_PAD + 2, true])
+  const all = q => (Array.isArray(root) ? root : [root]).flatMap(r => [...r.querySelectorAll(q)]); // one box, or the cards just drawn
+  const jobs = all(".ctl.optgrid").map(box => [box, [...box.querySelectorAll(".opt")], o => o.textContent, 2 * OPT_PAD + 2, true])
     // list chips (speeds, words): text, then the remove button; the add field takes its own line
-    .concat([...root.querySelectorAll(".ctl.lst")].map(box => [box, [...box.querySelectorAll(".lchip")], o => o.firstChild ? o.firstChild.textContent : "", LCHIP_CHROME, false]));
+    .concat(all(".ctl.lst").map(box => [box, [...box.querySelectorAll(".lchip")], o => o.firstChild ? o.firstChild.textContent : "", LCHIP_CHROME, false]));
   // all writes undone, then all reads, then all writes: one layout for the whole list instead of one per box
   jobs.forEach(([box]) => { box.classList.remove("tight"); box.style.removeProperty("--tight-fs"); });
   const pre = jobs.map(([box, pills]) => pillsMeasure(box, pills));
