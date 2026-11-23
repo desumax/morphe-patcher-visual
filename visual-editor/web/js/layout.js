@@ -3,7 +3,7 @@
 
 // ------------------------------------------------------------------ theme and tablet layout
 // UI design (Max, Nov 23): "yt" = Original (YouTube's own settings look), "m3" = Morphe (Morphe Manager's
-// Material 3), "glass" = Glass (the Morphe layout as frosted panes over a soft coloured backdrop).
+// Material 3), "glass" = Glass (Liquid Glass, design 1: the Morphe layout as clear glass over a colourful backdrop).
 let theme = "yt";
 const UI_DESIGNS = [["yt", "Original"], ["m3", "Morphe"], ["glass", "Glass"]];
 function applyTheme() {
@@ -14,35 +14,45 @@ function applyTheme() {
   applyAppColors();
 }
 // Glass adapts to the device, after ntvien/liquid-glass's device tiers: the same design is drawn with as
-// much glass as the device can afford, so it never stutters.
-//   2 Full:  blurred, refracting panes (SVG displacement through backdrop-filter) on bars, menus, dialogs
-//            and the settings cards. Chromium only, on devices with 6+ GB and 6+ cores.
-//   1 Light: blur on the few panes that float over content (top of the list, menu, dialogs, snackbar);
-//            cards are tinted, not blurred.
-//   0 Flat:  no blur at all, tinted panes only: no backdrop-filter support, reduced transparency asked
-//            for, or a low-end device (2 GB or 2 cores or fewer).
-// While glass is on, frame times are sampled during scrolls and menu/dialog animations; if three
-// quarters of the frames take longer than 24 ms the tier drops one step, and the device remembers it.
+// much real glass as the device can afford, so it never stutters. Only small, still things bend what is
+// behind them; nothing large is sampled while the list scrolls (see the Glass notes in index.html).
+//   2 Full:  the lens on the top bar, tabs, dialogs, menu and snackbar, and on up to LENS_CAP chosen
+//            thumbs in the list. Chromium with SVG backdrop filters, on 8 cores, or 6 cores and 6 GB.
+//   1 Light: the lens on the top bar, tabs, dialogs, menu and snackbar only.
+//   0 Flat:  no backdrop-filter at all (the same paint): no backdrop-filter support, reduced transparency
+//            asked for, or a low-end device (2 GB or 2 cores or fewer).
+// While glass is on, frames are timed during scrolls and menu/dialog openings (glassSample); a device
+// that keeps falling behind drops a tier, remembered for GLASS_CAP_DAYS.
 let glassTier = null, glassCap = null;
 // the preview's own page can force a level, to see each one on any computer (Max, Nov 23 PM); the app never does
 let glassForced = null; try { const f = localStorage.getItem(LS + "-glassforce"); if (f !== null && /^[012]$/.test(f)) glassForced = +f; else if (f === "x" || f === "w") glassForced = f; } catch { /* storage unavailable */ }
+const GLASS_CAP_KEY = LS + "-glasscap", GLASS_CAP_DAYS = 7;
+// a flagship never gets the slow warning, and starts at Full (Max, Nov 23 evening: a Snapdragon 8 Gen 5
+// was warned; WebViews often don't say how much memory there is, so unknown memory counts as enough)
+function glassHighEnd() { const c = navigator.hardwareConcurrency || 0, m = navigator.deviceMemory || 8; return c >= 8 && m >= 4; }
 function glassTierDetect() {
   const sup = q => { try { return CSS.supports(q); } catch { return false; } };
   const mq = q => { try { return matchMedia(q).matches; } catch { return false; } };
   if (!(sup("backdrop-filter: blur(1px)") || sup("-webkit-backdrop-filter: blur(1px)"))) return 0;
-  if (mq("(prefers-reduced-transparency: reduce)")) return 0;
-  const mem = navigator.deviceMemory || 4, cores = navigator.hardwareConcurrency || 4;
-  if (mem <= 2 || cores <= 2) return 0;
+  if (mq("(prefers-reduced-transparency: reduce)") || glassLowEnd()) return 0;
+  const mem = navigator.deviceMemory || 8, cores = navigator.hardwareConcurrency || 4;
   const chromium = !!(window.chrome || /\bChrome\/\d/.test(navigator.userAgent));
-  if (chromium && mem >= 6 && cores >= 6 && sup("backdrop-filter: url(#lens)") && !mq("(prefers-reduced-motion: reduce)")) return 2;
+  if (chromium && lensOK && (glassHighEnd() || (mem >= 6 && cores >= 6)) && !mq("(prefers-reduced-motion: reduce)")) return 2;
   return 1;
 }
 function glassTierApply() {
-  if (glassCap === null) { glassCap = 2; try { const c = parseInt(localStorage.getItem(LS + "-glass"), 10); if (c >= 0 && c <= 2) glassCap = c; } catch { /* storage unavailable */ } }
+  if (glassCap === null) {
+    glassCap = 2;
+    try {
+      localStorage.removeItem(LS + "-glass"); // the old, permanent cap: one slow moment kept a phone down for good
+      const c = JSON.parse(localStorage.getItem(GLASS_CAP_KEY) || "null");
+      if (c && c.cap >= 0 && c.cap <= 2 && Date.now() - c.t < GLASS_CAP_DAYS * 864e5) glassCap = c.cap; else localStorage.removeItem(GLASS_CAP_KEY);
+    } catch { /* storage unavailable */ }
+  }
   if (typeof glassForced === "number") glassTier = glassForced;
   else if (glassTier === null) glassTier = Math.min(glassForced === "w" ? 0 : glassTierDetect(), glassCap);
   $("phone").dataset.gt = glassTier;
-  liquidSoon();
+  glassArt(); glassArtPlace(); lensR = new WeakMap(); liquidSoon();
 }
 const GLASS_TIER_NAMES = ["Flat glass", "Light glass", "Full glass"];
 // Glass where it can't run (Max, Nov 23): no backdrop-filter at all, or an Android older than
@@ -66,8 +76,9 @@ function uiPick(id) {
   if (theme === "glass" && glassLowEnd()) setTimeout(glassSlowWarn, 450); // after the thumb has moved
   return true;
 }
-// A device that is too weak for glass, found by detection (2 GB or 2 cores) or by slow frames while glass
-// is on: a popup says so once, in the dialog look of the rest (Max, Nov 23). Each new finding warns again.
+// A device that is too weak for glass: found by detection (2 GB or 2 cores), or by frames that stay slow
+// even in Flat glass on a device that isn't high-end (glassJudge). A popup says so, in the dialog look of
+// the rest (Max, Nov 23). Dropping a tier is quiet: it only means less real glass.
 const GLASS_SLOW_MSG = "Your device is not powerful enough for this glass design, please switch to alternatives for best performance!";
 function glassLowEnd() { if (glassForced === "w") return true; const m = navigator.deviceMemory || 4, c = navigator.hardwareConcurrency || 4; return m <= 2 || c <= 2; }
 function glassSlowWarn() {
@@ -78,33 +89,63 @@ function glassSlowWarn() {
     <div class="acts"><button class="dbtn primary" id="dOk">OK</button></div>`);
   $("dOk").onclick = closeDialog;
 }
+// ---------- the backdrop of design 1 ----------
+// The lab's art (gradient, five colour blobs, stars, light bars, faint words, hills at the foot), drawn
+// once into an image, since glass is clear and needs something to show. The phone paints it from its top
+// left corner at the phone's width; whatever hides the list paints the same image shifted by its own
+// place (--g-art-x/-top, here; --g-art-y adds the top bar in index.html), so the two meet without a seam.
+let glassArtDone = false;
+function glassArt() {
+  if (glassArtDone) return; glassArtDone = true;
+  const W = 412, H = 960, k = Math.min(2, Math.max(1, Math.round(devicePixelRatio || 1))), c = document.createElement("canvas"); c.width = W * k; c.height = H * k;
+  const x = c.getContext("2d"); if (!x) return; x.scale(k, k);
+  let s = 7; const rnd = () => (s = (s * 9301 + 49297) % 233280) / 233280;
+  const g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, "#1a1440"); g.addColorStop(.42, "#3b1f5c"); g.addColorStop(.72, "#0f3b4a"); g.addColorStop(1, "#071a24");
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  [[70, 300, 170, "rgba(255,80,160,.55)"], [340, 470, 180, "rgba(40,200,255,.45)"], [220, 640, 190, "rgba(255,170,60,.42)"], [60, 780, 150, "rgba(120,255,170,.32)"], [330, 880, 160, "rgba(150,90,255,.5)"], [300, 110, 150, "rgba(90,120,255,.4)"]]
+    .forEach(([cx, cy, r, col]) => { const rg = x.createRadialGradient(cx, cy, 0, cx, cy, r); rg.addColorStop(0, col); rg.addColorStop(1, "rgba(0,0,0,0)"); x.fillStyle = rg; x.fillRect(0, 0, W, H); });
+  for (let i = 0; i < 170; i++) { x.fillStyle = `rgba(255,255,255,${.25 + rnd() * .6})`; const r = rnd() * 1.4 + .3; x.beginPath(); x.arc(rnd() * W, rnd() * H, r, 0, 7); x.fill(); }
+  x.save(); x.globalAlpha = .1; x.fillStyle = "#fff"; for (let i = -4; i < 16; i++) { x.save(); x.translate(i * 46, 260); x.rotate(-.5); x.fillRect(0, 0, 6, 1000); x.restore(); } x.restore();
+  x.save(); x.font = "900 74px system-ui, sans-serif"; x.fillStyle = "rgba(255,255,255,.1)"; ["MORPHE", "VISUAL", "GLASS", "MORPHE"].forEach((t, i) => x.fillText(t, -6 + (i % 2) * 40, 400 + i * 120)); x.restore();
+  ["#2a1f55", "#1b1540"].forEach((col, j) => { x.fillStyle = col; x.beginPath(); x.moveTo(0, H); let y = H - 60 + j * 26; for (let px = 0; px <= W; px += 18) { y += (rnd() - .5) * 34; y = Math.max(H - 90 + j * 20, Math.min(H + j * 30, y)); x.lineTo(px, y); } x.lineTo(W, H); x.fill(); });
+  const set = u => $("phone").style.setProperty("--g-art", `url("${u}")`);
+  try { if (c.toBlob) c.toBlob(b => set(b ? URL.createObjectURL(b) : c.toDataURL()), "image/webp", .9); else set(c.toDataURL("image/jpeg", .9)); } catch { /* a canvas that can't be read: the gradient stays */ }
+}
+function glassArtPlace() {
+  const ph = $("phone"), app = $("app"), st = $("stick"); if (!ph || !app || theme !== "glass") return;
+  const pr = ph.getBoundingClientRect(), k = pr.width / (ph.offsetWidth || 1) || 1, top = pr.top + ph.clientTop * k, left = pr.left + ph.clientLeft * k;
+  ph.style.setProperty("--g-art-w", ph.clientWidth + "px");
+  ph.style.setProperty("--g-art-top", Math.round((app.getBoundingClientRect().top - top) / k) + "px");
+  if (st && st.offsetWidth) ph.style.setProperty("--g-art-x", Math.round((st.getBoundingClientRect().left - left) / k) + "px");
+}
+if (window.ResizeObserver) { const ro = new ResizeObserver(() => glassArtPlace()); ro.observe($("phone")); ro.observe($("stick")); }
 // ---------- Liquid Glass lens (Max, Nov 23: glass design 1) ----------
 // Clear glass that bends what is behind it at its edges, with no frost: the web port of ntvien/liquid-glass's
 // AGSL lens. For each surface size a displacement map is baked once in a canvas: inside a band B from the
 // rounded edge, every point is pushed inward along the edge normal by (1 - sqrt(1 - u²)) × A, u = 1 - depth/B.
-// The map feeds feDisplacementMap through backdrop-filter: url(#…), then a saturation lift; floats add a slight
-// colour fringe (red, green and blue bent by ×1, ×1.12, ×1.24). Maps are cached by size, corner and recipe.
-// What bends, by tier (the --gx-* variables in index.html draw the rest):
-//   2 Full:  floats (sticky preview, menu, dialogs, snackbar) with fringe, cards, tracks, chosen thumbs;
-//   1 Light: floats and chosen thumbs only, at most LENS_CAP thumbs on screen (as the repo caps real glass
-//            per screen); cards keep rim and tint without sampling anything;
-//   0 Flat:  no lens and no backdrop-filter at all: translucent fill, a top-left sheen and a 1px stroke.
-// Only what is on screen gets a lens; the rest is cleared, so the cost follows what is visible.
+// The map feeds feDisplacementMap through backdrop-filter: url(#…), then a saturation lift; in Full, dialogs
+// and the top bar add a slight colour fringe (red, green and blue bent by ×1, ×1.1, ×1.2). Maps are cached by
+// size, corner and recipe. The recipes are the lab's (chrome, ctl, thumb, dlg). What bends, by tier:
+//   2 Full:  top bar, tabs, dialogs, menu, snackbar, and up to LENS_CAP chosen thumbs on screen;
+//   1 Light: top bar, tabs, dialogs, menu, snackbar;
+//   0 Flat:  nothing.
+// Cards and tracks never bend: they scroll, and each would be sampled again on every frame of a scroll
+// (that is what made Full glass slow on a flagship). Only what is on screen gets a lens.
 const LENS = {
-  float: { band: 16, amount: 26, sat: 1.6, blur: 2.5 }, floatFull: { band: 16, amount: 26, chroma: .12, sat: 1.6, blur: 2.5 },
+  chrome: { band: 16, amount: 26, sat: 1.6, blur: 2.5 }, chromeFull: { band: 16, amount: 26, chroma: .12, sat: 1.6, blur: 2.5 },
   dlg: { band: 20, amount: 30, sat: 1.6, blur: 6 }, dlgFull: { band: 20, amount: 30, chroma: .1, sat: 1.6, blur: 6 },
-  card: { band: 12, amount: 18, sat: 1.4 }, track: { band: 8, amount: 12, sat: 1.5 }, picked: { band: 9, amount: 14, sat: 1.8 },
+  ctl: { band: 8, amount: 12, sat: 1.5 }, thumb: { band: 9, amount: 14, sat: 1.8 },
 };
 const LENS_ROLES = [
-  { sel: ".stick, html:not(.inapp) #picker, .snack", L: "float", tier: 1 },
-  { sel: ".dlg", L: "dlg", tier: 1 },
-  { sel: ".group", L: "card", tier: 2 },
-  { sel: ".seg, .seg3, .lt7, .tab7:not([aria-selected=\"true\"])", L: "track", tier: 2 },
-  { sel: ".seg3.th > .seg3-th, .lt7 > i, .ctl .opt[aria-pressed=\"true\"], .tab7[aria-selected=\"true\"]", L: "picked", tier: 1, cap: true },
+  { sel: ".appbar > .iconbtn, .secpill, .seg, .snack", L: "chrome", tier: 1 },
+  { sel: ".dlg, html:not(.inapp) #picker", L: "dlg", tier: 1 },
+  { sel: ".tab7:not([aria-selected=\"true\"])", L: "ctl", tier: 1 },
+  { sel: ".tab7[aria-selected=\"true\"]", L: "thumb", tier: 1 },
+  { sel: ".seg3.th > .seg3-th, .lt7 > i, .ctl .opt[aria-pressed=\"true\"]", L: "thumb", tier: 2, cap: true },
 ];
-const LENS_CAP = 8;
+const LENS_CAP = 6;
 const lensOK = (() => { try { return CSS.supports("backdrop-filter", "url(#x)") || CSS.supports("-webkit-backdrop-filter", "url(#x)"); } catch { return false; } })();
-const lensMaps = new Map(); let lensN = 0;
+const lensMaps = new Map(); let lensN = 0, lensR = new WeakMap(); // corner radius per element, read once
 function lensSd(px, py, hw, hh, r) { const qx = Math.abs(px) - hw + r, qy = Math.abs(py) - hh + r; return Math.min(Math.max(qx, qy), 0) + Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) - r; }
 function lensFilter(w, h, r, L) {
   w = Math.max(2, Math.round(w)); h = Math.max(2, Math.round(h)); r = Math.min(r, w / 2, h / 2);
@@ -143,15 +184,16 @@ function liquidSync() {
   if (!tier) { lensOn.forEach(lensClear); lensOn = new Set(); return; }
   const vh = innerHeight, vw = innerWidth, want = [], seen = new Set();
   // reads first, then writes (one layout)
-  for (let i = LENS_ROLES.length - 1; i >= 0; i--) { // later roles win (a chosen tab is picked, not track)
+  for (let i = LENS_ROLES.length - 1; i >= 0; i--) { // later roles win
     const R = LENS_ROLES[i]; if (tier < R.tier) continue;
     let n = 0;
     ph.querySelectorAll(R.sel).forEach(e => {
-      if (seen.has(e)) return; seen.add(e);
+      if (seen.has(e) || (R.cap && n >= LENS_CAP)) return; seen.add(e);
       const b = e.getBoundingClientRect(); if (b.width < 4 || b.height < 4 || b.bottom < 0 || b.top > vh || b.right < 0 || b.left > vw) return;
       if (e.checkVisibility && !e.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true, opacityProperty: true, visibilityProperty: true })) return; // a closed menu or dialog
-      if (R.cap && tier === 1 && ++n > LENS_CAP) return;
-      want.push([e, e.offsetWidth || b.width, e.offsetHeight || b.height, parseFloat(getComputedStyle(e).borderTopLeftRadius) || 0, LENS[R.L + (tier === 2 && LENS[R.L + "Full"] ? "Full" : "")]]);
+      n++;
+      let r = lensR.get(e); if (r === undefined) { r = parseFloat(getComputedStyle(e).borderTopLeftRadius) || 0; lensR.set(e, r); }
+      want.push([e, e.offsetWidth || b.width, e.offsetHeight || b.height, r, LENS[R.L + (tier === 2 && LENS[R.L + "Full"] ? "Full" : "")]]);
     });
   }
   const next = new Set();
@@ -159,33 +201,51 @@ function liquidSync() {
   lensOn.forEach(e => { if (!next.has(e)) lensClear(e); }); lensOn = next;
 }
 function liquidSoon() { if (!lensRaf && theme === "glass") lensRaf = requestAnimationFrame(() => requestAnimationFrame(liquidSync)); }
-// redraws, choices, resizes and scrolls all ask for one sync on the next frames
+// what can change which glass is on screen asks for one sync on the next frames: choices and redraws in the
+// list and the tabs, the top bar, and dialogs, the menu and the snackbar opening. The live preview is left
+// out on purpose: its animations change the page many times a second and never hold glass.
 {
-  const ph = $("phone");
-  new MutationObserver(liquidSoon).observe(ph, { childList: true, subtree: true, attributes: true, attributeFilter: ["aria-pressed", "aria-selected", "data-at", "data-gt"] });
+  const mo = new MutationObserver(liquidSoon), A = ["aria-pressed", "aria-selected", "aria-checked", "data-at"];
+  ["list", "tabs", "pickGrid"].forEach(id => { const e = $(id); if (e) mo.observe(e, { childList: true, subtree: true, attributes: true, attributeFilter: A }); });
+  const bar = document.querySelector(".appbar"); if (bar) mo.observe(bar, { childList: true, subtree: true, attributes: true, attributeFilter: A });
+  const mc = new MutationObserver(() => { liquidSoon(); setTimeout(liquidSoon, 420); }); // again once it has faded in or out
+  ["dlg", "picker", "snack", "app"].forEach(id => { const e = $(id); if (e) mc.observe(e, { attributes: true, attributeFilter: ["class"] }); });
+  mo.observe($("phone"), { attributes: true, attributeFilter: ["data-gt", "class"] });
   let st = 0; document.addEventListener("scroll", () => { clearTimeout(st); st = setTimeout(liquidSoon, 120); }, { capture: true, passive: true });
   addEventListener("resize", liquidSoon);
 }
-// frame-time watch: a short window of frames after a scroll or an opening menu or dialog
-let glassWatch = null;
-function glassSample() {
+// Frame watch (rebuilt Nov 23 evening, after a Snapdragon 8 Gen 5 was told it was too slow): 90 frames
+// while the list or the menu scrolls, or a menu or dialog opens, leaving out the first frames (the first
+// paint of a new layer is always slow) and gaps from a hidden page. A window is slow when its median frame
+// takes over twice the display's own frame time and over 22 ms (most frames under 45 fps). Two slow windows
+// in a row drop the tier one step, quietly; only Flat still being slow, on a device that isn't high-end,
+// shows the warning (glass itself costs nothing in Flat, but the device can't keep up with this look).
+let glassWatch = null, glassStrikes = 0;
+function glassSample(ev) {
   setTimeout(liquidSoon, 40); // a menu or dialog opening: its glass gets its lens once it shows
-  if (theme !== "glass" || !glassTier || glassWatch || typeof glassForced === "number") return;
-  const dts = []; let last = 0;
+  if (ev && ev.type === "scroll" && ev.target !== $("scroller") && ev.target !== $("picker")) return; // the preview's own motion isn't a scroll of the list
+  if (theme !== "glass" || glassWatch || typeof glassForced === "number" || document.hidden) return;
+  const dts = []; let last = 0, skip = 8;
   glassWatch = requestAnimationFrame(function f(t) {
-    if (last) { const dt = t - last; if (dt < 250) dts.push(dt); } // a hidden tab's gap isn't a slow frame
+    if (document.hidden) { glassWatch = null; return; }
+    if (last && --skip < 0) { const dt = t - last; if (dt < 200) dts.push(dt); }
     last = t;
-    if (dts.length < 40) { glassWatch = requestAnimationFrame(f); return; }
-    glassWatch = null;
-    dts.sort((a, b) => a - b);
-    if (dts[Math.floor(dts.length * .75)] > 24 && theme === "glass" && glassTier > 0) {
-      glassTier--; glassCap = glassTier;
-      try { localStorage.setItem(LS + "-glass", String(glassCap)); } catch { /* storage unavailable */ }
-      $("phone").dataset.gt = glassTier;
-      if (typeof renderBar === "function" && $("picker").classList.contains("open")) renderBar();
-      glassSlowWarn(); // slow frames: the device can't keep up with this much glass
-    }
+    if (dts.length < 90) { glassWatch = requestAnimationFrame(f); return; }
+    glassWatch = null; glassJudge(dts);
   });
+}
+function glassJudge(dts) {
+  dts.sort((a, b) => a - b);
+  const frame = dts[Math.floor(dts.length * .1)], med = dts[dts.length >> 1];
+  glassStrikes = med > Math.max(22, frame * 2) ? glassStrikes + 1 : 0;
+  if (glassStrikes < 2 || theme !== "glass") return;
+  glassStrikes = 0;
+  if (glassTier > 0) {
+    glassTier--; glassCap = glassTier;
+    try { localStorage.setItem(GLASS_CAP_KEY, JSON.stringify({ cap: glassCap, t: Date.now() })); } catch { /* storage unavailable */ }
+    $("phone").dataset.gt = glassTier;
+    if (typeof renderBar === "function" && $("picker").classList.contains("open")) renderBar();
+  } else if (!glassHighEnd()) glassSlowWarn();
 }
 document.addEventListener("scroll", glassSample, { capture: true, passive: true });
 function setGlassForce(v) {

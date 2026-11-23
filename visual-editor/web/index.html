@@ -1063,129 +1063,154 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .sechead .nolive { font-weight: 400; color: var(--m-on-var); opacity: .75; font-size: 12px; }
 .theme-yt .sechead .nolive { color: #888; }
 /* ---------- Glass UI design (Max, Nov 23) ----------
-   Liquid Glass (Max chose design 1 of ten, Nov 23): clear glass over a soft coloured backdrop that bends
-   what is behind it at its edges (the lens, layout.js liquidSync), with no frost anywhere: a thin bright
-   rim, slight vibrancy, a dark tint on what floats so labels read, translucent coloured thumbs.
-   Built from ROLES, each written once below; to change how a kind of surface looks, change its role,
-   not the element. To give a new element the glass look, add it to the one role list it belongs to:
-     float  = panes floating over content (sticky preview, menu, dialogs, snackbar)
-     card   = setting cards and the tutorial's panes
-     rim    = everything with the lit gradient rim (floats, cards, tutorial panes)
-     ctl    = clear-glass controls (toggles, option pills, tabs, switches, buttons, icons)
-     track  = the controls a thumb glides in (they also refract in Full)
-     picked = what is chosen: translucent coloured glass with a bright rim and a soft shadow
-     press  = everything tappable: it gives a little and lights up while pressed
-   How much real glass is drawn depends on the device (data-gt on #phone, from layout.js, after
-   ntvien/liquid-glass's device tiers). Tiers only change the --gx-* variables, never the roles:
-     0 Flat  = no backdrop-filter at all (the repo's Off tier): translucent fills, a top-left sheen and
-               1px strokes; floats stay near opaque so text over content reads;
-     1 Light = the lens on floats and on the chosen thumbs on screen; cards keep rim and tint only;
-     2 Full  = the lens also on cards and tracks, and a slight colour fringe on the floats.
-   The lens itself is set per element by liquidSync (backdrop-filter: url(#lens…)); the --gx-*-fx
-   variables are only the fallback where SVG backdrop filters are missing.
-   Covers that must hide what is behind them (locks, the search field) stay near opaque in every tier. */
+   Liquid Glass, design 1 of ten (glass-designs/glass-lab.html?d=liquid), drawn from that lab's recipe:
+   clear glass over a colourful backdrop that bends what is behind it at its edges (the lens, layout.js
+   liquidSync), no frost, a thin bright rim (a hairline plus a lit top edge), a dark tint on chrome so labels
+   read, translucent coloured thumbs. Built from ROLES named as in the lab; change a role, not an element:
+     chrome = the top bar's round buttons, the screen pill, Original/Morphe, the snackbar
+     card   = every setting is its own card (radius 22, 8px apart); menu cards; tutorial panes
+     ctl    = clear controls: tabs, Hide/Show and switch tracks, option pills, the slider track, small buttons
+     thumb  = what is chosen: a translucent tone (on, off, blue, white) with a bright rim and a soft shadow
+     dlg    = dialogs and the screen menu (radius 30)
+     fill   = the slider's fill; lock = the cover with the gold lock; press = what gives under the finger
+   Backdrop: the lab's art (gradient, colour blobs, stars, light bars, faint words), drawn once by glassArt()
+   (layout.js) into an image on the phone. What hides the list (the sticky preview area, the app's menu,
+   the editor behind a back swipe) paints the same image at the same place (--g-art-*), so nothing blurs.
+   Cost (Max, Nov 23 evening: a Snapdragon 8 Gen 5 got the slow warning): nothing large samples what is
+   behind it while the list scrolls; cards, tracks and locks are plain paint. Tiers only change what
+   liquidSync bends and the --gx-* fallbacks:
+     2 Full  = lens on the top bar, tabs, dialogs, menu and snackbar, and on up to LENS_CAP chosen thumbs;
+     1 Light = lens on the top bar, tabs, dialogs, menu and snackbar;
+     0 Flat  = no backdrop-filter at all: the same paint, dialogs and menu near opaque.
+   Locks and the search field stay near opaque in every tier. */
 .phone.theme-glass {
-  --g-pane: rgba(18,18,26,.38); --g-pane-solid: rgba(17,19,30,.94); --g-stick: rgba(18,18,26,.56); --g-dlg: rgba(22,22,30,.42);
-  --g-rim: linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,.2) 14%, rgba(255,255,255,.15) 80%, rgba(255,255,255,.22)); /* a 1px hairline, brighter where the light hits the top */
-  --g-shine: radial-gradient(120% 90% at 0% 0%, rgba(255,255,255,.13), rgba(255,255,255,0) 55%); /* Flat only: the sheen stands in for the lens */
-  --g-ctl: linear-gradient(rgba(255,255,255,.06), rgba(255,255,255,.06));
+  --g-chrome: rgba(18,18,26,.38);
+  --g-chrome-edge: inset 0 0 0 1px rgba(255,255,255,.22), inset 0 1px 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(255,255,255,.12), 0 8px 24px rgba(0,0,0,.35);
+  --g-card: rgba(255,255,255,.035);
+  --g-card-edge: inset 0 0 0 1px rgba(255,255,255,.16), inset 0 1px 0 rgba(255,255,255,.35);
+  --g-ctl: rgba(255,255,255,.06);
   --g-ctl-edge: inset 0 0 0 1px rgba(255,255,255,.2), inset 0 1px 0 rgba(255,255,255,.4);
-  --g-gloss: linear-gradient(transparent, transparent); /* no painted gloss: the lens and the rim carry the light */
-  --g-picked-edge: inset 0 0 0 1px rgba(255,255,255,.3), inset 0 1px 0 rgba(255,255,255,.6), 0 4px 12px rgba(0,0,0,.3);
-  --g-press: rgba(255,255,255,.16);
-  --g-edge: rgba(255,255,255,.14); --g-hi: rgba(255,255,255,.3); --g-line: rgba(255,255,255,.08);
-  --g-blur: blur(2.5px) saturate(1.6); --g-blur-strong: blur(2.5px) saturate(1.6); /* fallback only, and never frosted */
-  /* what the tier draws (Flat: no blur anywhere) */
-  --gx-float: var(--g-pane-solid); --gx-stick: var(--g-pane-solid); --gx-dlg: var(--g-pane-solid); --gx-float-fx: none; --gx-float-fx-strong: none; --gx-card-fx: none; --gx-track-fx: none; --gx-lock-fx: none;
-  --gx-tut: rgba(8,10,18,.82); --gx-tut-fx: none;
+  --g-thumb-edge: inset 0 0 0 1px rgba(255,255,255,.3), inset 0 1px 0 rgba(255,255,255,.6), 0 4px 12px rgba(0,0,0,.3);
+  --g-on: rgba(43,92,52,.72); --g-off: rgba(92,43,43,.72); --g-blue: rgba(30,90,168,.78); --g-white: rgba(255,255,255,.82); --g-knob: rgba(255,255,255,.18); --g-def: rgba(70,72,84,.62);
+  --g-fill: rgba(62,166,255,.8);
+  --g-dlg: rgba(22,22,30,.4);
+  --g-dlg-edge: inset 0 0 0 1px rgba(255,255,255,.24), inset 0 1.5px 0 rgba(255,255,255,.55), 0 20px 50px rgba(0,0,0,.5);
+  --g-press: rgba(255,255,255,.16); --g-line: rgba(255,255,255,.1);
+  /* the backdrop image and where it sits (glassArtPlace, layout.js); until it is drawn, its gradient */
+  --g-art-bg: #1b1540;
+  --g-art-paint: var(--g-art, linear-gradient(#1a1440, #3b1f5c 45%, #0f3b4a 75%, #071a24)) calc(-1 * var(--g-art-x, 0px)) calc(-1 * var(--g-art-y, 0px)) / var(--g-art-w, 100%) auto no-repeat, var(--g-art-bg);
+  /* Flat: nothing bends, so what floats over the list is near opaque */
+  --gx-dlg: rgba(24,22,36,.95); --gx-menu: rgba(24,22,36,.95); --gx-snack: rgba(24,22,36,.92); --gx-float-fx: none; --gx-dlg-fx: none; --gx-knob-fx: none;
+  --gx-tut: rgba(8,10,18,.86); --gx-tut-fx: none;
   --m-bg: #0a0c14; --m-surface: #0a0c14; --m-c-lowest: rgba(0,0,0,.25); --m-c: rgba(255,255,255,.035); --m-c-high: rgba(255,255,255,.09); --m-c-highest: rgba(255,255,255,.14);
-  --m-on: #f4f6fc; --m-on-var: rgba(232,238,252,.72); --m-outline: rgba(255,255,255,.32); --m-outline-var: rgba(255,255,255,.16);
+  --m-on: #f4f6fc; --m-on-var: rgba(236,240,252,.74); --m-outline: rgba(255,255,255,.32); --m-outline-var: rgba(255,255,255,.16);
   --m-primary: #9fcaff; --m-on-primary: #05213f; --m-primary-c: rgba(120,170,255,.22); --m-on-primary-c: #dcebff; --m-secondary-c: rgba(255,255,255,.12);
-  --lk-grey: rgba(44,50,68,.94); --lk-veil: rgba(30,35,50,.86); --r-l: 22px; --r-li: 24px;
-  background: radial-gradient(120% 55% at 0% 0%, rgba(72,112,255,.46), transparent 62%), radial-gradient(90% 50% at 100% 28%, rgba(0,186,176,.32), transparent 62%), radial-gradient(110% 60% at 22% 100%, rgba(150,78,255,.36), transparent 64%), radial-gradient(80% 45% at 100% 92%, rgba(255,110,150,.2), transparent 60%), #07090f;
+  --lk-grey: rgba(28,28,38,.9); --lk-veil: rgba(28,28,38,.84); --r-l: 22px; --r-li: 24px;
+  background: var(--g-art, linear-gradient(#1a1440, #3b1f5c 45%, #0f3b4a 75%, #071a24)) 0 0 / var(--g-art-w, 100%) auto no-repeat, var(--g-art-bg);
 }
-/* Light and Full */
+.phone.theme-glass .app { --g-art-y: calc(var(--g-art-top, 0px) + var(--abh, 56px)); }
+.phone.theme-glass .app.barhidden { --g-art-y: var(--g-art-top, 0px); }
+/* Light and Full: dialogs, the menu and the snackbar are clear glass with the lens (blur where SVG lenses are missing) */
 .phone.theme-glass:is([data-gt="1"], [data-gt="2"]) {
-  --g-shine: linear-gradient(transparent, transparent);
-  --gx-float: var(--g-pane); --gx-stick: var(--g-stick); --gx-dlg: var(--g-dlg); --gx-float-fx: var(--g-blur); --gx-float-fx-strong: var(--g-blur-strong); --gx-lock-fx: blur(4px) saturate(1.4);
-  --gx-tut: rgba(8,10,18,.5); --gx-tut-fx: blur(16px) saturate(1.6);
-  --lk-grey: rgba(44,50,68,.72); --lk-veil: rgba(30,35,50,.6); }
-/* Full: the lens also on cards and tracks (liquidSync); without SVG backdrop filters they stay clear */
+  --gx-dlg: var(--g-dlg); --gx-menu: rgba(22,22,30,.5); --gx-snack: var(--g-chrome); --gx-float-fx: blur(2.5px) saturate(1.6); --gx-dlg-fx: blur(6px) saturate(1.6);
+  --gx-tut: rgba(8,10,18,.6); --gx-tut-fx: blur(12px) saturate(1.6); }
+/* Full: the slider knob brightens and lifts the colour under it (a CSS stand-in: a lens can't reach a native thumb) */
+.phone.theme-glass[data-gt="2"] { --gx-knob-fx: saturate(1.8) brightness(1.2); }
 
-/* role: float */
-.theme-glass .stick { background: var(--gx-stick); box-shadow: 0 1px 0 var(--g-edge), 0 10px 18px -10px rgba(0,0,0,.55); -webkit-backdrop-filter: var(--gx-float-fx); backdrop-filter: var(--gx-float-fx); }
-html .phone.theme-glass #picker, .theme-glass .dlg, .theme-glass .snack { background: var(--gx-float) var(--g-shine); box-shadow: 0 18px 44px rgba(0,0,0,.5); -webkit-backdrop-filter: var(--gx-float-fx); backdrop-filter: var(--gx-float-fx); }
-html .phone.theme-glass #picker { -webkit-backdrop-filter: var(--gx-float-fx-strong); backdrop-filter: var(--gx-float-fx-strong); }
-html.inapp .phone.theme-glass #picker { box-shadow: inset 0 1px 0 var(--g-edge); }
-.theme-glass .dlg { background-color: var(--gx-dlg); box-shadow: 0 20px 50px rgba(0,0,0,.5); }
+/* the backdrop, painted again where the list must hide (the sticky preview follows the bar as it hides) */
+.theme-glass .stick, html.inapp .phone.theme-glass #picker, html.inapp.peekback .phone.theme-glass .editor { background: var(--g-art-paint); box-shadow: none; }
+.theme-glass .stick { transition: background-position 260ms var(--ease); }
+.theme-glass .status, .theme-glass .appbar { background: transparent; }
+
+/* role: chrome */
+.theme-glass .appbar > .iconbtn, .theme-glass .secpill, .theme-glass .seg { background-color: var(--g-chrome); box-shadow: var(--g-chrome-edge); }
+.theme-glass .appbar > .iconbtn:hover, .theme-glass .secpill:hover { background-color: rgba(40,40,56,.5); }
+.theme-glass .seg { --seg-on: var(--g-blue); padding: 3px; }
+.theme-glass .seg::before { top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px); box-shadow: var(--g-thumb-edge); }
+.theme-glass .seg:has(#btnOrig[aria-pressed="true"])::before { background: rgba(160,32,32,.78); }
+.theme-glass .snack { background: var(--gx-snack); color: var(--m-on); border-radius: 18px; box-shadow: var(--g-chrome-edge); -webkit-backdrop-filter: var(--gx-float-fx); backdrop-filter: var(--gx-float-fx); }
+.theme-glass .snack button { color: var(--m-primary); }
+.theme-glass .snack code { color: #b9c0d0; }
+
 /* role: card */
-.theme-glass .group { background: var(--m-c) var(--g-shine); isolation: isolate; -webkit-backdrop-filter: var(--gx-card-fx); backdrop-filter: var(--gx-card-fx); } /* isolate: its rim stays inside it, under the sticky preview and the menus */
-.theme-glass .tut .tlist, .theme-glass .tut .tbar7, .theme-glass .tut .tres, .theme-glass .tut .tstyle { background: rgba(255,255,255,.07) var(--g-shine); }
-.theme-glass .tut .tpick, .theme-glass .tut .tdlg { background: rgba(22,26,40,.94) var(--g-shine); }
-/* role: rim, a gradient drawn by a masked ::after (no border, so nothing is laid out again); the ones
-   not placed already get position: relative */
-.theme-glass .group, .theme-glass .dlg, .theme-glass .tut .tres, .theme-glass .tut .tdlg, .theme-glass .tut .tstyle { position: relative; }
-.theme-glass .group::after, html .phone.theme-glass #picker::after, .theme-glass .dlg::after, .theme-glass .snack::after, .theme-glass .tut .tlist::after, .theme-glass .tut .tbar7::after, .theme-glass .tut .tres::after, .theme-glass .tut .tdlg::after, .theme-glass .tut .tpick::after, .theme-glass .tut .tstyle::after {
-  content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: var(--g-rim); pointer-events: none; z-index: 6;
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
-html.inapp .phone.theme-glass #picker::after { display: none; }
+.theme-glass .group { background: none; margin: 0 10px 2px; overflow: visible; }
+.theme-glass .group > :is(.row, .unit, .zgrid) { background-color: var(--g-card); border-radius: 22px; margin-bottom: 8px; overflow: hidden; }
+.theme-glass .group > .row { box-shadow: var(--g-card-edge); }
+.theme-glass .group > :is(.unit, .zgrid) { position: relative; }
+.theme-glass .group > :is(.unit, .zgrid)::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: var(--g-card-edge); pointer-events: none; z-index: 6; } /* the rim over the rows inside */
+.theme-glass .group > .row, .theme-glass .group > .unit > .row:first-child, .theme-glass .group > .zgrid, .theme-glass .group > * + .zgrid, .theme-glass .zgrid + * { border-top: 0; }
+.theme-glass .group > .row.sel::before, .theme-glass .group > .unit > .row.sel:first-child::before { top: 14px; bottom: 14px; }
+.theme-glass .kids .row, .theme-glass .zcol .row + .row, .theme-glass .zcol .unit + .row, .theme-glass .zcol .unit + .unit > .row:first-child, .theme-glass .zcol .row + .unit > .row:first-child { border-top-color: var(--g-line); }
+.theme-glass .zgrid > .row.zprev { border-left-color: var(--g-line); }
+.theme-glass .pick { background-color: var(--g-card); box-shadow: var(--g-card-edge); border-radius: 18px; }
+.theme-glass .pick[aria-current="true"] { background-color: rgba(255,255,255,.14); box-shadow: var(--g-thumb-edge); }
+.theme-glass .tut .tlist, .theme-glass .tut .tbar7, .theme-glass .tut .tres, .theme-glass .tut .tstyle { background: rgba(255,255,255,.07); box-shadow: var(--g-card-edge); }
+.theme-glass .tut .tpick, .theme-glass .tut .tdlg { background: rgba(22,26,40,.94); box-shadow: var(--g-dlg-edge); }
+
 /* role: ctl */
-.theme-glass .seg, .theme-glass .seg3, .theme-glass .lt7, .theme-glass .tab7, .theme-glass .secpill, .theme-glass .kidbtn, .theme-glass .ctl .opt, .theme-glass .ordreset, .theme-glass .offnew, .theme-glass .row .kind, .theme-glass .pick .pi, .theme-glass .sw, .theme-glass .tut .tseg, .theme-glass .tut .tseg3, .theme-glass .tut .ttabs span, .theme-glass .tut .tb, .theme-glass .dbtn:not(.primary) {
-  background-image: var(--g-ctl); box-shadow: var(--g-ctl-edge); }
+.theme-glass .seg3, .theme-glass .lt7, .theme-glass .tab7, .theme-glass .kidbtn, .theme-glass .ctl .opt, .theme-glass .ordreset, .theme-glass .offnew, .theme-glass .row .kind, .theme-glass .pick .pi, .theme-glass .sw, .theme-glass .tut .tseg, .theme-glass .tut .tseg3, .theme-glass .tut .ttabs span, .theme-glass .tut .tb, .theme-glass .dbtn:not(.primary), .theme-glass .dlg .choice button {
+  background-color: var(--g-ctl); box-shadow: var(--g-ctl-edge); }
+.theme-glass .ctl .opt { border-color: transparent; }
+.theme-glass .tab7 { border-radius: 999px; padding: 0 14px; }
+.theme-glass .sw { border-color: transparent; }
 .theme-glass .goto, .theme-glass .searchbar { box-shadow: var(--g-ctl-edge); }
-/* role: track */
-.theme-glass .seg, .theme-glass .seg3, .theme-glass .lt7, .theme-glass .tab7 { -webkit-backdrop-filter: var(--gx-track-fx); backdrop-filter: var(--gx-track-fx); }
-/* role: picked */
-.theme-glass .seg3-th, .theme-glass .lt7 > i, .theme-glass .glayer > i, .theme-glass .ctl .opt[aria-pressed="true"], .theme-glass .tab7[aria-selected="true"], .theme-glass .seg::before, .theme-glass .sw[aria-checked="true"], .theme-glass .dbtn.primary, .theme-glass .tut .tseg::before, .theme-glass .tut .tseg3 b.on, .theme-glass .tut .ttabs span.on, .theme-glass .row.sel .kind {
-  background-image: var(--g-gloss); box-shadow: var(--g-picked-edge); }
-.theme-glass .lk7:not(.go), .theme-glass .lk7.go .lkh { box-shadow: inset 0 0 0 .5px rgba(255,255,255,.2), inset 0 .5px 0 rgba(255,255,255,.4); -webkit-backdrop-filter: var(--gx-lock-fx); backdrop-filter: var(--gx-lock-fx); } /* locks: a frosted cover with the gold lock */
-.theme-glass .tut .ok { background-image: var(--g-gloss), linear-gradient(90deg, var(--m-brand-1), var(--m-brand-2)); box-shadow: inset 0 0 0 .5px rgba(255,255,255,.4), inset 0 .5px 0 rgba(255,255,255,.6); }
-.theme-glass .ctl.optgrid.gliding > .opt[aria-pressed="true"] { background-image: none; box-shadow: none; }
+.theme-glass .searchbar { background: rgba(26,24,40,.94); }
+
+/* role: thumb */
+.theme-glass .seg3-th, .theme-glass .lt7 > i, .theme-glass .glayer > i, .theme-glass .ctl .opt[aria-pressed="true"], .theme-glass .tab7[aria-selected="true"], .theme-glass .sw[aria-checked="true"], .theme-glass .dbtn.primary, .theme-glass .tut .tseg::before, .theme-glass .tut .tseg3 b.on, .theme-glass .tut .ttabs span.on, .theme-glass .row.sel .kind {
+  box-shadow: var(--g-thumb-edge); }
+.theme-glass .seg3-th, .theme-glass .seg3:not(.th) button[aria-checked="true"] { background-color: var(--g-blue); }
+.theme-glass .seg3 button[aria-checked="true"] { color: #fff; }
+.theme-glass .lt7 > i, .theme-glass .lt7[data-tone="pos"] > i, .theme-glass .ctl .opt[aria-pressed="true"], .theme-glass .sw[aria-checked="true"] { background-color: var(--g-on); }
+.theme-glass .lt7[data-tone="neg"] > i, .theme-glass .ctl .opt[aria-pressed="true"].neg { background-color: var(--g-off); }
+.theme-glass .ctl .opt[aria-pressed="true"].def { background-color: var(--g-def); }
+.theme-glass .tab7[aria-selected="true"], .theme-glass .tut .ttabs span.on { background-color: var(--g-white); color: #111; }
+.theme-glass .dbtn.primary { background-color: var(--g-blue); color: #fff; }
+.theme-glass .sw::after { box-shadow: inset 0 0 0 1px rgba(255,255,255,.4), 0 2px 6px rgba(0,0,0,.3); }
+.theme-glass .row.sel .kind { background-color: rgba(150,195,255,.3); }
+.theme-glass .ctl.optgrid.gliding > .opt[aria-pressed="true"] { background-color: var(--g-ctl); box-shadow: var(--g-ctl-edge); }
+
+/* role: dlg */
+.theme-glass .dlg { background: var(--gx-dlg); border-radius: 30px; box-shadow: var(--g-dlg-edge); -webkit-backdrop-filter: var(--gx-dlg-fx); backdrop-filter: var(--gx-dlg-fx); }
+html .phone.theme-glass #picker { background: var(--gx-menu); border-radius: 30px; box-shadow: var(--g-dlg-edge); -webkit-backdrop-filter: var(--gx-dlg-fx); backdrop-filter: var(--gx-dlg-fx); }
+html.inapp .phone.theme-glass #picker { border-radius: 0; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.theme-glass .dlg ul { background: var(--g-card); box-shadow: var(--g-card-edge); }
+.theme-glass .scrimfull { background: rgba(0,0,0,.28); }
+.theme-glass .dlgscrim { background: rgba(0,0,0,.4); }
+
+/* role: fill and the slider (lab: an 8px clear track, a blue fill, a 34x24 glass pill that grows while held) */
+.theme-glass .ctl input[type=range] { -webkit-appearance: none; appearance: none; height: 28px; background: transparent; }
+.theme-glass .ctl input[type=range]::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--g-fill) var(--pct, 0%), var(--g-ctl) var(--pct, 0%)); box-shadow: var(--g-ctl-edge); }
+.theme-glass .ctl input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 34px; height: 24px; margin-top: -8px; border-radius: 12px; border: 0;
+  background: radial-gradient(90% 70% at 50% 0%, rgba(255,255,255,.34), rgba(255,255,255,0) 70%), var(--g-knob); box-shadow: var(--g-thumb-edge);
+  -webkit-backdrop-filter: var(--gx-knob-fx); backdrop-filter: var(--gx-knob-fx); transition: transform .18s var(--ease); }
+.theme-glass .ctl input[type=range]:active::-webkit-slider-thumb { transform: scale(1.22); }
+.theme-glass .ctl input[type=range]::-moz-range-track { height: 8px; border-radius: 4px; background: var(--g-ctl); box-shadow: var(--g-ctl-edge); }
+.theme-glass .ctl input[type=range]::-moz-range-progress { height: 8px; border-radius: 4px; background: var(--g-fill); }
+.theme-glass .ctl input[type=range]::-moz-range-thumb { width: 34px; height: 24px; border-radius: 12px; border: 0; background: var(--g-knob); box-shadow: var(--g-thumb-edge); transition: transform .18s var(--ease); }
+.theme-glass .ctl input[type=range]:active::-moz-range-thumb { transform: scale(1.22); }
+
+/* role: lock (plain paint: a cover never samples what is behind it) */
+.theme-glass .lk7:not(.go), .theme-glass .lk7.go .lkh { box-shadow: inset 0 0 0 1px rgba(255,255,255,.16), inset 0 1px 0 rgba(255,255,255,.3); }
+.theme-glass .ctl > .lk7 .lkk { fill: #252a3a; }
+.theme-glass .tut .ok { background-image: linear-gradient(90deg, var(--m-brand-1), var(--m-brand-2)); box-shadow: var(--g-thumb-edge); }
+
 /* role: press */
 .theme-glass :is(.ctl .opt, .tab7, .seg3 button, .seg button, .secpill, .kidbtn, .ordreset, .offnew, .goto, .dbtn, .pick, .iconbtn) { transition: transform .16s var(--ease), background-color .16s var(--ease), color .3s var(--ease); }
 .theme-glass :is(.ctl .opt, .tab7, .seg3 button, .seg button, .secpill, .kidbtn, .ordreset, .offnew, .goto, .dbtn, .pick, .iconbtn):active { transform: scale(.96); }
-.theme-glass :is(.ctl .opt, .tab7, .secpill, .kidbtn, .ordreset, .offnew, .pick, .iconbtn):not([aria-pressed="true"]):not([aria-selected="true"]):not([aria-current="true"]):active { background-color: var(--g-press); }
+.theme-glass :is(.ctl .opt, .tab7, .kidbtn, .ordreset, .offnew, .pick):not([aria-pressed="true"]):not([aria-selected="true"]):not([aria-current="true"]):active { background-color: var(--g-press); }
 .theme-glass .lt7:active { background-color: var(--g-press); }
 .theme-glass :is(.ctl .opt[aria-pressed="true"], .tab7[aria-selected="true"], .goto, .dbtn):active { filter: brightness(1.18); }
 .theme-glass .lt7:active > i { filter: brightness(1.15); }
-.theme-glass .row:active { background-color: rgba(255,255,255,.05); }
-.theme-glass .ctl input[type=range]:active::-webkit-slider-thumb { transform: scale(1.15); }
+.theme-glass .group > .row:active, .theme-glass .row:active { background-color: rgba(255,255,255,.06); }
 
 /* per element: only what a role can't say */
-.theme-glass .status, .theme-glass .appbar { background: transparent; }
-.theme-glass .row + .row, .theme-glass .unit + .row, .theme-glass .unit + .unit > .row:first-child, .theme-glass .row + .unit > .row:first-child, .theme-glass .group > * + .zgrid, .theme-glass .zgrid + * { border-top-color: var(--g-line); }
-.theme-glass .zgrid > .row.zprev { border-left-color: var(--g-line); }
-.theme-glass .themerow { border-top-color: rgba(255,255,255,.1); }
-.theme-glass .row.sel { background: linear-gradient(90deg, rgba(150,195,255,.22), rgba(150,195,255,.07)); }
-.theme-glass .row.sel .kind { background-color: rgba(150,195,255,.3); }
-.theme-glass .ctl .opt:not([aria-pressed="true"]) { border-color: rgba(255,255,255,.07); }
+.theme-glass .themerow { border-top-color: var(--g-line); }
+.theme-glass .row.sel { background: linear-gradient(90deg, rgba(150,195,255,.2), rgba(150,195,255,.06)); }
 .theme-glass .tut .tseg, .theme-glass .tut .tseg3, .theme-glass .tut .ttabs span:not(.on) { background-color: rgba(255,255,255,.08); }
-.theme-glass .tab7[aria-selected="true"] { background-color: rgba(255,255,255,.82); color: #0a0c14; }
-.theme-glass .sw::after { box-shadow: 0 0 0 .5px rgba(255,255,255,.5), 0 1px 3px rgba(0,0,0,.25); }
-.theme-glass .ctl > .lk7 .lkk { fill: #252a3a; }
-.theme-glass .searchbar { background: #1b1f2d; }
-.theme-glass .stagebox { box-shadow: 0 0 0 1px rgba(255,255,255,.1), 0 6px 18px rgba(0,0,0,.5); }
-.theme-glass .pick[aria-current="true"] { background: rgba(255,255,255,.12); box-shadow: inset 0 0 0 1px var(--g-edge); }
-.theme-glass .scrimfull { background: rgba(0,0,0,.28); }
-.theme-glass .dlgscrim { background: rgba(0,0,0,.4); }
-.theme-glass .snack { color: var(--m-on); }
-.theme-glass .snack button { color: var(--m-primary); }
-.theme-glass .snack code { color: #b9c0d0; }
-html.inapp.peekback .phone.theme-glass .editor { background: #0a0c14; }
+.theme-glass .stagebox { box-shadow: 0 0 0 1px rgba(255,255,255,.14), 0 8px 24px rgba(0,0,0,.4); }
 .theme-glass .tut { background: var(--gx-tut); -webkit-backdrop-filter: var(--gx-tut-fx); backdrop-filter: var(--gx-tut-fx); }
 .theme-glass .tut .tlist.sel { background-color: rgba(150,195,255,.18); }
-/* sliders: a glass track that fills with colour, a glass bead for the thumb */
-.theme-glass .ctl input[type=range] { -webkit-appearance: none; appearance: none; height: 24px; background: transparent; }
-.theme-glass .ctl input[type=range]::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: linear-gradient(90deg, rgba(159,202,255,.85) var(--pct, 0%), rgba(255,255,255,.1) var(--pct, 0%)); box-shadow: inset 0 0 0 .5px rgba(255,255,255,.18); }
-.theme-glass .ctl input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; margin-top: -7px; border-radius: 50%; border: 0; background: rgba(255,255,255,.92); box-shadow: 0 0 0 .5px rgba(255,255,255,.7), 0 1px 4px rgba(0,0,0,.28); transition: transform .15s var(--ease); }
-.theme-glass .ctl input[type=range]::-moz-range-track { height: 8px; border-radius: 4px; background: rgba(255,255,255,.1); box-shadow: inset 0 0 0 .5px rgba(255,255,255,.18); }
-.theme-glass .ctl input[type=range]::-moz-range-progress { height: 8px; border-radius: 4px; background: rgba(159,202,255,.85); }
-.theme-glass .ctl input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; border: 0; background: rgba(255,255,255,.92); box-shadow: 0 0 0 .5px rgba(255,255,255,.7), 0 1px 4px rgba(0,0,0,.28); }
-/* chosen thumbs: translucent tones, so the lens and the backdrop show through them */
-.theme-glass .seg3-th, .theme-glass .lt7 > i { background-color: rgba(159,202,255,.8); }
-.theme-glass .lt7[data-tone="pos"] > i, .theme-glass .ctl .opt[aria-pressed="true"] { background-color: rgba(43,92,52,.72); border-color: transparent; }
-.theme-glass .lt7[data-tone="neg"] > i, .theme-glass .ctl .opt[aria-pressed="true"].neg { background-color: rgba(92,43,43,.72); }
-.theme-glass .ctl .opt[aria-pressed="true"].def { background-color: rgba(70,72,84,.62); }
 /* ---------- end of Glass ---------- */
 .themerow.uirow { padding: 8px 8px 6px 12px !important; }
 .uirow .tt { min-width: 0; }
