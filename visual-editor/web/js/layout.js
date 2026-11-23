@@ -105,9 +105,10 @@ if (window.ResizeObserver) { const ro = new ResizeObserver(() => glassArtPlace()
 // Clear glass that bends what is behind it at its edges, with no frost: the web port of ntvien/liquid-glass's
 // AGSL lens. For each surface size a displacement map is baked once in a canvas: inside a band B from the
 // rounded edge, every point is pushed inward along the edge normal by (1 - sqrt(1 - u²)) × A, u = 1 - depth/B.
-// The map feeds feDisplacementMap through backdrop-filter: url(#…), then a saturation lift; in Full, dialogs
-// add a slight colour fringe (red, green and blue bent by ×1, ×1.1, ×1.2: three passes, so only there). Maps
-// are cached by size, corner and recipe. The recipes are the lab's (chrome, ctl, thumb, dlg). What bends:
+// The map feeds feDisplacementMap through backdrop-filter: url(#…), then a saturation lift. No recipe uses the
+// colour fringe (chroma) any more: on a dialog it took three more displacement passes, three channel picks
+// and two composites over one of the largest surfaces, every frame the preview moved under it, for a hairline
+// of colour. Maps are cached by size, corner and recipe (see lensFilter). The recipes are the lab's. What bends:
 //   2 Full:  top bar, tabs, dialogs, menu, snackbar, and up to LENS_CAP chosen thumbs on screen;
 //   1 Light: top bar, tabs, dialogs, menu, snackbar;
 //   0 Flat:  nothing.
@@ -115,7 +116,7 @@ if (window.ResizeObserver) { const ro = new ResizeObserver(() => glassArtPlace()
 // (that is what made Full glass slow on a flagship). Only what is on screen gets a lens.
 const LENS = {
   chrome: { band: 16, amount: 26, sat: 1.6, blur: 2.5 }, menu: { band: 20, amount: 30, sat: 1.6, blur: 6 },
-  dlg: { band: 20, amount: 30, sat: 1.6, blur: 6 }, dlgFull: { band: 20, amount: 30, chroma: .1, sat: 1.6, blur: 6 },
+  dlg: { band: 20, amount: 30, sat: 1.6, blur: 6 },
   ctl: { band: 8, amount: 12, sat: 1.5 }, thumb: { band: 9, amount: 14, sat: 1.8 },
 };
 const LENS_ROLES = [
@@ -128,12 +129,16 @@ const LENS_ROLES = [
 ];
 const LENS_CAP = 6;
 const lensOK = (() => { try { return CSS.supports("backdrop-filter", "url(#x)") || CSS.supports("-webkit-backdrop-filter", "url(#x)"); } catch { return false; } })();
-const lensMaps = new Map(); let lensN = 0, lensR = new WeakMap(); // corner radius per element, read once
+// maps by size and recipe, oldest first; at most LENS_KEEP, so resizing or many dialog sizes can't grow the
+// page without end (a map an element still wears is never dropped)
+const lensMaps = new Map(), LENS_KEEP = 24; let lensN = 0, lensR = new WeakMap(); // corner radius per element, read once
+const lensCv = document.createElement("canvas"); // one canvas, reused for every map
 function lensSd(px, py, hw, hh, r) { const qx = Math.abs(px) - hw + r, qy = Math.abs(py) - hh + r; return Math.min(Math.max(qx, qy), 0) + Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) - r; }
 function lensFilter(w, h, r, L) {
   w = Math.max(2, Math.round(w)); h = Math.max(2, Math.round(h)); r = Math.min(r, w / 2, h / 2);
-  const key = [w, h, Math.round(r), L.band, L.amount, L.chroma || 0, L.blur || 0, L.sat].join(); if (lensMaps.has(key)) return lensMaps.get(key);
-  const cv = document.createElement("canvas"); cv.width = w; cv.height = h; const cx = cv.getContext("2d"), im = cx.createImageData(w, h), D = im.data;
+  const key = [w, h, Math.round(r), L.band, L.amount, L.chroma || 0, L.blur || 0, L.sat].join();
+  if (lensMaps.has(key)) { const id = lensMaps.get(key); lensMaps.delete(key); lensMaps.set(key, id); return id; } // now the newest
+  const cv = lensCv; cv.width = w; cv.height = h; const cx = cv.getContext("2d"), im = cx.createImageData(w, h), D = im.data;
   const hw = w / 2, hh = h / 2, gr = Math.min(r * 1.5, hw, hh), B = L.band, A = L.amount, S = 2 * (A + 1);
   for (let i = 0; i < w * h; i++) { D[i * 4] = D[i * 4 + 1] = D[i * 4 + 2] = 128; D[i * 4 + 3] = 255; }
   // only the band at the edge moves: rows and columns deeper than B are skipped
@@ -157,7 +162,12 @@ function lensFilter(w, h, r, L) {
   body += `<feColorMatrix in="d" type="saturate" values="${L.sat}"/>`;
   let defs = $("lensDefs"); if (!defs) { document.body.insertAdjacentHTML("beforeend", '<svg id="lensDefs" width="0" height="0" style="position:absolute;width:0;height:0" aria-hidden="true" focusable="false"><defs></defs></svg>'); defs = $("lensDefs"); }
   defs.firstChild.insertAdjacentHTML("beforeend", `<filter id="${id}" x="0" y="0" width="${w}" height="${h}" filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" color-interpolation-filters="sRGB">${body}</filter>`);
-  lensMaps.set(key, id); return id;
+  lensMaps.set(key, id);
+  if (lensMaps.size > LENS_KEEP) {
+    const worn = new Set([...lensOn].map(e => (/#(lens\d+)/.exec(e.style.backdropFilter) || [])[1]));
+    for (const [k, v] of lensMaps) { if (lensMaps.size <= LENS_KEEP) break; if (v === id || worn.has(v)) continue; lensMaps.delete(k); document.getElementById(v)?.remove(); }
+  }
+  return id;
 }
 let lensOn = new Set(), lensRaf = 0;
 function lensClear(e) { e.style.backdropFilter = ""; e.style.webkitBackdropFilter = ""; }
@@ -166,6 +176,9 @@ function liquidSync() {
   const ph = $("phone"), tier = theme === "glass" && lensOK ? +(ph.dataset.gt || 0) : 0;
   if (!tier) { lensOn.forEach(lensClear); lensOn = new Set(); return; }
   const vh = innerHeight, vw = innerWidth, want = [], seen = new Set();
+  // the list's thumbs count only where the list can be seen: inside the scroller, below the sticky preview
+  // (the window's bounds let a hidden thumb take one of the LENS_CAP places)
+  const scr = $("scroller"), sc = scr.getBoundingClientRect(), stk = $("stick"), lt = Math.max(sc.top, stk && stk.offsetHeight ? stk.getBoundingClientRect().bottom : sc.top), lb = sc.bottom;
   // reads first, then writes (one layout)
   for (let i = LENS_ROLES.length - 1; i >= 0; i--) { // later roles win
     const R = LENS_ROLES[i]; if (tier < R.tier) continue;
@@ -173,6 +186,7 @@ function liquidSync() {
     ph.querySelectorAll(R.sel).forEach(e => {
       if (seen.has(e) || (R.cap && n >= LENS_CAP)) return; seen.add(e);
       const b = e.getBoundingClientRect(); if (b.width < 4 || b.height < 4 || b.bottom < 0 || b.top > vh || b.right < 0 || b.left > vw) return;
+      if (R.cap && scr.contains(e) && (b.bottom <= lt || b.top >= lb)) return;
       if (e.checkVisibility && !e.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true, opacityProperty: true, visibilityProperty: true })) return; // a closed menu or dialog
       n++;
       let r = lensR.get(e); if (r === undefined) { r = parseFloat(getComputedStyle(e).borderTopLeftRadius) || 0; lensR.set(e, r); }
@@ -201,13 +215,15 @@ function liquidSoon() { if (!lensRaf && theme === "glass") lensRaf = requestAnim
 // Frame watch (rebuilt Nov 23 evening, after a Snapdragon 8 Gen 5 was told it was too slow): 90 frames
 // while the list or the menu scrolls, or a menu or dialog opens, leaving out the first frames (the first
 // paint of a new layer is always slow) and gaps from a hidden page. A window is slow when its median frame
-// takes over twice the display's own frame time and over 22 ms (most frames under 45 fps). Two slow windows
+// takes over 22 ms (most frames under 45 fps), whatever the display's rate: a device held at a steady 30 fps
+// is slow, though it never shows a fast frame to compare with (it used to pass that way). Two slow windows
 // in a row drop the tier one step, quietly; only Flat still being slow, on a device that isn't high-end,
 // shows the warning (glass itself costs nothing in Flat, but the device can't keep up with this look).
 let glassWatch = null, glassStrikes = 0;
 function glassSample(ev) {
-  setTimeout(liquidSoon, 40); // a menu or dialog opening: its glass gets its lens once it shows
-  if (ev && ev.type === "scroll" && ev.target !== $("scroller") && ev.target !== $("picker")) return; // the preview's own motion isn't a scroll of the list
+  if (ev && ev.type === "scroll") { if (ev.target !== $("scroller") && ev.target !== $("picker")) return; } // the preview's own motion isn't a scroll of the list
+  else setTimeout(liquidSoon, 40); // a menu or dialog opening: its glass gets its lens once it shows (a scroll never asks: the
+  // listener above looks again only in Full, once the scroll has been quiet for 120 ms, so a gesture measures nothing)
   if (theme !== "glass" || glassWatch || typeof glassForced === "number" || document.hidden) return;
   const dts = []; let last = 0, skip = 8;
   glassWatch = requestAnimationFrame(function f(t) {
@@ -220,8 +236,7 @@ function glassSample(ev) {
 }
 function glassJudge(dts) {
   dts.sort((a, b) => a - b);
-  const frame = dts[Math.floor(dts.length * .1)], med = dts[dts.length >> 1];
-  glassStrikes = med > Math.max(22, frame * 2) ? glassStrikes + 1 : 0;
+  glassStrikes = dts[dts.length >> 1] > 22 ? glassStrikes + 1 : 0;
   if (glassStrikes < 2 || theme !== "glass") return;
   glassStrikes = 0;
   if (glassTier > 0) {

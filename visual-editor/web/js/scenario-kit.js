@@ -825,7 +825,7 @@ function silenceScen(box, min) {
   let got = 0;
   at(0, () => { // the audio clock follows the playhead, from the first frame
     const t0 = performance.now(), K = SIL_MS * scStretch;
-    const tick = () => { if (!tm.isConnected) return; const sim = Math.min(total, (performance.now() - t0) / K); tm.textContent = clockText(sim); if (sim < total) requestAnimationFrame(tick); };
+    const tick = () => { if (!tm.isConnected) return; const sim = Math.min(total, (performance.now() - t0) / K); const tx = clockText(sim); if (tm.textContent !== tx) tm.textContent = tx; /* only when the shown time changes */ if (sim < total) requestAnimationFrame(tick); };
     tick();
   });
   segs.forEach(([k, i, start, len, w, x0]) => at(start * SIL_MS, () => {

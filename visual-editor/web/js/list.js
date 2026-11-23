@@ -28,6 +28,15 @@ function renderBar() {
   $("secLabel").textContent = grouped ? g.title : s.title;
   $("secIcon").innerHTML = `<path d="${P[grouped ? g.icon : s.icon] || P.list}"/>`;
   renderTabs();
+  $("btnReset").disabled = mode !== "mod" || !Object.keys(PREF).some(k => JSON.stringify(state[k]) !== JSON.stringify(defaults[k]));
+  // the screen menu is drawn now only while it can be seen; a change made in a screen (every tap redraws
+  // the bar) leaves it for a quiet moment instead, off the tap's own frames, and opening it draws it first
+  if (pickerOpen || !$("pickGrid").firstChild) paintPicker(); else { pickDirty = true; clearTimeout(pickLater); pickLater = setTimeout(() => { if (pickDirty) paintPicker(); }, 400); }
+}
+let pickDirty = false, pickLater = 0;
+function paintPicker() {
+  pickDirty = false; clearTimeout(pickLater);
+  const g = groupOf(section);
   const pick = (x, i) => {
     const m = MEMBERS[x.id];
     const sub = `${m.live.length + m.misc.length} settings`;
@@ -47,7 +56,6 @@ function renderBar() {
     + `<div class="themerow uirow"><span class="pi">${I("palette")}</span><div class="tt">UI design${theme === "glass" && glassTier !== null ? `<small>${GLASS_TIER_NAMES[glassTier]}${typeof glassForced === "number" ? " (forced)" : ""}</small>` : ""}</div>${seg3("UI design", "ui", UI_DESIGNS, theme, uiOff())}</div>`
     + `<div class="themerow designrow"><div class="dcol"><div class="dsg"><span class="pi">${I("list")}</span><div class="tt">Settings list design</div></div><div class="drow">${seg3("Settings list design", "design", LIST_DESIGNS, design)}<button class="offnew" data-editor-off>${I("power")}Disable new design</button></div></div></div>`);
   placeSeg3();
-  $("btnReset").disabled = mode !== "mod" || !Object.keys(PREF).some(k => JSON.stringify(state[k]) !== JSON.stringify(defaults[k]));
 }
 // ---- DEV ONLY: "finished" checkmarks -------------------------------------------------------------
 // Screens Max has signed off ("lock it"). Shown as a small check in the screen menu and on the tabs.
@@ -210,6 +218,7 @@ $("pickGrid").addEventListener("pointercancel", endPickDrag);
 $("pickGrid").addEventListener("contextmenu", e => { if (e.target.closest(".pick")) e.preventDefault(); });
 function setPicker(open) {
   pickerOpen = open;
+  if (open && pickDirty) paintPicker(); // a change made in a screen, not drawn yet
   $("picker").classList.toggle("open", open); $("pickScrim").classList.toggle("open", open);
   if (open) { placeSeg3(); glassSample(); } // drawn while hidden: its thumb is placed once it can be measured
   $("secPill").setAttribute("aria-expanded", String(open));

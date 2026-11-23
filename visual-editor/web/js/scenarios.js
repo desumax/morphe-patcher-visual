@@ -439,7 +439,7 @@ SCN_HOLD.morphe_copy_video_link_with_timestamp_button = 7000;
 scen("player", "loop_video", (box, on) => {
   box.innerHTML = device("land", `${miniVideo(2)}<div class="lv7" style="position:absolute;left:8px;bottom:22%;font-size:8px;color:#ddd">0:00 / 0:42</div>${miniSeek(55)}`);
   const dev = box.querySelector(".dev"); const mp = dev.querySelector(".mp"), t = dev.querySelector(".lv7");
-  const runClock = (from, to, ms) => { const t0 = performance.now(); const tick = () => { const p = Math.min(1, (performance.now() - t0) / (ms * scStretch)); const s = Math.round(from + (to - from) * p); if (t.isConnected) t.textContent = `0:${String(s).padStart(2, "0")} / 0:42`; if (p < 1 && t.isConnected) requestAnimationFrame(tick); }; tick(); };
+  const runClock = (from, to, ms) => { const t0 = performance.now(); const tick = () => { const p = Math.min(1, (performance.now() - t0) / (ms * scStretch)); const s = Math.round(from + (to - from) * p); const tx = `0:${String(s).padStart(2, "0")} / 0:42`; if (t.isConnected && t.textContent !== tx) t.textContent = tx; /* only when the second changes */ if (p < 1 && t.isConnected) requestAnimationFrame(tick); }; tick(); };
   situation("The video reaches its end");
   at(100, () => { mp.style.transition = `width ${1000 * scStretch}ms linear`; mp.style.width = "100%"; runClock(23, 42, 1000); });
   at(1150, () => {
