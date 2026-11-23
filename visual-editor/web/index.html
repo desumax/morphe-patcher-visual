@@ -520,7 +520,7 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .ctl .opt[aria-pressed="true"].neg { background: #5c2b2b; border-color: #5c2b2b; color: #ffd9d6; }
 /* optGlide: one thumb carries the pressed colour from the old pill to the new one */
 .ctl.optgrid { position: relative; isolation: isolate; }
-.ctl.optgrid > .optth { position: absolute; left: 0; top: 0; z-index: -1; border-radius: 999px; contain: strict; pointer-events: none; will-change: transform; }
+.ctl.optgrid > .optth { position: absolute; left: 0; top: 0; z-index: -1; border-radius: 999px; contain: layout paint style; pointer-events: none; }
 .theme-yt .ctl.optgrid > .optth { border-radius: 8px; }
 .ctl.optgrid.gliding > .opt[aria-pressed="true"] { background: transparent; border-color: transparent; transition: none; }
 .ctl input[type=range] { flex: 1; min-width: 120px; accent-color: var(--m-primary); }
@@ -926,6 +926,8 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 .ordreset { display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 1px solid rgba(255,255,255,.18); color: inherit; border-radius: 18px; padding: 7px 12px; font: 500 12.5px var(--font, inherit); cursor: pointer; }
 .ordreset svg { width: 16px; height: 16px; fill: currentColor; }
 .ordreset:disabled { opacity: .38; cursor: default; }
+.themerow.ordrow { justify-content: space-between; padding-top: 4px !important; }
+.ordhint { font-size: 12px; color: var(--m-on-var); padding-left: 8px; }
 .doodle { display: flex; gap: 1px; font: 800 15px/1 inherit; }
 .doodle span { color: #fff; padding: 3px 3px; border-radius: 4px; display: inline-block; animation: dood 1.6s ease-in-out infinite; }
 .doodle span:nth-child(2) { animation-delay: .12s; } .doodle span:nth-child(3) { animation-delay: .24s; } .doodle span:nth-child(4) { animation-delay: .36s; } .doodle span:nth-child(5) { animation-delay: .48s; }
@@ -1047,6 +1049,53 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .subhead { padding: 14px 16px 2px; font-size: 12px; font-weight: 500; color: #aaa; letter-spacing: .02em; }
 .sechead .nolive { font-weight: 400; color: var(--m-on-var); opacity: .75; font-size: 12px; }
 .theme-yt .sechead .nolive { color: #888; }
+/* ---------- Glass UI design (Max, Nov 23) ----------
+   The Morphe layout drawn as glass: tinted panes with a bright hairline edge over a soft coloured
+   backdrop that stays put while the list scrolls. How much real glass is drawn depends on the device
+   (data-gt on #phone, set in layout.js after ntvien/liquid-glass's device tiers):
+     0 Flat  = tinted panes, no blur;  1 Light = blur on the panes that float over content;
+     2 Full  = Light, plus refraction (SVG displacement) on those panes and blur on the settings cards.
+   Panes that must hide what is behind them (lock covers, search field) stay opaque in every tier. */
+.phone.theme-glass {
+  --g-pane: rgba(16,19,30,.58); --g-pane-solid: rgba(18,21,32,.95); --g-edge: rgba(255,255,255,.13); --g-hi: rgba(255,255,255,.22);
+  --g-sheen: linear-gradient(140deg, rgba(255,255,255,.13), rgba(255,255,255,.03) 38%, rgba(255,255,255,0) 60%, rgba(255,255,255,.05));
+  --g-blur: blur(18px) saturate(1.7); --g-blur-strong: blur(24px) saturate(1.8);
+  --m-bg: #0a0c14; --m-surface: #0a0c14; --m-c-lowest: rgba(0,0,0,.25); --m-c: rgba(255,255,255,.065); --m-c-high: rgba(255,255,255,.1); --m-c-highest: rgba(255,255,255,.16);
+  --m-on: #f3f5fb; --m-on-var: rgba(230,236,250,.7); --m-outline: rgba(255,255,255,.3); --m-outline-var: rgba(255,255,255,.12);
+  --m-primary: #9fcaff; --m-on-primary: #05213f; --m-primary-c: rgba(120,170,255,.22); --m-on-primary-c: #dcebff; --m-secondary-c: rgba(255,255,255,.12);
+  --lk-grey: #262b39; --r-l: 22px; --r-li: 24px;
+  background: radial-gradient(120% 55% at 0% 0%, rgba(72,112,255,.42), transparent 62%), radial-gradient(90% 50% at 100% 28%, rgba(0,186,176,.28), transparent 62%), radial-gradient(110% 60% at 22% 100%, rgba(150,78,255,.32), transparent 64%), radial-gradient(80% 45% at 100% 92%, rgba(255,110,150,.16), transparent 60%), #07090f;
+}
+.theme-glass .status, .theme-glass .appbar { background: transparent; }
+.theme-glass .stick { background: var(--g-pane-solid); box-shadow: 0 1px 0 var(--g-edge), 0 10px 18px -10px rgba(0,0,0,.55); }
+.theme-glass .group { background: var(--m-c) var(--g-sheen); box-shadow: inset 0 0 0 1px var(--g-edge), inset 0 1px 0 var(--g-hi); }
+.theme-glass .row + .row, .theme-glass .unit + .row, .theme-glass .unit + .unit > .row:first-child, .theme-glass .row + .unit > .row:first-child, .theme-glass .group > * + .zgrid, .theme-glass .zgrid + * { border-top-color: rgba(255,255,255,.075); }
+.theme-glass .zgrid > .row.zprev { border-left-color: rgba(255,255,255,.075); }
+.theme-glass .row.sel { background: linear-gradient(90deg, rgba(150,195,255,.2), rgba(150,195,255,.08)); }
+.theme-glass .seg, .theme-glass .seg3, .theme-glass .lt7, .theme-glass .tab7, .theme-glass .secpill, .theme-glass .kidbtn { box-shadow: inset 0 0 0 1px var(--g-edge), inset 0 1px 0 rgba(255,255,255,.12); }
+.theme-glass .seg3-th, .theme-glass .lt7 > i { box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 2px 10px rgba(90,150,255,.3); }
+.theme-glass .tab7[aria-selected="true"] { background: rgba(255,255,255,.9); color: #0a0c14; box-shadow: inset 0 1px 0 #fff, 0 2px 10px rgba(0,0,0,.3); }
+.theme-glass .searchbar { background: #1b1f2d; box-shadow: inset 0 0 0 1px var(--g-edge); }
+.theme-glass .stagebox { box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 6px 18px rgba(0,0,0,.5); }
+html .phone.theme-glass #picker, .theme-glass .dlg, .theme-glass .snack { background: var(--g-pane-solid) var(--g-sheen); box-shadow: inset 0 0 0 1px var(--g-edge), inset 0 1px 0 var(--g-hi), 0 18px 44px rgba(0,0,0,.5); }
+html.inapp .phone.theme-glass #picker { box-shadow: inset 0 1px 0 var(--g-edge); }
+.theme-glass .pick[aria-current="true"] { background: rgba(255,255,255,.12); box-shadow: inset 0 0 0 1px var(--g-edge); }
+.theme-glass .pick .pi { background: rgba(255,255,255,.1); box-shadow: inset 0 1px 0 rgba(255,255,255,.14); }
+.theme-glass .scrimfull { background: rgba(0,0,0,.28); }
+.theme-glass .dlgscrim { background: rgba(0,0,0,.4); }
+.theme-glass .snack { color: var(--m-on); }
+.theme-glass .snack button { color: var(--m-primary); }
+.theme-glass .snack code { color: #b9c0d0; }
+.theme-glass .themerow { border-top-color: rgba(255,255,255,.1); }
+.theme-glass .ordreset { border-color: var(--g-edge); }
+html.inapp.peekback .phone.theme-glass .editor { background: #0a0c14; }
+.uirow .tt small { display: block; }
+/* Light and Full: the floating panes are see-through and blur what passes behind them */
+.phone.theme-glass:is([data-gt="1"], [data-gt="2"]) .stick, .phone.theme-glass:is([data-gt="1"], [data-gt="2"]) .dlg, .phone.theme-glass:is([data-gt="1"], [data-gt="2"]) .snack { background-color: var(--g-pane); -webkit-backdrop-filter: var(--g-blur); backdrop-filter: var(--g-blur); }
+html .phone.theme-glass:is([data-gt="1"], [data-gt="2"]) #picker { background-color: var(--g-pane); -webkit-backdrop-filter: var(--g-blur-strong); backdrop-filter: var(--g-blur-strong); }
+/* Full: the panes also bend what is behind them, and the cards blur the backdrop */
+.phone.theme-glass[data-gt="2"] { --g-blur: blur(8px) url(#lgRefract) blur(6px) saturate(1.8); --g-blur-strong: blur(10px) url(#lgRefract) blur(10px) saturate(1.9); --g-pane: rgba(16,19,30,.5); }
+.phone.theme-glass[data-gt="2"] .group { -webkit-backdrop-filter: blur(14px) saturate(1.5); backdrop-filter: blur(14px) saturate(1.5); }
 /* round 9 scenario kit */
 .pg7 * { min-width: 0; }
 /* Every caption pill inside a scenario phone ("Nothing happens", "Locked", "🔊 100%", "Loop 2", ...) is
@@ -1197,7 +1246,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
         <div><b>Sub-options</b> sit under the setting they depend on and appear only while it is on. The arrow next to its title folds them away.</div>
         <div><b>Search</b> (top bar) finds any setting and takes you to it, even a sub-option that is still locked.</div>
         <div><b>Reset</b> puts the current screen back to Morphe's defaults.</div>
-        <div><b>Original</b> shows stock YouTube. <b>Morphe</b> shows your settings. The Morphe design toggle at the end of the screen menu switches the editor's look.</div>
+        <div><b>Original</b> shows stock YouTube. <b>Morphe</b> shows your settings. UI design, near the end of the screen menu, switches the editor's look: Original, Morphe or Glass.</div>
       </div>
       <div class="btnrow"><button class="btn" id="replayTut">Replay first-run tutorial</button></div>
     </div>

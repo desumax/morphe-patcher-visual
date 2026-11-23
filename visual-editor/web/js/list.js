@@ -21,10 +21,12 @@ function renderBar() {
   const gpick = (x, i) => { const n = tabsOf(x).reduce((a, [t]) => a + MEMBERS[t].live.length + MEMBERS[t].misc.length, 0);
     return `<button class="pick gcard" role="menuitem" data-group="${x.id}" aria-current="${x === g}" style="transition-delay:${i * 12}ms"><span class="gc-rail"><span class="pi">${I(x.icon)}</span><span class="gc-n"><b>${n}</b><small>settings</small></span></span><span class="gc-body"><span class="gc-t">${esc(x.title)}${devMarkGroup(x)}</span><span class="gc-tabs">${tabsOf(x).map(([, t]) => `<span>${esc(t)}</span>`).join("")}</span></span></button>`; };
   $("pickGrid").innerHTML = (grouped ? `<div class="pg pvis pgroups">${GROUPS.map(gpick).join("")}</div>` : `<div class="pg pvis">${vis.map(pick).join("")}</div>` + `<div class="plaincard"><div class="ph">${I("list")}No preview · standard settings</div><div class="pg">${plain.map(pick).join("")}</div></div>`)
-    + `<div class="themerow"><div class="themetog" data-theme-toggle role="menuitemcheckbox" aria-checked="${theme === "m3"}"><span class="pi">${I("palette")}</span><div class="tt">Morphe design</div><span class="sw" role="presentation" aria-checked="${theme === "m3"}"></span></div>`
-    + `<button class="ordreset" data-order-reset ${customOrder ? "" : "disabled"} title="Hold a screen to move it. This restores Morphe's order.">${I("reset")}Reset order</button></div>`
+    // screen order: its own line under the cards, so the group switch keeps the full width for its text
+    + `<div class="themerow ordrow"><span class="ordhint">Hold a screen to move it</span><button class="ordreset" data-order-reset ${customOrder ? "" : "disabled"} title="Hold a screen to move it. This restores Morphe's order.">${I("reset")}Reset order</button></div>`
     + `<div class="themerow simrow"><div class="themetog" data-group-toggle role="menuitemcheckbox" aria-checked="${grouped}"><span class="pi">${I("layers")}</span><div class="tt">Group screens into tabs<small>Six screens instead of ${SECTIONS.length}. Each one has tabs right under the live preview, and every tab brings its own preview.</small></div><span class="sw" role="presentation" aria-checked="${grouped}"></span></div></div>`
-    + `<div class="themerow designrow"><div class="dcol"><div class="dsg"><span class="pi">${I("list")}</span><div class="tt">Settings list design</div></div><div class="drow"><div class="seg3" role="radiogroup" aria-label="Settings list design"><i class="seg3-th"></i>${[["classic", "Morphe"], ["toggles", "Switches"], ["clean", "Clean"]].map(([id, t]) => `<button role="radio" data-design="${id}" aria-checked="${design === id}">${t}</button>`).join("")}</div><button class="offnew" data-editor-off>${I("power")}Disable new design</button></div></div></div>`;
+    // UI design sits right above the list design (Max, Nov 23): the palette icon, its name and a three-way toggle
+    + `<div class="themerow designrow uirow"><div class="dcol"><div class="dsg"><span class="pi">${I("palette")}</span><div class="tt">UI design${theme === "glass" && glassTier !== null ? `<small>${GLASS_TIER_NAMES[glassTier]}, set for this device</small>` : ""}</div></div><div class="drow">${seg3("UI design", "ui", UI_DESIGNS, theme)}</div></div></div>`
+    + `<div class="themerow designrow"><div class="dcol"><div class="dsg"><span class="pi">${I("list")}</span><div class="tt">Settings list design</div></div><div class="drow">${seg3("Settings list design", "design", [["classic", "Morphe"], ["toggles", "Switches"], ["clean", "Clean"]], design)}<button class="offnew" data-editor-off>${I("power")}Disable new design</button></div></div></div>`;
   placeSeg3();
   $("btnReset").disabled = mode !== "mod" || !Object.keys(PREF).some(k => JSON.stringify(state[k]) !== JSON.stringify(defaults[k]));
 }
@@ -177,7 +179,7 @@ $("pickGrid").addEventListener("contextmenu", e => { if (e.target.closest(".pick
 function setPicker(open) {
   pickerOpen = open;
   $("picker").classList.toggle("open", open); $("pickScrim").classList.toggle("open", open);
-  if (open) placeSeg3(); // drawn while hidden: its thumb is placed once it can be measured
+  if (open) { placeSeg3(); glassSample(); } // drawn while hidden: its thumb is placed once it can be measured
   $("secPill").setAttribute("aria-expanded", String(open));
 }
 
@@ -234,7 +236,7 @@ function flyTransition(st, from, to) {
 // play button, the time, a seekbar that belongs to another tab) and components of other screens.
 const FIXED_SEL = ".pbtn, .bigbtn, .time, .seek, .chip, svg.ico, .tb, .badge-txt";
 function markFixed(st) {
-  const mine = new Set(sectionKeys()), ours = e => mine.has(e.dataset.k) || mine.has(e.dataset.also);
+  const mine = new Set(sectionKeys()), ours = e => mine.has(e.dataset.k) || (e.dataset.also || "").split(" ").some(x => mine.has(x));
   const cs = [...st.querySelectorAll(".c[data-k]")];
   cs.forEach(c => { if (!ours(c) && !c.classList.contains("ghost") && !c.querySelector("[data-k], [data-also]") && !c.closest(".finger")) c.classList.add("fixed7"); });
   st.querySelectorAll(FIXED_SEL).forEach(e => {
@@ -483,7 +485,7 @@ function stagePositions() {
   const pos = {}, sr = st.getBoundingClientRect();
   st.classList.add("measure");
   st.querySelectorAll("[data-k], [data-also]").forEach(e => {
-    const k = e.dataset.k || e.dataset.also, r = e.getBoundingClientRect(); if (!r.width && !r.height) return;
+    const k = e.dataset.k || (e.dataset.also || "").split(" ")[0], r = e.getBoundingClientRect(); if (!r.width && !r.height) return;
     let y = r.top - sr.top, x = r.left - sr.left;
     for (let q = e.parentElement; q && q !== st; q = q.parentElement) { y += q.scrollTop; x += q.scrollLeft; }
     const v = Math.round(y / 14) * 10000 + Math.max(0, Math.round(x));
@@ -841,37 +843,57 @@ function optGlide() {
   const th = document.createElement("i"); th.className = "optth"; th.setAttribute("aria-hidden", "true");
   th.style.cssText = `width:${to.w}px;height:${to.h}px;transform:translate(${to.x}px,${to.y}px);background:${bg}`;
   box.prepend(th); box.classList.add("gliding");
+  // the pill's own corner, and a droplet shape for the trip: the leading end round, the trailing end
+  // drawn out into a tail (each corner "horizontal / vertical"), so the colour flows rather than slides
+  const R0 = Math.min(parseFloat(cs.borderTopLeftRadius) || 0, to.h / 2);
+  const rad = (h, lead, tail, right) => { const v = h / 2, L = `${lead}px`, T = `${tail}px`; // right: moving right
+    return right ? `${T} ${L} ${L} ${T} / ${v}px ${v}px ${v}px ${v}px` : `${L} ${T} ${T} ${L} / ${v}px ${v}px ${v}px ${v}px`; };
   const fr = (x, y, w, h, extra) => Object.assign({ transform: `translate(${x}px,${y}px)`, width: w + "px", height: h + "px" }, extra);
+  const flat = r => ({ borderRadius: `${r}px` });
   let frames, dur;
-  if (!f.bg) { // nothing was picked yet: the thumb grows out of the tapped pill
-    frames = [fr(to.x + to.w * .2, to.y + to.h * .2, to.w * .6, to.h * .6, { opacity: 0, easing: "cubic-bezier(.3,0,.4,1)" }),
-      fr(to.x - 2, to.y - 1, to.w + 4, to.h + 2, { opacity: 1, offset: .55, easing: "ease-in-out" }), fr(to.x + 1, to.y + .5, to.w - 2, to.h - 1, { offset: .8, easing: "ease-in-out" }), fr(to.x, to.y, to.w, to.h, { opacity: 1 })];
-    dur = 360;
+  if (!f.bg) { // nothing was picked yet: a drop of colour grows out of the tapped pill and wobbles into its shape
+    frames = [fr(to.x + to.w * .3, to.y + to.h * .25, to.w * .4, to.h * .5, { opacity: 0, borderRadius: `${to.h / 2}px`, easing: "cubic-bezier(.3,0,.4,1)" }),
+      fr(to.x - 3, to.y + 1, to.w + 6, to.h - 2, { opacity: 1, borderRadius: `${to.h / 2}px`, offset: .5, easing: "ease-in-out" }),
+      fr(to.x + 1.5, to.y - 1, to.w - 3, to.h + 2, { ...flat(R0), offset: .75, easing: "ease-in-out" }), fr(to.x, to.y, to.w, to.h, { opacity: 1, ...flat(R0) })];
+    dur = 200;
   } else {
-    // stretch toward the new pill (leading edge ahead), overshoot a few px (capped, so long trips
-    // never fly past the grid), settle back with a smaller rebound
-    const ux = dist ? dx / dist : 0, uy = dist ? dy / dist : 0, ov = Math.min(7, 2 + dist * .05);
+    const ux = dist ? dx / dist : 0, uy = dist ? dy / dist : 0, ov = Math.min(6, 2 + dist * .04), right = dx >= 0;
     // the rebound stays inside the grid (a pill at the edge is not overshot out of its card)
     const bw = b.width, bh = b.height, cx = x => Math.max(-2, Math.min(bw - to.w + 2, x)), cy = y => Math.max(-2, Math.min(bh - to.h + 2, y));
-    let mid;
-    if (Math.abs(dy) > 1) { // another grid row: travel straight there, a little smaller on the way (never a blob over four pills)
-      const t = .55, mw = (f.w + (to.w - f.w) * t) * .86, mh = (f.h + (to.h - f.h) * t) * .86;
-      const mcx = f.x + f.w / 2 + (to.x + to.w / 2 - f.x - f.w / 2) * t, mcy = f.y + f.h / 2 + (to.y + to.h / 2 - f.y - f.h / 2) * t;
-      mid = fr(mcx - mw / 2, mcy - mh / 2, mw, mh, { offset: .45, easing: "cubic-bezier(.2,.6,.35,1)" });
-    } else { // same row: stretch toward the new pill, leading edge ahead, a touch flatter
-      const L0 = f.x, R0 = f.x + f.w, L1 = to.x, R1 = to.x + to.w, lead = .78, trail = .3, ix = dx >= 0;
-      const mL = L0 + (L1 - L0) * (ix ? trail : lead), mR = R0 + (R1 - R0) * (ix ? lead : trail);
-      const mh = (f.h + (to.h - f.h) * .5) * .86, mcy = f.y + f.h / 2 + (to.y + to.h / 2 - f.y - f.h / 2) * .5;
-      mid = fr(mL, mcy - mh / 2, mR - mL, mh, { offset: .42, easing: "cubic-bezier(.2,.6,.35,1)" });
+    let mids;
+    if (Math.abs(dy) > 1) { // another grid row: a drop travels straight there (never a blob over four pills)
+      const at = (t, k) => { const mw = (f.w + (to.w - f.w) * t) * k, mh = (f.h + (to.h - f.h) * t) * k;
+        const mcx = f.x + f.w / 2 + (to.x + to.w / 2 - f.x - f.w / 2) * t, mcy = f.y + f.h / 2 + (to.y + to.h / 2 - f.y - f.h / 2) * t; return [mcx - mw / 2, mcy - mh / 2, mw, mh]; };
+      const [x1, y1, w1, h1] = at(.25, .9), [x2, y2, w2, h2] = at(.62, .8);
+      mids = [fr(x1, y1, w1, h1, { borderRadius: rad(h1, h1 / 2, h1 * .9, right), offset: .2, easing: "cubic-bezier(.3,0,.5,1)" }),
+        fr(x2, y2, w2, h2, { borderRadius: rad(h2, h2 / 2, h2 * 1.2, right), offset: .48, easing: "cubic-bezier(.2,.6,.35,1)" })];
+    } else { // same row: the leading end runs ahead and pulls the tail after it, thinner in the middle of the trip
+      const L0 = f.x, R0x = f.x + f.w, L1 = to.x, R1 = to.x + to.w, mcy = f.y + f.h / 2 + (to.y + to.h / 2 - f.y - f.h / 2) * .5;
+      const span = (lead, trail, k) => { const l = L0 + (L1 - L0) * (right ? trail : lead), r = R0x + (R1 - R0x) * (right ? lead : trail), h = (f.h + (to.h - f.h) * .5) * k; return [l, mcy - h / 2, r - l, h]; };
+      const [x1, y1, w1, h1] = span(.45, .06, .9), [x2, y2, w2, h2] = span(.88, .42, .78);
+      mids = [fr(x1, y1, w1, h1, { borderRadius: rad(h1, h1 / 2, Math.min(w1 * .45, h1 * 1.3), right), offset: .22, easing: "cubic-bezier(.3,0,.5,1)" }),
+        fr(x2, y2, w2, h2, { borderRadius: rad(h2, h2 / 2, Math.min(w2 * .45, h2 * 1.6), right), offset: .5, easing: "cubic-bezier(.2,.6,.35,1)" })];
     }
-    frames = [fr(f.x, f.y, f.w, f.h, { backgroundColor: f.bg, easing: "cubic-bezier(.45,0,.55,1)" }), mid,
-      fr(cx(to.x + ux * ov), cy(to.y + uy * ov), to.w - Math.abs(ux) * ov * .6, to.h + Math.abs(ux) * 1.5 - Math.abs(uy) * ov * .3, { backgroundColor: bg, offset: .72, easing: "ease-in-out" }),
-      fr(cx(to.x - ux * ov * .3), cy(to.y - uy * ov * .3), to.w + Math.abs(ux) * ov * .2, to.h, { offset: .88, easing: "ease-in-out" }),
-      fr(to.x, to.y, to.w, to.h, { backgroundColor: bg })];
-    dur = Math.round(380 + Math.min(220, dist * .55));
+    // arrival: overshoot, squash, and a short damped jelly wobble back into the pill's own shape
+    frames = [fr(f.x, f.y, f.w, f.h, { backgroundColor: f.bg, ...flat(Math.min(R0, f.h / 2)), easing: "cubic-bezier(.45,0,.55,1)" }), ...mids,
+      fr(cx(to.x + ux * ov), cy(to.y + uy * ov), to.w - Math.abs(ux) * ov * .8, to.h + 2 - Math.abs(uy) * ov * .4, { backgroundColor: bg, borderRadius: `${to.h / 2}px`, offset: .7, easing: "ease-in-out" }),
+      fr(cx(to.x - ux * ov * .35), cy(to.y - uy * ov * .35) + .75, to.w + Math.abs(ux) * ov * .4 + 1, to.h - 1.5, { ...flat(R0), offset: .84, easing: "ease-in-out" }),
+      fr(to.x - .5, to.y - .4, to.w + 1, to.h + .8, { ...flat(R0), offset: .93, easing: "ease-in-out" }),
+      fr(to.x, to.y, to.w, to.h, { backgroundColor: bg, ...flat(R0) })];
+    dur = Math.round(200 + Math.min(110, dist * .28)); // twice as quick as first (Max, Nov 23)
   }
   const a = th.animate(frames, { duration: dur, fill: "none" });
-  const done = () => { th.remove(); if (!box.querySelector(":scope > .optth")) box.classList.remove("gliding"); };
+  // hand back to the pill without a fade: the pill's own background transition, set off by .gliding
+  // going, flashed it from clear to its colour (choice, black, choice) on the last frame
+  const done = () => {
+    if (![...box.querySelectorAll(":scope > .optth")].some(t => t !== th)) { // not handed on to a newer glide
+      const p = box.querySelector('.opt[aria-pressed="true"]');
+      if (p) p.style.transition = "none";
+      box.classList.remove("gliding"); if (p) void p.offsetWidth;
+      if (p) requestAnimationFrame(() => { p.style.transition = ""; });
+    }
+    th.remove();
+  };
   a.onfinish = done; a.oncancel = done;
 }
 const OPT_PAD = 6; // the least room beside a pill's text
@@ -1119,7 +1141,7 @@ function commit() { applyAppColors(); renderBar(); renderStage(); renderList(); 
 
 // ------------------------------------------------------------------ restart handling
 const pendingRestart = () => Object.keys(PREF).filter(k => PREF[k].rebootApp && JSON.stringify(state[k]) !== JSON.stringify(baseline[k]));
-function openDialog(html) { $("dlgBox").innerHTML = html; $("dlg").classList.add("open"); setTimeout(() => $("dlgBox").querySelector("button")?.focus(), 50); }
+function openDialog(html) { $("dlgBox").innerHTML = html; $("dlg").classList.add("open"); glassSample(); setTimeout(() => $("dlgBox").querySelector("button")?.focus(), 50); }
 function closeDialog() { $("dlg").classList.remove("open"); }
 // Changes that only apply after YouTube restarts (Max, Nov 20). Values are saved as soon as they are
 // changed; leaving asks what to do with these: restart now, keep them for later, or reset them to the
@@ -1168,16 +1190,22 @@ function pendingDialog(saved = []) {
   $("dGo").onclick = closeDialog;
   $("dReset").onclick = () => resetConfirm(keys.length, false, () => pendingDialog(saved));
 }
-// The list design's three-way toggle: one thumb slides to the picked design (Max, Nov 22). The picker
+// The menu's three-way toggles: one thumb slides to the picked option (Max, Nov 22). The picker
 // is drawn again on every change, so the thumb starts from where the old one was (seg3From) and glides.
-let seg3From = null;
+// Every three-way toggle in the menu (UI design, Settings list design) works the same way.
+const seg3 = (label, attr, opts, cur) => `<div class="seg3" role="radiogroup" aria-label="${label}" data-seg="${attr}"><i class="seg3-th"></i>${opts.map(([id, t]) => `<button role="radio" data-${attr}="${id}" aria-checked="${cur === id}">${t}</button>`).join("")}</div>`;
+let seg3From = {};
+function seg3Snap() { seg3From = {}; document.querySelectorAll("#pickGrid .seg3.th").forEach(seg => { const th = seg.querySelector(".seg3-th"); seg3From[seg.dataset.seg] = [th.offsetLeft, th.offsetWidth]; }); }
 function placeSeg3() {
-  const seg = document.querySelector("#pickGrid .seg3"), th = seg && seg.querySelector(".seg3-th"), on = seg && seg.querySelector('[aria-checked="true"]');
-  if (!th || !on || !on.offsetWidth) return; // hidden: the picked button keeps its own fill (CSS)
-  const to = [on.offsetLeft, on.offsetWidth];
-  seg.classList.add("th"); // shown first, so its starting place is drawn and the move animates
-  if (seg3From) { th.style.transition = "none"; th.style.left = seg3From[0] + "px"; th.style.width = seg3From[1] + "px"; void th.offsetWidth; th.style.transition = ""; }
-  th.style.left = to[0] + "px"; th.style.width = to[1] + "px"; seg3From = null;
+  document.querySelectorAll("#pickGrid .seg3").forEach(seg => {
+    const th = seg.querySelector(".seg3-th"), on = seg.querySelector('[aria-checked="true"]');
+    if (!th || !on || !on.offsetWidth) return; // hidden: the picked button keeps its own fill (CSS)
+    const to = [on.offsetLeft, on.offsetWidth], from = seg3From[seg.dataset.seg];
+    seg.classList.add("th"); // shown first, so its starting place is drawn and the move animates
+    if (from) { th.style.transition = "none"; th.style.left = from[0] + "px"; th.style.width = from[1] + "px"; void th.offsetWidth; th.style.transition = ""; }
+    th.style.left = to[0] + "px"; th.style.width = to[1] + "px";
+  });
+  seg3From = {};
 }
 function storeBaseline() { try { localStorage.setItem(LS + "-baseline", JSON.stringify(baseline)); } catch { /* storage unavailable */ } }
 // with the search bar open, the back arrow closes search (like its cross), it doesn't leave the editor;

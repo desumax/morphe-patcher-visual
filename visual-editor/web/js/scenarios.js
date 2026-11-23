@@ -621,6 +621,8 @@ const watchExtras = html => html
 { const base = SCENES.watch; SCENES.watch = () => watchExtras(base()); }
 
 // ------------------------------------------------------------------ miniplayer, one design per type
+// the miniplayer itself stands for its type and for every look setting: selecting one rings it
+const MINI_LOOKS = "miniplayer_disable_rounded_corners miniplayer_glass miniplayer_docked miniplayer_opacity miniplayer_width_dip";
 SCENES.miniplayer = () => {
   const type = V("morphe_miniplayer_type");
   const round = !VE("morphe_miniplayer_disable_rounded_corners");
@@ -640,11 +642,14 @@ SCENES.miniplayer = () => {
     // Bar miniplayers: a strip above the navigation bar.
     const minimal = type !== "DEFAULT";
     const bar2 = type === "MINIMAL_BAR_2";
-    mini = `<div class="mini" style="position:absolute;left:${docked || !glass ? 0 : 8}px;right:${docked || !glass ? 0 : 8}px;bottom:${docked || !glass ? 52 : 60}px;${surface};border-radius:${docked ? 0 : glass ? 14 : 0}px;overflow:hidden;display:flex;align-items:center;gap:10px;padding-right:6px;opacity:${op};height:${bar2 ? 44 : 54}px">
+    mini = `<div class="mini" style="position:absolute;inset:0;${surface};border-radius:${docked ? 0 : glass ? 14 : 0}px;overflow:hidden;display:flex;align-items:center;gap:10px;padding-right:6px;opacity:${op};">
       <div style="width:${minimal ? (bar2 ? 0 : 64) : 96}px;flex:none;display:${bar2 ? "none" : "block"}">${thumb(0, "border-radius:0")}</div>
       ${bar2 ? `<div style="width:8px"></div>` : ""}${ttl()}
       ${C("miniplayer_hide_overlay_buttons", `<div style="display:flex">${minimal ? "" : `<span style="margin:6px">${ic("prev")}</span>`}<span style="margin:6px">${ic("pause", 24)}</span>${minimal ? "" : `<span style="margin:6px">${ic("next")}</span>`}<span style="margin:6px">${ic("close")}</span></div>`)}
       ${prog}</div>`;
+    // the miniplayer is the element of Miniplayer type and of every look setting (MINI_LOOKS): selecting
+    // any of them rings and flashes it
+    mini = C("miniplayer_type", mini, { also: MINI_LOOKS, style: `position:absolute;left:${docked || !glass ? 0 : 8}px;right:${docked || !glass ? 0 : 8}px;bottom:${docked || !glass ? 52 : 60}px;height:${bar2 ? 44 : 54}px;z-index:1` });
   } else {
     // Floating miniplayers (Modern 1 to 4). Each type draws its controls differently.
     const ov = {
@@ -654,11 +659,12 @@ SCENES.miniplayer = () => {
       MODERN_4: `<div style="position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.25)"><div style="width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,.55);display:grid;place-items:center">${ic("pause", 24)}</div><div style="position:absolute;right:4px;top:4px">${ic("close", 18)}</div><div style="position:absolute;left:4px;top:4px">${ic("full", 18)}</div></div>`,
     }[type === "TABLET" ? "MODERN_1" : type] || "";
     const below = type === "MODERN_3" ? `<div style="display:flex;align-items:center;gap:6px;padding:6px 8px">${ttl()}</div>` : type === "MODERN_2" ? `<div style="padding:4px 8px 6px">${ttl()}</div>` : "";
-    mini = `<div class="mini" style="position:absolute;${pos};width:${w}px;opacity:${op};${type === "MODERN_2" || type === "MODERN_3" ? surface + ";" : ""}border-radius:${docked ? `${radius}px 0 0 0` : radius + "px"};overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.6)">
+    mini = `<div class="mini" style="position:relative;width:100%;opacity:${op};${type === "MODERN_2" || type === "MODERN_3" ? surface + ";" : ""}border-radius:${docked ? `${radius}px 0 0 0` : radius + "px"};overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.6)">
       <div style="position:relative">${thumb(0, "border-radius:0")}${C("miniplayer_hide_overlay_buttons", ov, { style: "position:absolute;inset:0" })}${prog}</div>
       ${below}
       ${type === "MODERN_1" || type === "MODERN_4" ? C("miniplayer_hide_title", `<div style="position:absolute;left:0;right:0;bottom:2px;padding:10px 6px 4px;background:linear-gradient(transparent,rgba(0,0,0,.8));font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(VIDEOS[0].t)}</div>`, { style: "position:absolute;left:0;right:0;bottom:0" }) : ""}
     </div>`;
+    mini = C("miniplayer_type", mini, { also: MINI_LOOKS, style: `position:absolute;${pos};width:${w}px;z-index:1;border-radius:${docked ? `${radius}px 0 0 0` : radius + "px"}` });
   }
   const resume = C("miniplayer_disable_resuming", `<div style="${surface};border-radius:14px;padding:8px;display:flex;gap:8px;align-items:center"><div style="width:72px;flex:none;border-radius:8px;overflow:hidden">${thumb(1, "border-radius:0")}</div><div style="min-width:0;flex:1"><div class="t2" style="font-size:10.5px">Continue watching</div><div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(VIDEOS[1].t)}</div></div>${ic("close", 18)}</div>`, { also: "miniplayer_disable_resuming", style: "position:absolute;left:10px;right:10px;top:60px;z-index:2" });
   const notAvail = "";
@@ -1249,9 +1255,11 @@ function playScenario(k, prevValue) {
   canvas.innerHTML = `<div class="cap"><b>${esc(shownTitle(k))}</b></div><div class="sit"></div><div class="scbox" style="display:grid;place-items:center"></div><div class="foot"></div><div class="prog"></div>`;
   canvas.classList.add("show");
   const box = canvas.querySelector(".scbox"), self = SCN_SELF_DUO.has(k);
-  // two columns: no title line, the phones get that height (the selected card already names it)
-  if (!self) { canvas.querySelector(".cap").remove(); }
-  canvas.classList.toggle("nocap", !self);
+  // no title line in any comparison, the phones get that height (the selected card already names it);
+  // the ones that draw both sides in one picture (SCN_SELF_DUO) used to keep it: a white title over
+  // the phones that no other comparison has (Player popup panels, Max, Nov 23)
+  canvas.querySelector(".cap").remove();
+  canvas.classList.add("nocap");
   const L = SCN_HOLD[k] || SC_HOLD, runs = self ? 1 : Math.max(1, Math.floor(SC_TOTAL / (L * 1.45)));
   const slot = SC_TOTAL / runs, stretch = Math.max(1, Math.min(1.6, (slot - 400) / L));
   let vals = duoValues(k, prevValue);

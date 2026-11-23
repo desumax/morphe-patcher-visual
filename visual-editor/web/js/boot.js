@@ -13,7 +13,7 @@ async function boot() {
   baseline = { ...state };
   try { const b = JSON.parse(localStorage.getItem(LS + "-baseline") || "null"); if (b) for (const k in b) if (k in PREF) baseline[k] = b[k]; } catch { /* storage unavailable */ }
   if (saved.section && SECTIONS.some(s => s.id === saved.section)) section = saved.section;
-  if (saved.theme === "m3") theme = "m3";
+  if (UI_DESIGNS.some(([id]) => id === saved.theme)) theme = saved.theme;
   if (saved.lv >= 2 && typeof saved.grouped === "boolean") grouped = saved.grouped; // older saves predate tabs being the default
   if (saved.tabs) Object.assign(lastTab, saved.tabs);
   applyTheme();

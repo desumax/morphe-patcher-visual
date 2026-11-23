@@ -63,7 +63,7 @@ function select(k, from, arrive = false) {
   if (DEMOS[k]) startDemo(k); else stopDemo();
   if (SCN[k] && from) playScenario(k);
   const a = A[k];
-  const notApplicable = a && (a.kind === "vis" || a.kind === "overlay") && a.section === section && !CUSTOM_KEYS.has(k) && !document.querySelector(`#stage [data-k="${k}"], #stage [data-also="${k}"]`);
+  const notApplicable = a && (a.kind === "vis" || a.kind === "overlay") && a.section === section && !CUSTOM_KEYS.has(k) && !document.querySelector(`#stage [data-k="${k}"], #stage [data-also~="${k}"]`);
   if (notApplicable && SCENES[section]) {
     const why = k === "morphe_hide_end_screen_suggested_video" ? "Appears only when autoplay is off. Set Autoplay mode to Off to see it."
       : k === "morphe_hide_autoplay_preview" ? "Appears only when autoplay is on."
@@ -73,7 +73,7 @@ function select(k, from, arrive = false) {
 }
 function pointToParents(k) {
   // wait for the element's own flash (it may first scroll into view), then flash everything together
-  const onStage = document.querySelector(`#stage [data-k="${k}"], #stage [data-also="${k}"]`);
+  const onStage = document.querySelector(`#stage [data-k="${k}"], #stage [data-also~="${k}"]`);
   if (!onStage || selected !== k || (lastFlash.k === k && Date.now() - lastFlash.t < 200)) return flashParents(k);
   parentFlashFor = k;
   fT(() => { if (parentFlashFor === k) flashParents(k); }, 1500);
@@ -204,7 +204,7 @@ function afterChange(k, before) {
   if (k === "morphe_change_form_factor") buildMembers(); // a Tablet layout brings back tablet-only settings (offDevice)
   commit(); select(k); settle();
   // the whole preview only pulses when nothing in it stands for this setting
-  const sb = document.querySelector(".stagebox"); if (sb && !document.querySelector(`#stage [data-k="${k}"], #stage [data-also="${k}"]`) && !proxyEls(k).length) { sb.classList.remove("changed"); void sb.offsetWidth; sb.classList.add("changed"); }
+  const sb = document.querySelector(".stagebox"); if (sb && !document.querySelector(`#stage [data-k="${k}"], #stage [data-also~="${k}"]`) && !proxyEls(k).length) { sb.classList.remove("changed"); void sb.offsetWidth; sb.classList.add("changed"); }
   try { navigator.vibrate && navigator.vibrate(20); } catch { /* ignore */ }
   if (SCN[k]) playScenario(k, before);
   // teleport back to the setting that was waiting on this one

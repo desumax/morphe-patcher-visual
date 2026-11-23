@@ -380,8 +380,10 @@ function C(k, inner, o = {}) {
   if (o.cls) cls.push(o.cls);
   if (a && (a.kind === "vis" || a.kind === "overlay") && !shown(full)) cls.push("off");
   if (ghosts.has(full) || lentTo(selected, full)) cls.push("ghost");
-  if (selected === full || (o.also && selected === "morphe_" + o.also)) cls.push("sel");
-  return `<${o.tag || "div"} class="${cls.join(" ")}" data-k="${full}" ${o.also ? `data-also="morphe_${o.also}"` : ""} data-label="${esc(title(full))}" style="${o.style || ""}">${inner}</${o.tag || "div"}>`;
+  // also: one or more other settings (space-separated) this element stands for in the preview
+  const also = o.also ? o.also.split(" ").map(x => "morphe_" + x) : [];
+  if (selected === full || also.includes(selected)) cls.push("sel");
+  return `<${o.tag || "div"} class="${cls.join(" ")}" data-k="${full}" ${also.length ? `data-also="${also.join(" ")}"` : ""} data-label="${esc(title(full))}" style="${o.style || ""}">${inner}</${o.tag || "div"}>`;
 }
 const pb = (k, icon, o = {}) => C(k, `<div class="pbtn ${o.bg ? "ctrlbg" : ""}" style="${o.s ? `width:${o.s}px;height:${o.s}px` : ""}">${icon}</div>`, o);
 

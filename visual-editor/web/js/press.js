@@ -158,7 +158,7 @@ $("list").addEventListener("input", e => {
     // a slider with a live overlay (swipe overlay look, zone sizes) redraws only that overlay: redrawing
     // the whole preview on every step flashed parts of it
     if (LIVE_HUD[k] && selected === k) LIVE_HUD[k]();
-    else { selected = k; renderStage(); highlight(k, false); if (LIVE_HUD[k]) LIVE_HUD[k](); }
+    else { if (selected !== k) stopScenario(); selected = k; renderStage(); highlight(k, false); if (LIVE_HUD[k]) LIVE_HUD[k](); }
   }
 });
 $("list").addEventListener("change", e => {
@@ -212,11 +212,12 @@ $("pickScrim").onclick = () => setPicker(false);
 $("pickGrid").addEventListener("click", e => {
   if (pickSuppress) return;
   const dz = e.target.closest("[data-design]");
-  if (dz) { const th = document.querySelector("#pickGrid .seg3.th .seg3-th"); seg3From = th ? [th.offsetLeft, th.offsetWidth] : null; design = dz.dataset.design; renderBar(); renderList(); store.save(); return; }
+  if (dz) { seg3Snap(); design = dz.dataset.design; renderBar(); renderList(); store.save(); return; }
+  const ui = e.target.closest("[data-ui]");
+  if (ui) { if (ui.dataset.ui === theme) return; seg3Snap(); theme = ui.dataset.ui; applyTheme(); renderBar(); store.save(); glassSample(); return; }
   if (e.target.closest("[data-group-toggle]")) { grouped = !grouped; renderBar(); renderStage(); store.save(); if (grouped) tutOnce("groups"); return; }
   const gb = e.target.closest("[data-group]");
   if (gb) { const g = GROUPS.find(x => x.id === gb.dataset.group), tabs = tabsOf(g); setPicker(false); returnTo = null; switchSection(lastTab[g.id] && tabs.some(([t]) => t === lastTab[g.id]) ? lastTab[g.id] : tabs[0][0]); return; }
-  if (e.target.closest("[data-theme-toggle]")) { theme = theme === "m3" ? "yt" : "m3"; applyTheme(); renderBar(); store.save(); return; }
   // leaves the new design for Morphe's own settings screen; in the app the patch's switch at the top
   // of Morphe's settings turns it back on
   if (e.target.closest("[data-editor-off]")) {

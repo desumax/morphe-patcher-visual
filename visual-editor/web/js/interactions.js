@@ -16,7 +16,7 @@ $("snackUndo").onclick = () => { if (undoFn) undoFn(); undoFn = null; $("snack")
 // cycle speeds"), or a named one (the seekbar for the seekbar colour and thumb settings).
 const PROXY_K = { morphe_seekbar_custom_color: "morphe_hide_seekbar" };
 function proxyEls(k) {
-  const q = x => [...document.querySelectorAll(`#stage [data-k="${x}"], #stage [data-also="${x}"]`)].filter(e => e.getClientRects().length && (!e.classList.contains("off") || e.classList.contains("ghost")));
+  const q = x => [...document.querySelectorAll(`#stage [data-k="${x}"], #stage [data-also~="${x}"]`)].filter(e => e.getClientRects().length && (!e.classList.contains("off") || e.classList.contains("ghost")));
   if (q(k).length) return [];
   const seen = new Set();
   for (let p = PROXY_K[k] || PARENT_OF[k]; p && !seen.has(p); p = PROXY_K[p] || PARENT_OF[p]) { seen.add(p); const e = q(p); if (e.length) return e; }
@@ -24,7 +24,10 @@ function proxyEls(k) {
 }
 // Any interaction with a card (tap, hold, its toggle or options, or its element in the preview)
 // selects it, and a selected card always shows its whole description.
-function touchSel(k) { if (selected === k) return; if (ghosts.has(selected)) unghost(selected); selected = k; highlight(k, false); renderInspector(); }
+// Selecting by tapping a card's control (a switch, a value pill) ends the running comparison too: it used
+// to set the selection before select() ran, so select() saw no change and the last setting's comparison
+// kept playing (Max, Nov 23: it happened only when the new setting was picked through its control)
+function touchSel(k) { if (selected === k) return; stopScenario(); if (ghosts.has(selected)) unghost(selected); selected = k; highlight(k, false); renderInspector(); }
 // Descriptions show two lines; a longer one is cut (with a fade) and unfolds when its setting is
 // selected, folding back when another one is. Every card keeps the same size whatever its state.
 // An unfold starts two frames later, after the work that selected the card (a redraw, the preview,
@@ -44,9 +47,9 @@ function fitSums(root = $("list"), keep = new Set()) {
 }
 function highlight(k, flash = true, reveal = false) {
   document.querySelectorAll(".sel").forEach(e => e.classList.remove("sel", "selx")); wakeRings(); syncLocked(k);
-  document.querySelectorAll(`[data-k="${k}"], [data-row="${k}"], [data-also="${k}"]`).forEach(e => e.classList.add("sel"));
+  document.querySelectorAll(`[data-k="${k}"], [data-row="${k}"], [data-also~="${k}"]`).forEach(e => e.classList.add("sel"));
   document.querySelectorAll("#list .sum.open").forEach(e => { if (!e.closest(".row.sel")) e.classList.remove("open"); }); document.querySelectorAll(`#list [data-row="${k}"] > .txt > .sum.long:not(.open)`).forEach(unfold);
-  const els = [...document.querySelectorAll(`#stage [data-k="${k}"], #stage [data-also="${k}"]`)];
+  const els = [...document.querySelectorAll(`#stage [data-k="${k}"], #stage [data-also~="${k}"]`)];
   const proxy = els.length ? [] : proxyEls(k);
   const finish = () => { els.forEach(e => {
     fitOutline(e);
@@ -57,7 +60,7 @@ function highlight(k, flash = true, reveal = false) {
   const finishAll = () => { finish0(); lastFlash = { k, t: Date.now() }; if (parentFlashFor === k) flashParents(k); };
   if (!reveal || skipReveal) { skipReveal = false; return finishAll(); }
   // wait until a growing (ghost-revealed or restored) element has its full size, then scroll to it
-  const liveEls = () => [...document.querySelectorAll(`#stage [data-k="${k}"], #stage [data-also="${k}"]`)];
+  const liveEls = () => [...document.querySelectorAll(`#stage [data-k="${k}"], #stage [data-also~="${k}"]`)];
   const go = () => { if (selected !== k) return; const live = liveEls(); els.splice(0, els.length, ...live); fT(finishAll, revealInStage(live) ? 340 : 0); };
   fT(() => {
     if (selected !== k) return;
@@ -81,7 +84,7 @@ function flashStage(e, times = 1) {
 function flashRow(el) { clearTimeout(el._attnT); el.classList.remove("attn"); void el.offsetWidth; el.classList.add("attn"); el._attnT = setTimeout(() => el.classList.remove("attn"), FLASH_MS * 2 + 40); }
 // The setting and its element(s) flash together: used when arriving at a setting (search, "Take me there").
 function flashTarget(k) {
-  document.querySelectorAll(`#stage [data-k="${k}"], #stage [data-also="${k}"]`).forEach(e => flashStage(e, 2));
+  document.querySelectorAll(`#stage [data-k="${k}"], #stage [data-also~="${k}"]`).forEach(e => flashStage(e, 2));
   document.querySelectorAll(`[data-row="${k}"]`).forEach(el => { if (el.offsetParent) flashRow(el); });
 }
 // Only the parents that actually block k: "Hide snackbar" is already off, so it does not flash
@@ -98,7 +101,7 @@ function flashParents(k) {
   parentFlashFor = null;
   flashTarget(k);
   for (const key of blockingParents(k)) {
-    document.querySelectorAll(`#stage [data-k="${key}"], #stage [data-also="${key}"]`).forEach(e => flashStage(e, 2));
+    document.querySelectorAll(`#stage [data-k="${key}"], #stage [data-also~="${key}"]`).forEach(e => flashStage(e, 2));
     document.querySelectorAll(`[data-row="${key}"]`).forEach(flashRow);
   }
 }
