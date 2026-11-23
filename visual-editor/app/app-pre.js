@@ -13,6 +13,7 @@ if (INAPP) {
   try { LIVE = JSON.parse(MorpheApp.state()); liveOk = !!(LIVE && LIVE.values && Object.keys(LIVE.values).length); } catch (e) { /* handled below */ }
   if (!liveOk && !MorpheApp.preview) {
     LIVE = { values: {}, version: "" };
+    window.MORPHE_STOP = true; // boot.js draws nothing while the app swaps in its regular list
     try { MorpheApp.fallback(); } catch (e) { try { MorpheApp.close(); } catch (e2) { /* ignore */ } }
   }
   try { localStorage.removeItem(LS + "-baseline"); } catch (e) { /* storage unavailable */ }
@@ -64,14 +65,19 @@ if (INAPP) {
     const known = new Set(cat.preferences.map(p => p.key));
     const TYPE_WIDGET = { action: "Preference", boolean: "SwitchPreference", enum: "ListPreference", string: "EditTextPreference", integer: "EditTextPreference", long: "EditTextPreference", float: "EditTextPreference" };
     const liveType = m => m.type === "action" ? null : m.type;
+    const FAMILY = { boolean: "switch", enum: "text", string: "text", integer: "number", long: "number", float: "number" };
     for (const p of cat.preferences) {
       const m = meta[p.key]; if (!m) continue;
       // Morphe changed the setting's type (a switch became a list, say): its type and widget win,
       // so the control and the value format match what Morphe saves.
-      if (m.type && TYPE_WIDGET[m.type] && liveType(m) !== p.type && !(m.type === "action" && p.type == null)) {
+      // Within one family (integer / long / float, string / enum) only the value format follows, so
+      // a read-only counter stays read-only and a list stays a list.
+      if (FAMILY[m.type] && FAMILY[m.type] === FAMILY[p.type]) p.type = m.type;
+      else if (m.type && TYPE_WIDGET[m.type] && liveType(m) !== p.type && !(m.type === "action" && p.type == null)) {
         p.type = liveType(m);
         p.widget = Array.isArray(m.entries) && m.entries.length ? "ListPreference" : TYPE_WIDGET[m.type];
         delete p.entryVariants; delete p.versionDefault; delete p.summaryOn; delete p.summaryOff;
+        if (p.widget !== "ListPreference") { delete p.entries; delete RUNTIME_ENTRIES[p.key]; }
       }
       if (m.title) p.title = m.title;
       if (m.summary != null) p.summary = m.summary;

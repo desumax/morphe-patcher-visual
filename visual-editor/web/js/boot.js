@@ -3,6 +3,7 @@
 
 // ------------------------------------------------------------------ boot
 async function boot() {
+  if (window.MORPHE_STOP) return; // in the app with no settings to edit: the app shows its regular list (app-pre.js)
   try { const r = await fetch("catalogue.json"); CAT = await r.json(); }
   catch (err) { $("list").innerHTML = `<div class="secnote" style="padding:20px 16px">Could not load catalogue.json. Serve this folder over HTTP (for example <code>python3 -m http.server</code>) and reload.</div>`; return; }
   CAT.preferences.push(...SB_CATS.map(([k, t, d]) => ({ key: "morphe_sb_" + k, title: t, summary: "What SponsorBlock does with this kind of segment", widget: "ListPreference", type: "string", default: d, rebootApp: false, parents: [{ key: "morphe_sb_enabled", mode: "all" }], customAvailability: [], screen: "SPONSORBLOCK", subScreen: null, synthetic: true, entries: SB_BEHAVIOUR })).filter(p => !CAT.preferences.some(x => x.key === p.key)));
