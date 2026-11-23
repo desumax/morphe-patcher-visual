@@ -12,17 +12,18 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-out = Path(sys.argv[1]).resolve()
+sys.path.insert(0, str(HERE))
+import outdir  # noqa: E402
+
+out = outdir.fresh(Path(sys.argv[1]).resolve())
 app = out / "app"
-if out.exists():
-    shutil.rmtree(out)
-out.mkdir(parents=True)
 subprocess.run([sys.executable, str(HERE / "build_app_web.py"), str(app)], check=True)
 
 # Stand-in for window.MorpheApp: no live values (the preview's defaults are used), changes stay in
 # the page, and leaving or restarting tells the frame, which shows what the app would do.
 STUB = """<script>
 window.MorpheApp = {
+  preview: true, // no live values here: the page keeps the preview's catalogue and defaults
   state: () => JSON.stringify({ values: {}, version: "" }),
   set: () => {}, ready: () => {}, vibrate: ms => { try { navigator.vibrate && Navigator.prototype.vibrate.call(navigator, ms); } catch (e) {} },
   close: () => parent.postMessage({ appview: "close" }, "*"),

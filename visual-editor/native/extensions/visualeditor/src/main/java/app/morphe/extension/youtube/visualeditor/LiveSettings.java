@@ -52,8 +52,10 @@ final class LiveSettings {
         JSONObject out = new JSONObject();
         Map<String, Row> rows = new HashMap<>();
         PreferenceScreen root = VisualEditorEntry.liveRoot();
-        ACTION_ROWS.clear();
-        if (root != null) walk(root, null, null, 0, rows);
+        // Every leaf row in list order, local to this read so no Preference (and through it the
+        // settings activity) is kept once the editor closes.
+        List<Row> actionRows = new ArrayList<>();
+        if (root != null) walk(root, null, null, 0, rows, actionRows);
         PreferenceTree tree = PreferenceTree.get();
         Set<String> settingKeys = new HashSet<>();
         for (Setting<?> s : Setting.allLoadedSettings()) {
@@ -92,7 +94,7 @@ final class LiveSettings {
                 Logger.printException(() -> "Visual editor: meta failed for " + s.key, ex);
             }
         }
-        addActions(out, settingKeys, rows);
+        addActions(out, settingKeys, actionRows);
         return out;
     }
 
@@ -106,10 +108,10 @@ final class LiveSettings {
      */
     private static final Map<String, WeakReference<Preference>> ACTIONS = new HashMap<>();
 
-    private static void addActions(JSONObject out, Set<String> settingKeys, Map<String, Row> rows) {
+    private static void addActions(JSONObject out, Set<String> settingKeys, List<Row> actionRows) {
         ACTIONS.clear();
         int n = 0;
-        for (Row r : ACTION_ROWS) {
+        for (Row r : actionRows) {
             Preference p = r.pref;
             String key = p.getKey();
             if (key != null && (settingKeys.contains(key) || key.startsWith("morphe_visual_editor_"))) continue;
@@ -146,9 +148,6 @@ final class LiveSettings {
             return null;
         }
     }
-
-    /** Every leaf row in list order, with or without a key (filled by walk). */
-    private static final List<Row> ACTION_ROWS = new ArrayList<>();
 
     /** Runs an action row as if it was tapped in Morphe's own list. Main thread. */
     static boolean runAction(String key) {
@@ -203,17 +202,17 @@ final class LiveSettings {
         }
     }
 
-    private static void walk(PreferenceGroup group, @Nullable String screen, @Nullable String sub, int depth, Map<String, Row> rows) {
+    private static void walk(PreferenceGroup group, @Nullable String screen, @Nullable String sub, int depth, Map<String, Row> rows, List<Row> actionRows) {
         for (int i = 0, n = group.getPreferenceCount(); i < n; i++) {
             Preference p = group.getPreference(i);
             String key = p.getKey();
             Row row = new Row(p, screen, sub);
             if (key != null && !rows.containsKey(key)) rows.put(key, row);
-            ACTION_ROWS.add(row);
+            actionRows.add(row);
             if (p instanceof PreferenceGroup g) {
                 String t = p.getTitle() == null ? null : p.getTitle().toString();
                 boolean isScreen = p instanceof PreferenceScreen;
-                walk(g, depth == 0 && isScreen ? t : screen, depth >= 1 && isScreen ? t : sub, isScreen ? depth + 1 : depth, rows);
+                walk(g, depth == 0 && isScreen ? t : screen, depth >= 1 && isScreen ? t : sub, isScreen ? depth + 1 : depth, rows, actionRows);
             }
         }
     }

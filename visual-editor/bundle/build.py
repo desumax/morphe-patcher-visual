@@ -11,9 +11,10 @@ Needs: git, JDK 17+, the Android SDK (ANDROID_HOME or local.properties), and a G
 read:packages for the Morphe Gradle plugin (GITHUB_ACTOR + GITHUB_TOKEN, or gpr.user / gpr.key
 in ~/.gradle/gradle.properties).
 
-Usage: build.py [--tag v2.3.0] [--work DIR] [--out DIR] [--version 0.1.0-test.1]
+Usage: build.py --version 0.1.0-test.N [--tag v2.3.0] [--work DIR] [--out DIR]
 """
 import argparse
+import json
 import os
 import shutil
 import subprocess
@@ -32,6 +33,10 @@ def run(cmd, cwd=None, env=None):
     subprocess.run([str(c) for c in cmd], cwd=cwd, env=env, check=True)
 
 
+sys.path.insert(0, str(HERE.parent / "app"))
+import outdir  # noqa: E402
+
+
 def rmtree(path: Path):
     def onerror(func, p, _):
         os.chmod(p, 0o700)
@@ -45,16 +50,28 @@ def main():
     ap.add_argument("--tag", default="v2.3.0", help="morphe-patches release to build against")
     ap.add_argument("--work", default=str(HERE / "work"))
     ap.add_argument("--out", default=str(HERE / "out"))
-    ap.add_argument("--version", default="0.1.0-test.1")
+    ap.add_argument("--version", required=True, help="bundle version, e.g. 0.1.0-test.9 (also names the .mpp)")
+    ap.add_argument("--manifest", action="store_true",
+                    help="also point patches-bundle.json at this version's release asset (publish that release before pushing the manifest)")
     ap.add_argument("--skip-build", action="store_true", help="only prepare the workspace")
     args = ap.parse_args()
 
     started = time.time()
     work = Path(args.work).resolve()
     repo = work / "morphe-patches"
-    rmtree(repo)
+    # Only a checkout this tool cloned (marked) is replaced; any other folder there stops the run.
+    outdir.clear(repo)
     work.mkdir(parents=True, exist_ok=True)
     run(["git", "clone", "--quiet", "--depth", "1", "--branch", args.tag, UPSTREAM, repo])
+    outdir.mark(repo)
+
+    # Upstream's own YouTube compatibility (app identity, supported versions and their minimum
+    # Android), kept from the official sources before they are removed, so the editor declares
+    # exactly what the official patches support at this tag (see VisualSettingsEditorPatch.kt).
+    constants = repo / "patches/src/main/kotlin/app/morphe/patches/youtube/shared/Constants.kt"
+    if not constants.exists():
+        sys.exit(f"{constants.relative_to(repo)} is missing at {args.tag}: update the editor's compatibility")
+    constants_src = constants.read_text(encoding="utf-8")
 
     # Keep only what the editor builds against: the shared extension library and the patch stubs.
     rmtree(repo / "patches" / "src")
@@ -65,6 +82,8 @@ def main():
 
     # The editor's sources and build files.
     shutil.copytree(NATIVE / "patches" / "src", repo / "patches" / "src")
+    constants.parent.mkdir(parents=True, exist_ok=True)
+    constants.write_text(constants_src, encoding="utf-8")
     shutil.copytree(NATIVE / "extensions" / "visualeditor", repo / "extensions" / "visualeditor")
     shutil.copytree(OVERLAY, repo, dirs_exist_ok=True)
     run([sys.executable, HERE / "gen_preview_map_data.py", NATIVE / "preview_map.json",
@@ -97,6 +116,16 @@ def main():
     target = out / f"morphe-visual-editor-{args.version}.mpp"
     shutil.copy2(built[-1], target)
     print(f"Built {target} ({target.stat().st_size} bytes) in {time.time() - started:.0f} s")
+
+    if args.manifest:
+        # Manager's feed: the version, its .mpp and the release it is attached to must agree.
+        tag = "visual-editor-" + args.version.split("-", 1)[-1].replace(".", "-")
+        feed = HERE / "patches-bundle.json"
+        data = json.loads(feed.read_text(encoding="utf-8"))
+        data.update(version=args.version, created_at=time.strftime("%Y-%m-%dT%H:%M:%S"),
+                    download_url=f"https://github.com/desumax/morphe-patcher-visual/releases/download/{tag}/{target.name}")
+        feed.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        print(f"patches-bundle.json now points at release {tag}: attach {target.name} to it before pushing")
 
 
 if __name__ == "__main__":

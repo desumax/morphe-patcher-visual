@@ -12,7 +12,7 @@ from pathlib import Path
 src, out = Path(sys.argv[1]), Path(sys.argv[2])
 CHUNK = 60000  # under the 65535-byte limit of one class-file string constant
 entries = []
-for f in sorted(p for p in src.rglob("*") if p.is_file()):
+for f in sorted(p for p in src.rglob("*") if p.is_file() and not p.name.startswith(".")):  # skip tool markers
     rel = f.relative_to(src).as_posix()
     data = base64.b64encode(gzip.compress(f.read_bytes(), 9, mtime=0)).decode("ascii")
     parts = [data[i:i + CHUNK] for i in range(0, len(data), CHUNK)]

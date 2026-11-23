@@ -63,6 +63,13 @@ final class SettingsBridge {
             after.run();
             return;
         }
+        // Morphe has this setting switched off right now (its parent is off, or it is not supported
+        // here): its own list would not let it change, so neither does the editor. The page gets
+        // the kept value back.
+        if (!s.isAvailable()) {
+            after.run();
+            return;
+        }
         if (s.userDialogMessage != null && !newValue.equals(String.valueOf(s.defaultValue))) {
             try {
                 new AlertDialog.Builder(context)

@@ -242,16 +242,26 @@ final class WebEditorDialog extends Dialog {
 
     /** Called from the page's JavaScript thread: anything touching views goes to the main thread. */
     private final class Bridge {
+        /**
+         * Live values, YouTube version and metadata. A setting whose value can't be read is left
+         * out (the page then hides it); if nothing can be read, returns "" and the page goes back
+         * to Morphe's regular list instead of showing an editor that could not save anything.
+         */
         @JavascriptInterface
         public String state() {
-            JSONObject values = new JSONObject();
             try {
+                JSONObject values = new JSONObject();
                 for (Setting<?> s : Setting.allLoadedSettings()) {
-                    Object v = s.get();
-                    if (v instanceof Enum<?> e) values.put(s.key, e.name());
-                    else if (v instanceof Boolean || v instanceof Number) values.put(s.key, v);
-                    else values.put(s.key, String.valueOf(v));
+                    try {
+                        Object v = s.get();
+                        if (v instanceof Enum<?> e) values.put(s.key, e.name());
+                        else if (v instanceof Boolean || v instanceof Number) values.put(s.key, v);
+                        else values.put(s.key, String.valueOf(v));
+                    } catch (Exception ex) {
+                        Logger.printException(() -> "Visual editor: could not read " + s.key, ex);
+                    }
                 }
+                if (values.length() == 0) return "";
                 JSONObject out = new JSONObject();
                 out.put("values", values);
                 out.put("version", appVersion(activity));
@@ -259,7 +269,7 @@ final class WebEditorDialog extends Dialog {
                 return out.toString();
             } catch (Exception ex) {
                 Logger.printException(() -> "Visual editor: state failed", ex);
-                return "{\"values\":{},\"version\":\"\"}";
+                return "";
             }
         }
 

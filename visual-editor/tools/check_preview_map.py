@@ -10,13 +10,23 @@ unknown settings are shown as plain rows. The report only says which animations 
 Exits with 1 when the map is out of date, so it can run in CI after each upstream release.
 """
 import json
+import re
 import sys
+from pathlib import Path
 
 cat = json.load(open(sys.argv[1]))
 pmap = json.load(open(sys.argv[2]))
 live = {p["key"] for p in cat["preferences"] if not p.get("synthetic")}
+# Rows the catalogue makes itself for settings Morphe builds in code (SponsorBlock's categories):
+# not in morphe_prefs.xml, so not "upstream" for this report, but not gone either.
+synthetic = {p["key"] for p in cat["preferences"] if p.get("synthetic")}
+# the preview adds those rows at start-up from SB_CATS (web/js/scenarios.js) when the catalogue lacks them
+sb = Path(__file__).resolve().parent.parent / "web" / "js" / "scenarios.js"
+m = re.search(r"const SB_CATS = (\[.*?\]);\n", sb.read_text(encoding="utf-8")) if sb.exists() else None
+if m:
+    synthetic |= {"morphe_sb_" + c[0] for c in json.loads(m.group(1))}
 mapped = set(pmap["entries"])
-stale = sorted(mapped - live)
+stale = sorted(mapped - live - synthetic)
 new = sorted(k for k in live - mapped)
 print(f"{len(live)} settings upstream, {len(mapped)} in the preview map")
 print(f"\nIn the map but gone upstream ({len(stale)}), skipped at runtime:")

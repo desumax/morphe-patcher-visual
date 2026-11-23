@@ -12,9 +12,10 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 WEB = HERE.parent / "web"
-out = Path(sys.argv[1])
-if out.exists():
-    shutil.rmtree(out)
+sys.path.insert(0, str(HERE))
+import outdir  # noqa: E402
+
+out = outdir.fresh(Path(sys.argv[1]))
 (out / "js").mkdir(parents=True)
 
 html = (WEB / "index.html").read_text(encoding="utf-8")

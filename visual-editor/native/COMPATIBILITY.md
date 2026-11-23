@@ -49,8 +49,12 @@ developer works in, would break or conflict nearly every week.
   `isAvailable`, `isSetToDefault` and `resetToDefault`, the same calls the regular screens make.
 - **List settings:** the editor moves a list setting to the next entry that the regular screen
   offers (read from the XML). It never invents a value.
-- **Nothing about the settings ships in the patch.** The catalogue in `../data` and its extractor
-  exist only for the web prototype and for the drift check below.
+- **The catalogue ships only as preview hints.** The in-app editor is the web preview, so its
+  `catalogue.json` is packed into the extension (generated `WebAssets.java`). At runtime the live
+  data wins: which settings show comes from the installed preference rows, and titles, summaries,
+  entries, defaults, types and availability come from Morphe (`LiveSettings`, `Setting` API). The
+  catalogue only adds preview hints (drawing, animation, order, grouping). If Morphe's values can't
+  be read, the editor closes and the regular Morphe list is used.
 
 ### 2. The preview map is hints, never truth
 
@@ -68,10 +72,11 @@ uses. At runtime:
 
 | Need | Done with |
 | --- | --- |
-| An entry at the top of Morphe settings | The public `PreferenceScreen.Screen(...)` API every patch uses. Root entries are sorted by key, so `morphe_settings_screen_00_0_visual_editor` lands above `..._00_about`. |
+| An entry at the top of Morphe settings | One call injected at the start of `YouTubePreferenceFragment.initialize()` (in finalize, so it works whichever bundle's patches run first). The extension then adds its rows above About once the list is built. If the fragment or method is missing, the patch only logs a warning, so a successful patch run alone doesn't prove the editor is in: check for its row in Morphe settings. |
 | The editor's own settings (on, tabs) | `VisualEditorSettings` in the editor's own package, not `Settings.java`. |
 | Opening the editor | A preference class in the editor's package, inflated from the generated XML like any other. |
-| Morphe Manager, the patcher, other patches | Not touched. It is an ordinary optional patch, off by default. |
+| Morphe Manager, the patcher, other patches | Not touched. In the standalone test bundle it is the only patch and is on by default; it needs the Morphe Patches bundle in the same run (Manager: Expert mode, both bundles, at least one patch that adds Morphe settings). |
+| Text | The entry switch and "Open visual editor" row are English literals for now, outside upstream's translation workflow. An upstream PR needs them as string resources. |
 
 The developer can rename, move, add or remove settings exactly as today. The editor follows
 without any change on their side.
@@ -84,7 +89,9 @@ looks like.
 **Which settings exist.** This is handled entirely by Morphe's own code:
 
 - **Patch level:** the editor declares `compatibleWith(COMPATIBILITY_YOUTUBE)`, the same list of
-  supported YouTube versions as every other YouTube patch. Morphe Manager only offers it where the
+  supported YouTube versions (and minimum Android per version) as every other YouTube patch. The
+  standalone builder keeps upstream's `youtube/shared/Constants.kt` from the tag it builds
+  against, so the declaration always matches that release. Morphe Manager only offers it where the
   rest of Morphe works.
 - **Settings not added on this version:** Morphe only adds a version-gated setting when that
   version needs it (for example `if (!is_21_30_or_greater) ...` in the patches). A setting that
