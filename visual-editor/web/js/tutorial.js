@@ -11,9 +11,11 @@ const TUT_PAGES = {
   change: { cap: "Hold it to change the setting", sub: "The toggle on its card works too. Here the button gets hidden" },
   find: { ms: 5200, cap: "Tap a hidden setting to find it", sub: "An outline shows where it was. Hold it, or use the toggle, to show it or hide it again" },
   tools: { ms: 10400, cap: "Search, reset and compare", sub: "Search finds any setting. Reset undoes your changes. Original shows stock YouTube, Morphe shows yours" },
-  custom: { ms: 12300, cap: "Make it yours", sub: "At the end of the screen menu: group screens into tabs, and pick how the settings list looks" },
+  custom: { ms: 12300, cap: "Make it yours", sub: "At the end of the screen menu: group screens into tabs, and pick how the editor and its list look" },
+  // the last page: pick a look right here; the whole editor, this tutorial included, changes as you tap (Max, Nov 23 PM)
+  style: { ms: 600000, cap: "Pick your style", sub: "Tap to try each one. The editor changes as you tap, and you can change it again at the end of the screen menu" },
 };
-const tutPages = () => [...(grouped ? ["groups"] : []), "tap", "change", "find", "tools", "custom"];
+const tutPages = () => [...(grouped ? ["groups"] : []), "tap", "change", "find", "tools", "custom", "style"];
 const TUT_STEP_MS = 4200;
 const TUT_QUERY = "cast button";
 // the Cast setting's card as each list design draws it
@@ -43,6 +45,7 @@ function runTutorial(startAt) {
           <div class="tpfoot"><div class="tprow">Group screens into tabs<span class="sw" id="tGsw" aria-checked="${grouped}"></span></div>
             <div class="tprow">List design<span class="tseg3">${[["classic", "Morphe"], ["toggles", "Switches"], ["clean", "Clean"]].map(([d, n]) => `<b data-d="${d}" class="${d === design ? "on" : ""}">${n}</b>`).join("")}</span></div></div></div></div>
       <div class="ttabs" id="tTabs">${playerTabs.map((n, i) => `<span class="${i ? "" : "on"}">${esc(n)}</span>`).join("")}</div>
+      <div class="tstyle" id="tStyle"><div class="tsrow"><span>UI design</span>${seg3("UI design", "tui", UI_DESIGNS, theme)}</div><div class="tsrow"><span>List design</span>${seg3("List design", "tld", [["classic", "Morphe"], ["toggles", "Switches"], ["clean", "Clean"]], design)}</div></div>
       <div class="tlist" id="tlist">${tutRowHTML(design)}</div>
       <div class="tres" id="tRes"><div class="tres-hint" id="tHint">Type to search all ${total} settings</div>
         <div class="tres-n">1 result</div><div class="tsres" id="tSres"><div class="ttl" id="tSttl"></div><div class="where">${castWhere}</div></div></div>
@@ -95,6 +98,8 @@ function runTutorial(startAt) {
   { const cap = $("tcap"); let hMax = 0; pages.forEach((id, n) => { cap.innerHTML = `<b>${n + 1}</b>${TUT_PAGES[id].cap}<small>${pageSub(id)}</small>`; hMax = Math.max(hMax, cap.offsetHeight); }); cap.style.minHeight = hMax + "px"; }
   // the demo keeps its height while search folds the preview and the card away
   demo.style.minHeight = demo.offsetHeight + "px";
+  // the style page shows its choices where the preview and the tabs were, in the same height
+  $("tStyle").style.minHeight = stage.offsetHeight + (grouped ? $("tTabs").offsetHeight + 8 : 0) + "px";
   const pageMs = () => TUT_PAGES[pages[step]].ms || TUT_STEP_MS; // at2 stretches it on pages 1 and 5
   const show = () => {
     clock.start("tutPage");
@@ -182,6 +187,11 @@ function runTutorial(startAt) {
       at2(8350, () => { tap(); setMode(false); setHidden(true); cast.className = "tb ghost"; });
       at2(9300, () => f.classList.remove("show"));
     }
+    if (id === "style") { // no finger: the choices are real and change the editor as they are tapped
+      cast.className = "tb"; setHidden(false, true); f.classList.remove("show"); row.classList.remove("pre");
+      t.querySelectorAll("[data-tui]").forEach(b => b.setAttribute("aria-checked", String(b.dataset.tui === theme)));
+      t.querySelectorAll("[data-tld]").forEach(b => b.setAttribute("aria-checked", String(b.dataset.tld === design)));
+    }
     if (id === "custom") { // the screen menu's own settings: tabs off and on again, then each list design
       cast.className = "tb"; setHidden(false, true); move($("tPill"), 0, 0, 60);
       at2(90, () => move($("tPill"), 600));
@@ -205,6 +215,12 @@ function runTutorial(startAt) {
   t.querySelector(".steps").addEventListener("click", e => {
     const b = e.target.closest("[data-step]"); if (!b) return;
     step = Number(b.dataset.step); show();
+  });
+  $("tStyle").addEventListener("click", e => {
+    const u = e.target.closest("[data-tui]"), l = e.target.closest("[data-tld]");
+    if (u && u.dataset.tui !== theme) { theme = u.dataset.tui; applyTheme(); renderBar(); store.save(); glassSample(); }
+    if (l && l.dataset.tld !== design) { design = l.dataset.tld; setRowDesign(design); renderBar(); renderList(); store.save(); }
+    if (u || l) t.querySelectorAll("#tStyle [role=radio]").forEach(b => b.setAttribute("aria-checked", String((b.dataset.tui || b.dataset.tld) === (b.dataset.tui ? theme : design))));
   });
   $("tutOk").onclick = () => { if (single || step === pages.length - 1) return close(); step++; show(); };
 }

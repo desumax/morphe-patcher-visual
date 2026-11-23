@@ -23,6 +23,8 @@ function applyTheme() {
 // While glass is on, frame times are sampled during scrolls and menu/dialog animations; if three
 // quarters of the frames take longer than 24 ms the tier drops one step, and the device remembers it.
 let glassTier = null, glassCap = null;
+// the preview's own page can force a level, to see each one on any computer (Max, Nov 23 PM); the app never does
+let glassForced = null; try { const f = localStorage.getItem(LS + "-glassforce"); if (f !== null && /^[012]$/.test(f)) glassForced = +f; } catch { /* storage unavailable */ }
 function glassTierDetect() {
   const sup = q => { try { return CSS.supports(q); } catch { return false; } };
   const mq = q => { try { return matchMedia(q).matches; } catch { return false; } };
@@ -36,7 +38,8 @@ function glassTierDetect() {
 }
 function glassTierApply() {
   if (glassCap === null) { glassCap = 2; try { const c = parseInt(localStorage.getItem(LS + "-glass"), 10); if (c >= 0 && c <= 2) glassCap = c; } catch { /* storage unavailable */ } }
-  if (glassTier === null) glassTier = Math.min(glassTierDetect(), glassCap);
+  if (glassForced !== null) glassTier = glassForced;
+  else if (glassTier === null) glassTier = Math.min(glassTierDetect(), glassCap);
   $("phone").dataset.gt = glassTier;
   if (glassTier === 2 && !$("lgDefs")) document.body.insertAdjacentHTML("beforeend", '<svg id="lgDefs" width="0" height="0" style="position:absolute;width:0;height:0" aria-hidden="true" focusable="false"><filter id="lgRefract" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB"><feTurbulence type="fractalNoise" baseFrequency="0.011 0.016" numOctaves="2" seed="11" result="n"/><feGaussianBlur in="n" stdDeviation="2.5" result="w"/><feDisplacementMap in="SourceGraphic" in2="w" scale="26" xChannelSelector="R" yChannelSelector="G"/></filter></svg>');
 }
@@ -44,7 +47,7 @@ const GLASS_TIER_NAMES = ["Flat glass", "Light glass", "Full glass"];
 // frame-time watch: a short window of frames after a scroll or an opening menu or dialog
 let glassWatch = null;
 function glassSample() {
-  if (theme !== "glass" || !glassTier || glassWatch) return;
+  if (theme !== "glass" || !glassTier || glassWatch || glassForced !== null) return;
   const dts = []; let last = 0;
   glassWatch = requestAnimationFrame(function f(t) {
     if (last) { const dt = t - last; if (dt < 250) dts.push(dt); } // a hidden tab's gap isn't a slow frame
@@ -61,6 +64,11 @@ function glassSample() {
   });
 }
 document.addEventListener("scroll", glassSample, { capture: true, passive: true });
+function setGlassForce(v) {
+  glassForced = v === "" || v === null ? null : +v; glassTier = null;
+  try { if (glassForced === null) localStorage.removeItem(LS + "-glassforce"); else localStorage.setItem(LS + "-glassforce", String(glassForced)); } catch { /* storage unavailable */ }
+  applyTheme(); renderBar();
+}
 // Morphe's theme patch (Pure black / AMOLED, Material You, Catppuccin, custom) changes YouTube's
 // background, so the preview and, in the YouTube look, the editor itself follow it.
 function appBg() {
@@ -109,5 +117,6 @@ function applyDevice() {
   $("devBtns").innerHTML = DEVICES.map(x => `<button class="btn" data-dev="${x.id}" aria-pressed="${x.id === device_}">${x.label}</button>`).join("");
 }
 $("devBtns").addEventListener("click", e => { const b = e.target.closest("[data-dev]"); if (!b) return; device_ = b.dataset.dev; applyDevice(); store.save(); });
+{ const gf = $("glassForce"); if (gf) { gf.value = glassForced === null ? "" : String(glassForced); gf.addEventListener("change", e => setGlassForce(e.target.value)); } }
 $("uiScale").addEventListener("input", e => { uiScale = Number(e.target.value); $("uiScaleOut").textContent = uiScale + "%"; applyDevice(); });
 window.addEventListener("resize", () => { if (window.innerWidth > 860) applyDevice(); else { $("phone").style.transform = ""; $("devwrap").style.width = ""; $("devwrap").style.height = ""; $("phone").style.width = ""; $("phone").style.height = ""; } });

@@ -24,8 +24,9 @@ function renderBar() {
     // screen order: its own line under the cards, so the group switch keeps the full width for its text
     + `<div class="themerow ordrow"><span class="ordhint">Hold a screen to move it</span><button class="ordreset" data-order-reset ${customOrder ? "" : "disabled"} title="Hold a screen to move it. This restores Morphe's order.">${I("reset")}Reset order</button></div>`
     + `<div class="themerow simrow"><div class="themetog" data-group-toggle role="menuitemcheckbox" aria-checked="${grouped}"><span class="pi">${I("layers")}</span><div class="tt">Group screens into tabs<small>Six screens instead of ${SECTIONS.length}. Each one has tabs right under the live preview, and every tab brings its own preview.</small></div><span class="sw" role="presentation" aria-checked="${grouped}"></span></div></div>`
-    // UI design sits right above the list design (Max, Nov 23): the palette icon, its name and a three-way toggle
-    + `<div class="themerow designrow uirow"><div class="dcol"><div class="dsg"><span class="pi">${I("palette")}</span><div class="tt">UI design${theme === "glass" && glassTier !== null ? `<small>${GLASS_TIER_NAMES[glassTier]}, set for this device</small>` : ""}</div></div><div class="drow">${seg3("UI design", "ui", UI_DESIGNS, theme)}</div></div></div>`
+    // UI design sits right above the list design (Max, Nov 23)
+    // one line: the title on the left, its toggle on the right (Max, Nov 23 PM)
+    + `<div class="themerow uirow"><span class="pi">${I("palette")}</span><div class="tt">UI design${theme === "glass" && glassTier !== null ? `<small>${GLASS_TIER_NAMES[glassTier]}${glassForced ? " (forced)" : ""}</small>` : ""}</div>${seg3("UI design", "ui", UI_DESIGNS, theme)}</div>`
     + `<div class="themerow designrow"><div class="dcol"><div class="dsg"><span class="pi">${I("list")}</span><div class="tt">Settings list design</div></div><div class="drow">${seg3("Settings list design", "design", [["classic", "Morphe"], ["toggles", "Switches"], ["clean", "Clean"]], design)}<button class="offnew" data-editor-off>${I("power")}Disable new design</button></div></div></div>`;
   placeSeg3();
   $("btnReset").disabled = mode !== "mod" || !Object.keys(PREF).some(k => JSON.stringify(state[k]) !== JSON.stringify(defaults[k]));
@@ -304,7 +305,7 @@ function controlFor(k) {
   if (OFF_LIST.has(k) && String(v) === "off") return "";
   // up to 8 choices: a row of pills; 9 to 16 (icon styles, theme colours, qualities): a 3-column grid
   // of pills built from the same entries, so it follows whatever list Morphe ships; more: a dropdown
-  if (ents.length && ents.length <= 16) return `<div class="ctl optgrid">${ents.map(e => `<button class="opt${NEG_WORD.has(String(e.label)) ? " neg" : ""}${sameVal(e.value, defaults[k]) ? " def" : ""}" data-set="${k}" data-val="${esc(e.value)}" aria-pressed="${sameVal(e.value, v)}" ${dis}>${esc(e.label)}</button>`).join("")}</div>`;
+  if (ents.length && ents.length <= 16) return `<div class="ctl optgrid">${ents.map(e => `<button class="opt${NEG_WORD.has(String(e.label)) ? " neg" : ""}${sameVal(e.value, defaults[k]) ? " def" : ""}" data-set="${k}" data-val="${esc(e.value)}" aria-pressed="${sameVal(e.value, v)}" ${dis}><span class="ol">${esc(e.label)}</span></button>`).join("")}</div>`; // .ol: the label sits over the gliding colour, the colour over the pill borders
   if (ents.length) return `<div class="ctl"><select data-set="${k}" ${dis} aria-label="${esc(shownTitle(k))}">${ents.map(e => `<option value="${esc(e.value)}" ${sameVal(e.value, v) ? "selected" : ""}>${esc(e.label)}</option>`).join("")}</select></div>`;
   if (p.type === "integer" || p.type === "float" || p.type === "long") {
     const r = Object.entries(RANGES).find(([n]) => k.includes(n));
@@ -313,7 +314,7 @@ function controlFor(k) {
     const sr = /\(?(\d+)\s*[-–]\s*(\d+)\s*(ms|dp|sp|%)?\)/.exec(String(p.summary || ""));
     if (r || sr || /opacity|scale|strength|display_area/.test(k)) {
       const [min, max] = r ? r[1] : sr ? [Number(sr[1]), Number(sr[2])] : [0, 100];
-      return `<div class="ctl"><input type="range" min="${min}" max="${max}" step="1" value="${v}" data-set="${k}" ${dis} aria-label="${esc(shownTitle(k))}"><span class="val" data-val-of="${k}">${v}</span></div>`;
+      return `<div class="ctl"><input type="range" min="${min}" max="${max}" step="1" value="${v}" data-set="${k}" style="--pct:${max > min ? Math.round((v - min) / (max - min) * 1000) / 10 : 0}%" ${dis} aria-label="${esc(shownTitle(k))}"><span class="val" data-val-of="${k}">${v}</span></div>`;
     }
     return `<div class="ctl side"><input type="number" value="${v}" data-set="${k}" ${dis} aria-label="${esc(shownTitle(k))}" step="${p.type === "float" ? "0.05" : "1"}"></div>`;
   }
@@ -656,6 +657,9 @@ function renderList() {
   const oldKidRows = new Map(); list.querySelectorAll(".kids .row:not(.hide)").forEach(r => oldKidRows.set(r.dataset.row, r.outerHTML));
   const wasOpen = new Map([...list.querySelectorAll(".row > .txt > .sum.open")].map(e => [e.closest(".row").dataset.row, e.getBoundingClientRect().height]));
   const headsWere = list.dataset.view === section ? shownHeads(list) : null;
+  // a locked card that unlocks loses its "Take me there" and its "needs ..." line: the card eases to its new
+  // height and the two fade where they were, instead of the card snapping shorter (Max, Nov 23)
+  const lockedWas = new Map(); if (list.dataset.view === section) list.querySelectorAll(".row.dis[data-row]").forEach(r => { const sd = r.querySelector(":scope > .side"); if (!sd || !r.offsetHeight || sd.offsetParent !== r) return; lockedWas.set(r.dataset.row, { h: r.offsetHeight, side: sd.cloneNode(true), x: sd.offsetLeft, y: sd.offsetTop, w: sd.offsetWidth }); });
   list.innerHTML = html; list.dataset.view = section;
   mergeZonePreview(list);
   fitOpts(list);
@@ -728,6 +732,17 @@ function renderList() {
   if (lastDis.sec === section) { carryUnlocks(list); lastDis.keys.forEach(k => { if (!dis.has(k)) { const r = list.querySelector(`[data-row="${k}"]`); if (r && !r.dataset.ulk && !r.classList.contains("hide")) unlockFx(r); } }); }
   else unlocking.clear();
   lastDis = { sec: section, keys: dis };
+  lockedWas.forEach((w, k) => { const r = list.querySelector(`.row[data-row="${k}"]:not(.dis)`); if (r) unlockMorph(r, w); });
+}
+// the unlocking card: height from the locked card's to its own, the old side column fading in place
+function unlockMorph(r, w) {
+  const h1 = r.offsetHeight;
+  if (!h1) return;
+  const ghost = w.side; ghost.classList.add("sidefade"); ghost.querySelectorAll("button").forEach(b => { b.disabled = true; b.tabIndex = -1; });
+  ghost.style.cssText = `position:absolute;left:${w.x}px;top:${w.y}px;width:${w.w}px;margin:0;pointer-events:none;z-index:3`;
+  r.appendChild(ghost);
+  ghost.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "scale(.92)" }], { duration: ULK_MS * .45, easing: "ease-out", fill: "forwards" }).onfinish = () => ghost.remove();
+  if (Math.abs(h1 - w.h) > 1) r.animate([{ height: w.h + "px", minHeight: "0px", overflow: "hidden" }, { height: h1 + "px", minHeight: "0px", overflow: "hidden" }], { duration: ULK_MS * .6, easing: "cubic-bezier(.4,0,.2,1)" });
 }
 // "Swipe zone preview" is one column on the right of the left, right and top zone rows, its title
 // running vertically, since it previews all three
@@ -769,17 +784,22 @@ function fitPills(box, pills, textOf, chrome, tight = false, pre) {
   if (!pre) return;
   const { W, gap } = pre, cs = { fontSize: pre.fontSize };
   optCtx = optCtx || document.createElement("canvas").getContext("2d"); optCtx.font = pre.font;
-  let need = Math.ceil(Math.max(...pills.map(o => optCtx.measureText(textOf(o)).width)) + chrome);
+  let need = Math.ceil(Math.max(...pills.map(o => optCtx.measureText(textOf(o)).width)) + chrome), colCap = Infinity;
   // A few long labels (Chinese (Simplified)) take two lines when that gains a column, so one long name
   // does not halve the grid (Max, Nov 20). Each label's best two-line width is its widest half.
-  if (!tight || pills.length > 8) {
+  if (!tight || pills.length > 8 || pills.some(o => /\s/.test(textOf(o).trim()))) {
     const w = t => optCtx.measureText(t).width;
     const two = t => { const p = t.split(/\s+/); let b = w(t); for (let i = 1; i < p.length; i++) b = Math.min(b, Math.max(w(p.slice(0, i).join(" ")), w(p.slice(i).join(" ")))); return b; };
     const need2 = Math.ceil(Math.max(...pills.map(o => two(textOf(o)))) + chrome);
     const wraps = pills.filter(o => w(textOf(o)) + chrome > need2).length;
-    if (wraps <= Math.max(1, Math.floor(pills.length / 4)) && Math.floor((W + gap) / (need2 + gap)) > Math.floor((W + gap) / (need + gap))) need = need2;
+    // Labels of two words or more may take two lines whenever one more column saves a line of pills
+    // (Max, Nov 23 PM: Player icon style, 2 columns of 5 lines became 3 of 4), every word kept whole.
+    const colsAt = nd => Math.max(1, Math.floor((W + gap) / (nd + gap))), rowsAt = c => Math.ceil(pills.length / Math.min(pills.length, c));
+    const c1 = colsAt(need), c2 = Math.min(colsAt(need2), c1 + 1);
+    if (colsAt(need2) > c1 && wraps <= Math.max(1, Math.floor(pills.length / 4))) need = need2; // a few long labels: as many columns as fit
+    else if (c2 > c1 && rowsAt(c2) < rowsAt(c1)) { need = need2; colCap = c2; } // many: one more column, one line less
   }
-  const maxCols = Math.max(1, Math.floor((W + gap) / (need + gap)));
+  const maxCols = Math.min(colCap, Math.max(1, Math.floor((W + gap) / (need + gap))));
   const n = pills.length, rows = Math.ceil(n / Math.min(n, maxCols)), cols = Math.ceil(n / rows);
   // fill the line only when that stretches the pills by at most a quarter; otherwise each keeps the
   // widest pill's width (three long options one per line stay that long, not the whole card wide)
@@ -800,7 +820,7 @@ function fitPills(box, pills, textOf, chrome, tight = false, pre) {
     }
   }
   const even = (W - gap * (cols - 1)) / cols;
-  const fill = cols > 1 && even <= need * 1.25;
+  const fill = cols > 1 && (even <= need * 1.25 || colCap === cols); // a column gained by wrapping: the pills share the line
   box.style.gridTemplateColumns = fill ? `repeat(${cols}, minmax(0, 1fr))` : `repeat(${cols}, ${Math.min(need, W)}px)`;
   box.style.justifyContent = fill ? "" : "center"; // pills that don't fill the line sit in its middle
 }
@@ -855,32 +875,35 @@ function optGlide() {
     frames = [fr(to.x + to.w * .3, to.y + to.h * .25, to.w * .4, to.h * .5, { opacity: 0, borderRadius: `${to.h / 2}px`, easing: "cubic-bezier(.3,0,.4,1)" }),
       fr(to.x - 3, to.y + 1, to.w + 6, to.h - 2, { opacity: 1, borderRadius: `${to.h / 2}px`, offset: .5, easing: "ease-in-out" }),
       fr(to.x + 1.5, to.y - 1, to.w - 3, to.h + 2, { ...flat(R0), offset: .75, easing: "ease-in-out" }), fr(to.x, to.y, to.w, to.h, { opacity: 1, ...flat(R0) })];
-    dur = 200;
+    dur = 170;
   } else {
     const ux = dist ? dx / dist : 0, uy = dist ? dy / dist : 0, ov = Math.min(6, 2 + dist * .04), right = dx >= 0;
     // the rebound stays inside the grid (a pill at the edge is not overshot out of its card)
     const bw = b.width, bh = b.height, cx = x => Math.max(-2, Math.min(bw - to.w + 2, x)), cy = y => Math.max(-2, Math.min(bh - to.h + 2, y));
     let mids;
-    if (Math.abs(dy) > 1) { // another grid row: a drop travels straight there (never a blob over four pills)
-      const at = (t, k) => { const mw = (f.w + (to.w - f.w) * t) * k, mh = (f.h + (to.h - f.h) * t) * k;
-        const mcx = f.x + f.w / 2 + (to.x + to.w / 2 - f.x - f.w / 2) * t, mcy = f.y + f.h / 2 + (to.y + to.h / 2 - f.y - f.h / 2) * t; return [mcx - mw / 2, mcy - mh / 2, mw, mh]; };
-      const [x1, y1, w1, h1] = at(.25, .9), [x2, y2, w2, h2] = at(.62, .8);
-      mids = [fr(x1, y1, w1, h1, { borderRadius: rad(h1, h1 / 2, h1 * .9, right), offset: .2, easing: "cubic-bezier(.3,0,.5,1)" }),
-        fr(x2, y2, w2, h2, { borderRadius: rad(h2, h2 / 2, h2 * 1.2, right), offset: .48, easing: "cubic-bezier(.2,.6,.35,1)" })];
-    } else { // same row: the leading end runs ahead and pulls the tail after it, thinner in the middle of the trip
+    // one point of the trip: centre moved t of the way, the drop drawn out along its way (k: along, q: across)
+    const at = (t, k, q) => { const w0 = f.w + (to.w - f.w) * t, h0 = f.h + (to.h - f.h) * t, ax = Math.abs(ux), ay = Math.abs(uy);
+      const mw = w0 * (ax * k + ay * q), mh = h0 * (ay * k + ax * q), mcx = f.x + f.w / 2 + (to.x + to.w / 2 - f.x - f.w / 2) * t, mcy = f.y + f.h / 2 + (to.y + to.h / 2 - f.y - f.h / 2) * t; return [mcx - mw / 2, mcy - mh / 2, mw, mh]; };
+    if (Math.abs(dy) > 1) { // another grid row: a drop travels straight there (never a blob over four pills), stretched along its way
+      const [x1, y1, w1, h1] = at(.18, 1.08, .86), [x2, y2, w2, h2] = at(.45, 1.22, .74), [x3, y3, w3, h3] = at(.74, 1.1, .82);
+      mids = [fr(x1, y1, w1, h1, { borderRadius: rad(h1, h1 / 2, h1 * .8, right), offset: .16, easing: "cubic-bezier(.33,0,.4,1)" }),
+        fr(x2, y2, w2, h2, { borderRadius: rad(h2, h2 / 2, h2 * 1.2, right), offset: .38, easing: "cubic-bezier(.3,.2,.4,1)" }),
+        fr(x3, y3, w3, h3, { borderRadius: rad(h3, h3 / 2, h3, right), offset: .58, easing: "cubic-bezier(.25,.5,.4,1)" })];
+    } else { // same row: the leading end runs ahead and pulls the tail after it like a liquid, thinnest mid-way
       const L0 = f.x, R0x = f.x + f.w, L1 = to.x, R1 = to.x + to.w, mcy = f.y + f.h / 2 + (to.y + to.h / 2 - f.y - f.h / 2) * .5;
       const span = (lead, trail, k) => { const l = L0 + (L1 - L0) * (right ? trail : lead), r = R0x + (R1 - R0x) * (right ? lead : trail), h = (f.h + (to.h - f.h) * .5) * k; return [l, mcy - h / 2, r - l, h]; };
-      const [x1, y1, w1, h1] = span(.45, .06, .9), [x2, y2, w2, h2] = span(.88, .42, .78);
-      mids = [fr(x1, y1, w1, h1, { borderRadius: rad(h1, h1 / 2, Math.min(w1 * .45, h1 * 1.3), right), offset: .22, easing: "cubic-bezier(.3,0,.5,1)" }),
-        fr(x2, y2, w2, h2, { borderRadius: rad(h2, h2 / 2, Math.min(w2 * .45, h2 * 1.6), right), offset: .5, easing: "cubic-bezier(.2,.6,.35,1)" })];
+      const [x1, y1, w1, h1] = span(.32, .02, .93), [x2, y2, w2, h2] = span(.7, .2, .8), [x3, y3, w3, h3] = span(.97, .6, .86);
+      mids = [fr(x1, y1, w1, h1, { borderRadius: rad(h1, h1 / 2, Math.min(w1 * .45, h1 * 1.1), right), offset: .16, easing: "cubic-bezier(.33,0,.4,1)" }),
+        fr(x2, y2, w2, h2, { borderRadius: rad(h2, h2 / 2, Math.min(w2 * .45, h2 * 1.7), right), offset: .38, easing: "cubic-bezier(.3,.2,.4,1)" }),
+        fr(x3, y3, w3, h3, { borderRadius: rad(h3, h3 / 2, Math.min(w3 * .45, h3 * 1.2), right), offset: .58, easing: "cubic-bezier(.25,.5,.4,1)" })];
     }
     // arrival: overshoot, squash, and a short damped jelly wobble back into the pill's own shape
     frames = [fr(f.x, f.y, f.w, f.h, { backgroundColor: f.bg, ...flat(Math.min(R0, f.h / 2)), easing: "cubic-bezier(.45,0,.55,1)" }), ...mids,
-      fr(cx(to.x + ux * ov), cy(to.y + uy * ov), to.w - Math.abs(ux) * ov * .8, to.h + 2 - Math.abs(uy) * ov * .4, { backgroundColor: bg, borderRadius: `${to.h / 2}px`, offset: .7, easing: "ease-in-out" }),
-      fr(cx(to.x - ux * ov * .35), cy(to.y - uy * ov * .35) + .75, to.w + Math.abs(ux) * ov * .4 + 1, to.h - 1.5, { ...flat(R0), offset: .84, easing: "ease-in-out" }),
-      fr(to.x - .5, to.y - .4, to.w + 1, to.h + .8, { ...flat(R0), offset: .93, easing: "ease-in-out" }),
+      fr(cx(to.x + ux * ov), cy(to.y + uy * ov), to.w - Math.abs(ux) * ov * .8, to.h + 2 - Math.abs(uy) * ov * .4, { backgroundColor: bg, borderRadius: `${to.h / 2}px`, offset: .72, easing: "cubic-bezier(.4,0,.6,1)" }),
+      fr(cx(to.x - ux * ov * .3), cy(to.y - uy * ov * .3) + .6, to.w + Math.abs(ux) * ov * .35 + 1, to.h - 1.2, { ...flat(R0), offset: .86, easing: "cubic-bezier(.4,0,.6,1)" }),
+      fr(to.x - .4, to.y - .3, to.w + .8, to.h + .6, { ...flat(R0), offset: .94, easing: "cubic-bezier(.4,0,.6,1)" }),
       fr(to.x, to.y, to.w, to.h, { backgroundColor: bg, ...flat(R0) })];
-    dur = Math.round(200 + Math.min(110, dist * .28)); // twice as quick as first (Max, Nov 23)
+    dur = Math.round(160 + Math.min(80, dist * .22)); // quicker again: 160-240 ms (Max, Nov 23 PM)
   }
   const a = th.animate(frames, { duration: dur, fill: "none" });
   // hand back to the pill without a fade: the pill's own background transition, set off by .gliding
@@ -955,7 +978,7 @@ function mergeZonePreview(list) {
 // One unlock animation per setting, on one clock. Every tap redraws the list, which threw the running
 // badge away with the old rows (it vanished, or a stale copy of the row brought it back from the start:
 // the flicker on a quick second tap). Now a redraw picks the animation up where it was instead.
-const ULK_MS = 700, unlocking = new Map(); // setting -> when its unlock animation started
+const ULK_MS = 560, unlocking = new Map(); // setting -> when its unlock animation started
 function unlockFx(row, out = false) {
   const k = row.dataset.row, t0 = unlocking.get(k), resume = t0 !== undefined && performance.now() - t0 < ULK_MS;
   if (!resume) unlocking.set(k, performance.now());

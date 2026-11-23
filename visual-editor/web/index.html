@@ -520,7 +520,9 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .ctl .opt[aria-pressed="true"].neg { background: #5c2b2b; border-color: #5c2b2b; color: #ffd9d6; }
 /* optGlide: one thumb carries the pressed colour from the old pill to the new one */
 .ctl.optgrid { position: relative; isolation: isolate; }
-.ctl.optgrid > .optth { position: absolute; left: 0; top: 0; z-index: -1; border-radius: 999px; contain: layout paint style; pointer-events: none; }
+/* layers: pill borders, then the gliding colour, then the labels (Max, Nov 23: the colour over the borders) */
+.ctl.optgrid > .opt > .ol { position: relative; z-index: 2; }
+.ctl.optgrid > .optth { position: absolute; left: 0; top: 0; z-index: 1; border-radius: 999px; contain: layout paint style; pointer-events: none; }
 .theme-yt .ctl.optgrid > .optth { border-radius: 8px; }
 .ctl.optgrid.gliding > .opt[aria-pressed="true"] { background: transparent; border-color: transparent; transition: none; }
 .ctl input[type=range] { flex: 1; min-width: 120px; accent-color: var(--m-primary); }
@@ -693,6 +695,12 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .tut .ttabs span { flex: none; font-size: 11px; font-weight: 500; padding: 5px 9px; border-radius: 6px; background: #272727; color: #f1f1f1; transition: background var(--dur), color var(--dur); }
 .tut .ttabs span.on { background: #f1f1f1; color: #0f0f0f; }
 .tut .tlist { flex-wrap: wrap; }
+/* the last page: the real style choices, in place of the preview (the demo keeps its height) */
+.tut .tstyle { display: none; width: 100%; gap: 12px; padding: 14px; align-content: center; border-radius: var(--r-l); background: #2a2c31; }
+.tut .tdemo[data-page="style"] .tstyle { display: grid; }
+.tut .tdemo[data-page="style"] .tstage, .tut .tdemo[data-page="style"] .ttabs { display: none; }
+.tut .tsrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; font-weight: 500; color: var(--m-on); }
+.tut .tsrow .seg3 button { font-size: 11.5px; padding: 6px 10px; }
 .tut .tcap b { display: inline-grid; place-items: center; width: 22px; height: 22px; margin-right: 8px; border-radius: 50%; background: var(--m-primary); color: var(--m-on-primary, #00315c); font-size: 13px; vertical-align: 2px; }
 .tut .tcap small { display: block; font-size: 12.5px; color: var(--m-on-var); margin-top: 2px; }
 .tut .ok { height: 48px; min-width: 160px; padding: 0 28px; border-radius: 999px; border: 0; font-size: 15px; font-weight: 600; color: #fff; background: linear-gradient(90deg, var(--m-brand-1), var(--m-brand-2)); cursor: pointer; opacity: 0; transform: translateY(8px); transition: opacity 300ms var(--ease), transform 300ms var(--ease); pointer-events: none; }
@@ -860,7 +868,7 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 .kidbtn svg { display: block; width: 16px; height: 16px; fill: currentColor; transition: transform 280ms var(--ease); }
 .kidbtn[aria-expanded="true"] svg { transform: rotate(180deg); }
 /* unlock */
-.row.unlock { animation: unlockbg 665ms var(--ease); } /* in step with the lock, now .7 s (Max, Nov 23) */
+.row.unlock { animation: unlockbg 530ms var(--ease); } /* in step with the lock, now .56 s: 20% faster than .7 s (Max, Nov 23) */
 @keyframes unlockbg { 0% { background: rgba(144,216,137,0); } 25% { background: rgba(144,216,137,.16); } 100% { background: rgba(144,216,137,0); } }
 /* Locked (Max, Nov 23): the control is greyed out under a cover that shows only the gold lock, the colour
    of the "Parent setting must be..." line. Unlocking breaks the lock and opens the cover from the middle
@@ -888,7 +896,7 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 .lk7.go .lkc { position: absolute; top: 0; bottom: 0; width: calc(200% - 1px); display: grid; place-items: center; }
 .lk7.go .lkh.l .lkc { left: 0; }
 .lk7.go .lkh.r .lkc { right: 0; }
-.lk7.go * { animation-duration: 700ms; animation-fill-mode: both; animation-timing-function: cubic-bezier(.4,0,.2,1); }
+.lk7.go * { animation-duration: 560ms; animation-fill-mode: both; animation-timing-function: cubic-bezier(.4,0,.2,1); }
 /* Doors: the shackle swings open and stays on the left door, the lock cracks down the middle, and its halves
    slide out to both ends with the grey. As they part, each door casts a shadow on the control behind and
    shows a lit inner edge, and a shade over the control lifts, so the doors read as in front of it.
@@ -972,7 +980,9 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 .theme-yt .pick[aria-current="true"] { background: rgba(255,255,255,.1); }
 .theme-yt .group { margin: 0; border-radius: 0; background: transparent; }
 .theme-yt .row { padding: 12px 16px; }
-.theme-yt .row + .row, .theme-yt .unit + .row, .theme-yt .unit + .unit > .row:first-child, .theme-yt .row + .unit > .row:first-child, .theme-yt .kids .row { border-top: 0; }
+/* a thin line between settings, as in the Morphe and Glass designs (Max, Nov 23 PM: YouTube has none, but cards read better apart) */
+.theme-yt .row + .row, .theme-yt .unit + .row, .theme-yt .unit + .unit > .row:first-child, .theme-yt .row + .unit > .row:first-child { border-top: 1px solid rgba(255,255,255,.09); }
+.theme-yt .kids .row { border-top: 0; }
 .theme-yt .kids .row { padding-left: 34px; }
 .theme-yt .row .ttl { font-size: 16px; font-weight: 400; }
 .theme-yt .row .sum { font-size: 13.5px; }
@@ -1050,52 +1060,96 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .sechead .nolive { font-weight: 400; color: var(--m-on-var); opacity: .75; font-size: 12px; }
 .theme-yt .sechead .nolive { color: #888; }
 /* ---------- Glass UI design (Max, Nov 23) ----------
-   The Morphe layout drawn as glass: tinted panes with a bright hairline edge over a soft coloured
-   backdrop that stays put while the list scrolls. How much real glass is drawn depends on the device
-   (data-gt on #phone, set in layout.js after ntvien/liquid-glass's device tiers):
-     0 Flat  = tinted panes, no blur;  1 Light = blur on the panes that float over content;
-     2 Full  = Light, plus refraction (SVG displacement) on those panes and blur on the settings cards.
-   Panes that must hide what is behind them (lock covers, search field) stay opaque in every tier. */
+   The Morphe layout drawn as clear glass over a soft coloured backdrop that stays put while the list
+   scrolls: light tints, a bright rim lit from the top left, a soft inner shine, and colour that glows
+   through. One material (--g-*) for every surface: panes (bars, menu, dialogs, snackbar, cards,
+   tutorial), controls (toggles, option pills, tabs, switches, sliders, icons, buttons) and the locks.
+   How much real glass is drawn depends on the device (data-gt on #phone, from layout.js, after
+   ntvien/liquid-glass's device tiers):
+     0 Flat  = the same look without any blur: tints, rims and shine only;
+     1 Light = the panes floating over content blur and saturate what is behind them, the locks frost;
+     2 Full  = Light, plus refraction (SVG displacement) on those panes, and the cards and controls
+               blur and brighten the backdrop through them.
+   Covers that must hide what is behind them (locks, the search field) stay near opaque in every tier. */
 .phone.theme-glass {
-  --g-pane: rgba(16,19,30,.58); --g-pane-solid: rgba(18,21,32,.95); --g-edge: rgba(255,255,255,.13); --g-hi: rgba(255,255,255,.22);
-  --g-sheen: linear-gradient(140deg, rgba(255,255,255,.13), rgba(255,255,255,.03) 38%, rgba(255,255,255,0) 60%, rgba(255,255,255,.05));
-  --g-blur: blur(18px) saturate(1.7); --g-blur-strong: blur(24px) saturate(1.8);
-  --m-bg: #0a0c14; --m-surface: #0a0c14; --m-c-lowest: rgba(0,0,0,.25); --m-c: rgba(255,255,255,.065); --m-c-high: rgba(255,255,255,.1); --m-c-highest: rgba(255,255,255,.16);
-  --m-on: #f3f5fb; --m-on-var: rgba(230,236,250,.7); --m-outline: rgba(255,255,255,.3); --m-outline-var: rgba(255,255,255,.12);
+  --g-pane: rgba(16,20,32,.5); --g-pane-solid: rgba(17,21,33,.94);
+  --g-rim: linear-gradient(135deg, rgba(255,255,255,.55), rgba(255,255,255,.08) 32%, rgba(255,255,255,.02) 55%, rgba(255,255,255,.22));
+  --g-shine: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.02) 45%, rgba(255,255,255,0) 70%, rgba(255,255,255,.04));
+  --g-ctl: linear-gradient(180deg, rgba(255,255,255,.17), rgba(255,255,255,.05) 55%, rgba(255,255,255,.09));
+  --g-ctl-edge: inset 0 1px .5px rgba(255,255,255,.5), inset 0 -1px 1px rgba(255,255,255,.1), inset 0 0 0 1px rgba(255,255,255,.12);
+  --g-gloss: linear-gradient(180deg, rgba(255,255,255,.42), rgba(255,255,255,.08) 48%, rgba(255,255,255,0) 52%, rgba(255,255,255,.12));
+  --g-edge: rgba(255,255,255,.14); --g-hi: rgba(255,255,255,.3);
+  --g-blur: blur(10px) saturate(1.9); --g-blur-strong: blur(14px) saturate(2);
+  --m-bg: #0a0c14; --m-surface: #0a0c14; --m-c-lowest: rgba(0,0,0,.25); --m-c: rgba(255,255,255,.05); --m-c-high: rgba(255,255,255,.09); --m-c-highest: rgba(255,255,255,.14);
+  --m-on: #f4f6fc; --m-on-var: rgba(232,238,252,.72); --m-outline: rgba(255,255,255,.32); --m-outline-var: rgba(255,255,255,.16);
   --m-primary: #9fcaff; --m-on-primary: #05213f; --m-primary-c: rgba(120,170,255,.22); --m-on-primary-c: #dcebff; --m-secondary-c: rgba(255,255,255,.12);
-  --lk-grey: #262b39; --r-l: 22px; --r-li: 24px;
-  background: radial-gradient(120% 55% at 0% 0%, rgba(72,112,255,.42), transparent 62%), radial-gradient(90% 50% at 100% 28%, rgba(0,186,176,.28), transparent 62%), radial-gradient(110% 60% at 22% 100%, rgba(150,78,255,.32), transparent 64%), radial-gradient(80% 45% at 100% 92%, rgba(255,110,150,.16), transparent 60%), #07090f;
+  --lk-grey: rgba(44,50,68,.94); --lk-veil: rgba(30,35,50,.86); --r-l: 22px; --r-li: 24px;
+  background: radial-gradient(120% 55% at 0% 0%, rgba(72,112,255,.46), transparent 62%), radial-gradient(90% 50% at 100% 28%, rgba(0,186,176,.32), transparent 62%), radial-gradient(110% 60% at 22% 100%, rgba(150,78,255,.36), transparent 64%), radial-gradient(80% 45% at 100% 92%, rgba(255,110,150,.2), transparent 60%), #07090f;
 }
 .theme-glass .status, .theme-glass .appbar { background: transparent; }
+/* panes: tint + shine, a gradient rim drawn by a masked ::after (no border, so nothing is laid out again) */
+.theme-glass .group, .theme-glass .dlg, .theme-glass .tut .tres, .theme-glass .tut .tdlg, .theme-glass .tut .tstyle { position: relative; } /* the others are placed already */
+.theme-glass .group::after, html .phone.theme-glass #picker::after, .theme-glass .dlg::after, .theme-glass .snack::after, .theme-glass .tut .tlist::after, .theme-glass .tut .tbar7::after, .theme-glass .tut .tres::after, .theme-glass .tut .tdlg::after, .theme-glass .tut .tpick::after, .theme-glass .tut .tstyle::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: var(--g-rim); pointer-events: none; z-index: 6;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
+html.inapp .phone.theme-glass #picker::after { display: none; }
+.theme-glass .group { background: var(--m-c) var(--g-shine); box-shadow: 0 8px 24px -12px rgba(0,0,0,.5); }
 .theme-glass .stick { background: var(--g-pane-solid); box-shadow: 0 1px 0 var(--g-edge), 0 10px 18px -10px rgba(0,0,0,.55); }
-.theme-glass .group { background: var(--m-c) var(--g-sheen); box-shadow: inset 0 0 0 1px var(--g-edge), inset 0 1px 0 var(--g-hi); }
-.theme-glass .row + .row, .theme-glass .unit + .row, .theme-glass .unit + .unit > .row:first-child, .theme-glass .row + .unit > .row:first-child, .theme-glass .group > * + .zgrid, .theme-glass .zgrid + * { border-top-color: rgba(255,255,255,.075); }
-.theme-glass .zgrid > .row.zprev { border-left-color: rgba(255,255,255,.075); }
-.theme-glass .row.sel { background: linear-gradient(90deg, rgba(150,195,255,.2), rgba(150,195,255,.08)); }
-.theme-glass .seg, .theme-glass .seg3, .theme-glass .lt7, .theme-glass .tab7, .theme-glass .secpill, .theme-glass .kidbtn { box-shadow: inset 0 0 0 1px var(--g-edge), inset 0 1px 0 rgba(255,255,255,.12); }
-.theme-glass .seg3-th, .theme-glass .lt7 > i { box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 2px 10px rgba(90,150,255,.3); }
-.theme-glass .tab7[aria-selected="true"] { background: rgba(255,255,255,.9); color: #0a0c14; box-shadow: inset 0 1px 0 #fff, 0 2px 10px rgba(0,0,0,.3); }
-.theme-glass .searchbar { background: #1b1f2d; box-shadow: inset 0 0 0 1px var(--g-edge); }
-.theme-glass .stagebox { box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 6px 18px rgba(0,0,0,.5); }
-html .phone.theme-glass #picker, .theme-glass .dlg, .theme-glass .snack { background: var(--g-pane-solid) var(--g-sheen); box-shadow: inset 0 0 0 1px var(--g-edge), inset 0 1px 0 var(--g-hi), 0 18px 44px rgba(0,0,0,.5); }
+html .phone.theme-glass #picker, .theme-glass .dlg, .theme-glass .snack { background: var(--g-pane-solid) var(--g-shine); box-shadow: 0 18px 44px rgba(0,0,0,.5); }
 html.inapp .phone.theme-glass #picker { box-shadow: inset 0 1px 0 var(--g-edge); }
+.theme-glass .row + .row, .theme-glass .unit + .row, .theme-glass .unit + .unit > .row:first-child, .theme-glass .row + .unit > .row:first-child, .theme-glass .group > * + .zgrid, .theme-glass .zgrid + * { border-top-color: rgba(255,255,255,.08); }
+.theme-glass .zgrid > .row.zprev { border-left-color: rgba(255,255,255,.08); }
+.theme-glass .row.sel { background: linear-gradient(90deg, rgba(150,195,255,.22), rgba(150,195,255,.07)); }
+/* controls: clear glass (tint gradient, lit top edge, soft bottom glow); what is picked is coloured glass with a gloss */
+.theme-glass .seg, .theme-glass .seg3, .theme-glass .lt7, .theme-glass .tab7, .theme-glass .secpill, .theme-glass .kidbtn, .theme-glass .ctl .opt, .theme-glass .ordreset, .theme-glass .offnew, .theme-glass .row .kind, .theme-glass .pick .pi, .theme-glass .sw, .theme-glass .tut .tseg, .theme-glass .tut .tseg3, .theme-glass .tut .ttabs span, .theme-glass .tut .tb, .theme-glass .dbtn:not(.primary) {
+  background-image: var(--g-ctl); box-shadow: var(--g-ctl-edge); }
+.theme-glass .ctl .opt:not([aria-pressed="true"]) { border-color: rgba(255,255,255,.07); }
+.theme-glass .tut .tseg, .theme-glass .tut .tseg3, .theme-glass .tut .ttabs span:not(.on) { background-color: rgba(255,255,255,.08); }
+.theme-glass .goto { box-shadow: var(--g-ctl-edge); }
+.theme-glass .seg3-th, .theme-glass .lt7 > i, .theme-glass .ctl.optgrid > .optth, .theme-glass .ctl .opt[aria-pressed="true"], .theme-glass .tab7[aria-selected="true"], .theme-glass .seg::before, .theme-glass .sw[aria-checked="true"], .theme-glass .dbtn.primary, .theme-glass .tut .tseg::before, .theme-glass .tut .tseg3 b.on, .theme-glass .tut .ttabs span.on, .theme-glass .row.sel .kind {
+  background-image: var(--g-gloss); box-shadow: inset 0 1px .5px rgba(255,255,255,.65), inset 0 -1px 1px rgba(0,0,0,.18), 0 2px 10px rgba(0,0,0,.28); }
+.theme-glass .ctl.optgrid.gliding > .opt[aria-pressed="true"] { background-image: none; box-shadow: none; }
+.theme-glass .tab7[aria-selected="true"] { background-color: rgba(255,255,255,.88); color: #0a0c14; }
+.theme-glass .row.sel .kind { background-color: rgba(150,195,255,.3); }
+.theme-glass .row .kind svg, .theme-glass .pick .pi svg { filter: drop-shadow(0 1px 1px rgba(0,0,0,.35)); }
+.theme-glass .sw::after { box-shadow: 0 1px 3px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.6); }
+/* sliders: a glass track that fills with colour, a glass bead for the thumb */
+.theme-glass .ctl input[type=range] { -webkit-appearance: none; appearance: none; height: 24px; background: transparent; }
+.theme-glass .ctl input[type=range]::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: linear-gradient(90deg, rgba(159,202,255,.85) var(--pct, 0%), rgba(255,255,255,.1) var(--pct, 0%)); box-shadow: inset 0 1px 1px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.12), 0 1px 0 rgba(255,255,255,.08); }
+.theme-glass .ctl input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; margin-top: -7px; border-radius: 50%; border: 0; background: radial-gradient(circle at 35% 28%, #fff, rgba(255,255,255,.85) 30%, rgba(205,225,255,.6) 70%, rgba(255,255,255,.8)); box-shadow: 0 2px 8px rgba(0,0,0,.45), inset 0 -2px 3px rgba(80,120,200,.25), 0 0 0 1px rgba(255,255,255,.55); }
+.theme-glass .ctl input[type=range]::-moz-range-track { height: 8px; border-radius: 4px; background: rgba(255,255,255,.1); box-shadow: inset 0 1px 1px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.12); }
+.theme-glass .ctl input[type=range]::-moz-range-progress { height: 8px; border-radius: 4px; background: rgba(159,202,255,.85); }
+.theme-glass .ctl input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; border: 0; background: radial-gradient(circle at 35% 28%, #fff, rgba(205,225,255,.65) 70%); box-shadow: 0 2px 8px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.55); }
+/* locks: frosted glass covers with the gold lock; the opening doors keep the rim light */
+.theme-glass .lk7:not(.go), .theme-glass .lk7.go .lkh { box-shadow: inset 0 1px .5px rgba(255,255,255,.35), inset 0 0 0 1px rgba(255,255,255,.1); }
+.theme-glass .ctl > .lk7 .lkk { fill: #252a3a; }
+.theme-glass .searchbar { background: #1b1f2d; box-shadow: var(--g-ctl-edge); }
+.theme-glass .stagebox { box-shadow: 0 0 0 1px rgba(255,255,255,.1), 0 6px 18px rgba(0,0,0,.5); }
 .theme-glass .pick[aria-current="true"] { background: rgba(255,255,255,.12); box-shadow: inset 0 0 0 1px var(--g-edge); }
-.theme-glass .pick .pi { background: rgba(255,255,255,.1); box-shadow: inset 0 1px 0 rgba(255,255,255,.14); }
 .theme-glass .scrimfull { background: rgba(0,0,0,.28); }
 .theme-glass .dlgscrim { background: rgba(0,0,0,.4); }
 .theme-glass .snack { color: var(--m-on); }
 .theme-glass .snack button { color: var(--m-primary); }
 .theme-glass .snack code { color: #b9c0d0; }
 .theme-glass .themerow { border-top-color: rgba(255,255,255,.1); }
-.theme-glass .ordreset { border-color: var(--g-edge); }
 html.inapp.peekback .phone.theme-glass .editor { background: #0a0c14; }
+/* the tutorial is glass too: its sheet lets the backdrop glow through, its parts are panes and controls */
+.theme-glass .tut { background: rgba(8,10,18,.82); }
+.theme-glass .tut .tlist, .theme-glass .tut .tbar7, .theme-glass .tut .tres, .theme-glass .tut .tstyle { background: rgba(255,255,255,.07) var(--g-shine); }
+.theme-glass .tut .tpick, .theme-glass .tut .tdlg { background: rgba(22,26,40,.94) var(--g-shine); }
+.theme-glass .tut .tlist.sel { background-color: rgba(150,195,255,.18); }
+.theme-glass .tut .ok { background-image: var(--g-gloss), linear-gradient(90deg, var(--m-brand-1), var(--m-brand-2)); box-shadow: inset 0 1px .5px rgba(255,255,255,.65), inset 0 -1px 1px rgba(0,0,0,.18), 0 4px 16px rgba(0,0,0,.35); }
 .uirow .tt small { display: block; }
-/* Light and Full: the floating panes are see-through and blur what passes behind them */
+/* Light and Full: the floating panes are see-through and blur what passes behind them; locks frost */
 .phone.theme-glass:is([data-gt="1"], [data-gt="2"]) .stick, .phone.theme-glass:is([data-gt="1"], [data-gt="2"]) .dlg, .phone.theme-glass:is([data-gt="1"], [data-gt="2"]) .snack { background-color: var(--g-pane); -webkit-backdrop-filter: var(--g-blur); backdrop-filter: var(--g-blur); }
 html .phone.theme-glass:is([data-gt="1"], [data-gt="2"]) #picker { background-color: var(--g-pane); -webkit-backdrop-filter: var(--g-blur-strong); backdrop-filter: var(--g-blur-strong); }
-/* Full: the panes also bend what is behind them, and the cards blur the backdrop */
-.phone.theme-glass[data-gt="2"] { --g-blur: blur(8px) url(#lgRefract) blur(6px) saturate(1.8); --g-blur-strong: blur(10px) url(#lgRefract) blur(10px) saturate(1.9); --g-pane: rgba(16,19,30,.5); }
-.phone.theme-glass[data-gt="2"] .group { -webkit-backdrop-filter: blur(14px) saturate(1.5); backdrop-filter: blur(14px) saturate(1.5); }
+.phone.theme-glass:is([data-gt="1"], [data-gt="2"]) .tut { background: rgba(8,10,18,.5); -webkit-backdrop-filter: blur(16px) saturate(1.6); backdrop-filter: blur(16px) saturate(1.6); }
+.phone.theme-glass:is([data-gt="1"], [data-gt="2"]) { --lk-grey: rgba(44,50,68,.72); --lk-veil: rgba(30,35,50,.6); }
+.phone.theme-glass:is([data-gt="1"], [data-gt="2"]) .lk7:not(.go), .phone.theme-glass:is([data-gt="1"], [data-gt="2"]) .lk7.go .lkh { -webkit-backdrop-filter: blur(4px) saturate(1.4); backdrop-filter: blur(4px) saturate(1.4); }
+/* Full: the panes also bend what is behind them; cards and controls brighten the backdrop through them */
+.phone.theme-glass[data-gt="2"] { --g-blur: blur(4px) url(#lgRefract) blur(4px) saturate(1.9); --g-blur-strong: blur(6px) url(#lgRefract) blur(6px) saturate(2); --g-pane: rgba(16,20,32,.38); }
+.phone.theme-glass[data-gt="2"] .group { -webkit-backdrop-filter: blur(10px) saturate(1.7) brightness(1.06); backdrop-filter: blur(10px) saturate(1.7) brightness(1.06); }
+.phone.theme-glass[data-gt="2"] .lt7, .phone.theme-glass[data-gt="2"] .tab7, .phone.theme-glass[data-gt="2"] .seg, .phone.theme-glass[data-gt="2"] .seg3 { -webkit-backdrop-filter: blur(3px) saturate(1.8) brightness(1.1); backdrop-filter: blur(3px) saturate(1.8) brightness(1.1); }
 /* round 9 scenario kit */
 .pg7 * { min-width: 0; }
 /* Every caption pill inside a scenario phone ("Nothing happens", "Locked", "🔊 100%", "Loop 2", ...) is
@@ -1235,6 +1289,7 @@ html .phone.theme-glass:is([data-gt="1"], [data-gt="2"]) #picker { background-co
       <h2>Device</h2>
       <div class="btnrow" id="devBtns"></div>
       <div class="btnrow devonly"><a class="btn" style="display:inline-flex;align-items:center;text-decoration:none;color:inherit" href="appview.html" title="The page the app's editor loads: card menu, full screen, no frame">App view</a></div>
+      <label class="scale" title="Glass design only. Auto picks the level this device can afford, as the app does; the others force one level to see it on this computer.">Glass level <select id="glassForce"><option value="">Auto</option><option value="0">Flat</option><option value="1">Light</option><option value="2">Full</option></select></label>
       <label class="scale">UI scale <input type="range" id="uiScale" min="75" max="125" step="5" value="100"><output id="uiScaleOut">100%</output></label>
     </div>
     <div class="card">

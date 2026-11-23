@@ -821,9 +821,72 @@ function flash7(el) {
     { ...k(1), boxShadow: "0 0 0 .1em rgba(62,166,255,.5)", offset: .5 }, { ...k(big), boxShadow: "0 0 0 .2em rgba(62,166,255,.95)", offset: .75 },
     { ...k(1), boxShadow: "0 0 0 0 rgba(62,166,255,0)" }], { duration: 900, easing: "ease-in-out" });
 }
+// Parts that differ between the two phones from the first frame flash once the phones are up, on both
+// sides (Max, Nov 23: the audio track badge of Force original audio language never flashed, after the
+// Auto button and the Translate link had to be marked by hand). Every small part of one phone (a label,
+// an icon, a readout, a menu line: under a fifth of the phone, messages left out) is paired with the
+// same part in the other phone (same place in the drawing, same order); a different text, colour or
+// icon, or a part only one phone has, flashes. When more than 8 parts differ the whole drawing differs
+// (a waveform, a different screen): nothing flashes then. One rule for every comparison, no marks needed.
+const DIFF_MAX = 8;
+function smallPart(e, dev, da) {
+  if (e.closest(".toastin")) return false;
+  const r = e.getBoundingClientRect();
+  return r.width > 0 && r.width * r.height <= da * .2;
+}
+function diffFlash(box) {
+  const devs = [...box.querySelectorAll(".dl7 .dev")]; if (devs.length !== 2) return;
+  const parts = d => {
+    const m = new Map(), dr = d.getBoundingClientRect(), da = dr.width * dr.height;
+    d.querySelectorAll("*").forEach(e => {
+      const own = [...e.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join("").trim();
+      if (e.children.length && !own && e.tagName !== "svg") return; // a container: its parts are compared
+      if (own.length > 40) return; // a sentence of a text card is not a part
+      if (e.closest("svg") && e.tagName !== "svg") return; // an icon is compared whole
+      if (!smallPart(e, d, da)) return;
+      const path = []; for (let x = e; x && x !== d; x = x.parentElement) path.unshift(x.tagName + "." + [...x.classList].filter(c => c !== "new7" && c !== "sel").join("."));
+      const st = (e.getAttribute("style") || "").replace(/(^|;)\s*(left|top|right|bottom|width|height|transform|transition|animation|opacity|margin[a-z-]*|inset)\s*:[^;]*/g, "");
+      const sig = (e.tagName === "svg" ? e.innerHTML.slice(0, 120) : own) + "|" + st;
+      const key = path.join(">"); if (!m.has(key)) m.set(key, []); m.get(key).push({ e, sig });
+    });
+    return m;
+  };
+  const [a, b] = devs.map(parts), hits = [[], []];
+  new Set([...a.keys(), ...b.keys()]).forEach(k => {
+    const x = a.get(k) || [], y = b.get(k) || [];
+    for (let i = 0; i < Math.max(x.length, y.length); i++) {
+      if (!x[i] || !y[i]) hits[x[i] ? 0 : 1].push((x[i] || y[i]).e);
+      else if (x[i].sig !== y[i].sig) { hits[0].push(x[i].e); hits[1].push(y[i].e); }
+    }
+  });
+  if (hits[0].length > DIFF_MAX || hits[1].length > DIFF_MAX) return;
+  // three or more differing lines of one box (a menu, a text card) flash as that box, once
+  hits.forEach((side, i) => {
+    const by = new Map(); side.forEach(e => { const p = e.parentElement; if (!by.has(p)) by.set(p, []); by.get(p).push(e); });
+    const da = devs[i].offsetWidth * devs[i].offsetHeight * devScale(devs[i]) ** 2;
+    by.forEach((es, p) => { const r = p.getBoundingClientRect(); if (es.length >= 3 && p !== devs[i] && r.width * r.height <= da * .45) hits[i] = hits[i].filter(e => !es.includes(e)).concat(p); });
+  });
+  // a part inside another flashing part flashes with it, not on its own
+  const all = hits.flat(), top = all.filter(e => !all.some(o => o !== e && o.contains(e)));
+  top.forEach(e => { if (!e.matches(NEW_SEL)) setTimeout(() => flash7(e), NEW_FLASH_MS); });
+  if (window.__dfLog) window.__dfLog(top);
+}
+// A small part the story brings in later by fading it up from nothing (a voice line, a label) flashes as
+// it appears, like a part added later; messages and taps are left out.
+function revealFlash(e) {
+  const d = e.closest(".dev"); if (!d || e.closest(".toastin") || e.matches(".tap7, .rip7, [class*='tap'], [class*='finger'], [class*='ripple']")) return;
+  const dr = d.getBoundingClientRect();
+  if (!smallPart(e, d, dr.width * dr.height)) return;
+  flash7(e); if (window.__rvLog) window.__rvLog(e);
+}
 new MutationObserver(ms => {
   const hit = new Set(), devs = new Set(), PILLS = ".toastin, .badge7";
   ms.forEach(m => {
+    if (m.type === "attributes") { // style: faded up from opacity 0 (see revealFlash)
+      const was = /(^|;)\s*opacity\s*:\s*0(\s*[;!]|\s*$)/.test(m.oldValue || ""), now = m.target.style.opacity;
+      if (was && now !== "" && +now > 0) requestAnimationFrame(() => revealFlash(m.target));
+      return;
+    }
     const t = m.target.nodeType === 1 ? m.target : m.target.parentElement, own = t && t.closest && t.closest(CHG_SEL);
     if (own && own.closest(".dev")) hit.add(own); // its text or content changed
     const pill = t && t.closest && t.closest(PILLS); if (pill && pill.closest(".dev")) devs.add(pill.closest(".dev")); // a pill's text changed: its size did too
@@ -838,7 +901,7 @@ new MutationObserver(ms => {
   hit.forEach(flash7);
   // at once (a pill added inside a frame callback is drawn in that frame), and again after keepPillIn
   if (devs.size) { devs.forEach(pillsApart); requestAnimationFrame(() => devs.forEach(pillsApart)); }
-}).observe(document.getElementById("canvas"), { childList: true, subtree: true, characterData: true }); // $() is defined later, in list.js
+}).observe(document.getElementById("canvas"), { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["style"], attributeOldValue: true }); // $() is defined later, in list.js
 // swap what the device shows (fullscreen video vs portrait watch page) as it turns
 // The new screen goes in underneath, fully drawn, and the old one fades off the top of it. (Both used to
 // fade at once, old out and new in a little later, so the screen dipped to black in between: the flicker
@@ -1273,6 +1336,7 @@ function playScenario(k, prevValue) {
     scDrawing = true;
     try { drawSides(); } finally { scDrawing = false; const list = scCollect; scCollect = null; startCollected(list); }
     fitDev();
+    if (!self) diffFlash(box);
   };
   const drawSides = () => {
     if (self) {

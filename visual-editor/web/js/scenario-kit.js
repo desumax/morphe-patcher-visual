@@ -673,7 +673,7 @@ scen("playback", "force_original_audio", (box, on) => {
   box.innerHTML = device("port", watch7(`<span class="badge7" style="right:3px;top:3px">${ico7("translate", 6)} ${track}</span><span class="sp7" style="position:absolute;left:50%;bottom:6px;transform:translateX(-50%);font-size:6px;background:rgba(0,0,0,.75);padding:1px 5px;border-radius:6px;white-space:nowrap;opacity:0;transition:opacity .3s">🗣 ${line}</span>` + prog7(20)));
   const dev = box.querySelector(".dev");
   toast7(dev, on ? "The creator's own voice" : "An AI-dubbed voice in your language", "78%");
-  at(300, () => { dev.querySelector(".sp7").style.opacity = 1; });
+  at(300, () => { dev.querySelector(".sp7").style.opacity = 1; }); // the voice line flashes as it fades up (revealFlash)
   return "";
 });
 // Remember live stream position: you went back in a live stream, left, and come back to it.

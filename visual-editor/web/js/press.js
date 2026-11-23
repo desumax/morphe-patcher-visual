@@ -147,6 +147,7 @@ $("list").addEventListener("click", e => {
 });
 $("list").addEventListener("input", e => {
   const t = e.target; const k = t.dataset && t.dataset.set; if (!k || t.tagName === "SELECT") return;
+  if (t.type === "range") t.style.setProperty("--pct", (t.max > t.min ? (t.value - t.min) / (t.max - t.min) * 100 : 0) + "%"); // the filled part of a styled track
   // a number box applies each keystroke straight away (the box keeps focus), like a slider does
   const num = t.type === "number" && t.value !== "" && isFinite(t.value);
   if (t.type === "range" || t.type === "color" || num) {
