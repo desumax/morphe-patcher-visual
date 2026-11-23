@@ -35,7 +35,7 @@ function runTutorial(startAt) {
   const pickScreens = SECTIONS.filter(x => x.id !== "misc").slice(0, 12).map(s => `<span class="sm">${esc(s.title)}</span>`).join("");
   const total = CAT.preferences.filter(p => inVersion(p.key)).length;
   const castWhere = esc(placeLabel(sectionOf("morphe_hide_cast_button")) || "Player");
-  t.innerHTML = `<h2>Visual settings</h2><p class="tsub">See what each Morphe setting changes</p>
+  paint(t, `<h2>Visual settings</h2><p class="tsub">See what each Morphe setting changes</p>
     <div class="tcap" id="tcap"></div>
     <div class="tdemo">
       <div class="tbar7" id="tBar"><span class="tpill" id="tPill"></span><span class="tsp"></span><span class="tic" id="tSearch">${I("search")}</span><span class="tic" id="tReset">${I("reset")}</span><span class="tseg"><b id="tOrig">Original</b><b id="tMorphe" class="on">Morphe</b></span><div class="tq" id="tQ"><span id="tQt"></span></div></div>
@@ -55,7 +55,7 @@ function runTutorial(startAt) {
     </div>
     <div class="finger tfinger" id="tFinger">${I("gesture")}</div>
     <div class="steps" role="tablist" aria-label="Tutorial pages">${pages.map((_, n) => `<button role="tab" data-step="${n}" aria-label="Page ${n + 1}"><i></i></button>`).join("")}</div>
-    <button class="ok show" id="tutOk">Next</button>`;
+    <button class="ok show" id="tutOk">Next</button>`);
   t.classList.add("on");
   // opened to explain one new page: that page loops and the button closes the tutorial
   const single = !!startAt;

@@ -171,7 +171,7 @@ $("list").addEventListener("change", e => {
 });
 
 $("secPill").onclick = () => setPicker(!pickerOpen);
-$("tabs").addEventListener("click", e => { if (tabDrag.justDragged) { tabDrag.justDragged = false; return; } const t = e.target.closest("[data-tab]"); if (!t || t.dataset.tab === section) return; returnTo = null; switchSection(t.dataset.tab); });
+$("tabs").addEventListener("click", e => { if (tabDrag.justDragged) { tabDrag.justDragged = false; return; } const t = e.target.closest("[data-tab]"); if (!t || t.dataset.tab === section) return; returnTo = null; markTab(t.dataset.tab); switchSection(t.dataset.tab); });
 // Tabs scroll sideways (touch, mouse wheel, mouse drag). Holding a tab lifts it; drag it to reorder.
 const tabDrag = { justDragged: false };
 (() => {

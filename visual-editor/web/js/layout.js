@@ -117,6 +117,7 @@ function applyDevice() {
   $("devBtns").innerHTML = DEVICES.map(x => `<button class="btn" data-dev="${x.id}" aria-pressed="${x.id === device_}">${x.label}</button>`).join("");
 }
 $("devBtns").addEventListener("click", e => { const b = e.target.closest("[data-dev]"); if (!b) return; device_ = b.dataset.dev; applyDevice(); store.save(); });
+{ const gs = $("glideStyle"); if (gs) { gs.innerHTML = GLIDE_STYLES.map(([v, t]) => `<option value="${v}">${t}</option>`).join(""); gs.value = glideStyle; gs.addEventListener("change", e => setGlideStyle(e.target.value)); } }
 { const gf = $("glassForce"); if (gf) { gf.value = glassForced === null ? "" : String(glassForced); gf.addEventListener("change", e => setGlassForce(e.target.value)); } }
 $("uiScale").addEventListener("input", e => { uiScale = Number(e.target.value); $("uiScaleOut").textContent = uiScale + "%"; applyDevice(); });
 window.addEventListener("resize", () => { if (window.innerWidth > 860) applyDevice(); else { $("phone").style.transform = ""; $("devwrap").style.width = ""; $("devwrap").style.height = ""; $("phone").style.width = ""; $("phone").style.height = ""; } });

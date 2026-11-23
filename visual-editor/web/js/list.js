@@ -3,6 +3,24 @@
 
 // ------------------------------------------------------------------ rendering
 const $ = id => document.getElementById(id);
+// Every redraw of the editor's own UI goes through paint(), always in the same order:
+//   1. the new HTML is written;
+//   2. the mark passes run: they set classes, attributes and structure from the data only (greyed parts,
+//      hidden rows, merged groups) and never read a size or a style. The box is .painting while they run,
+//      which turns transitions off, so whatever they set is the element's first look and never plays;
+//   3. one style flush, then transitions are back on;
+//   4. back in the caller: measure (sizes, scroll positions), place, animate.
+// A class set after something read a style plays its transition: that was the Player icon style flash
+// (greyed parts faded on every redraw). Phones inside comparisons are not painted this way: their
+// stories draw and then change on purpose, on their own clock.
+function paint(el, html, ...marks) {
+  el.classList.add("painting");
+  el.innerHTML = html;
+  for (const m of marks) m(el);
+  void el.offsetHeight;
+  el.classList.remove("painting");
+  return el;
+}
 const secInfo = () => SECTIONS.find(s => s.id === section);
 
 function renderBar() {
@@ -20,14 +38,14 @@ function renderBar() {
   // the group's name and one line per tab on the right
   const gpick = (x, i) => { const n = tabsOf(x).reduce((a, [t]) => a + MEMBERS[t].live.length + MEMBERS[t].misc.length, 0);
     return `<button class="pick gcard" role="menuitem" data-group="${x.id}" aria-current="${x === g}" style="transition-delay:${i * 12}ms"><span class="gc-rail"><span class="pi">${I(x.icon)}</span><span class="gc-n"><b>${n}</b><small>settings</small></span></span><span class="gc-body"><span class="gc-t">${esc(x.title)}${devMarkGroup(x)}</span><span class="gc-tabs">${tabsOf(x).map(([, t]) => `<span>${esc(t)}</span>`).join("")}</span></span></button>`; };
-  $("pickGrid").innerHTML = (grouped ? `<div class="pg pvis pgroups">${GROUPS.map(gpick).join("")}</div>` : `<div class="pg pvis">${vis.map(pick).join("")}</div>` + `<div class="plaincard"><div class="ph">${I("list")}No preview · standard settings</div><div class="pg">${plain.map(pick).join("")}</div></div>`)
+  paint($("pickGrid"), (grouped ? `<div class="pg pvis pgroups">${GROUPS.map(gpick).join("")}</div>` : `<div class="pg pvis">${vis.map(pick).join("")}</div>` + `<div class="plaincard"><div class="ph">${I("list")}No preview · standard settings</div><div class="pg">${plain.map(pick).join("")}</div></div>`)
     // screen order: its own line under the cards, so the group switch keeps the full width for its text
     + `<div class="themerow ordrow"><span class="ordhint">Hold a screen to move it</span><button class="ordreset" data-order-reset ${customOrder ? "" : "disabled"} title="Hold a screen to move it. This restores Morphe's order.">${I("reset")}Reset order</button></div>`
     + `<div class="themerow simrow"><div class="themetog" data-group-toggle role="menuitemcheckbox" aria-checked="${grouped}"><span class="pi">${I("layers")}</span><div class="tt">Group screens into tabs<small>Six screens instead of ${SECTIONS.length}. Each one has tabs right under the live preview, and every tab brings its own preview.</small></div><span class="sw" role="presentation" aria-checked="${grouped}"></span></div></div>`
     // UI design sits right above the list design (Max, Nov 23)
     // one line: the title on the left, its toggle on the right (Max, Nov 23 PM)
     + `<div class="themerow uirow"><span class="pi">${I("palette")}</span><div class="tt">UI design${theme === "glass" && glassTier !== null ? `<small>${GLASS_TIER_NAMES[glassTier]}${glassForced ? " (forced)" : ""}</small>` : ""}</div>${seg3("UI design", "ui", UI_DESIGNS, theme)}</div>`
-    + `<div class="themerow designrow"><div class="dcol"><div class="dsg"><span class="pi">${I("list")}</span><div class="tt">Settings list design</div></div><div class="drow">${seg3("Settings list design", "design", [["classic", "Morphe"], ["toggles", "Switches"], ["clean", "Clean"]], design)}<button class="offnew" data-editor-off>${I("power")}Disable new design</button></div>${designPreview()}</div></div>`;
+    + `<div class="themerow designrow"><div class="dcol"><div class="dsg"><span class="pi">${I("list")}</span><div class="tt">Settings list design</div></div><div class="drow">${seg3("Settings list design", "design", [["classic", "Morphe"], ["toggles", "Switches"], ["clean", "Clean"]], design)}<button class="offnew" data-editor-off>${I("power")}Disable new design</button></div>${designPreview()}</div></div>`);
   placeSeg3();
   $("btnReset").disabled = mode !== "mod" || !Object.keys(PREF).some(k => JSON.stringify(state[k]) !== JSON.stringify(defaults[k]));
 }
@@ -107,10 +125,23 @@ function renderTabs() {
   const box = $("tabs"); if (!box) return;
   $("stick").classList.toggle("grouped", grouped);
   if (!grouped) { box.innerHTML = ""; return; }
-  const g = groupOf(section);
-  box.innerHTML = tabsOf(g).map(([id, t]) => `<button class="tab7" role="tab" data-tab="${id}" aria-selected="${id === section}">${esc(t)}${devMark(id)}</button>`).join("");
+  const g = groupOf(section), tabs = tabsOf(g), key = tabs.map(x => x[0]).join(" ");
+  if (box.dataset.key === key && box.children.length) { if (box.dataset.sel !== section) markTab(section); return; }
+  glideStop(box);
+  paint(box, tabs.map(([id, t]) => `<button class="tab7" role="tab" data-tab="${id}" aria-selected="${id === section}"><span class="ol">${esc(t)}${devMark(id)}</span></button>`).join(""));
+  box.dataset.key = key; box.dataset.sel = section;
   const cur = box.querySelector('[aria-selected="true"]');
   if (cur) box.scrollTo({ left: cur.offsetLeft - (box.clientWidth - cur.offsetWidth) / 2, behavior: "smooth" });
+}
+// The selected tab moves at the tap (the screen follows a moment later): its fill glides from the old
+// tab to the new one (glideRun), the labels stay above it (.ol)
+function markTab(id) {
+  const box = $("tabs"), old = box.querySelector('[aria-selected="true"]'), was = old && (glideNow(box) || gRect(old, box));
+  glideStop(box);
+  box.querySelectorAll(".tab7").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === id))); box.dataset.sel = id;
+  const cur = box.querySelector('[aria-selected="true"]'); if (!cur) return;
+  if (was) { const cs = getComputedStyle(cur); glideRun(box, was, gRect(cur, box), { bg: cs.backgroundColor, radius: parseFloat(cs.borderTopLeftRadius) || 0, z: 0, done: () => { cur.style.transition = "none"; requestAnimationFrame(() => { cur.style.transition = ""; }); } }); }
+  box.scrollTo({ left: cur.offsetLeft - (box.clientWidth - cur.offsetWidth) / 2, behavior: "smooth" });
 }
 // Screen menu order: Morphe's own order by default (its settings screens, then their sub-screens);
 // hold a card to drag it somewhere else. The custom order is saved; Reset order restores Morphe's.
@@ -202,13 +233,10 @@ function renderStage() {
   st.style.setProperty("--seek-1", V("morphe_seekbar_custom_color") ? String(V("morphe_seekbar_custom_color_primary") || "") : "");
   // the Player menu: switching between the menu and one of its sheets plays like a user opening it
   const flyFrom = same && section === "flyout" ? { sub: st.dataset.flysub || "", html: st.querySelector(".inner-scroll")?.outerHTML, top: st.querySelector(".inner-scroll")?.scrollTop || 0 } : null;
-  st.innerHTML = scene().replace(/background:#0f0f0f/g, "background:var(--app-bg,#0f0f0f)");
-  // greyed before anything reads a style or a scroll position: once a part has been styled, getting
-  // .fixed7 played its opacity transition, so every redraw faded the greyed parts (times, seekbar, Cast)
-  // from full to grey: a flash on every change, unrelated to the setting (Max, Nov 23: Player icon style)
-  markFixed(st);
+  // greying is a mark pass (see paint): set after a style read, .fixed7 played its opacity transition and
+  // every redraw faded the greyed parts (times, seekbar, Cast): Player icon style, Max, Nov 23
+  paint(st, scene().replace(/background:#0f0f0f/g, "background:var(--app-bg,#0f0f0f)"), markFixed, fillFingers);
   if (section === "flyout") { st.dataset.flysub = flySub || ""; if (flyFrom && flyFrom.html && flyFrom.sub !== (flySub || "")) flyTransition(st, flyFrom, flySub || ""); }
-  st.querySelectorAll(".finger").forEach(f => { if (!f.firstChild) f.innerHTML = I("gesture"); });
   st.querySelectorAll(".inner-scroll").forEach((e, i) => { if (scrollers[i]) e.scrollTop = scrollers[i]; });
   st.querySelectorAll('[style*="overflow-x:auto"]').forEach((e, i) => { e.dataset.hs = ""; if (hscroll[i]) e.scrollLeft = hscroll[i]; });
   hugComponents(st);
@@ -239,6 +267,7 @@ function flyTransition(st, from, to) {
 // Parts of the preview that no setting on this screen changes are greyed out: plain controls (the
 // play button, the time, a seekbar that belongs to another tab) and components of other screens.
 const FIXED_SEL = ".pbtn, .bigbtn, .time, .seek, .chip, svg.ico, .tb, .badge-txt";
+const fillFingers = st => st.querySelectorAll(".finger").forEach(f => { if (!f.firstChild) f.innerHTML = I("gesture"); });
 function markFixed(st) {
   const mine = new Set(sectionKeys()), ours = e => mine.has(e.dataset.k) || (e.dataset.also || "").split(" ").some(x => mine.has(x));
   const cs = [...st.querySelectorAll(".c[data-k]")];
@@ -663,8 +692,7 @@ function renderList() {
   // a locked card that unlocks loses its "Take me there" and its "needs ..." line: the card eases to its new
   // height and the two fade where they were, instead of the card snapping shorter (Max, Nov 23)
   const lockedWas = new Map(); if (list.dataset.view === section) list.querySelectorAll(".row.dis[data-row]").forEach(r => { const sd = r.querySelector(":scope > .side"); if (!sd || !r.offsetHeight || sd.offsetParent !== r) return; lockedWas.set(r.dataset.row, { h: r.offsetHeight, side: sd.cloneNode(true), x: sd.offsetLeft, y: sd.offsetTop, w: sd.offsetWidth }); });
-  list.innerHTML = html; list.dataset.view = section;
-  mergeZonePreview(list);
+  paint(list, html, mergeZonePreview); list.dataset.view = section;
   fitOpts(list);
   const goneNow = hideLocked(list);
   midFold.forEach((h, grp) => {
@@ -675,8 +703,14 @@ function renderList() {
   list.querySelectorAll("[data-sw]").forEach(x => {
     const was = swWas.get(x.dataset.sw), now = [x.getAttribute("aria-checked"), x.dataset.at, x.dataset.tone];
     if (!was || was[0] === now[0]) return;
-    const put = v => { x.setAttribute("aria-checked", v[0]); if (v[1]) x.dataset.at = v[1]; if (v[2]) x.dataset.tone = v[2]; };
-    put(was); x.classList.add("still"); void x.offsetWidth; x.classList.remove("still"); requestAnimationFrame(() => put(now));
+    const put = v => { x.setAttribute("aria-checked", v[0]); if (v[1]) x.dataset.at = v[1]; else delete x.dataset.at; if (v[2]) x.dataset.tone = v[2]; else delete x.dataset.tone; };
+    const th = x.matches(".lt7") && x.querySelector(":scope > i");
+    if (!th) { put(was); x.classList.add("still"); void x.offsetWidth; x.classList.remove("still"); requestAnimationFrame(() => put(now)); return; }
+    // the two-way toggle: its thumb's colour glides like every other choice (glideRun)
+    x.classList.add("still"); put(was); const f = gRect(th, x), fromBg = getComputedStyle(th).backgroundColor;
+    put(now); const t = gRect(th, x), cs0 = getComputedStyle(th), bg = cs0.backgroundColor, rad = parseFloat(cs0.borderTopLeftRadius) || 0; // read now: the style object is live
+    put(was); void x.offsetWidth; x.classList.remove("still"); void x.offsetWidth; put(now); // the labels' colour still eases
+    glideRun(x, f, t, { bg, fromBg, radius: rad, z: -1 });
   });
   closingOld.forEach((old, grp) => {
     // the parent's sub-options pill keeps its count until the fold is over, then turns into the
@@ -836,20 +870,106 @@ function fitOpts(root = $("list")) {
   const pre = jobs.map(([box, pills]) => pillsMeasure(box, pills));
   jobs.forEach((j, i) => { if (pre[i]) fitPills(...j, pre[i]); });
 }
-// Option pills: the pressed colour flows from the old pill to the new one with a little bounce, in every
-// option grid (list rows and the "needs" popup), across grid rows and for tall or tight pills alike.
-// optSnap runs before the state changes (the grid is redrawn), optGlide once the new grid is laid out.
-// One absolutely placed thumb per grid, shut in with contain:strict: only its transform and size move,
-// nothing else in the list is laid out again. A tap during a glide carries on from where the thumb is.
+// ---------- Glide: one motion for every picked thumb ----------
+// Option grids, the three-way toggles in the menu, the two-way Hide/Show toggles and the tabs all move
+// their colour from the old choice to the new one through glideRun(), so they always move alike and a
+// new motion is one change here. The motion is drawn by temporary blobs in a .glayer laid over the box
+// (under the labels): the control's own thumb or picked fill is hidden while they run (.gliding) and
+// shows again, in place, when they finish. Each motion is sampled once into keyframes (transform, size,
+// corner, opacity) and played by the compositor-friendly Web Animations engine: no per-frame script.
+// A tap during a glide carries on from where the colour is (glideNow).
+// The motions are the five iterations from Nov 23 (option-glide/iterations); the preview page can switch
+// between them (inspector, "Glide style").
+const GLIDE_STYLES = [["goo", "Goo drop"], ["spring", "Spring slide"], ["lens", "Liquid lens"], ["worm", "Worm"], ["grow", "Grow in place"]];
+let glideStyle = (() => { try { const v = localStorage.getItem(LS + "-glide"); return GLIDE_STYLES.some(s => s[0] === v) ? v : "goo"; } catch { return "goo"; } })();
+function setGlideStyle(v) { glideStyle = v; try { localStorage.setItem(LS + "-glide", v); } catch { /* storage unavailable */ } }
+const GLIDE_REDUCED = matchMedia("(prefers-reduced-motion: reduce)");
+// a damped spring from 0 to 1 after t ms: [position, speed] (k stiffness, z damping ratio)
+function gSpring(t, k, z) {
+  const w0 = Math.sqrt(k), s = t / 1000; if (s <= 0) return [0, 0];
+  if (z < 1) { const wd = w0 * Math.sqrt(1 - z * z), e = Math.exp(-z * w0 * s), c = Math.cos(wd * s), sn = Math.sin(wd * s); return [1 - e * (c + (z * w0 / wd) * sn), e * (w0 * w0 / wd) * sn / w0]; }
+  const e = Math.exp(-w0 * s); return [1 - e * (1 + w0 * s), w0 * s * e];
+}
+const gLerp = (a, b, p) => a + (b - a) * p;
+// each motion: the blobs at d ms from the old place f to the new place t ({x, y, w, h} in the box)
+const GLIDE_MOTION = {
+  spring: { end: 520, draw: (f, t, d) => { const [p] = gSpring(d, 560, .78); return [{ x: gLerp(f.x, t.x, p), y: gLerp(f.y, t.y, p), w: gLerp(f.w, t.w, p), h: gLerp(f.h, t.h, p) }]; } },
+  lens: { end: 600, draw: (f, t, d) => {
+    const [p, v] = gSpring(d, 480, .74), lift = Math.max(0, Math.min(1, Math.abs(v) * 1.2)), dist = Math.hypot(t.x - f.x, t.y - f.y), hor = Math.abs(t.x - f.x) >= Math.abs(t.y - f.y) || !dist;
+    const st = 1 + Math.min(.35, lift * .35 * Math.min(1, dist / 60)), sq = 1 - (st - 1) * .45, up = 1 + lift * .1;
+    const w = gLerp(f.w, t.w, p) * (hor ? st : sq) * up, h = gLerp(f.h, t.h, p) * (hor ? sq : st) * up, cx = gLerp(f.x + f.w / 2, t.x + t.w / 2, p), cy = gLerp(f.y + f.h / 2, t.y + t.h / 2, p);
+    return [{ x: cx - w / 2, y: cy - h / 2, w, h, o: 1 - lift * .25 }]; } },
+  worm: { end: 560, draw: (f, t, d) => {
+    const fast = gSpring(d, 760, .8)[0], slow = gSpring(Math.max(0, d - 20), 400, .84)[0], right = t.x + t.w / 2 >= f.x + f.w / 2, down = t.y + t.h / 2 >= f.y + f.h / 2;
+    const l = gLerp(f.x, t.x, right ? slow : fast), r = gLerp(f.x + f.w, t.x + t.w, right ? fast : slow), tp = gLerp(f.y, t.y, down ? slow : fast), bt = gLerp(f.y + f.h, t.y + t.h, down ? fast : slow);
+    return [{ x: l, y: tp, w: r - l, h: bt - tp }]; } },
+  // metaball liquid: the old fill shrinks, a drop pulls away from it, travels stretched by its speed and
+  // melts into the new fill as it swells (the blobs are joined by the goo filter on the layer)
+  goo: { goo: true, end: 620, draw: (f, t, d) => {
+    const [p, v] = gSpring(d, 400, .82), old = Math.max(0, 1 - Math.pow(Math.min(1, d / 270), 1.3)), nw = gSpring(Math.max(0, d - 70), 520, .72)[0];
+    const fx = f.x + f.w / 2, fy = f.y + f.h / 2, tx = t.x + t.w / 2, ty = t.y + t.h / 2, hor = Math.abs(tx - fx) >= Math.abs(ty - fy);
+    const s0 = Math.min(f.h, t.h) * .9, sp = Math.min(1, Math.abs(v) * .6), dw = s0 * (hor ? 1 + sp * 1.4 : 1 - sp * .25), dh = s0 * (hor ? 1 - sp * .25 : 1 + sp * 1.4), on = p < .97 ? 1 : 0;
+    return [{ x: t.x + t.w * (1 - nw) / 2, y: t.y + t.h * (1 - nw) / 2, w: t.w * nw, h: t.h * nw },
+      { x: gLerp(fx, tx, p) - dw * on / 2, y: gLerp(fy, ty, p) - dh * on / 2, w: dw * on, h: dh * on },
+      { x: f.x + f.w * (1 - old) / 2, y: f.y + f.h * (1 - old) / 2, w: f.w * old, h: f.h * old }]; } },
+  // Material 3 Expressive: nothing crosses the other choices; the old fill melts, the new springs out
+  grow: { end: 520, draw: (f, t, d) => {
+    const out = Math.max(0, 1 - d / 160), g = gSpring(d, 620, .62)[0], w = t.w * g, h = t.h * (.4 + .6 * g);
+    return [{ x: t.x + (t.w - w) / 2, y: t.y + (t.h - h) / 2, w, h, r: gLerp(t.h * .2, t.h / 2, Math.min(1, d / 260)) },
+      { x: f.x + f.w * (1 - out) * .15, y: f.y + f.h * (1 - out) * .15, w: f.w * (1 - (1 - out) * .3), h: f.h * (1 - (1 - out) * .3), o: out }]; } },
+};
+let gooReady = false;
+function gooFilter() {
+  if (gooReady) return; gooReady = true;
+  document.body.insertAdjacentHTML("beforeend", `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="gGoo" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur in="SourceGraphic" stdDeviation="5"/><feColorMatrix mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -8" result="g"/><feComposite in="SourceGraphic" in2="g" operator="atop"/></filter></svg>`);
+}
+// a part's place in a box, in the box's own coordinates (padding box, scrolled content included)
+function gRect(el, box) { const b = box.getBoundingClientRect(), r = el.getBoundingClientRect(); return { x: r.left - b.left - box.clientLeft + box.scrollLeft, y: r.top - b.top - box.clientTop + box.scrollTop, w: r.width, h: r.height }; }
+// where a running glide's colour is now (the largest blob), or null
+function glideNow(box) {
+  const g = box._glide; if (!g || !g.layer.isConnected) return null;
+  let best = null; g.layer.querySelectorAll("i").forEach(e => { const r = gRect(e, box); if (r.w > 1 && r.h > 1 && (!best || r.w * r.h > best.w * best.h)) best = r; });
+  return best;
+}
+function glideStop(box) { const g = box._glide; if (g) { box._glide = null; g.anims.forEach(a => a.cancel()); g.layer.remove(); box.classList.remove("gliding"); } }
+// o: bg (the new colour), fromBg (the old one, if it differs), radius (the thumb's corner), z (layer
+// stacking), done (called once the colour has landed or the glide was replaced)
+function glideRun(box, f, t, o) {
+  const prev = box._glide; glideStop(box); if (prev && prev.done) prev.done(true);
+  if (GLIDE_REDUCED.matches || Math.hypot(t.x - f.x, t.y - f.y) < 1 && Math.abs(t.w - f.w) < 1) { if (o.done) o.done(false); return; }
+  const M = GLIDE_MOTION[glideStyle] || GLIDE_MOTION.goo; if (M.goo) gooFilter();
+  const STEP = 1000 / 60, frames = [];
+  for (let d = 0; d < M.end; d += STEP) frames.push(M.draw(f, t, d));
+  frames.push([{ x: t.x, y: t.y, w: t.w, h: t.h }]);
+  const layer = document.createElement("span"); layer.className = "glayer" + (M.goo ? " goo" : ""); layer.setAttribute("aria-hidden", "true");
+  layer.style.cssText = `z-index:${o.z ?? 0};width:${box.scrollWidth}px;height:${box.scrollHeight}px`;
+  const n = Math.max(...frames.map(fr => fr.length)), R = o.radius ?? 999, last = frames.length - 1, mid = Math.round(last * .4);
+  const anims = [];
+  for (let i = 0; i < n; i++) {
+    const e = document.createElement("i"); e.style.backgroundColor = o.bg; layer.appendChild(e);
+    const kf = frames.map((fr, j) => {
+      const b = fr[i] || { x: t.x + t.w / 2, y: t.y + t.h / 2, w: 0, h: 0 }, w = Math.max(0, b.w), h = Math.max(0, b.h);
+      const k = { transform: `translate(${b.x}px,${b.y}px)`, width: w + "px", height: h + "px", borderRadius: Math.max(0, Math.min(b.r ?? R, w / 2, h / 2)) + "px", opacity: b.o ?? 1 };
+      if (o.fromBg && o.fromBg !== o.bg && (j === 0 || j === mid)) k.backgroundColor = j === 0 ? o.fromBg : o.bg;
+      return k;
+    });
+    anims.push(e.animate(kf, { duration: last * STEP, easing: "linear", fill: "forwards" }));
+  }
+  box.prepend(layer); box.classList.add("gliding");
+  const g = box._glide = { layer, anims, done: o.done };
+  // the control's own fill comes back without its transitions (done turns them off for a frame)
+  anims[0].onfinish = () => { if (box._glide !== g) return; box._glide = null; if (o.done) o.done(false); box.classList.remove("gliding"); void box.offsetWidth; layer.remove(); };
+}
+// Option pills: optSnap runs before the state changes (the grid is redrawn), optGlide once the new grid
+// is laid out, in every option grid (list rows and the "needs" popup).
 let optFrom = null;
-const OPT_REDUCED = matchMedia("(prefers-reduced-motion: reduce)");
 function optSnap(btn) {
   optFrom = null;
-  const box = btn.closest(".ctl.optgrid"); if (!box || OPT_REDUCED.matches) return;
-  const th = box.querySelector(":scope > .optth"), old = box.querySelector('.opt[aria-pressed="true"]');
-  const from = th || old || btn, b = box.getBoundingClientRect(), r = from.getBoundingClientRect();
-  optFrom = { k: btn.dataset.set, pop: !!box.closest(".dlglist"), x: r.left - b.left, y: r.top - b.top, w: r.width, h: r.height, bg: th || old ? getComputedStyle(from).backgroundColor : null, t: performance.now() };
-  if (th) th.getAnimations().forEach(a => a.cancel());
+  const box = btn.closest(".ctl.optgrid"); if (!box || GLIDE_REDUCED.matches) return;
+  const old = box.querySelector('.opt[aria-pressed="true"]'), now = glideNow(box);
+  const r = now || (old ? gRect(old, box) : gRect(btn, box));
+  optFrom = { k: btn.dataset.set, pop: !!box.closest(".dlglist"), ...r, bg: box._glide ? box._glide.layer.firstChild.style.backgroundColor : old ? getComputedStyle(old).backgroundColor : null, t: performance.now() };
+  glideStop(box);
 }
 function optGlide() {
   const f = optFrom; optFrom = null;
@@ -857,70 +977,12 @@ function optGlide() {
   const scope = f.pop ? document.querySelector("#dlgBox .dlglist") : $("list");
   const on = scope && [...scope.querySelectorAll(`.opt[data-set="${f.k}"][aria-pressed="true"]`)].find(o => o.offsetParent);
   const box = on && on.parentElement; if (!box || !box.classList.contains("optgrid")) return;
-  const b = box.getBoundingClientRect(), r = on.getBoundingClientRect();
-  const to = { x: r.left - b.left, y: r.top - b.top, w: r.width, h: r.height };
-  const dx = to.x - f.x, dy = to.y - f.y, dist = Math.hypot(dx, dy);
-  const cs = getComputedStyle(on), bg = cs.backgroundColor;
-  if (dist < 1 && f.bg === bg) return;
-  box.querySelectorAll(":scope > .optth").forEach(t => t.remove());
-  const th = document.createElement("i"); th.className = "optth"; th.setAttribute("aria-hidden", "true");
-  th.style.cssText = `width:${to.w}px;height:${to.h}px;transform:translate(${to.x}px,${to.y}px);background:${bg}`;
-  box.prepend(th); box.classList.add("gliding");
-  // the pill's own corner, and a droplet shape for the trip: the leading end round, the trailing end
-  // drawn out into a tail (each corner "horizontal / vertical"), so the colour flows rather than slides
-  const R0 = Math.min(parseFloat(cs.borderTopLeftRadius) || 0, to.h / 2);
-  const rad = (h, lead, tail, right) => { const v = h / 2, L = `${lead}px`, T = `${tail}px`; // right: moving right
-    return right ? `${T} ${L} ${L} ${T} / ${v}px ${v}px ${v}px ${v}px` : `${L} ${T} ${T} ${L} / ${v}px ${v}px ${v}px ${v}px`; };
-  const fr = (x, y, w, h, extra) => Object.assign({ transform: `translate(${x}px,${y}px)`, width: w + "px", height: h + "px" }, extra);
-  const flat = r => ({ borderRadius: `${r}px` });
-  let frames, dur;
-  if (!f.bg) { // nothing was picked yet: a drop of colour grows out of the tapped pill and wobbles into its shape
-    frames = [fr(to.x + to.w * .3, to.y + to.h * .25, to.w * .4, to.h * .5, { opacity: 0, borderRadius: `${to.h / 2}px`, easing: "cubic-bezier(.3,0,.4,1)" }),
-      fr(to.x - 3, to.y + 1, to.w + 6, to.h - 2, { opacity: 1, borderRadius: `${to.h / 2}px`, offset: .5, easing: "ease-in-out" }),
-      fr(to.x + 1.5, to.y - 1, to.w - 3, to.h + 2, { ...flat(R0), offset: .75, easing: "ease-in-out" }), fr(to.x, to.y, to.w, to.h, { opacity: 1, ...flat(R0) })];
-    dur = 170;
-  } else {
-    const ux = dist ? dx / dist : 0, uy = dist ? dy / dist : 0, ov = Math.min(6, 2 + dist * .04), right = dx >= 0;
-    // the rebound stays inside the grid (a pill at the edge is not overshot out of its card)
-    const bw = b.width, bh = b.height, cx = x => Math.max(-2, Math.min(bw - to.w + 2, x)), cy = y => Math.max(-2, Math.min(bh - to.h + 2, y));
-    let mids;
-    // one point of the trip: centre moved t of the way, the drop drawn out along its way (k: along, q: across)
-    const at = (t, k, q) => { const w0 = f.w + (to.w - f.w) * t, h0 = f.h + (to.h - f.h) * t, ax = Math.abs(ux), ay = Math.abs(uy);
-      const mw = w0 * (ax * k + ay * q), mh = h0 * (ay * k + ax * q), mcx = f.x + f.w / 2 + (to.x + to.w / 2 - f.x - f.w / 2) * t, mcy = f.y + f.h / 2 + (to.y + to.h / 2 - f.y - f.h / 2) * t; return [mcx - mw / 2, mcy - mh / 2, mw, mh]; };
-    if (Math.abs(dy) > 1) { // another grid row: a drop travels straight there (never a blob over four pills), stretched along its way
-      const [x1, y1, w1, h1] = at(.18, 1.08, .86), [x2, y2, w2, h2] = at(.45, 1.22, .74), [x3, y3, w3, h3] = at(.74, 1.1, .82);
-      mids = [fr(x1, y1, w1, h1, { borderRadius: rad(h1, h1 / 2, h1 * .8, right), offset: .16, easing: "cubic-bezier(.33,0,.4,1)" }),
-        fr(x2, y2, w2, h2, { borderRadius: rad(h2, h2 / 2, h2 * 1.2, right), offset: .38, easing: "cubic-bezier(.3,.2,.4,1)" }),
-        fr(x3, y3, w3, h3, { borderRadius: rad(h3, h3 / 2, h3, right), offset: .58, easing: "cubic-bezier(.25,.5,.4,1)" })];
-    } else { // same row: the leading end runs ahead and pulls the tail after it like a liquid, thinnest mid-way
-      const L0 = f.x, R0x = f.x + f.w, L1 = to.x, R1 = to.x + to.w, mcy = f.y + f.h / 2 + (to.y + to.h / 2 - f.y - f.h / 2) * .5;
-      const span = (lead, trail, k) => { const l = L0 + (L1 - L0) * (right ? trail : lead), r = R0x + (R1 - R0x) * (right ? lead : trail), h = (f.h + (to.h - f.h) * .5) * k; return [l, mcy - h / 2, r - l, h]; };
-      const [x1, y1, w1, h1] = span(.32, .02, .93), [x2, y2, w2, h2] = span(.7, .2, .8), [x3, y3, w3, h3] = span(.97, .6, .86);
-      mids = [fr(x1, y1, w1, h1, { borderRadius: rad(h1, h1 / 2, Math.min(w1 * .45, h1 * 1.1), right), offset: .16, easing: "cubic-bezier(.33,0,.4,1)" }),
-        fr(x2, y2, w2, h2, { borderRadius: rad(h2, h2 / 2, Math.min(w2 * .45, h2 * 1.7), right), offset: .38, easing: "cubic-bezier(.3,.2,.4,1)" }),
-        fr(x3, y3, w3, h3, { borderRadius: rad(h3, h3 / 2, Math.min(w3 * .45, h3 * 1.2), right), offset: .58, easing: "cubic-bezier(.25,.5,.4,1)" })];
-    }
-    // arrival: overshoot, squash, and a short damped jelly wobble back into the pill's own shape
-    frames = [fr(f.x, f.y, f.w, f.h, { backgroundColor: f.bg, ...flat(Math.min(R0, f.h / 2)), easing: "cubic-bezier(.45,0,.55,1)" }), ...mids,
-      fr(cx(to.x + ux * ov), cy(to.y + uy * ov), to.w - Math.abs(ux) * ov * .8, to.h + 2 - Math.abs(uy) * ov * .4, { backgroundColor: bg, borderRadius: `${to.h / 2}px`, offset: .72, easing: "cubic-bezier(.4,0,.6,1)" }),
-      fr(cx(to.x - ux * ov * .3), cy(to.y - uy * ov * .3) + .6, to.w + Math.abs(ux) * ov * .35 + 1, to.h - 1.2, { ...flat(R0), offset: .86, easing: "cubic-bezier(.4,0,.6,1)" }),
-      fr(to.x - .4, to.y - .3, to.w + .8, to.h + .6, { ...flat(R0), offset: .94, easing: "cubic-bezier(.4,0,.6,1)" }),
-      fr(to.x, to.y, to.w, to.h, { backgroundColor: bg, ...flat(R0) })];
-    dur = Math.round(160 + Math.min(80, dist * .22)); // quicker again: 160-240 ms (Max, Nov 23 PM)
-  }
-  const a = th.animate(frames, { duration: dur, fill: "none" });
-  // hand back to the pill without a fade: the pill's own background transition, set off by .gliding
-  // going, flashed it from clear to its colour (choice, black, choice) on the last frame
-  const done = () => {
-    if (![...box.querySelectorAll(":scope > .optth")].some(t => t !== th)) { // not handed on to a newer glide
-      const p = box.querySelector('.opt[aria-pressed="true"]');
-      if (p) p.style.transition = "none";
-      box.classList.remove("gliding"); if (p) void p.offsetWidth;
-      if (p) requestAnimationFrame(() => { p.style.transition = ""; });
-    }
-    th.remove();
-  };
-  a.onfinish = done; a.oncancel = done;
+  const cs = getComputedStyle(on), t = gRect(on, box);
+  // nothing was picked before: the colour grows out of the tapped pill
+  const from = f.bg ? f : { x: t.x + t.w * .3, y: t.y + t.h * .25, w: t.w * .4, h: t.h * .5 };
+  glideRun(box, from, t, { bg: cs.backgroundColor, fromBg: f.bg, radius: parseFloat(cs.borderTopLeftRadius) || 0, z: 1, done: () => {
+    // hand back to the pill without its background transition flashing it on the last frame
+    on.style.transition = "none"; requestAnimationFrame(() => { on.style.transition = ""; }); } });
 }
 const OPT_PAD = 6; // the least room beside a pill's text
 const LCHIP_CHROME = 8 + 2 + 22 + 2; // left padding, gap, remove button, right padding (4 speeds a row in a ~300px card)
@@ -1069,7 +1131,7 @@ function renderSearch() {
   const q = query.trim().toLowerCase();
   // settings this device leaves out of the lists (offDevice) are still found, locked, with the reason
   const all = CAT.preferences.filter(p => inYtVersion(p.key) && !(p.type === "screen" && offDevice(p.key)));
-  if (!q) { $("list").innerHTML = `<div class="shint">Type to search all ${all.length} settings.</div>`; return; }
+  if (!q) { paint($("list"), `<div class="shint">Type to search all ${all.length} settings.</div>`); return; }
   const words = q.split(/\s+/).filter(Boolean);
   const hits = [];
   for (const p of all) {
@@ -1083,14 +1145,14 @@ function renderSearch() {
   for (let i = hits.length - 1; i >= 0; i--) { const s = hits[i].p; if (s.type === "screen" && hits.some(h => h.p.subScreen === s.key && title(h.p.key) === title(s.key))) hits.splice(i, 1); }
   hits.sort((a, b) => a.score - b.score || SECTIONS.indexOf(a.sec) - SECTIONS.indexOf(b.sec));
   const mark = t => { let h = esc(t); for (const w of words) h = h.replace(new RegExp(`(${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "ig"), "<mark>$1</mark>"); return h; };
-  $("list").innerHTML = hits.length
+  paint($("list"), hits.length
     ? `<div class="sechead">${hits.length} result${hits.length > 1 ? "s" : ""}</div><div class="group">${hits.slice(0, 120).map(({ p, sec }) => {
         const par = PARENT_OF[p.key];
         const where = p.type === "screen" ? `Screen · ${placeLabel(resSection(p.key))}` : `${placeLabel(resSection(p.key))}${par ? ` › ${title(par)}` : ""}`;
         const off = offDevice(p.key);
         return `<div class="sres${off ? " soff" : ""}" data-res="${p.key}" tabindex="0"><div class="ttl">${mark(title(p.key))}${off ? I("lock", "lk") : ""}</div><div class="where">${esc(where)}</div>${off ? `<div class="sum need">${esc(deviceWhy(p.key))}</div>` : summaryFor(p.key) ? `<div class="sum">${esc(summaryFor(p.key))}</div>` : ""}</div>`;
       }).join("")}</div>`
-    : `<div class="shint">No settings match “${esc(query)}”.</div>`;
+    : `<div class="shint">No settings match “${esc(query)}”.</div>`);
 }
 $("btnSearch").onclick = () => setSearch(true);
 $("qClose").onclick = () => { query = ""; setSearch(false); };
@@ -1167,7 +1229,7 @@ function commit() { applyAppColors(); renderBar(); renderStage(); renderList(); 
 
 // ------------------------------------------------------------------ restart handling
 const pendingRestart = () => Object.keys(PREF).filter(k => PREF[k].rebootApp && JSON.stringify(state[k]) !== JSON.stringify(baseline[k]));
-function openDialog(html) { $("dlgBox").innerHTML = html; $("dlg").classList.add("open"); glassSample(); setTimeout(() => $("dlgBox").querySelector("button")?.focus(), 50); }
+function openDialog(html) { paint($("dlgBox"), html); $("dlg").classList.add("open"); glassSample(); setTimeout(() => $("dlgBox").querySelector("button")?.focus(), 50); }
 function closeDialog() { $("dlg").classList.remove("open"); }
 // Changes that only apply after YouTube restarts (Max, Nov 20). Values are saved as soon as they are
 // changed; leaving asks what to do with these: restart now, keep them for later, or reset them to the
@@ -1234,15 +1296,16 @@ function designPreview() {
 // Every three-way toggle in the menu (UI design, Settings list design) works the same way.
 const seg3 = (label, attr, opts, cur) => `<div class="seg3" role="radiogroup" aria-label="${label}" data-seg="${attr}"><i class="seg3-th"></i>${opts.map(([id, t]) => `<button role="radio" data-${attr}="${id}" aria-checked="${cur === id}">${t}</button>`).join("")}</div>`;
 let seg3From = {};
-function seg3Snap() { seg3From = {}; document.querySelectorAll("#pickGrid .seg3.th").forEach(seg => { const th = seg.querySelector(".seg3-th"); seg3From[seg.dataset.seg] = [th.offsetLeft, th.offsetWidth]; }); }
+function seg3Snap() { seg3From = {}; document.querySelectorAll("#pickGrid .seg3.th").forEach(seg => { const th = seg.querySelector(".seg3-th"), now = glideNow(seg); seg3From[seg.dataset.seg] = now ? [now.x, now.w] : [th.offsetLeft, th.offsetWidth]; glideStop(seg); }); }
 function placeSeg3() {
   document.querySelectorAll("#pickGrid .seg3").forEach(seg => {
     const th = seg.querySelector(".seg3-th"), on = seg.querySelector('[aria-checked="true"]');
     if (!th || !on || !on.offsetWidth) return; // hidden: the picked button keeps its own fill (CSS)
     const to = [on.offsetLeft, on.offsetWidth], from = seg3From[seg.dataset.seg];
     seg.classList.add("th"); // shown first, so its starting place is drawn and the move animates
-    if (from) { th.style.transition = "none"; th.style.left = from[0] + "px"; th.style.width = from[1] + "px"; void th.offsetWidth; th.style.transition = ""; }
-    th.style.left = to[0] + "px"; th.style.width = to[1] + "px";
+    th.style.transition = "none"; th.style.left = to[0] + "px"; th.style.width = to[1] + "px";
+    if (from) { const cs = getComputedStyle(th), y = th.offsetTop, h = th.offsetHeight; glideRun(seg, { x: from[0], y, w: from[1], h }, { x: to[0], y, w: to[1], h }, { bg: cs.backgroundColor, radius: parseFloat(cs.borderTopLeftRadius) || 0, z: -1 }); }
+    requestAnimationFrame(() => { th.style.transition = ""; });
   });
   seg3From = {};
 }
