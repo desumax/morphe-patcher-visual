@@ -213,7 +213,7 @@ $("pickScrim").onclick = () => setPicker(false);
 $("pickGrid").addEventListener("click", e => {
   if (pickSuppress) return;
   const dz = e.target.closest("[data-design]");
-  if (dz) { seg3Snap(); design = dz.dataset.design; renderBar(); renderList(); store.save(); return; }
+  if (dz) { if (dz.dataset.design === design) return; seg3Snap(); designMorph = true; design = dz.dataset.design; renderBar(); renderList(); store.save(); return; }
   const ui = e.target.closest("[data-ui]");
   if (ui) { if (ui.dataset.ui === theme) return; seg3Snap(); theme = ui.dataset.ui; applyTheme(); renderBar(); store.save(); glassSample(); return; }
   if (e.target.closest("[data-group-toggle]")) { grouped = !grouped; renderBar(); renderStage(); store.save(); if (grouped) tutOnce("groups"); return; }

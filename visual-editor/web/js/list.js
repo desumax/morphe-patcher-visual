@@ -27,7 +27,7 @@ function renderBar() {
     // UI design sits right above the list design (Max, Nov 23)
     // one line: the title on the left, its toggle on the right (Max, Nov 23 PM)
     + `<div class="themerow uirow"><span class="pi">${I("palette")}</span><div class="tt">UI design${theme === "glass" && glassTier !== null ? `<small>${GLASS_TIER_NAMES[glassTier]}${glassForced ? " (forced)" : ""}</small>` : ""}</div>${seg3("UI design", "ui", UI_DESIGNS, theme)}</div>`
-    + `<div class="themerow designrow"><div class="dcol"><div class="dsg"><span class="pi">${I("list")}</span><div class="tt">Settings list design</div></div><div class="drow">${seg3("Settings list design", "design", [["classic", "Morphe"], ["toggles", "Switches"], ["clean", "Clean"]], design)}<button class="offnew" data-editor-off>${I("power")}Disable new design</button></div></div></div>`;
+    + `<div class="themerow designrow"><div class="dcol"><div class="dsg"><span class="pi">${I("list")}</span><div class="tt">Settings list design</div></div><div class="drow">${seg3("Settings list design", "design", [["classic", "Morphe"], ["toggles", "Switches"], ["clean", "Clean"]], design)}<button class="offnew" data-editor-off>${I("power")}Disable new design</button></div>${designPreview()}</div></div>`;
   placeSeg3();
   $("btnReset").disabled = mode !== "mod" || !Object.keys(PREF).some(k => JSON.stringify(state[k]) !== JSON.stringify(defaults[k]));
 }
@@ -203,12 +203,15 @@ function renderStage() {
   // the Player menu: switching between the menu and one of its sheets plays like a user opening it
   const flyFrom = same && section === "flyout" ? { sub: st.dataset.flysub || "", html: st.querySelector(".inner-scroll")?.outerHTML, top: st.querySelector(".inner-scroll")?.scrollTop || 0 } : null;
   st.innerHTML = scene().replace(/background:#0f0f0f/g, "background:var(--app-bg,#0f0f0f)");
+  // greyed before anything reads a style or a scroll position: once a part has been styled, getting
+  // .fixed7 played its opacity transition, so every redraw faded the greyed parts (times, seekbar, Cast)
+  // from full to grey: a flash on every change, unrelated to the setting (Max, Nov 23: Player icon style)
+  markFixed(st);
   if (section === "flyout") { st.dataset.flysub = flySub || ""; if (flyFrom && flyFrom.html && flyFrom.sub !== (flySub || "")) flyTransition(st, flyFrom, flySub || ""); }
   st.querySelectorAll(".finger").forEach(f => { if (!f.firstChild) f.innerHTML = I("gesture"); });
   st.querySelectorAll(".inner-scroll").forEach((e, i) => { if (scrollers[i]) e.scrollTop = scrollers[i]; });
   st.querySelectorAll('[style*="overflow-x:auto"]').forEach((e, i) => { e.dataset.hs = ""; if (hscroll[i]) e.scrollLeft = hscroll[i]; });
   hugComponents(st);
-  markFixed(st);
   st.querySelectorAll(".c").forEach(fitRing);
   const sel = st.querySelector(".c.sel"); if (sel) watchRing(sel); wakeRings();
 }
@@ -1215,6 +1218,19 @@ function pendingDialog(saved = []) {
 }
 // The menu's three-way toggles: one thumb slides to the picked option (Max, Nov 22). The picker
 // is drawn again on every change, so the thumb starts from where the old one was (seg3From) and glides.
+// Under "Settings list design": a real card of the list drawn in the picked design (Max, Nov 23 PM: the
+// choice showed no preview of what it does). Two settings, so a switch and a choice both show; it is drawn
+// by rowHTML itself, so it always matches the list. It doesn't react to taps.
+const DESIGN_SAMPLE = ["morphe_hide_cast_button", "morphe_hide_autoplay_button"];
+let designMorph = false;
+function designPreview() {
+  const ks = DESIGN_SAMPLE.filter(k => PREF[k] && inVersion(k));
+  if (!ks.length) return "";
+  let rows = ks.map(k => rowHTML(k, true)).join("");
+  rows = rows.replace(/\s(data-row|data-k|data-also|data-set|data-sw|tabindex|data-kidtoggle|data-goto)="[^"]*"/g, "").replace(/\b(sel|dis|peek)\b(?=[^"]*")/g, "");
+  const m = designMorph; designMorph = false;
+  return `<div class="dprev${m ? " morph" : ""}" aria-hidden="true" inert><div class="group">${rows}</div></div>`;
+}
 // Every three-way toggle in the menu (UI design, Settings list design) works the same way.
 const seg3 = (label, attr, opts, cur) => `<div class="seg3" role="radiogroup" aria-label="${label}" data-seg="${attr}"><i class="seg3-th"></i>${opts.map(([id, t]) => `<button role="radio" data-${attr}="${id}" aria-checked="${cur === id}">${t}</button>`).join("")}</div>`;
 let seg3From = {};

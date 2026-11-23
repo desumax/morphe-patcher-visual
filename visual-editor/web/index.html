@@ -1075,9 +1075,9 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   --g-pane: rgba(16,20,32,.5); --g-pane-solid: rgba(17,21,33,.94);
   --g-rim: linear-gradient(135deg, rgba(255,255,255,.55), rgba(255,255,255,.08) 32%, rgba(255,255,255,.02) 55%, rgba(255,255,255,.22));
   --g-shine: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.02) 45%, rgba(255,255,255,0) 70%, rgba(255,255,255,.04));
-  --g-ctl: linear-gradient(180deg, rgba(255,255,255,.17), rgba(255,255,255,.05) 55%, rgba(255,255,255,.09));
-  --g-ctl-edge: inset 0 1px .5px rgba(255,255,255,.5), inset 0 -1px 1px rgba(255,255,255,.1), inset 0 0 0 1px rgba(255,255,255,.12);
-  --g-gloss: linear-gradient(180deg, rgba(255,255,255,.42), rgba(255,255,255,.08) 48%, rgba(255,255,255,0) 52%, rgba(255,255,255,.12));
+  --g-ctl: linear-gradient(rgba(255,255,255,.07), rgba(255,255,255,.07));
+  --g-ctl-edge: inset 0 0 0 .5px rgba(255,255,255,.2), inset 0 .5px 0 rgba(255,255,255,.42), inset 0 -.5px 0 rgba(255,255,255,.12);
+  --g-gloss: radial-gradient(130% 90% at 50% -10%, rgba(255,255,255,.2), rgba(255,255,255,0) 62%); /* light gathered at the top rim: refraction, not a bevel */
   --g-edge: rgba(255,255,255,.14); --g-hi: rgba(255,255,255,.3);
   --g-blur: blur(10px) saturate(1.9); --g-blur-strong: blur(14px) saturate(2);
   --m-bg: #0a0c14; --m-surface: #0a0c14; --m-c-lowest: rgba(0,0,0,.25); --m-c: rgba(255,255,255,.05); --m-c-high: rgba(255,255,255,.09); --m-c-highest: rgba(255,255,255,.14);
@@ -1093,7 +1093,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: var(--g-rim); pointer-events: none; z-index: 6;
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
 html.inapp .phone.theme-glass #picker::after { display: none; }
-.theme-glass .group { background: var(--m-c) var(--g-shine); box-shadow: 0 8px 24px -12px rgba(0,0,0,.5); }
+.theme-glass .group { background: var(--m-c) var(--g-shine); isolation: isolate; } /* isolate: its rim stays inside it, under the sticky preview and the menus */
 .theme-glass .stick { background: var(--g-pane-solid); box-shadow: 0 1px 0 var(--g-edge), 0 10px 18px -10px rgba(0,0,0,.55); }
 html .phone.theme-glass #picker, .theme-glass .dlg, .theme-glass .snack { background: var(--g-pane-solid) var(--g-shine); box-shadow: 0 18px 44px rgba(0,0,0,.5); }
 html.inapp .phone.theme-glass #picker { box-shadow: inset 0 1px 0 var(--g-edge); }
@@ -1107,21 +1107,21 @@ html.inapp .phone.theme-glass #picker { box-shadow: inset 0 1px 0 var(--g-edge);
 .theme-glass .tut .tseg, .theme-glass .tut .tseg3, .theme-glass .tut .ttabs span:not(.on) { background-color: rgba(255,255,255,.08); }
 .theme-glass .goto { box-shadow: var(--g-ctl-edge); }
 .theme-glass .seg3-th, .theme-glass .lt7 > i, .theme-glass .ctl.optgrid > .optth, .theme-glass .ctl .opt[aria-pressed="true"], .theme-glass .tab7[aria-selected="true"], .theme-glass .seg::before, .theme-glass .sw[aria-checked="true"], .theme-glass .dbtn.primary, .theme-glass .tut .tseg::before, .theme-glass .tut .tseg3 b.on, .theme-glass .tut .ttabs span.on, .theme-glass .row.sel .kind {
-  background-image: var(--g-gloss); box-shadow: inset 0 1px .5px rgba(255,255,255,.65), inset 0 -1px 1px rgba(0,0,0,.18), 0 2px 10px rgba(0,0,0,.28); }
+  background-image: var(--g-gloss); box-shadow: inset 0 0 0 .5px rgba(255,255,255,.34), inset 0 .5px 0 rgba(255,255,255,.55); }
 .theme-glass .ctl.optgrid.gliding > .opt[aria-pressed="true"] { background-image: none; box-shadow: none; }
 .theme-glass .tab7[aria-selected="true"] { background-color: rgba(255,255,255,.88); color: #0a0c14; }
 .theme-glass .row.sel .kind { background-color: rgba(150,195,255,.3); }
-.theme-glass .row .kind svg, .theme-glass .pick .pi svg { filter: drop-shadow(0 1px 1px rgba(0,0,0,.35)); }
-.theme-glass .sw::after { box-shadow: 0 1px 3px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.6); }
+
+.theme-glass .sw::after { box-shadow: 0 0 0 .5px rgba(255,255,255,.5), 0 1px 3px rgba(0,0,0,.25); }
 /* sliders: a glass track that fills with colour, a glass bead for the thumb */
 .theme-glass .ctl input[type=range] { -webkit-appearance: none; appearance: none; height: 24px; background: transparent; }
-.theme-glass .ctl input[type=range]::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: linear-gradient(90deg, rgba(159,202,255,.85) var(--pct, 0%), rgba(255,255,255,.1) var(--pct, 0%)); box-shadow: inset 0 1px 1px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.12), 0 1px 0 rgba(255,255,255,.08); }
-.theme-glass .ctl input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; margin-top: -7px; border-radius: 50%; border: 0; background: radial-gradient(circle at 35% 28%, #fff, rgba(255,255,255,.85) 30%, rgba(205,225,255,.6) 70%, rgba(255,255,255,.8)); box-shadow: 0 2px 8px rgba(0,0,0,.45), inset 0 -2px 3px rgba(80,120,200,.25), 0 0 0 1px rgba(255,255,255,.55); }
-.theme-glass .ctl input[type=range]::-moz-range-track { height: 8px; border-radius: 4px; background: rgba(255,255,255,.1); box-shadow: inset 0 1px 1px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.12); }
+.theme-glass .ctl input[type=range]::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: linear-gradient(90deg, rgba(159,202,255,.85) var(--pct, 0%), rgba(255,255,255,.1) var(--pct, 0%)); box-shadow: inset 0 0 0 .5px rgba(255,255,255,.18); }
+.theme-glass .ctl input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; margin-top: -7px; border-radius: 50%; border: 0; background: rgba(255,255,255,.92); box-shadow: 0 0 0 .5px rgba(255,255,255,.7), 0 1px 4px rgba(0,0,0,.28); transition: transform .15s var(--ease); }
+.theme-glass .ctl input[type=range]::-moz-range-track { height: 8px; border-radius: 4px; background: rgba(255,255,255,.1); box-shadow: inset 0 0 0 .5px rgba(255,255,255,.18); }
 .theme-glass .ctl input[type=range]::-moz-range-progress { height: 8px; border-radius: 4px; background: rgba(159,202,255,.85); }
-.theme-glass .ctl input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; border: 0; background: radial-gradient(circle at 35% 28%, #fff, rgba(205,225,255,.65) 70%); box-shadow: 0 2px 8px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.55); }
+.theme-glass .ctl input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; border: 0; background: rgba(255,255,255,.92); box-shadow: 0 0 0 .5px rgba(255,255,255,.7), 0 1px 4px rgba(0,0,0,.28); }
 /* locks: frosted glass covers with the gold lock; the opening doors keep the rim light */
-.theme-glass .lk7:not(.go), .theme-glass .lk7.go .lkh { box-shadow: inset 0 1px .5px rgba(255,255,255,.35), inset 0 0 0 1px rgba(255,255,255,.1); }
+.theme-glass .lk7:not(.go), .theme-glass .lk7.go .lkh { box-shadow: inset 0 0 0 .5px rgba(255,255,255,.2), inset 0 .5px 0 rgba(255,255,255,.4); }
 .theme-glass .ctl > .lk7 .lkk { fill: #252a3a; }
 .theme-glass .searchbar { background: #1b1f2d; box-shadow: var(--g-ctl-edge); }
 .theme-glass .stagebox { box-shadow: 0 0 0 1px rgba(255,255,255,.1), 0 6px 18px rgba(0,0,0,.5); }
@@ -1138,8 +1138,26 @@ html.inapp.peekback .phone.theme-glass .editor { background: #0a0c14; }
 .theme-glass .tut .tlist, .theme-glass .tut .tbar7, .theme-glass .tut .tres, .theme-glass .tut .tstyle { background: rgba(255,255,255,.07) var(--g-shine); }
 .theme-glass .tut .tpick, .theme-glass .tut .tdlg { background: rgba(22,26,40,.94) var(--g-shine); }
 .theme-glass .tut .tlist.sel { background-color: rgba(150,195,255,.18); }
-.theme-glass .tut .ok { background-image: var(--g-gloss), linear-gradient(90deg, var(--m-brand-1), var(--m-brand-2)); box-shadow: inset 0 1px .5px rgba(255,255,255,.65), inset 0 -1px 1px rgba(0,0,0,.18), 0 4px 16px rgba(0,0,0,.35); }
+.theme-glass .tut .ok { background-image: var(--g-gloss), linear-gradient(90deg, var(--m-brand-1), var(--m-brand-2)); box-shadow: inset 0 0 0 .5px rgba(255,255,255,.4), inset 0 .5px 0 rgba(255,255,255,.6); }
+.themerow.uirow { padding: 8px 8px 6px 12px !important; }
+.uirow .tt { min-width: 0; }
 .uirow .tt small { display: block; }
+.uirow .seg3 { margin-left: auto; }
+/* the list design's live sample: a small real card under its toggle */
+.designrow .dprev { width: 100%; pointer-events: none; }
+.designrow .dprev .group { margin: 2px 0 0; }
+.designrow .dprev .row { min-height: 44px; padding-top: 8px; padding-bottom: 8px; }
+.designrow .dprev .row .sum { display: none; }
+.designrow .dprev.morph .row > * { animation: tmorph .35s var(--ease); }
+/* press: the glass lights up where it is pressed and gives a little, as modern glass controls do */
+.theme-glass :is(.ctl .opt, .tab7, .seg3 button, .seg button, .secpill, .kidbtn, .ordreset, .offnew, .goto, .dbtn, .pick, .iconbtn) { transition: transform .16s var(--ease), background-color .16s var(--ease), color .3s var(--ease); }
+.theme-glass :is(.ctl .opt, .tab7, .seg3 button, .seg button, .secpill, .kidbtn, .ordreset, .offnew, .goto, .dbtn, .pick, .iconbtn):active { transform: scale(.96); }
+.theme-glass :is(.ctl .opt, .tab7, .secpill, .kidbtn, .ordreset, .offnew, .pick, .iconbtn):not([aria-pressed="true"]):not([aria-selected="true"]):not([aria-current="true"]):active { background-color: rgba(255,255,255,.16); }
+.theme-glass :is(.ctl .opt[aria-pressed="true"], .tab7[aria-selected="true"], .goto, .dbtn):active { filter: brightness(1.18); }
+.theme-glass .lt7:active { background-color: rgba(255,255,255,.16); }
+.theme-glass .lt7:active > i { filter: brightness(1.15); }
+.theme-glass .row:active { background-color: rgba(255,255,255,.05); }
+.theme-glass .ctl input[type=range]:active::-webkit-slider-thumb { transform: scale(1.15); }
 /* Light and Full: the floating panes are see-through and blur what passes behind them; locks frost */
 .phone.theme-glass:is([data-gt="1"], [data-gt="2"]) .stick, .phone.theme-glass:is([data-gt="1"], [data-gt="2"]) .dlg, .phone.theme-glass:is([data-gt="1"], [data-gt="2"]) .snack { background-color: var(--g-pane); -webkit-backdrop-filter: var(--g-blur); backdrop-filter: var(--g-blur); }
 html .phone.theme-glass:is([data-gt="1"], [data-gt="2"]) #picker { background-color: var(--g-pane); -webkit-backdrop-filter: var(--g-blur-strong); backdrop-filter: var(--g-blur-strong); }
