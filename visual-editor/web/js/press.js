@@ -143,7 +143,7 @@ $("list").addEventListener("click", e => {
   const sw = e.target.closest("[data-sw]");
   if (sw) { const k = sw.dataset.sw; if (A[k]) { touchSel(k); toggle(k); } else { select(k); toggle(k); } return; }
   const opt = e.target.closest("button.opt[data-set]");
-  if (opt) { ensureMod(); const k = opt.dataset.set; touchSel(k); const before = state[k]; state[k] = coerce(k, opt.dataset.val); afterChange(k, before); }
+  if (opt) { ensureMod(); const k = opt.dataset.set; touchSel(k); const before = state[k]; optSnap(opt); state[k] = coerce(k, opt.dataset.val); afterChange(k, before); optGlide(); }
 });
 $("list").addEventListener("input", e => {
   const t = e.target; const k = t.dataset && t.dataset.set; if (!k || t.tagName === "SELECT") return;

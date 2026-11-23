@@ -283,7 +283,17 @@ function stateChip(k) {
   }
   return "";
 }
-function summaryFor(k) { const p = PREF[k]; const v = V(k); if (p.type === "boolean") return (v ? p.summaryOn : p.summaryOff) || p.summary || ""; return p.summary || ""; }
+function summaryFor(k) { const p = PREF[k]; const v = V(k); if (p.type === "boolean") return fmtSum(k, (v ? p.summaryOn : p.summaryOff) || p.summary || ""); return fmtSum(k, p.summary || ""); }
+// Morphe fills some descriptions at run time (String.format: "Saved videos: %s"). The preview fills the
+// same slots, in every place a description shows, so a raw %s never reaches the screen: the setting's own
+// value when it has one, else a stand-in from FMT_FILL (slot 1, 2, ...), else an ellipsis.
+const FMT_FILL = { morphe_loop_count_clear: ["0"], morphe_series_tracker_completion: ["90", "30"], morphe_export_download_folder: ["Download"] };
+function fmtSum(k, t) {
+  if (!/%(\d+\$)?[sd]/.test(t)) return t;
+  const v = V(k), own = v !== undefined && v !== null && v !== "" && typeof v !== "boolean" ? String(v) : null, fill = FMT_FILL[k] || [];
+  let n = 0;
+  return t.replace(/%%|%(\d+\$)?[sd]/g, (m, pos) => m === "%%" ? "%" : (i => own ?? fill[i] ?? "…")(pos ? parseInt(pos, 10) - 1 : n++));
+}
 const RANGES = { font_size: [8, 48], travel_duration: [2, 15], width_dip: [100, 400], caption_scale: [50, 300], corner_radius: [0, 24], blur: [0, 100], smoothing: [0, 100], dim_duration: [0, 10] };
 const sameVal = (a, b) => String(a) === String(b) || (a !== "" && b !== "" && a != null && b != null && !isNaN(a) && !isNaN(b) && Number(a) === Number(b));
 function controlFor(k) {
@@ -429,7 +439,7 @@ function rowHTML(k, live) {
   if (dis) cls.push("dis");
   if (PARENT_OF[k]) { if (peeking(k)) cls.push("peek"); else if (!kidVisible(k)) cls.push("hide"); }
   if (live && (a.kind === "vis" || a.kind === "overlay") && !shown(k)) cls.push("offstate");
-  const sum = info ? (String(p.summary || "").replace(/\s*Tap here to open \S+\s*$/, "") || (p.type === "screen" ? "Opens a sub-screen in Morphe settings" : "Information")) : summaryFor(k); // the link has its own button (linkFor)
+  const sum = info ? (fmtSum(k, String(p.summary || "")).replace(/\s*Tap here to open \S+\s*$/, "") || (p.type === "screen" ? "Opens a sub-screen in Morphe settings" : "Information")) : summaryFor(k); // the link has its own button (linkFor)
   const blk = dis ? blockerOf(k) : null;
   const bp = dis ? null : borrowedParent(k);
   const goto = blk ? `<button class="goto" data-goto="${k}">${sectionOf(blk) !== section ? "Change it here" : "Take me there"} ${I("arrow")}</button>`
@@ -445,15 +455,10 @@ function rowHTML(k, live) {
   const over = /^(hide|show) in /i.test(title(k)) && p.subScreenTitle ? `<div class="over">${esc(p.subScreenTitle)}</div>` : "";
   return `<div class="${cls.join(" ")}" data-row="${k}" data-k="${k}" tabindex="0">
     <div class="txt">${over}${lreset ? '<div class="ttlrow">' : ""}<div class="ttl">${ttlHTML(shownTitle(k), (dis ? I("lock", "lk") : "") + tags + kidbtn)}</div>${lreset ? lreset + "</div>" : ""}
-      ${sum ? `<div class="sum">${sumTag(k)}${esc(sum)}</div>` : ""}${ctl}</div>${right || goto || need ? `<div class="side">${right}${need}${goto}</div>` : ""}</div>`;
+      ${sum ? `<div class="sum">${esc(sum)}</div>` : ""}${ctl}</div>${right || goto || need ? `<div class="side">${right}${need}${goto}</div>` : ""}</div>`;
 }
-// Morphe writes a "Disable X" setting's description for the switch turned on ("Disables X..."). The clean
-// design shows that card as "X" with Off | On, where the description's state is Off, so the description
-// says so ("When Off: Disables..."), read live from Morphe's text, for every such setting.
-function sumTag(k) {
-  const p = PREF[k], c = design === "clean" && cleanOf(k);
-  return c && c.labels[0] === "On" && !(p.summaryOn || p.summaryOff) ? `<b class="when">When ${c.labels[1]}:</b> ` : "";
-}
+// A "Disable X" card shown as "X" with Off | On keeps Morphe's description as written, with no
+// "When Off:" lead-in (Max, Nov 23: dropped on every such card).
 // The last word of a title and the badges after it never wrap apart, so a sub-options pill can't end up alone on a line.
 function ttlHTML(t, after) { if (!after) return esc(t); const i = t.lastIndexOf(" "); return `${esc(t.slice(0, i + 1))}<span class="nw">${esc(t.slice(i + 1))}${after}</span>`; }
 const groupHTML = (name, icon, keys, live) => keys.length ? `<div class="gtitle">${I(icon)}${name} · ${keys.length}</div><div class="group">${keys.map(k => rowHTML(k, live)).join("")}</div>` : "";
@@ -806,6 +811,69 @@ function fitOpts(root = $("list")) {
   const pre = jobs.map(([box, pills]) => pillsMeasure(box, pills));
   jobs.forEach((j, i) => { if (pre[i]) fitPills(...j, pre[i]); });
 }
+// Option pills: the pressed colour flows from the old pill to the new one with a little bounce, in every
+// option grid (list rows and the "needs" popup), across grid rows and for tall or tight pills alike.
+// optSnap runs before the state changes (the grid is redrawn), optGlide once the new grid is laid out.
+// One absolutely placed thumb per grid, shut in with contain:strict: only its transform and size move,
+// nothing else in the list is laid out again. A tap during a glide carries on from where the thumb is.
+let optFrom = null;
+const OPT_REDUCED = matchMedia("(prefers-reduced-motion: reduce)");
+function optSnap(btn) {
+  optFrom = null;
+  const box = btn.closest(".ctl.optgrid"); if (!box || OPT_REDUCED.matches) return;
+  const th = box.querySelector(":scope > .optth"), old = box.querySelector('.opt[aria-pressed="true"]');
+  const from = th || old || btn, b = box.getBoundingClientRect(), r = from.getBoundingClientRect();
+  optFrom = { k: btn.dataset.set, pop: !!box.closest(".dlglist"), x: r.left - b.left, y: r.top - b.top, w: r.width, h: r.height, bg: th || old ? getComputedStyle(from).backgroundColor : null, t: performance.now() };
+  if (th) th.getAnimations().forEach(a => a.cancel());
+}
+function optGlide() {
+  const f = optFrom; optFrom = null;
+  if (!f || performance.now() - f.t > 400) return;
+  const scope = f.pop ? document.querySelector("#dlgBox .dlglist") : $("list");
+  const on = scope && [...scope.querySelectorAll(`.opt[data-set="${f.k}"][aria-pressed="true"]`)].find(o => o.offsetParent);
+  const box = on && on.parentElement; if (!box || !box.classList.contains("optgrid")) return;
+  const b = box.getBoundingClientRect(), r = on.getBoundingClientRect();
+  const to = { x: r.left - b.left, y: r.top - b.top, w: r.width, h: r.height };
+  const dx = to.x - f.x, dy = to.y - f.y, dist = Math.hypot(dx, dy);
+  const cs = getComputedStyle(on), bg = cs.backgroundColor;
+  if (dist < 1 && f.bg === bg) return;
+  box.querySelectorAll(":scope > .optth").forEach(t => t.remove());
+  const th = document.createElement("i"); th.className = "optth"; th.setAttribute("aria-hidden", "true");
+  th.style.cssText = `width:${to.w}px;height:${to.h}px;transform:translate(${to.x}px,${to.y}px);background:${bg}`;
+  box.prepend(th); box.classList.add("gliding");
+  const fr = (x, y, w, h, extra) => Object.assign({ transform: `translate(${x}px,${y}px)`, width: w + "px", height: h + "px" }, extra);
+  let frames, dur;
+  if (!f.bg) { // nothing was picked yet: the thumb grows out of the tapped pill
+    frames = [fr(to.x + to.w * .2, to.y + to.h * .2, to.w * .6, to.h * .6, { opacity: 0, easing: "cubic-bezier(.3,0,.4,1)" }),
+      fr(to.x - 2, to.y - 1, to.w + 4, to.h + 2, { opacity: 1, offset: .55, easing: "ease-in-out" }), fr(to.x + 1, to.y + .5, to.w - 2, to.h - 1, { offset: .8, easing: "ease-in-out" }), fr(to.x, to.y, to.w, to.h, { opacity: 1 })];
+    dur = 360;
+  } else {
+    // stretch toward the new pill (leading edge ahead), overshoot a few px (capped, so long trips
+    // never fly past the grid), settle back with a smaller rebound
+    const ux = dist ? dx / dist : 0, uy = dist ? dy / dist : 0, ov = Math.min(7, 2 + dist * .05);
+    // the rebound stays inside the grid (a pill at the edge is not overshot out of its card)
+    const bw = b.width, bh = b.height, cx = x => Math.max(-2, Math.min(bw - to.w + 2, x)), cy = y => Math.max(-2, Math.min(bh - to.h + 2, y));
+    let mid;
+    if (Math.abs(dy) > 1) { // another grid row: travel straight there, a little smaller on the way (never a blob over four pills)
+      const t = .55, mw = (f.w + (to.w - f.w) * t) * .86, mh = (f.h + (to.h - f.h) * t) * .86;
+      const mcx = f.x + f.w / 2 + (to.x + to.w / 2 - f.x - f.w / 2) * t, mcy = f.y + f.h / 2 + (to.y + to.h / 2 - f.y - f.h / 2) * t;
+      mid = fr(mcx - mw / 2, mcy - mh / 2, mw, mh, { offset: .45, easing: "cubic-bezier(.2,.6,.35,1)" });
+    } else { // same row: stretch toward the new pill, leading edge ahead, a touch flatter
+      const L0 = f.x, R0 = f.x + f.w, L1 = to.x, R1 = to.x + to.w, lead = .78, trail = .3, ix = dx >= 0;
+      const mL = L0 + (L1 - L0) * (ix ? trail : lead), mR = R0 + (R1 - R0) * (ix ? lead : trail);
+      const mh = (f.h + (to.h - f.h) * .5) * .86, mcy = f.y + f.h / 2 + (to.y + to.h / 2 - f.y - f.h / 2) * .5;
+      mid = fr(mL, mcy - mh / 2, mR - mL, mh, { offset: .42, easing: "cubic-bezier(.2,.6,.35,1)" });
+    }
+    frames = [fr(f.x, f.y, f.w, f.h, { backgroundColor: f.bg, easing: "cubic-bezier(.45,0,.55,1)" }), mid,
+      fr(cx(to.x + ux * ov), cy(to.y + uy * ov), to.w - Math.abs(ux) * ov * .6, to.h + Math.abs(ux) * 1.5 - Math.abs(uy) * ov * .3, { backgroundColor: bg, offset: .72, easing: "ease-in-out" }),
+      fr(cx(to.x - ux * ov * .3), cy(to.y - uy * ov * .3), to.w + Math.abs(ux) * ov * .2, to.h, { offset: .88, easing: "ease-in-out" }),
+      fr(to.x, to.y, to.w, to.h, { backgroundColor: bg })];
+    dur = Math.round(380 + Math.min(220, dist * .55));
+  }
+  const a = th.animate(frames, { duration: dur, fill: "none" });
+  const done = () => { th.remove(); if (!box.querySelector(":scope > .optth")) box.classList.remove("gliding"); };
+  a.onfinish = done; a.oncancel = done;
+}
 const OPT_PAD = 6; // the least room beside a pill's text
 const LCHIP_CHROME = 8 + 2 + 22 + 2; // left padding, gap, remove button, right padding (4 speeds a row in a ~300px card)
 addEventListener("resize", () => { clearTimeout(fitOpts._t); fitOpts._t = setTimeout(() => fitOpts(), 120); });
@@ -996,7 +1064,7 @@ function renderInspector() {
   else {
     const a = A[k];
     const src = p.sourceFile ? `<a href="https://github.com/MorpheApp/morphe-patches/blob/main/${esc(p.sourceFile)}" target="_blank" rel="noopener">${esc(p.sourceFile.split("/").pop())}</a>` : "–";
-    $("selCard").innerHTML = `<h2>Selected</h2><h3>${esc(shownTitle(k))}</h3><p>${esc(p.summary || summaryFor(k) || "")}</p>
+    $("selCard").innerHTML = `<h2>Selected</h2><h3>${esc(shownTitle(k))}</h3><p>${esc(fmtSum(k, p.summary || "") || summaryFor(k) || "")}</p>
       <dl class="kv">
         <dt>Key</dt><dd>${esc(k)}</dd>
         <dt>Adapter</dt><dd><span class="pill">${a ? (a.kind === "scenario" ? "ScenarioAnimation" : KIND_NAME[a.kind]) : KIND_NAME.fallback}</span></dd>
@@ -1139,7 +1207,7 @@ function borrowPopup(k, target) {
     if (e.target.id === "dDone") return closeDialog();
     const sw = e.target.closest("[data-sw]"), opt = e.target.closest("button.opt[data-set]");
     if (sw) { ensureMod(); state[target] = !state[target]; after(); }
-    else if (opt) { ensureMod(); state[target] = coerce(target, opt.dataset.val); after(); }
+    else if (opt) { ensureMod(); optSnap(opt); state[target] = coerce(target, opt.dataset.val); after(); optGlide(); }
   };
   box.onchange = e => { const t = e.target; if (!t.dataset || t.dataset.set !== target) return; ensureMod(); state[target] = t.type === "range" || t.type === "number" ? Number(t.value) : coerce(target, t.value); after(); };
 }

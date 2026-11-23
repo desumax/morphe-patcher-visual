@@ -152,7 +152,7 @@ scen("feed", "playlist_long_press_drag", (box, on) => {
 });
 scen("feed", "playlist_wide_drag_handles", (box, on) => {
   situation("Grabbing a playlist row to move it");
-  box.innerHTML = device("port", pageRows(top7("Road trip mix", ["search", "more"]) + [1, 2, 3].map(i => `<div style="display:flex;gap:3px;align-items:center"><div class="hd7" style="width:${on ? 16 : 6}px;align-self:stretch;display:grid;place-items:center;border-radius:2px;background:${on ? "rgba(62,166,255,.18)" : "transparent"}">${ico7("list", 6, "#aaa")}</div><div style="flex:1">${row7(i, ["Night train to Bodø", "Lo-fi beats", "Fjord drive"][i - 1])}</div></div>`).join("")));
+  box.innerHTML = device("port", pageRows(top7("Road trip mix", ["search", "more"]) + [1, 2, 3].map(i => `<div style="display:flex;gap:3px;align-items:center"><div class="hd7${on && i === 1 ? " new7" : ""}" style="width:${on ? 16 : 6}px;align-self:stretch;display:grid;place-items:center;border-radius:2px;background:${on ? "rgba(62,166,255,.18)" : "transparent"}">${ico7("list", 6, "#aaa")}</div><div style="flex:1">${row7(i, ["Night train to Bodø", "Lo-fi beats", "Fjord drive"][i - 1])}</div></div>`).join("")));
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const H = dev.clientHeight;
   at(300, () => holdAt(f, on ? 13 : 9, H * .17));
   at(1000, () => { f.classList.remove("hold", "show"); toast7(dev, on ? "Easy to grab" : "Small target, often missed", "80%"); });
@@ -169,7 +169,7 @@ scen("feed", "post_image_download", (box, on) => {
 });
 scen("feed", "post_translate", (box, on) => {
   situation("A community post in another language");
-  box.innerHTML = device("port", pageRows(`<div style="display:flex;gap:4px;align-items:center"><span style="width:12px;height:12px;border-radius:50%;background:${AV[0]}"></span><b style="font-size:7px">Fjord & Timber</b></div><div class="tx7" style="font-size:6.5px;line-height:1.35;transition:opacity .25s">Taket er ferdig! Neste uke: vedovnen.</div>${on ? `<div class="tb7" style="font-size:6px;color:#3ea6ff;display:flex;gap:2px;align-items:center">${ico7("translate", 7, "#3ea6ff")}Translate</div>` : ""}<div style="height:34px;border-radius:4px;background:${ART[3]}"></div>`));
+  box.innerHTML = device("port", pageRows(`<div style="display:flex;gap:4px;align-items:center"><span style="width:12px;height:12px;border-radius:50%;background:${AV[0]}"></span><b style="font-size:7px">Fjord & Timber</b></div><div class="tx7" style="font-size:6.5px;line-height:1.35;transition:opacity .25s">Taket er ferdig! Neste uke: vedovnen.</div>${on ? `<div class="tb7 new7" style="width:max-content;font-size:6px;color:#3ea6ff;display:flex;gap:2px;align-items:center">${ico7("translate", 7, "#3ea6ff")}Translate</div>` : ""}<div style="height:34px;border-radius:4px;background:${ART[3]}"></div>`));
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
   if (!on) { toast7(dev, "No translate button", "80%"); return "Posts stay in their language (stock)"; }
   at(300, () => fingerTo(f, W * .25, H * .2)); at(650, () => tapF(f));
@@ -304,7 +304,7 @@ for (const [k, sit, html] of [
 }
 hidePage("comments", "hide_comments_section_in_home_feed", "Home feed with inline comments", feed7(big7(3, "Building a tiny cabin") + tgt7(`<div style="padding:3px;border-radius:3px;background:#1b1b1b">${cmt7(2, "Lovely build!")}</div>`) + row7(4, "Night train to Bodø")));
 scen("comments", "minimal_comments_button", (box, on) => {
-  box.innerHTML = device("port", pageRows(player7(3) + `<b style="font-size:7px">Building a tiny cabin</b><div class="cb7" style="transition:all .3s;overflow:hidden;border-radius:5px;background:#272727;padding:${on ? "2px 6px" : "4px"};font-size:6px;${on ? "width:max-content" : ""}">${on ? `${ico7("comment", 7)} 341` : `<b>Comments 341</b>${cmt7(2, "Lovely build!")}`}</div>${row7(2, "Up next")}`));
+  box.innerHTML = device("port", pageRows(player7(3) + `<b style="font-size:7px">Building a tiny cabin</b><div class="cb7${on ? " new7" : ""}" style="transition:all .3s;overflow:hidden;border-radius:5px;background:#272727;padding:${on ? "2px 6px" : "4px"};font-size:6px;${on ? "width:max-content" : ""}">${on ? `${ico7("comment", 7)} 341` : `<b>Comments 341</b>${cmt7(2, "Lovely build!")}`}</div>${row7(2, "Up next")}`));
   return on ? "A small comments button instead of the preview card" : "A large comments card with a preview (stock)";
 });
 scen("comments", "sanitize_comments_highlighted_search_links", (box, on) => {
@@ -396,7 +396,7 @@ scen("fullscreen", "swipe_save_and_restore_brightness", (box, on) => {
 const watch7 = (inner = "") => pageRows(player7(3, inner) + `<b style="font-size:7px">Building a tiny cabin</b>` + row7(2, "Up next · Night train") + row7(4, "Up next · Lo-fi beats"));
 scen("playback", "autoplay_control", (box, on) => {
   situation("A video ends");
-  box.innerHTML = device("port", watch7(`<div class="ap7" style="position:absolute;right:3px;top:3px;display:flex;gap:2px;align-items:center;font-size:5.5px">${on ? `<span style="padding:0 3px;border-radius:5px;background:rgba(0,0,0,.6)">${ico7("play", 6)} Auto</span>` : ""}</div>`));
+  box.innerHTML = device("port", watch7(`<div class="ap7" style="position:absolute;right:3px;top:3px;display:flex;gap:2px;align-items:center;font-size:5.5px">${on ? `<span class="new7" style="padding:0 3px;border-radius:5px;background:rgba(0,0,0,.6)">${ico7("play", 6)} Auto</span>` : ""}</div>`));
   const dev = box.querySelector(".dev");
   toast7(dev, on ? "Autoplay follows your rule: next in playlist only" : "Next video starts automatically", "86%");
   return on ? "A player button and a rule decide what plays next" : "YouTube decides (stock)";
@@ -405,8 +405,9 @@ scen("playback", "disable_playlist_autoplay", (box, on) => {
   situation("End of a video in a playlist");
   box.innerHTML = device("port", pageRows(player7(3, `<span class="cd7 toastin" style="top:50%;translate:0 -50%;white-space:nowrap">Next in 5</span>`) + `<b style="font-size:6.5px">Road trip mix · 2 / 12</b>` + row7(2, "Night train") + row7(4, "Lo-fi beats")));
   const dev = box.querySelector(".dev"), cd = dev.querySelector(".cd7");
-  [4, 3, 2].forEach((n, i) => at(400 + i * 300, () => { cd.textContent = "Next in " + n; }));
-  at(1400, () => { cd.innerHTML = on ? `${ico7("pause", 7)} Stopped` : `${ico7("play", 7)} Playing 3 / 12`; });
+  // every second shows, down to 1, 10% quicker than one step per 300 ms (Max, Nov 23)
+  [4, 3, 2, 1].forEach((n, i) => at(360 + i * 270, () => { cd.textContent = "Next in " + n; }));
+  at(1440, () => { cd.innerHTML = on ? `${ico7("pause", 7)} Stopped` : `${ico7("play", 7)} Playing 3 / 12`; });
   return on ? "Playlists stop after each video" : "Playlists play on (stock)";
 });
 // Two acts (playlist, then live stream), stock and patched side by side whatever the switch is set to.
@@ -598,7 +599,7 @@ scen("miniplayer", "seek_notification_media_prev_next", (box, on) => {
 });
 scen("playback", "download_force_4k", (box, on) => {
   situation("Downloading a video");
-  box.innerHTML = device("port", pageRows(player7(3) + `<div style="background:#212121;border-radius:5px;padding:4px;display:grid;gap:2px;font-size:6.5px"><b>Download quality</b><div>360p</div><div>720p</div><div class="q4" style="color:${on ? "#3ea6ff" : "#555"}">${on ? "2160p (4K)" : "2160p · Premium"}</div></div>`));
+  box.innerHTML = device("port", pageRows(player7(3) + `<div style="background:#212121;border-radius:5px;padding:4px;display:grid;gap:2px;font-size:6.5px"><b>Download quality</b><div>360p</div><div>720p</div><div class="q4 new7" style="width:max-content;color:${on ? "#3ea6ff" : "#555"}">${on ? "2160p (4K)" : "2160p · Premium"}</div></div>`));
   return on ? "4K downloads are offered" : "4K downloads are locked (stock)";
 });
 // Morphe (LiveChatTranslatePatch): a row becomes "author original (translation)" (or the translation

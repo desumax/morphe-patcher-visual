@@ -525,6 +525,11 @@ const inVersion = k => inYtVersion(k) && !offDevice(k);
 // Why this device leaves a setting out: search still lists it, locked, with this line (Max, Nov 20)
 const deviceWhy = k => DEVICE_ONLY[k] === "phone" ? "Only on phones" : "Only on tablets and large screens (600 dp or wider)";
 const availOk = k => { const p = PREF[k]; return !p || !p.availability || evalRule(p.availability, x => (x in PREF ? V(x) : null)); };
+// What a setting does right now: its value while it is available, otherwise nothing (a switch counts as
+// off, anything else as its default). A preview drawn from V() alone let a hidden setting with an "on"
+// default win over a visible one (Glass miniplayer, on by default but only for bar miniplayers, kept
+// the corners round whatever "Disable rounded corners" said).
+const VE = k => (parentsOk(k) ? V(k) : typeof defaults[k] === "boolean" ? false : defaults[k]);
 // Lists Morphe builds at runtime (caption languages from YouTube's translation list, the user's own
 // custom speeds). The preview uses a representative copy.
 const LANGS = [["en", "English"], ["es", "Spanish"], ["fr", "French"], ["de", "German"], ["it", "Italian"], ["pt", "Portuguese"], ["ja", "Japanese"], ["ko", "Korean"], ["zh-Hans", "Chinese (Simplified)"], ["ru", "Russian"], ["ar", "Arabic"], ["hi", "Hindi"]];
@@ -613,11 +618,11 @@ const watchExtras = html => html
 // ------------------------------------------------------------------ miniplayer, one design per type
 SCENES.miniplayer = () => {
   const type = V("morphe_miniplayer_type");
-  const round = !V("morphe_miniplayer_disable_rounded_corners");
-  const glass = !!V("morphe_miniplayer_glass");
-  const docked = !!V("morphe_miniplayer_docked");
-  const op = Number(V("morphe_miniplayer_opacity")) / 100;
-  const w = Math.max(130, Math.min(260, Number(V("morphe_miniplayer_width_dip")) || 192));
+  const round = !VE("morphe_miniplayer_disable_rounded_corners");
+  const glass = !!VE("morphe_miniplayer_glass");
+  const docked = !!VE("morphe_miniplayer_docked");
+  const op = Number(VE("morphe_miniplayer_opacity") ?? 100) / 100;
+  const w = Math.max(130, Math.min(260, Number(VE("morphe_miniplayer_width_dip")) || 192));
   const ttl = (extra = "") => C("miniplayer_hide_title", `<div style="min-width:0;${extra}"><div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(VIDEOS[0].t)}</div><div class="t2" style="font-size:11px">${VIDEOS[0].c}</div></div>`, { style: "flex:1;min-width:0" });
   const ic = (n, s = 20) => I(n, "ico", `style="width:${s}px;height:${s}px"`);
   const surface = glass ? "background:rgba(40,40,40,.55);backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);border:1px solid rgba(255,255,255,.12)" : "background:#212121";
@@ -777,8 +782,11 @@ function pillsApart(dev) {
 }
 // A small part of a scenario that changes (a corner readout such as "1.5×" or "720p", or anything marked
 // .chg7) flashes twice so the eye finds it: one shared rule for every animation, run from the observer
-// below, so a scenario only has to change the text. The first drawing of a phone never flashes.
-const CHG_SEL = ".badge7, .chg7";
+// below, so a scenario only has to change the text. The first drawing of a phone never flashes, except
+// for .new7: a small part the setting itself adds or changes that is there from the first frame (the
+// Auto button of Autoplay control, a Translate link, the 4K row): it flashes once the phones are up, so
+// the eye finds what differs even when nothing in the story changes it later.
+const CHG_SEL = ".badge7, .chg7", NEW_SEL = ".new7", NEW_FLASH_MS = 380;
 function flash7(el) {
   if (!el || !el.isConnected || el._flashAt && performance.now() - el._flashAt < 300) return;
   el._flashAt = performance.now();
@@ -813,6 +821,7 @@ new MutationObserver(ms => {
       [...(n.matches(".toastin") ? [n] : []), ...n.querySelectorAll(".toastin")].forEach(t => requestAnimationFrame(() => keepPillIn(t)));
       if (n.matches(PILLS) || n.querySelector(PILLS)) [...(n.closest(".dev") ? [n.closest(".dev")] : n.querySelectorAll(".dev"))].forEach(d => devs.add(d));
       if (n.matches(CHG_SEL) && m.target.closest && m.target.closest(".dev")) hit.add(n); // a readout appearing later
+      [...(n.matches(NEW_SEL) ? [n] : []), ...n.querySelectorAll(NEW_SEL)].forEach(e => setTimeout(() => flash7(e), NEW_FLASH_MS));
     });
   });
   hit.forEach(flash7);
@@ -1032,6 +1041,37 @@ scen("miniplayer", "miniplayer_disable_horizontal_drag", (box, disabled) => {
   at(1000, () => { if (disabled) dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:20%">Stays open</div>`); else dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:20%">Closed</div>`); });
   return disabled ? "A sideways fling does not close it" : "A sideways fling closes it (stock)";
 });
+// Dragging the miniplayer off the side tucks it into a thin tab at the edge (YouTube's horizontal drag).
+// The two settings below change what happens then: whether the video keeps playing, and whether the tab
+// stays tucked when you move on. The miniplayer shows its own pause / play mark and progress line.
+const miniTuck = (box, situationText) => {
+  situation(situationText);
+  box.innerHTML = device("port", miniDev());
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"), m = box.querySelector(".mp2"); const W = dev.clientWidth, H = dev.clientHeight;
+  m.style.overflow = "hidden";
+  m.innerHTML = `<span class="mpi chg7" style="position:absolute;left:50%;top:50%;translate:-50% -50%;transition:left .55s var(--ease),translate .55s var(--ease);display:grid;place-items:center;width:11px;height:11px;border-radius:50%;background:rgba(0,0,0,.5)">${ico7("pause", 7)}</span><div class="mpp" style="position:absolute;left:0;bottom:0;height:1.5px;width:22%;background:#f03"></div>`;
+  const prog = m.querySelector(".mpp");
+  requestAnimationFrame(() => { prog.style.transition = `width ${9000 * scStretch}ms linear`; prog.style.width = "100%"; }); // playing
+  const pause = () => { prog.style.width = getComputedStyle(prog).width; prog.style.transition = "none"; m.querySelector(".mpi").innerHTML = ico7("play", 7); };
+  at(150, () => { fingerTo(f, W - 26, H - 31); f.classList.add("hold"); });
+  // tucked: a strip stays at the edge, its pause / play mark moved onto the strip so the state still shows
+  const mark = m.querySelector(".mpi");
+  at(450, () => { fingerTo(f, W + 8, H - 31, 450); m.style.right = "-25px"; mark.style.left = "2.5px"; mark.style.translate = "0 -50%"; });
+  at(950, () => f.classList.remove("hold", "show"));
+  return { dev, f, m, W, H, pause, back: () => { m.style.right = "6px"; mark.style.left = "50%"; mark.style.translate = "-50% -50%"; } };
+};
+scen("miniplayer", "miniplayer_disable_horizontal_drag_playback", (box, on) => {
+  const t = miniTuck(box, "Dragging the miniplayer off the side");
+  at(1000, () => { if (on) { t.pause(); toast7(t.dev, `${ico7("pause", 7)} Paused`, "30%"); } else toast7(t.dev, `${ico7("play", 7)} Still playing`, "30%"); });
+  return on ? "Tucked away at the edge, the video pauses" : "Tucked away at the edge, the video keeps playing (stock)";
+});
+scen("miniplayer", "miniplayer_disable_horizontal_reposition", (box, on) => {
+  const t = miniTuck(box, "Tucking the miniplayer away, then opening another page");
+  at(1250, () => { fingerTo(t.f, t.W * .5, t.H * .17); }); // onto the video: another page opens
+  at(1650, () => tapF(t.f));
+  at(1850, () => { t.f.classList.remove("show"); const v = t.dev.querySelector(".dv-video"); if (v) v.style.background = ART[5]; if (!on) t.back(); toast7(t.dev, on ? "Stays tucked at the edge" : "Back in its corner", "30%"); });
+  return on ? "It stays tucked away while you move around" : "It pops back out to its corner (stock)";
+});
 scen("miniplayer", "miniplayer_swipe_up_expand", (box, on) => {
   situation("Swiping the miniplayer up");
   box.innerHTML = device("port", miniDev());
@@ -1161,6 +1201,7 @@ const FOOT_OFF = new Set([
   "morphe_show_menu_icons", // the icons are drawn (Max, Nov 20)
   "morphe_continue_watching_prompt", // the prompt, the countdown and the phone's own message say it (Max, Nov 20)
   "morphe_disable_auto_hide_navigation_bar", // the bar staying or sliding away is drawn (Max, Nov 20)
+  "morphe_disable_player_popup_panels", // the panels jumping open or waiting, and the phones' messages, say it (Max, Nov 23)
 ]);
 let askOnly = false; // drawing only the default side while the other waits for a choice
 const SCN_SELF_DUO = new Set(["morphe_disable_player_popup_panels", "morphe_playback_buffer_size", "morphe_skip_silence_minimum_pause"]); // one phone that tells all values itself

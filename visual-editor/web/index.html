@@ -393,9 +393,13 @@ html #pickGrid .pg.pgroups.pvis:not(.nx) .gcard .pi svg { width: 23px; height: 2
 .duo7.gen.labout .dl7 > .sf7, .duo7.gen.labright .dl7 > .sf7 { grid-area: cap; }
 /* captions beside the phones (portrait pairs): on the outer side, under the label, both centred on the phone */
 .duo7.gen.capside { flex-direction: row !important; align-items: stretch; gap: 6px; }
-.duo7.gen.capside .dl7 { grid-template-rows: 1fr auto auto 1fr; row-gap: 4px; }
-.duo7.gen.capside .dl7:first-child { grid-template-columns: auto min-content; grid-template-areas: ". dev" "pill dev" "cap dev" ". dev"; }
-.duo7.gen.capside .dl7 + .dl7 { grid-template-columns: min-content auto; grid-template-areas: "dev ." "dev pill" "dev cap" "dev ."; }
+/* the label sits on the phone's middle line and its caption hangs under it, so the Off and On labels line
+   up whatever the length of either caption (centring label and caption together put the label with the
+   longer caption higher: Fix transcript, Max, Nov 23) */
+.duo7.gen.capside .dl7 { grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr); row-gap: 4px; }
+.duo7.gen.capside .dl7:first-child { grid-template-columns: auto min-content; grid-template-areas: ". dev" "pill dev" "cap dev"; }
+.duo7.gen.capside .dl7 + .dl7 { grid-template-columns: min-content auto; grid-template-areas: "dev ." "dev pill" "dev cap"; }
+.duo7.gen.capside .dl7 > .sf7 { align-self: start; }
 .duo7.gen.capside .dl7 > span { justify-self: center; }
 .duo7.gen.capside .dl7 > .sf7 { width: 80px; min-width: 0; font-size: 12px; line-height: 15px; margin: 0; -webkit-line-clamp: 5; hyphens: manual; text-align: center; }
 .duo7.gen .dl7 > span.long { font-size: calc(var(--duopill) * .9 / var(--dsc, 1.7)); }
@@ -513,6 +517,11 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .ctl .opt[aria-pressed="true"] { background: var(--on-green); border-color: var(--on-green); color: var(--on-green-ink); }
 .ctl .opt[aria-pressed="true"].def { background: #3a3a3a; border-color: #3a3a3a; color: #fff; } /* the default (Auto, Default): neutral, like its side in the comparison */
 .ctl .opt[aria-pressed="true"].neg { background: #5c2b2b; border-color: #5c2b2b; color: #ffd9d6; }
+/* optGlide: one thumb carries the pressed colour from the old pill to the new one */
+.ctl.optgrid { position: relative; isolation: isolate; }
+.ctl.optgrid > .optth { position: absolute; left: 0; top: 0; z-index: -1; border-radius: 999px; contain: strict; pointer-events: none; will-change: transform; }
+.theme-yt .ctl.optgrid > .optth { border-radius: 8px; }
+.ctl.optgrid.gliding > .opt[aria-pressed="true"] { background: transparent; border-color: transparent; transition: none; }
 .ctl input[type=range] { flex: 1; min-width: 120px; accent-color: var(--m-primary); }
 .ctl .val { font-family: var(--mono); font-size: 12px; color: var(--m-on-var); min-width: 44px; text-align: right; }
 /* Material 3 switch with check/close icon in the thumb (Manager ToggleSwitch) */
@@ -801,7 +810,6 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 .kids .row .ttl { font-size: 14px; }
 .kids .row.peek { display: flex; }
 .kids .row.hide { display: none; }
-.row .sum .when { font-weight: 600; color: var(--m-on); }
 .kids .row.deep, .theme-yt .kids .row.deep { padding-left: 54px; }
 .kids .row.deep::after { left: 40px; }
 .ttl .nw { white-space: nowrap; }
