@@ -195,8 +195,12 @@
 .duo7.gen.capside .dl7 > .sf7 { align-self: start; }
 .duo7.gen.capside .dl7 > span { justify-self: center; }
 .duo7.gen.capside .dl7 > .sf7 { width: 80px; min-width: 0; font-size: 12px; line-height: 15px; margin: 0; -webkit-line-clamp: 5; hyphens: manual; text-align: center; }
-.duo7.gen .dl7 > span.long { font-size: calc(var(--duopill) * .9 / var(--dsc, 1.7)); }
-.duo7.gen .dl7 > span.xlong { font-size: calc(var(--duopill) * .8 / var(--dsc, 1.7)); }
+/* a long label gets smaller text but keeps the box height of a short one (Max, Nov 24: in Play next in queue
+   type the phone under a long label sat a little higher, and the phones moved up or down from option to
+   option). A label is its trimmed cap height (Roboto .711 em, motion.css text-box) plus .42 em above and
+   below, so smaller text made a shorter box; these paddings make up the difference in the regular size. */
+.duo7.gen .dl7 > span.long { font-size: calc(var(--duopill) * .9 / var(--dsc, 1.7)); padding-block: calc(var(--duopill) / var(--dsc, 1.7) * .4556); }
+.duo7.gen .dl7 > span.xlong { font-size: calc(var(--duopill) * .8 / var(--dsc, 1.7)); padding-block: calc(var(--duopill) / var(--dsc, 1.7) * .4911); }
 .duo7.gen .dl7 > span.ask { font-size: calc(var(--duopill) * .9 / var(--dsc, 1.7)); line-height: 1.55; white-space: nowrap; overflow: visible; max-width: none; background: #1a73e8; }
 .ask7 { box-sizing: border-box; border-radius: 12px; border: 2px dashed #555; background: rgba(255,255,255,.03); display: grid; place-items: center; padding: 6px; }
 .ask7 > span { font-size: calc(var(--duopill) * .9 / var(--dsc, 1.7)); font-weight: 600; color: #fff; background: #1a73e8; border-radius: .7em; padding: .42em .75em; text-align: center; line-height: 1.25; }

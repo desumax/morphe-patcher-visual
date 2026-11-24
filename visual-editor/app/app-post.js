@@ -151,10 +151,19 @@ if (INAPP) {
     if (typeof x === "number" && isFinite(x)) return Math.min(1, Math.max(0, (peek.edge === 1 ? peek.x - x : x - peek.x) / peekW()));
     return Math.min(1, Math.max(0, p)) * .45; // an older app: the progress only
   };
-  const peekEnd = () => {
-    document.documentElement.classList.remove("peekback");
+  // Back to the plain page in one frame, with nothing transitioning (Max, Nov 24: a back swipe started and
+  // then cancelled flashed the screen, and a see-through copy of the menu faded out over it: the menu went
+  // back above the screen while its closing fade, and its cards' fades, still ran). closeMenu: the menu
+  // behind is put away at once (a cancelled swipe); otherwise it stays as the page (the swipe went through).
+  const peekEnd = closeMenu => {
+    const root = document.documentElement;
+    root.classList.add("peekreset");
+    if (closeMenu) pk.classList.remove("open");
+    root.classList.remove("peekback");
     ed.style.transition = ed.style.transform = ed.style.boxShadow = ed.style.opacity = pk.style.opacity = pk.style.transform = pk.style.transition = "";
+    void pk.offsetWidth; void ed.offsetWidth; // the final look is worked out now, with transitions off
     peek = null;
+    requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove("peekreset")));
   };
   // from where the screen is to f, then done (the spring when it comes back, a quick glide when it leaves)
   const peekTo = (f, ms, ease, done) => {
@@ -164,7 +173,7 @@ if (INAPP) {
   };
   window.morpheBackStart = (edge, x) => {
     if (!canPeek()) return;
-    if (peek) { clearTimeout(peek.timer); peekEnd(); }
+    if (peek) { clearTimeout(peek.timer); peekEnd(true); }
     peek = { edge: edge === 1 ? 1 : 0, x: typeof x === "number" && isFinite(x) ? x : (edge === 1 ? peekW() : 0), f: 0 };
     pk.classList.add("open"); // the menu, drawn behind the screen
     document.documentElement.classList.add("peekback");
@@ -173,7 +182,8 @@ if (INAPP) {
   window.morpheBackProgress = (p, x) => { if (peek && !peek.timer) peekDraw(peekAt(p, x)); };
   window.morpheBackCancel = () => {
     if (!peek || peek.timer) return;
-    peekTo(0, 460, "var(--spring)", () => { if (!peek) return; pk.classList.remove("open"); peekEnd(); });
+    // no overshoot: a spring past the start showed a strip of the menu at the other edge for a moment
+    peekTo(0, 320, "cubic-bezier(.2, .8, .3, 1)", () => { if (!peek) return; peekEnd(true); });
   };
   const keyBack = window.morpheBack;
   window.morpheBack = () => {

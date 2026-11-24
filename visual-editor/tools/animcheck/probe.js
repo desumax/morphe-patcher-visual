@@ -60,6 +60,7 @@
     if (shown) {
       q(".dev", canvas).forEach(dev => {
         const r = rect(dev), cell = dev.closest(".dl7"), side = cell ? [...cell.parentElement.children].indexOf(cell) : -1;
+        const raw = rect(dev); // before the faded-half adjustment below (pair-misaligned compares whole phones)
         // a faded half phone (web/js/scenarios.js CROP7, .crop7): the cut end is masked out and takes no
         // room, so only the part that is shown counts (the cut, scaled like the phone, read from --cut7)
         const cut = parseFloat(getComputedStyle(dev).getPropertyValue("--cut7")) || 0;
@@ -69,7 +70,7 @@
           r.h = r.b - r.t;
         }
         const m = getComputedStyle(dev).transform.match(/^matrix\(([^,]+), ([^,]+)/);
-        s.devs.push({ id: idOf(dev), r, side, clip: clipOf(dev, stick), turning: !!m && Math.abs(parseFloat(m[2])) > .02 });
+        s.devs.push({ id: idOf(dev), r, raw, side, clip: clipOf(dev, stick), turning: !!m && Math.abs(parseFloat(m[2])) > .02 });
         artOf(dev, r, s.art);
       });
       const pg = canvas.querySelector(".prog"); if (pg) s.prog = { r: rect(pg), op: opacityOf(pg, stick) };
@@ -203,6 +204,16 @@
     if (isCmp && cmp.length && !cmp.some(s => s.devs.length)) add("no-phone", 0, "the comparison drew no phone");
     const tol = 1.5;
     let prev = null, prev2 = null;
+    // pair-misaligned (Max, Nov 24: in Play next in queue type one phone sat a little higher than the other,
+    // and the phones moved from option to option; a long label was a shorter box): two phones of the same
+    // size side by side, at rest, must have the same top
+    for (const s of cmp) {
+      const d = s.devs.filter(x => x.side === 0 || x.side === 1); if (d.length !== 2 || d.some(x => x.turning)) continue;
+      const [a, b] = d[0].side === 0 ? d : [d[1], d[0]];
+      if (Math.abs(a.raw.h - b.raw.h) > 1 || Math.abs(a.raw.w - b.raw.w) > 1 || Math.abs(mid(a.raw)[0] - mid(b.raw)[0]) < a.raw.w / 2) continue;
+      const pv = ss[ss.indexOf(s) - 1], was = pv && pv.devs.find(x => x.id === a.id); if (!was || Math.abs(was.raw.t - a.raw.t) > .5) continue;
+      if (Math.abs(a.raw.t - b.raw.t) > 1) add("pair-misaligned", s.t, `the two phones' tops differ by ${Math.abs(a.raw.t - b.raw.t).toFixed(1)}px`, "fail", "tops");
+    }
     ss.forEach((s, i) => {
       // clipped text: a pill, label or caption cut by its phone or by the preview box
       for (const it of s.items) {
