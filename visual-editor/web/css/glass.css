@@ -111,7 +111,7 @@ html.inapp .phone.theme-glass #picker, html.inapp.peekback .phone.theme-glass .e
 /* the screen menu cards' icon: the glass ring is a circle round the icon with room inside it (it hugged
    the 23 px icon, so the icon's corners touched or crossed the ring and it looked off centre) */
 .theme-glass #pickGrid .pg.pgroups.pvis:not(.nx) .gcard .pi { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background-color: var(--g-ctl); }
-.theme-glass #pickGrid .pg.pgroups.pvis:not(.nx) .gcard .pi svg { width: 21px; height: 21px; }
+.theme-glass #pickGrid .pg.pgroups.pvis:not(.nx) .gcard .pi svg { width: 22px; height: 22px; } /* an even size: whole pixels each side in the 36 px pill */
 .theme-glass .tab7 { border-radius: 999px; padding: 0 14px; }
 .theme-glass .sw { border-color: transparent; }
 .theme-glass .goto, .theme-glass .searchbar { box-shadow: var(--g-ctl-edge); }

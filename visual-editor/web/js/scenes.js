@@ -176,9 +176,11 @@ SCENES.feed = () => {
     // FeedCardLayoutPatch: compact mono text buttons under the card: like, comment (opens the video with its
     // comments) and save (to Watch later), lined up under the title
     const tb = (n, t) => `<span style="display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 8px;border-radius:14px;font-size:12px;font-weight:500;color:#f1f1f1">${I(n, "ico", 'style="width:18px;height:18px"')}${t}</span>`;
-    const acts = actions ? `<div${i ? "" : ' data-focus="morphe_feed_card_layout"'} style="display:flex;gap:2px;padding:0 8px 8px 48px">${tb("like", ["48K", "12K", "3.4K"][i % 3])}${tb("comment", ["1.2K", "341", "88"][i % 3])}${tb("save", "Save")}</div>` : "";
+    const acts = actions ? `<div class="c" data-also="morphe_feed_card_layout"${i ? "" : ' data-focus="morphe_feed_card_layout"'} style="display:flex;gap:2px;padding:0 8px 8px 48px">${tb("like", ["48K", "12K", "3.4K"][i % 3])}${tb("comment", ["1.2K", "341", "88"][i % 3])}${tb("save", "Save")}</div>` : "";
     // cards: 12 dp corners, 12 dp at the sides and 6 dp above and below each card (12 between two)
-    return `<div style="${cards ? "margin:6px 12px;background:#1c1c1c;border-radius:12px;overflow:hidden" : "margin-bottom:6px"}">${tn}${meta}${acts}</div>`;
+    // what the layout changes stands for the setting, so it flashes on a change instead of the whole preview
+    // (round 137): the action rows when the layout adds them, otherwise each card's frame
+    return `<div${actions ? "" : ' class="c" data-also="morphe_feed_card_layout"'} style="${cards ? "margin:6px 12px;background:#1c1c1c;border-radius:12px;overflow:hidden" : "margin-bottom:6px"}">${tn}${meta}${acts}</div>`;
   };
   const logo = `<div style="width:28px;height:20px;border-radius:6px;background:#ff0033;display:grid;place-items:center">${I("play", "ico", 'style="width:14px;height:14px"')}</div><b style="font-size:17px;letter-spacing:-.4px">YouTube</b>`;
   const doodle = `<div class="doodle"><span style="background:#4285f4">Y</span><span style="background:#ea4335">o</span><span style="background:#fbbc05">u</span><span style="background:#34a853">T</span><span style="background:#ff0033">ube</span></div>`;

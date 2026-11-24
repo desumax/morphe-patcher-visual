@@ -324,7 +324,9 @@ const at = (ms, f) => { if (scCollect) { scCollect.push([ms, f, scSide]); return
 // steps due at the same moment (the two phones' turns, say) run in one timer, in the order they were
 // written, so their layout work is done once for both (see fitDevSoon)
 function startCollected(list) {
-  const lead = list.length ? Math.max(0, Math.min(...list.map(x => x[0])) - LEAD_MS) : 0, due = new Map();
+  // a story that turns its phone keeps a 300 ms lead: a turn started while the pair is still settling into
+  // place left a phone cut by the edge of the preview (animcheck phone-clipped, round 137)
+  const lead = list.length ? Math.max(0, Math.min(...list.map(x => x[0])) - (scTurns ? 300 : LEAD_MS)) : 0, due = new Map();
   list.forEach(([ms, f, side]) => { const t = ms - lead; if (!due.has(t)) due.set(t, []); due.get(t).push([f, side]); });
   due.forEach((steps, t) => clock.after("steps", t * scStretch, () => steps.forEach(([f, side]) => {
     const p = scSide; scSide = side;

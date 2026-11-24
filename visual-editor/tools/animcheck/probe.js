@@ -271,7 +271,7 @@
           if (last.sides[0] === last.sides[1]) add("sides-end-same", last.t, "the two phones end the same", "warn");
         }
       }
-      const first = cmp[0].t, change = cmp.find(s => s.t > first + 60 && s.muts > 0 && s.devs.length);
+      const first = cmp[0].t, change = cmp.find(s => s.t > first && s.muts > 0 && s.devs.length); // stories now start within 60 ms (Max, Nov 24: no delays): only the first sample itself is the drawing
       // nothing moving until the story starts over is a still comparison (two pictures side by side), which is fine
       if (cmp.some(s => s.devs.length) && job.kind === "scn" && !job.ask) {
         if (!change || change.t - first > 5000) add("still", 0, "a still comparison: two pictures, no motion", "info");

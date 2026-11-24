@@ -125,12 +125,12 @@ scen("feed", "feed_long_press_menu", (box, on) => {
 // Wi-Fi and switches to mobile data, so all three end differently.
 SCN_HOLD.morphe_playback_in_feeds = 3400;
 scen("feed", "playback_in_feeds", (box, v) => {
-  situation(n === 2 ? "A video stops in view, on any network" : "A video stops in view, on Wi-Fi and then on mobile data");
   const n = Number(v), plays = wifi => n === 2 || (n === 1 && wifi);
+  situation(n === 2 ? "A video stops in view, on any network" : "A video stops in view, on Wi-Fi and then on mobile data");
   const art = `<span class="pz7" style="position:absolute;inset:0;border-radius:3px;background:inherit;transition:scale 2.4s linear"></span><span class="badge7 mu7" style="left:3px;top:3px;opacity:0;transition:opacity .2s">${ico7("mute", 6)} Muted</span><i class="pp7" style="position:absolute;left:0;bottom:0;height:2px;width:0;background:#ff0033"></i><span class="badge7 du7" style="left:auto;right:3px;top:auto;bottom:3px;transition:opacity .2s">12:04</span>`;
   box.innerHTML = device("port", pageRows(feed7(`<div class="fd7" style="display:grid;gap:5px;transition:transform .5s var(--ease)">${row7(4, "Night train to Bodø")}${big7(3, "Building a tiny cabin", art)}${row7(2, "Lo-fi beats")}</div>`)) + (n === 2
     // Always on: the network does not matter, so both are shown together and nothing switches (Max, round 136)
-    ? `<span class="badge7 net7" style="left:4px;top:auto;bottom:6px">${ico7("wifi", 6)} Wi-Fi + ${ico7("phone", 6)} Mobile data</span>`
+    ? `<span class="badge7 net7" style="left:4px;top:auto;bottom:6px;display:inline-flex;flex-direction:row;align-items:center;gap:3px;white-space:nowrap">${ico7("wifi", 6)}${ico7("phone", 6)}<span>Any network</span></span>`
     : `<span class="badge7 net7" style="left:4px;top:auto;bottom:6px;display:inline-grid">${[["wifi", "Wi-Fi", 1], ["phone", "Mobile data", 0]].map(([ic, t, on]) => `<span class="nt7" style="grid-area:1/1;transition:opacity .2s;opacity:${on}">${ico7(ic, 6)} ${t}</span>`).join("")}</span>`));
   const dev = box.querySelector(".dev"), pp = dev.querySelector(".pp7"), pz = dev.querySelector(".pz7"), mu = dev.querySelector(".mu7"), du = dev.querySelector(".du7"), net = dev.querySelector(".net7");
   const play = (on, from) => {
@@ -511,19 +511,24 @@ scen("ambient", "disable_fullscreen_ambient_mode", (box, on) => {
 //     for BOTH_ENABLED and WITHOUT_VOLUME_ONLY ("Show when muted").
 // So the two moments are one video: it starts with the volume up, then the phone's volume goes to zero.
 // Two readouts under the video keep both answers on screen, so every option ends different.
-SCN_HOLD.morphe_auto_captions_style = 3600;
+// Round 137 (Max: hard to read): no small print. The two moments are two videos on one screen, each with a
+// readout in the standard pill size (volume up / volume at zero) and its caption line drawn large or not at
+// all; the second one lights up after the first, and both stay, so every option ends on its own picture.
+SCN_HOLD.morphe_auto_captions_style = 3200;
 scen("captions", "auto_captions_style", (box, v) => {
-  situation("A video starts, then the phone's volume goes to zero");
+  situation("A video starts with sound, and with the phone's volume at zero");
   const show = muted => v === "BOTH_ENABLED" || (muted ? v === "WITHOUT_VOLUME_ONLY" : v === "WITH_VOLUME_ONLY");
-  const cap = `<span class="cap7" style="position:absolute;left:50%;bottom:4px;transform:translateX(-50%);font-size:6px;background:rgba(8,8,8,.78);padding:0 3px;border-radius:2px;white-space:nowrap;opacity:0;transition:opacity .25s">so today we start the roof</span>`;
-  const vol = `<span class="vol7" style="position:absolute;left:50%;top:5px;transform:translateX(-50%);display:flex;align-items:center;gap:3px;padding:2px 5px;border-radius:7px;background:rgba(20,20,20,.86);font-size:5.5px">${ico7("vol", 7)}<i style="width:34px;height:2.5px;border-radius:2px;background:#555;display:block;overflow:hidden"><i class="vf7" style="display:block;height:100%;width:60%;background:#fff;transition:width .5s var(--ease)"></i></i></span>`;
-  const line = (id, txt) => `<div class="st7" data-s="${id}" style="display:flex;align-items:center;gap:4px;font-size:6.5px;line-height:1.3;opacity:.35;transition:opacity .25s"><span style="flex:1;min-width:0">${txt}</span><b class="an7" style="font-weight:600"></b></div>`;
-  box.innerHTML = device("port", pageRows(player7(3, vol + cap) + `<b style="font-size:7px">Building a tiny cabin</b><div style="display:grid;gap:3px;background:#212121;border-radius:5px;padding:4px 5px">${line("up", "Video starts, volume up")}${line("zero", "Phone volume at zero")}</div>` + row7(2, "Up next · Night train")));
-  const dev = box.querySelector(".dev"), c = dev.querySelector(".cap7");
-  const say = (id, on) => { const l = dev.querySelector(`.st7[data-s="${id}"]`); if (!l) return; l.style.opacity = 1; const a = l.querySelector(".an7"); a.textContent = on ? "Captions on" : "No captions"; a.style.color = on ? "#7fd18a" : "#aaa"; };
-  at(60, () => { c.style.opacity = show(false) ? 1 : 0; say("up", show(false)); });
-  at(1700, () => { dev.querySelector(".vf7").style.width = "0%"; const sp = dev.querySelector(".vol7 svg"); if (sp) sp.outerHTML = ico7("mute", 7); });
-  at(2150, () => { c.textContent = "first the rafters go up"; c.style.opacity = show(true) ? 1 : 0; say("zero", show(true)); });
+  // one thing per spot: the volume readout top left; at the bottom either the caption line or a grey "Off"
+  const vid = (id, art, muted, line) => `<div class="ac7" data-s="${id}" style="position:relative;min-height:0;border-radius:4px;background:${ART[art]};opacity:.3;transition:opacity .3s">
+      <span class="badge7" style="left:3px;top:3px;display:inline-flex;flex-direction:row;align-items:center;gap:3px;white-space:nowrap">${ico7(muted ? "mute" : "vol", 6)}<span>${muted ? "Vol 0%" : "Vol 60%"}</span></span>
+      <span class="cap7" style="position:absolute;left:50%;bottom:9px;translate:-50% 0;font-size:8.5px;line-height:1.35;font-weight:500;color:#fff;background:rgba(8,8,8,.85);padding:1px 5px;border-radius:2px;white-space:nowrap;opacity:0;transition:opacity .25s">${line}</span>
+      <span class="badge7 cc7" style="left:50%;right:auto;top:auto;bottom:9px;translate:-50% 0;color:#aaa;opacity:0;transition:opacity .25s;display:inline-flex;flex-direction:row;align-items:center;gap:3px;white-space:nowrap">${ico7("cc", 6, "#aaa")}<span>Off</span></span></div>`;
+  // the two videos share the phone's height, whatever size the phone is drawn at
+  box.innerHTML = device("port", `<div class="pg7" style="position:absolute;inset:0;background:#0f0f0f;padding:6px;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:1fr 1fr;gap:5px;font-size:7px;color:#ddd">${vid("up", 3, false, "Hello again!") + vid("zero", 4, true, "Hello again!")}</div>`);
+  const dev = box.querySelector(".dev");
+  const play = (id, on) => { const e = dev.querySelector(`.ac7[data-s="${id}"]`); if (!e) return; e.style.opacity = 1; const c = e.querySelector(on ? ".cap7" : ".cc7"); c.style.opacity = 1; flash7(c); };
+  at(60, () => play("up", show(false)));
+  at(1400, () => play("zero", show(true)));
   return "";
 });
 scen("captions", "auto_translate_additional_languages", (box, on) => {

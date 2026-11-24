@@ -120,14 +120,41 @@ function paintPicker() {
 // An icon's drawing rarely fills its 24 px box evenly (a gear sits a little low, a play triangle to one
 // side), so an icon centred by its box looks off centre in a round pill: each one is moved so the
 // drawing itself is centred (Max, Nov 24: "slightly offset downwards"). For any .pi icon, whatever the set.
+// Menu icons sit in the middle of their round pill by what is drawn, not by the icon's 24-unit box and not
+// by the outline's box either (round 137: the gauge still sat low and to the right, its outline box is not
+// where its ink is). Each drawing is painted once into a small canvas, the box of its solid pixels gives the
+// offset (kept per drawing), and the shift is rounded to whole device pixels so a 1x screen does not smear it.
+const ICON_INK = new Map();
+function inkOffset(svg, done) {
+  const key = svg.innerHTML + "|" + svg.getAttribute("viewBox");
+  if (ICON_INK.has(key)) { const v = ICON_INK.get(key); if (Array.isArray(v)) done(v); else v.push(done); return; }
+  const wait = [done]; ICON_INK.set(key, wait);
+  const finish = off => { ICON_INK.set(key, off); wait.forEach(f => f(off)); };
+  const vb = svg.viewBox.baseVal, W = vb.width || 24, H = vb.height || 24, N = 96;
+  const fallback = () => { try { const b = svg.getBBox(); finish([vb.x + W / 2 - (b.x + b.width / 2), vb.y + H / 2 - (b.y + b.height / 2)]); } catch { ICON_INK.delete(key); } };
+  try {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const c = document.createElement("canvas"); c.width = c.height = N; const g = c.getContext("2d");
+        g.drawImage(img, 0, 0, N, N); const d = g.getImageData(0, 0, N, N).data;
+        let x0 = N, x1 = -1, y0 = N, y1 = -1;
+        for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (d[(y * N + x) * 4 + 3] > 127) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+        if (x1 < 0) return fallback();
+        finish([(N / 2 - (x0 + x1 + 1) / 2) * W / N, (N / 2 - (y0 + y1 + 1) / 2) * H / N]);
+      } catch { fallback(); }
+    };
+    img.onerror = fallback;
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb.x} ${vb.y} ${W} ${H}" width="${N}" height="${N}" fill="#fff">${svg.innerHTML}</svg>`);
+  } catch { fallback(); }
+}
 function centreIcons(root) {
-  root.querySelectorAll(".pi > svg").forEach(s => {
-    try {
-      const b = s.getBBox(), vb = s.viewBox.baseVal, k = (s.getBoundingClientRect().width || 20) / (vb.width || 24); if (!b.width || !b.height) return;
-      const dx = (vb.x + vb.width / 2 - (b.x + b.width / 2)) * k, dy = (vb.y + vb.height / 2 - (b.y + b.height / 2)) * k;
-      s.style.translate = Math.abs(dx) < .05 && Math.abs(dy) < .05 ? "" : `${dx.toFixed(2)}px ${dy.toFixed(2)}px`;
-    } catch { /* not drawn yet */ }
-  });
+  root.querySelectorAll(".pi > svg").forEach(s => inkOffset(s, ([ux, uy]) => {
+    if (!s.isConnected) return;
+    const k = (parseFloat(getComputedStyle(s).width) || 20) / (s.viewBox.baseVal.width || 24), dpr = window.devicePixelRatio || 1, snap = v => Math.round(v * k * dpr) / dpr;
+    const dx = snap(ux), dy = snap(uy);
+    s.style.translate = dx || dy ? `${dx}px ${dy}px` : "";
+  }));
 }
 // ---- DEV ONLY: "finished" checkmarks -------------------------------------------------------------
 // Screens Max has signed off ("lock it"). Shown as a small check in the screen menu and on the tabs.
@@ -432,9 +459,12 @@ const sameVal = (a, b) => String(a) === String(b) || (a !== "" && b !== "" && a 
 function controlFor(k) {
   const p = PREF[k]; const v = V(k); const dis = !parentsOk(k) ? "disabled" : "";
   let ents = entriesFor(k).filter(e => !(OFF_LIST.has(k) && e.value === "off"));
-  // a Show / Hide list keeps Morphe's order (Show all first) unless its default is another choice: then
-  // the default (the grey pill) leads on the far left (Max, Nov 24, Expandable cards under videos)
-  if (ents.length > 1 && ents.every(e => /^(show|hide)\b/i.test(String(e.label))) && !sameVal(ents[0].value, defaults[k])) ents = [...ents.filter(e => sameVal(e.value, defaults[k])), ...ents.filter(e => !sameVal(e.value, defaults[k]))];
+  // The default (the grey pill) always leads on the far left of a row of choices (Max, Nov 24: Expandable
+  // cards under videos, then Play next in queue type, whose default is Native queue). Lists that count
+  // (speeds, qualities, sizes: most labels carry a number) keep their order, a default in the middle of a
+  // scale would read wrong; so do the long ones drawn as a grid or a dropdown.
+  if (ents.length > 1 && ents.length <= 8 && !sameVal(ents[0].value, defaults[k]) && ents.filter(e => /\d/.test(String(e.label))).length * 2 < ents.length)
+    ents = [...ents.filter(e => sameVal(e.value, defaults[k])), ...ents.filter(e => !sameVal(e.value, defaults[k]))];
   if (OFF_LIST.has(k) && String(v) === "off") return "";
   // up to 8 choices: a row of pills; 9 to 16 (icon styles, theme colours, qualities): a 3-column grid
   // of pills built from the same entries, so it follows whatever list Morphe ships; more: a dropdown

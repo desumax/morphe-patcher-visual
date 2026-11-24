@@ -205,21 +205,20 @@ const DEMOS = {
     else { label("Double-tap: does nothing, no accidental likes", true); dT(() => nothing7(800), 300); }
   },
   morphe_disable_like_subscribe_glow(disabled) {
-    // YouTube's glow: when the creator says "like" or "subscribe", a bright sheen sweeps across the Like and
-    // Subscribe buttons and they light up warm. Drawn inside each button: an outer glow was cut off by
-    // the scrolling action bar around Like, so only Subscribe seemed to react (Max, Nov 24: regressed)
+    // YouTube draws this as an animated border around the buttons (the element Morphe removes is
+    // "animated_button_border"), not a sheen across them. Round 137 (Max): the border lights up in two
+    // pulses, in step with the two pulses of the message pill (flash7), so the cause and the glow read
+    // as one event. Drawn inside each button's edge: an outer glow is cut off by the scrolling action bar.
     const parts = [...document.querySelectorAll("#stage .likechip, #stage .mtile[data-glow], #stage .subbtn")];
     showPill("\u201CLike and subscribe!\u201D", 1300);
     if (!parts.length || disabled) { label("Creator says \"hit like\": no glow", true); return; }
     parts.forEach(e => {
-      const keep = [e.style.position, e.style.overflow];
-      e.style.position = "relative"; e.style.overflow = "hidden";
+      const keep = e.style.position; e.style.position = "relative";
       const g = document.createElement("i");
-      g.style.cssText = "position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(105deg,rgba(255,170,90,0) 30%,rgba(255,236,200,.85) 48%,rgba(255,120,190,.6) 56%,rgba(255,170,90,0) 72%) no-repeat;background-size:260% 100%;mix-blend-mode:screen";
+      g.style.cssText = "position:absolute;inset:0;border-radius:inherit;pointer-events:none;padding:2px;background:conic-gradient(from 0deg,#ff4e45,#ffb300,#ff4fb0,#7c5cff,#3ea6ff,#ff4e45);-webkit-mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);opacity:0";
       e.appendChild(g);
-      const a = g.animate([{ backgroundPosition: "130% 0", opacity: 0 }, { opacity: 1, offset: .15 }, { opacity: 1, offset: .85 }, { backgroundPosition: "-30% 0", opacity: 0 }], { duration: 700, iterations: 2, easing: "ease-in-out" });
-      e.animate([{ boxShadow: "inset 0 0 0 0 rgba(255,150,80,0)" }, { boxShadow: "inset 0 0 0 1.5px rgba(255,170,100,.9)" }, { boxShadow: "inset 0 0 0 0 rgba(255,150,80,0)" }], { duration: 700, iterations: 2 });
-      const end = () => { g.remove(); e.style.position = keep[0]; e.style.overflow = keep[1]; };
+      const a = g.animate([{ opacity: 0 }, { opacity: 1, offset: .25 }, { opacity: .4, offset: .5 }, { opacity: 1, offset: .75 }, { opacity: 0 }], { duration: 900, easing: "ease-in-out" }); // flash7's own keyframes
+      const end = () => { g.remove(); e.style.position = keep; };
       a.onfinish = end; onDemoStop(end);
     });
     label("Creator says \"hit like\": the buttons glow (stock)");

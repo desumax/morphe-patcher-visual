@@ -265,13 +265,18 @@ function switchSection(id, after) {
 }
 // A sub-screen (Voice over translation, Loop count, ...) is reached through its first setting, normally its
 // main switch: arriving there plays its animation and flash like any setting, instead of an empty landing.
+// A sub-screen of Morphe's menu (a search result such as "Post buttons") opens at the setting that stands
+// for it: one with the screen's own name, else one whose name starts with it ("Post buttons layout"), else
+// its main switch. Every setting of that screen flashes on arrival, so the result reads as the whole
+// screen and not as the one card it landed on (Max, round 137: "Post buttons" led to "Comment button").
+const screenKids = k => CAT.preferences.filter(p => p.subScreen === k && p.type && p.type !== "screen" && inVersion(p.key) && sectionOf(p.key));
 function screenLead(k) {
-  const kids = CAT.preferences.filter(p => p.subScreen === k && p.type && p.type !== "screen" && inVersion(p.key) && sectionOf(p.key));
-  return (kids.find(p => title(p.key) === title(k)) || kids.find(p => p.type === "boolean") || kids[0] || {}).key || null;
+  const kids = screenKids(k), t = String(title(k)).toLowerCase();
+  return (kids.find(p => title(p.key) === title(k)) || kids.find(p => String(title(p.key)).toLowerCase().startsWith(t)) || kids.find(p => p.type === "boolean") || kids[0] || {}).key || null;
 }
 function goToSetting(k, after) {
   const lead = PREF[k] && PREF[k].type === "screen" ? screenLead(k) : null;
-  if (lead) return goToSetting(lead, after);
+  if (lead) return goToSetting(lead, () => { screenKids(k).forEach(p => document.querySelectorAll(`#list [data-row="${p.key}"]`).forEach(el => { if (el.offsetParent) flashRow(el); })); after && after(); });
   if (PREF[k] && PREF[k].type === "screen") { // a sub-screen: open the editor screen and show it from the top
     switchSection(sectionOf(k), () => { $("scroller").scrollTo({ top: 0 }); const pill = $("secPill"); if (pill) { pill.classList.remove("attn"); void pill.offsetWidth; pill.classList.add("attn"); } after && after(); });
     return;
