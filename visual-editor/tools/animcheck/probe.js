@@ -156,7 +156,7 @@
     return memberKeys(sec).find(x => x !== k && !SCN[x] && !DEMOS[x] && PREF[x] && PREF[x].type !== "screen" && document.querySelector(`#list [data-k="${x}"]`)) || null;
   }
   const memberKeys = sec => { const m = MEMBERS[sec]; return m ? [...m.live, ...m.misc] : []; };
-  const stageSig = () => { const st = document.getElementById("stage").cloneNode(true); st.querySelectorAll(".finger, #hud, .ring, .ringlayer").forEach(e => e.remove()); st.querySelectorAll(".sel, .selx, .flash, .pressing, .flat, .twice").forEach(e => e.classList.remove("sel", "selx", "flash", "pressing", "flat", "twice")); return st.innerHTML.replace(/ class=""/g, ""); };
+  const stageSig = () => { const st = document.getElementById("stage").cloneNode(true); st.querySelectorAll(".finger, #hud, .ring, .ringlayer").forEach(e => e.remove()); st.querySelectorAll(".sel, .selx, .flash, .pressing, .flat, .twice").forEach(e => e.classList.remove("sel", "selx", "flash", "pressing", "flat", "twice")); st.querySelectorAll('[style*="--pop"]').forEach(e => e.style.removeProperty("--pop")); /* --pop is the flash's origin (popOrigin), worked out anew at each flash, like the flash classes above */ return st.innerHTML.replace(/ class=""/g, "").replace(/ style=""/g, ""); };
 
   const hash = str => { let h = 0; for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0; return h; };
   const S = { samples: [], muts: 0, raf: 0, on: false, t0: 0, next: 0, step: 50, errors: [] };

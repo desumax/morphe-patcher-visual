@@ -80,11 +80,11 @@ button { font: inherit; color: inherit; }
 .appbar { flex: none; display: flex; align-items: center; gap: 6px; padding: 6px 10px 8px 4px; background: var(--m-bg); position: relative; z-index: 30; }
 .iconbtn { width: 40px; height: 40px; border-radius: 50%; border: 0; background: transparent; display: grid; place-items: center; cursor: pointer; flex: none; transition: background var(--dur) var(--ease), transform var(--dur-short) var(--ease); }
 .iconbtn:hover { background: rgba(227,226,230,.08); }
-.iconbtn:active { transform: scale(.92); }
+html:not(.touchwait) .iconbtn:active { transform: scale(.92); }
 .iconbtn svg { width: 24px; height: 24px; fill: var(--m-on); }
 .secpill { display: flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px 0 10px; border-radius: 999px; border: 0; background: var(--m-c-high); cursor: pointer; min-width: 0; flex: 1 1 auto; max-width: max-content; transition: background var(--dur) var(--ease), transform var(--dur-short) var(--ease); }
 .secpill:hover { background: var(--m-c-highest); }
-.secpill:active { transform: scale(.96); }
+html:not(.touchwait) .secpill:active { transform: scale(.96); }
 .secpill svg { width: 20px; height: 20px; fill: var(--m-primary); flex: none; }
 .secpill { flex: none; }
 .secpill .lbl { display: none; font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }

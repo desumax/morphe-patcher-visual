@@ -17,6 +17,8 @@
 .sw.gliding::after, .seg.gliding::before, .tut .tseg.gliding::before { visibility: hidden; }
 .seg.still::before, .tut .tseg.still::before { transition: none; }
 .sw > .glayer > i { box-shadow: 0 1px 3px rgba(0,0,0,.35); }
+/* blobs that merge (goo) carry no edge of their own: each blob's rim showed as rings inside the moving fill */
+.glayer.goo > i { box-shadow: none !important; }
 .tut .tseg3, .tut .ttabs { position: relative; isolation: isolate; }
 .tut .tseg3.gliding > b.on, .tut .ttabs.gliding > span.on { background: transparent; transition: none; }
 .tabs7 { position: relative; isolation: isolate; }
@@ -58,7 +60,7 @@
   .dl7 > span { padding: .42em .75em; }
   .dev .toastin svg, .dev .badge7 svg { vertical-align: -.12em; }
 }
-.tgt7 { transition: max-height .45s var(--ease), max-width .45s var(--ease), opacity .3s, margin .45s, padding .45s; max-height: 90px; overflow: hidden; }
+.tgt7 { transition: max-height .32s var(--ease), max-width .32s var(--ease), opacity .21s, margin .32s, padding .32s; max-height: 90px; overflow: hidden; }
 .tgt7.w7 { display: inline-flex; max-width: 90px; vertical-align: bottom; flex: none; white-space: nowrap; }
 .tgt7.gone7 { max-height: 0 !important; opacity: 0; margin-top: 0 !important; margin-bottom: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }
 .tgt7.w7.gone7 { max-width: 0 !important; max-height: none !important; }

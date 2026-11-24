@@ -600,31 +600,44 @@ function coerceVal(k, v) { const t = PREF[k].type; return (t === "integer" || t 
 
 // ------------------------------------------------------------------ watch page, per action bar layout
 SCENES.watch = () => {
+  // RestoreOldVideoActionBarPatch.VideoActionBarLayout:
+  //   DEFAULT: what the server sends (21.36+: the channel at the start of the action bar, "compact_channel_bar");
+  //   CLASSIC: pills with their text, scrolling in one row that starts with the subscribe button;
+  //   CLASSIC_TWO_ROWS: the same pills in their own row, below a channel row with the subscribe button at its end;
+  //   MINIMAL: like, dislike, share and save as an icon above its text (at most 5 visible, 150 wide), every
+  //   other button in a "More actions" menu, the subscribe button in the channel row.
   const layout = V("morphe_video_action_bar_layout");
-  const modern = layout === "DEFAULT", minimal = layout === "MINIMAL", two = layout === "CLASSIC_TWO_ROWS";
+  const modern = layout === "DEFAULT", minimal = layout === "MINIMAL", two = layout === "CLASSIC_TWO_ROWS", classic = layout === "CLASSIC";
   const ryd = !!V("morphe_ryd_enabled");
   const dislike = ryd ? (V("morphe_ryd_dislike_percentage") ? "4%" : "2.1K") : "";
-  const act = (k, icon, label) => C(k, `<div class="chip" ${minimal ? 'style="padding:0 9px"' : ""}>${I(icon)}${minimal ? "" : label}</div>`);
-  const likeChip = C("hide_like_dislike_button", `<div class="chip likechip" style="padding:0;gap:0"><span style="display:flex;gap:6px;align-items:center;padding:0 10px 0 12px;border-right:1px solid #444">${I("like")}${minimal ? "" : `<span class="rollnum" data-n="48">48K</span>`}</span><span style="padding:0 12px;display:flex;gap:6px;align-items:center">${I("dislike")}${C("ryd_enabled", minimal || !dislike ? "" : `<span>${dislike}</span>`, { tag: "span", also: "ryd_dislike_percentage" })}</span></div>`);
-  // 21.36+ default layout: the channel lives at the start of the action bar ("compact_channel_bar").
-  const channelChip = C("hide_channel_profile_button", `<div class="chip" style="padding:0 4px 0 4px;gap:6px">${C("hide_channel_bar", av(0, 26), { tag: "span" })}${minimal ? "" : `<span style="font-size:12.5px">Fjord & Timber</span>`}${C("hide_channel_profile_subscribe_button", `<span class="chip" style="height:26px;background:#f1f1f1;color:#0f0f0f;font-size:12px;padding:0 10px">Subscribe</span>`, { tag: "span" })}</div>`);
-  const joinChip = C("hide_join_membership_button", `<div class="chip" style="background:transparent;border:1px solid #555">${minimal ? I("heart") : "Join"}</div>`);
-  const actions = [modern || minimal ? channelChip + joinChip : "", likeChip, act("hide_comments_button", "comment", "1.2K"), act("hide_share_button", "share", "Share"), act("hide_remix_button", "remix", "Remix"), act("hide_thanks_button", "dollar", "Thanks"),
+  const act = (k, icon, label) => C(k, `<div class="chip">${I(icon)}${label}</div>`);
+  const likeChip = C("hide_like_dislike_button", `<div class="chip likechip" style="padding:0;gap:0"><span style="display:flex;gap:6px;align-items:center;padding:0 10px 0 12px;border-right:1px solid #444">${I("like")}<span class="rollnum" data-n="48">48K</span></span><span style="padding:0 12px;display:flex;gap:6px;align-items:center">${I("dislike")}${C("ryd_enabled", !dislike ? "" : `<span>${dislike}</span>`, { tag: "span", also: "ryd_dislike_percentage" })}</span></div>`);
+  const subBtn = `<div class="chip subbtn" style="background:#f1f1f1;color:#0f0f0f">Subscribe</div>`;
+  const channelChip = C("hide_channel_profile_button", `<div class="chip" style="padding:0 4px 0 4px;gap:6px">${C("hide_channel_bar", av(0, 26), { tag: "span" })}<span style="font-size:12.5px">Fjord & Timber</span>${C("hide_channel_profile_subscribe_button", `<span class="chip subbtn" style="height:26px;background:#f1f1f1;color:#0f0f0f;font-size:12px;padding:0 10px">Subscribe</span>`, { tag: "span" })}</div>`);
+  const joinChip = C("hide_join_membership_button", `<div class="chip" style="background:transparent;border:1px solid #555">Join</div>`);
+  const rest = [act("hide_comments_button", "comment", "1.2K"), act("hide_share_button", "share", "Share"), act("hide_remix_button", "remix", "Remix"), act("hide_thanks_button", "dollar", "Thanks"),
     act("hide_download_button", "dl", "Download"), act("hide_clip_button", "clip", "Clip"), act("hide_save_button", "save", "Save"), act("hide_ask_button", "spark", "Ask"),
     act("hide_hype_button", "fire", "Hype"), act("hide_shop_button", "shop", "Shop"), act("hide_connect_button", "link", "Connect"), act("hide_promote_button", "speed", "Promote"), act("hide_stop_ads_button", "close", "Stop ads"),
     act("hide_report_button", "flag", "Report"), act("hide_more_button", "moreh", "")].join("");
-  const rowStyle = two ? "display:flex;flex-wrap:wrap;gap:8px" : "display:flex;gap:8px;overflow-x:auto;scrollbar-width:none";
+  // minimal: five equal tiles, an icon above its text; the last one opens the menu with the other buttons
+  const tile0 = (icon, label, extra = "") => `<div class="mtile" ${extra}style="flex:1 1 0;min-width:0;display:grid;justify-items:center;gap:3px;padding:6px 0;border-radius:12px;font-size:11px;color:#f1f1f1">${I(icon)}<span style="white-space:nowrap">${label}</span></div>`;
+  const tile = (k, icon, label, extra) => C(k, tile0(icon, label, extra), { style: "flex:1 1 0;min-width:0;display:flex" });
+  const minimalBar = `<div class="mbar" style="display:flex;gap:2px;padding:0 8px 10px">${C("hide_like_dislike_button", `<div style="flex:1;display:flex;gap:2px">${tile0("like", `<span class="rollnum" data-n="48">48K</span>`)}${tile0("dislike", dislike || "Dislike")}</div>`, { style: "flex:2 1 0;min-width:0;display:flex" })}${tile("hide_share_button", "share", "Share")}${tile("hide_save_button", "save", "Save")}${tile("hide_more_button", "moreh", "More", 'data-more="1" ')}</div>`;
+  const actions = modern ? channelChip + joinChip + likeChip + rest : classic ? joinChip + subBtn + likeChip + rest : likeChip + rest;
+  const rowStyle = "display:flex;gap:8px;overflow-x:auto;scrollbar-width:none";
+  // the channel row above the buttons: with the subscribe button at its end (two rows, minimal), without it
+  // when the button leads the row of pills (classic)
   const classicBar = C("hide_channel_bar", `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px">${av(0, 32)}<div style="flex:1;min-width:0"><span class="t1">${VIDEOS[0].c}</span> <span class="t2">412K</span></div>
-      ${C("hide_join_membership_button", `<div class="chip" style="background:transparent;border:1px solid #555">Join</div>`)}
-      <div class="chip" style="background:#f1f1f1;color:#0f0f0f">Subscribe</div></div>`, { blk: 1 });
-  return `<div style="background:#0f0f0f;height:330px;overflow-y:auto;scrollbar-width:thin" class="inner-scroll">
+      ${classic ? "" : C("hide_join_membership_button", `<div class="chip" style="background:transparent;border:1px solid #555">Join</div>`) + subBtn}</div>`, { blk: 1 });
+  return `<div style="background:#0f0f0f;height:330px;overflow-y:auto;scrollbar-width:thin;position:relative" class="inner-scroll">
+    <div class="finger"></div>
     <div style="height:96px;position:relative">${videoFrame(0)}<div class="seek" style="bottom:0;left:0;right:0;border-radius:0"><div class="played" style="width:30%"></div></div></div>
     <div style="padding:10px 12px ${modern ? 8 : 0}px">
       <div style="font-size:17px;font-weight:500;line-height:1.3">${esc(VIDEOS[0].t)}</div>
       <div class="t2" style="margin-top:4px"><span class="rollnum" data-n="1.2">1.2M</span> views · ${VIDEOS[0].a} <b style="color:#fff">...more</b></div>
     </div>
-    ${modern || minimal ? "" : classicBar}
-    ${C("hide_action_bar", `<div style="${rowStyle};padding:12px 12px 10px;margin-top:-12px">${actions}</div>`, { blk: 1 })}
+    ${modern ? "" : classicBar}
+    ${C("hide_action_bar", minimal ? minimalBar : `<div class="abrow" style="${rowStyle};padding:12px 12px 10px;margin-top:-12px">${actions}</div>`, { blk: 1 })}
     ${C("hide_comments_section", `<div style="margin:0 12px 10px;background:#272727;border-radius:12px;padding:10px 12px">
         <div class="t1">Comments <span class="t2">1.2K</span></div>
         ${C("hide_comments_preview_comment", `<div style="display:flex;gap:8px;margin-top:8px;align-items:center">${av(4, 24)}<div class="t2" style="color:#ddd;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">The wood stove at 12:04 is pure cosiness</div></div>`)}
@@ -1159,19 +1172,30 @@ def("shorts", "style", "shorts_icon_style");
 def("shorts", "vis", "hide_shorts_paused_overlay_buttons hide_shorts_save_sound_button hide_shorts_new_posts_button hide_shorts_upcoming_button hide_shorts_auto_dubbed_label hide_shorts_gesture_hints");
 
 // ------------------------------------------------------------------ navigation: glass bar
+// Drawn from YouTubeGlassNavigationBar, GlassNavigationBarLayout and GlassCapsuleDrawable (dark style):
+// a capsule 12 dp from the screen edges and 10 dp above the bottom; height = Glass navigation bar size %
+// of the bar's 52 dp (never less than the buttons need); corners 0.3 x the height, 0.5 (round ends) with
+// Round glass navigation bar; fill = the app background lifted 14% toward white at alpha 0.5 x opacity/50
+// (Glass opacity 20 = a clear glass); a light rim on top; a soft pill behind the selected tab. Maximum
+// width and Button spacing (same size dialog) shape the width: each button is its content plus the
+// spacing, at least 48 dp, all within the most width; buttons that don't fit are cut.
+// (The match used to look for an older opening tag of the bar, so glass changed nothing in the preview.)
 {
   const base = navBar;
   navBar = function (plain) {
     const html = base(plain);
     if (!V("morphe_navigation_bar_glass") || V("morphe_hide_navigation_bar")) return html;
-    const opa = (Number(V("morphe_navigation_bar_glass_opacity")) || 0) / 100;
-    const size = (Number(V("morphe_navigation_bar_glass_height")) || 100) / 100;
-    const round = !!V("morphe_navigation_bar_glass_round");
-    return html.replace(/^<div style="display:flex;justify-content:([a-z-]+);gap:(\d+)px;align-items:center;height:52px;background:[^;]+;border-top:1px solid #222">/,
-      (m, j, g) => `<div style="display:flex;justify-content:space-around;gap:${g}px;align-items:center;height:${Math.round(52 * size)}px;margin:0 ${Math.round(14 / size)}px 8px;border-radius:${round ? 999 : 18}px;background:rgba(40,40,40,${Math.max(opa, .08)});backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);border:1px solid rgba(255,255,255,.12);transform:scale(${size});transform-origin:bottom center">`);
+    const num = (k, d) => { const v = V("morphe_navigation_bar_glass_" + k), n = Number(v); return v === "" || v == null || !isFinite(n) ? d : n; };
+    const alpha = Math.min(1, .5 * num("opacity", 20) / 50);
+    const h = Math.max(44, Math.round(52 * num("height", 100) / 100)), r = (V("morphe_navigation_bar_glass_round") ? .5 : .3) * h;
+    // buttons shown (a hidden one is drawn collapsed: "off"), each its content (about 36 px) plus the spacing
+    const shown = (html.match(/class="[^"]*\bntab\b[^"]*"/g) || []).filter(c => !/\boff\b/.test(c)).length || 5;
+    const bw = Math.max(48, 36 + num("button_spacing", 48));
+    const style = `--gw:${num("width", 100)};--gr:${r}px;width:min(calc((100% - 24px) * var(--gw) / 100), ${shown * bw}px);height:${h}px;border-radius:${r}px;background:rgba(49,49,49,${alpha.toFixed(3)});backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);border:1px solid rgba(255,255,255,.06);border-top-color:rgba(255,255,255,.3);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 4px 14px rgba(0,0,0,.25)`;
+    return html.replace(/^(\s*)<div class="navbar([^"]*)" style="[^"]*">/, (m, sp, c) => `${sp}<div class="navbar glassnav${c}" style="${style}">`);
   };
 }
-def("nav", "style", "navigation_bar_glass navigation_bar_glass_opacity navigation_bar_glass_height navigation_bar_glass_round");
+def("nav", "style", "navigation_bar_glass navigation_bar_glass_opacity navigation_bar_glass_height navigation_bar_glass_round navigation_bar_glass_width navigation_bar_glass_button_spacing");
 scen("nav", "disable_auto_hide_navigation_bar", (box, on) => {
   situation("Scrolling the home feed");
   box.innerHTML = device("port", `<div class="feedscroll" style="position:absolute;left:0;right:0;top:0;transition:transform 1s var(--ease)">${[0, 1, 2, 3, 4].map(i => `<div style="height:46px;margin:6px;background:${ART[i]};border-radius:4px"></div>`).join("")}</div>${nav7().replace('<div style="', '<div class="nb" style="transition:transform .35s var(--ease);')}`); // the bar shows its tab icons (Max, Nov 20)
@@ -1371,7 +1395,7 @@ const FOOT_OFF = new Set([
 ]);
 let askOnly = false; // drawing only the default side while the other waits for a choice
 const SCN_NO_FLASH = new Set(["morphe_disable_drc_audio"]); // its differences are the whole text card: no blue flash (Max, Nov 23)
-const SCN_SELF_DUO = new Set(["morphe_disable_player_popup_panels", "morphe_playback_buffer_size", "morphe_skip_silence_minimum_pause"]); // one phone that tells all values itself
+const SCN_SELF_DUO = new Set(["morphe_disable_player_popup_panels", "morphe_playback_buffer_size", "morphe_skip_silence_minimum_pause", "morphe_hide_account_menu_filter_strings"]); // one phone that tells all values itself (a text: what it holds now)
 const DUO_OTHER = { morphe_speed_tap_and_hold: 4 };
 // Short words beside the phones where Morphe's option names don't read as a contrast on their own
 // ("Default" next to "Disabled, always show the autoplay countdown"; Max, Nov 20). Only the comparison

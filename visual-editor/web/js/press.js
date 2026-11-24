@@ -3,7 +3,7 @@
 
 // press handling (tap vs hold), shared by stage and list
 let press = null;
-const LONG = 480;
+const LONG = 480, PRESS_LEAD = 120; // hold length; with touch, how long a finger stays put before the hold shows
 // Mouse drag scrolls the preview's feeds and strips, like a finger would on the phone.
 let drag = null;
 function scrollTargets(t) {
@@ -26,14 +26,34 @@ function down(e) {
   // holding only does something for settings it can switch (on/off, or a short list it can step
   // through); for a slider, colour or text field the hold ring would charge up to nothing
   if (!canToggle(k)) { press = { el, k, from, x: e.clientX, y: e.clientY, long: false }; return; }
-  el.classList.add("pressing");
-  if (from === "stage" && el.classList.contains("off")) { (ghostTimers.get(k) || []).forEach(clearTimeout); ghostTimers.delete(k); el.classList.remove("ghost-out"); el.classList.add("charging"); }
+  // A finger that lands to scroll the list must not light up the hold (Max, Nov 24: the hold ring flashed
+  // on every fling). With touch the ring shows only once the finger has stayed put a moment; it then
+  // starts that far into its run (--press-lead), so the hold still completes at LONG.
+  const lead = e.pointerType === "touch" ? PRESS_LEAD : 0;
+  const show = () => {
+    if (!press || press.el !== el) return;
+    el.style.setProperty("--press-lead", -lead + "ms"); el.classList.add("pressing");
+    if (from === "stage" && el.classList.contains("off")) { (ghostTimers.get(k) || []).forEach(clearTimeout); ghostTimers.delete(k); el.classList.remove("ghost-out"); el.classList.add("charging"); }
+  };
   press = { el, k, from, x: e.clientX, y: e.clientY, long: false };
+  if (lead) press.vis = setTimeout(show, lead); else show();
   // holding a preview element brings its setting into view while the hold is still charging
   if (from === "stage") press.peek = setTimeout(() => { if (!press || press.k !== k) return; document.querySelectorAll(".row.sel").forEach(r => r.classList.remove("sel")); document.querySelector(`[data-row="${k}"]`)?.classList.add("sel"); const o = openFor(k); setTimeout(() => scrollRowIntoView(k, true), o ? 300 : 0); }, 160);
   press.t = setTimeout(() => { if (!press) return; press.long = true; el.classList.remove("pressing"); touchSel(k); toggle(k); if (from === "stage") setTimeout(() => scrollRowIntoView(k, true), 30); }, LONG);
 }
-function cancelPress() { if (press) { clearTimeout(press.t); clearTimeout(press.peek); press.el.classList.remove("pressing", "charging"); press = null; } }
+// Press looks (:active scale, tint, the toggle's stretching thumb) wait the same moment with touch: until
+// then html has .touchwait and the CSS :active rules don't apply. A finger that starts scrolling keeps
+// them off until it lifts (pointercancel comes without a pointerup, so touchend ends it).
+(() => {
+  const de = document.documentElement; let t = 0, x0 = 0, y0 = 0;
+  const end = () => { clearTimeout(t); de.classList.remove("touchwait"); };
+  document.addEventListener("pointerdown", e => { if (e.pointerType !== "touch") return; x0 = e.clientX; y0 = e.clientY; clearTimeout(t); de.classList.add("touchwait"); t = setTimeout(end, PRESS_LEAD); }, true);
+  document.addEventListener("pointermove", e => { if (e.pointerType === "touch" && Math.hypot(e.clientX - x0, e.clientY - y0) > 10) clearTimeout(t); }, true);
+  document.addEventListener("pointercancel", e => { if (e.pointerType === "touch") clearTimeout(t); }, true);
+  document.addEventListener("pointerup", e => { if (e.pointerType === "touch") end(); }, true);
+  document.addEventListener("touchend", end, true); document.addEventListener("touchcancel", end, true);
+})();
+function cancelPress() { if (press) { clearTimeout(press.t); clearTimeout(press.peek); clearTimeout(press.vis); press.el.classList.remove("pressing", "charging"); press = null; } }
 function move(e) {
   if (press && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 10) cancelPress();
   if (!drag || !(e.buttons & 1)) { drag = null; return; }
@@ -46,7 +66,7 @@ function move(e) {
 document.addEventListener("pointerup", () => { if (drag) { drag = null; $("stage").classList.remove("dragging"); } });
 function up() {
   if (!press) return;
-  clearTimeout(press.t); clearTimeout(press.peek); press.el.classList.remove("pressing", "charging");
+  clearTimeout(press.t); clearTimeout(press.peek); clearTimeout(press.vis); press.el.classList.remove("pressing", "charging");
   const { k, from, long } = press; press = null;
   if (long) return;
   const a = A[k];
@@ -56,6 +76,7 @@ function up() {
     if (from !== "stage" && document.querySelector(`#stage [data-k="${k}"]`)) ghost(k);
   } else select(k, from);
 }
+$("list").addEventListener("click", e => { const b = e.target.closest("[data-act]"); if (b && !b.disabled) { e.stopPropagation(); select(b.dataset.act, "list"); runActionRow(b.dataset.act); } });
 $("list").addEventListener("change", e => {
   const inp = e.target.closest("input[data-file]"); if (!inp || !inp.files || !inp.files[0]) return;
   const k = inp.dataset.file, file = inp.files[0];

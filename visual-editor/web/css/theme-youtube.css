@@ -25,6 +25,7 @@
 .theme-yt .row { padding: 12px 16px; }
 /* a thin line between settings, as in the Morphe and Glass designs (Max, Nov 23 PM: YouTube has none, but cards read better apart) */
 .theme-yt .row + .row, .theme-yt .unit + .row, .theme-yt .unit + .unit > .row:first-child, .theme-yt .row + .unit > .row:first-child { border-top: 1px solid rgba(255,255,255,.09); }
+.theme-yt .shared + .row, .theme-yt .row + .shared, .theme-yt .unit + .shared, .theme-yt .shared + .shared, .theme-yt .shared + .unit > .row:first-child { border-top: 1px solid rgba(255,255,255,.09); }
 .theme-yt .kids .row { border-top: 0; }
 .theme-yt .kids .row { padding-left: 34px; }
 .theme-yt .row .ttl { font-size: 16px; font-weight: 400; }
@@ -66,7 +67,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   .content.stacked .group > * { break-inside: avoid; }
   /* captions and the wide preview-linked blocks span both columns */
   .content.stacked .group > .subhead, .content.stacked .group > .zgrid { column-span: all; }
-  .content.stacked .row + .row, .content.stacked .unit + .row, .content.stacked .unit + .unit > .row:first-child, .content.stacked .row + .unit > .row:first-child { border-top: 0; }
+  .content.stacked .shared + .row, .content.stacked .row + .shared, .content.stacked .unit + .shared, .content.stacked .shared + .shared, .content.stacked .row + .row, .content.stacked .unit + .row, .content.stacked .unit + .unit > .row:first-child, .content.stacked .row + .unit > .row:first-child { border-top: 0; }
 }
 
 /* round 6 */

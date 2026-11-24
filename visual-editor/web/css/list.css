@@ -14,11 +14,15 @@
 .zgrid { display: grid; grid-template-columns: minmax(0, 1fr) auto; } .zgrid > .zcol { min-width: 0; }
 .group > * + .zgrid, .zgrid + * { border-top: 1px solid rgba(67,71,78,.55); }
 .row + .row, .unit + .row, .unit + .unit > .row:first-child, .row + .unit > .row:first-child { border-top: 1px solid rgba(67,71,78,.55); }
+/* rows of one Morphe sub-screen ("Filter bar") in one card, its title once on top (shareCards) */
+.shared > .shead { padding: 12px 16px 0; font-size: 12px; font-weight: 500; color: var(--m-on-var); letter-spacing: .02em; }
+.shared > .shead + .row { padding-top: 6px; }
+.shared + .row, .row + .shared, .unit + .shared, .shared + .shared, .shared + .unit > .row:first-child { border-top: 1px solid rgba(67,71,78,.55); }
 .row:hover { background: rgba(227,226,230,.04); }
 .row.sel { background: rgba(164,201,255,.12); }
 .row.sel::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--m-primary); }
 .row.dis .kind, .row.dis .ttl, .row.dis .sum:not(.need), .row.dis .ctl, .row.dis .state, .row.dis .sw { opacity: var(--disabled); }
-.row.pressing::after { content: ""; position: absolute; left: 0; bottom: 0; height: 2px; background: var(--yt-red); animation: bar .48s linear forwards; }
+.row.pressing::after { content: ""; position: absolute; left: 0; bottom: 0; height: 2px; background: var(--yt-red); animation: bar .48s linear var(--press-lead, 0ms) forwards; }
 @keyframes bar { from { width: 0; } to { width: 100%; } }
 .row.unlock { animation: unlock 1.1s var(--ease); }
 .row.unlock .kind { animation: unlockicon 1.1s var(--ease); }
@@ -44,7 +48,7 @@
 .row .sum.need { color: var(--m-warning); display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; -webkit-line-clamp: unset; }
 .goto { display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 10px 0 12px; border-radius: 999px; border: 0; background: var(--m-primary-c); color: var(--m-on-primary-c); font-size: 12px; font-weight: 600; cursor: pointer; }
 .goto svg { width: 14px; height: 14px; fill: currentColor; }
-.goto:active { transform: scale(.96); }
+html:not(.touchwait) .goto:active { transform: scale(.96); }
 .tag { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 600; padding: 1px 6px 1px 4px; border-radius: 999px; background: rgba(164,201,255,.14); color: var(--m-primary); margin-left: 6px; vertical-align: 2px; text-transform: uppercase; letter-spacing: .04em; }
 .tag svg { width: 10px; height: 10px; fill: currentColor; }
 .tag.rs { background: rgba(245,189,72,.14); color: var(--m-warning); }
@@ -118,6 +122,7 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .resetbtn.lreset:disabled { background: var(--m-c-highest); }
 .lerr { grid-column: 1 / -1; flex-basis: 100%; font-size: 11.5px; color: var(--m-error); }
 .ctl a.opt.linkbtn { display: inline-flex; align-items: center; gap: 6px; color: var(--m-primary, #3ea6ff); text-decoration: none; width: max-content; } .ctl a.opt.linkbtn svg { width: 16px; height: 16px; fill: currentColor; } /* an info row's website (linkFor) */
+.ctl .opt.actbtn { display: inline-flex; align-items: center; gap: 6px; color: var(--m-primary, #3ea6ff); width: max-content; } .ctl .opt.actbtn svg { width: 16px; height: 16px; fill: currentColor; } /* a row that runs something in Morphe (actionFor) */
 .lhint { grid-column: 1 / -1; flex-basis: 100%; font-size: 12px; line-height: 1.35; color: var(--m-on-var, #aaa); } /* a list filled from somewhere else (channel whitelists): where to add to it */
 /* option pills always wrap onto new lines and grow with their text, so it never spills past the border */
 .fallback .ctl:has(.opt) { flex-wrap: wrap; }
@@ -145,7 +150,7 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .dbtn { height: 52px; border-radius: 999px; border: 0; font-size: 14px; font-weight: 600; cursor: pointer; }
 .dbtn.primary { background: var(--m-primary); color: var(--m-on-primary); }
 .dbtn.tonal { background: var(--m-secondary-c); color: #D8E3F8; }
-.dbtn:active { transform: scale(.98); }
+html:not(.touchwait) .dbtn:active { transform: scale(.98); }
 .dbtn.text { background: transparent; color: var(--m-primary); height: 44px; }
 .dbtn.text.neg { color: #ffb4ab; } /* resetting changes: the quiet, red-text choice */
 .dbtn.primary.neg { background: #8c1d18; color: #ffdad6; }
@@ -195,7 +200,7 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .tut .tl-t { flex: 1; font-size: 14px; color: var(--m-on); }
 .tut .tl-t small { display: block; font-size: 12px; color: var(--m-on-var); }
 .tut .tl-bar { position: absolute; left: 0; bottom: 0; height: 2px; width: 0; background: var(--yt-red); }
-.tut .tl-bar.go { animation: bar .48s linear forwards; }
+.tut .tl-bar.go { animation: bar .48s linear var(--press-lead, 0ms) forwards; }
 .tut .tb.charging svg { opacity: .6; transition: opacity .48s linear; }
 .tut .tb.reveal { animation: revealk .34s var(--ease); }
 .tfinger { z-index: 95; }
@@ -275,3 +280,6 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .tut .ok.show { opacity: 1; transform: none; pointer-events: auto; }
 .tut .wait { font-size: 12px; color: var(--m-outline); height: 16px; }
 
+/* Import / Export, as Morphe's dialog (list.js importExportDialog) */
+.dlg textarea.iex { display: block; width: 100%; box-sizing: border-box; min-height: 180px; max-height: 46vh; margin: 8px 0 0; padding: 10px 12px; border: 0; border-radius: 12px; background: var(--m-c-highest, #303134); color: inherit; font: 12px/1.45 "Roboto Mono", ui-monospace, monospace; resize: vertical; white-space: pre; overflow: auto; }
+.dlg .iexrow { display: flex; gap: 8px; margin: 10px 0 2px; } .dlg .iexrow .dbtn { flex: 1 1 0; }

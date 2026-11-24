@@ -197,13 +197,24 @@ const DEMOS = {
     else { label("Double-tap: does nothing, no accidental likes", true); dT(() => nothing7(800), 300); }
   },
   morphe_disable_like_subscribe_glow(disabled) {
-    // YouTube's glow is a warm, coloured shimmer on Like and on Subscribe. It is drawn in those colours
-    // (not in the blue the editor uses to point at a part), on both buttons, twice.
-    const glow = [{ boxShadow: "0 0 0 0 rgba(255,120,60,0)" }, { boxShadow: "0 0 12px 4px rgba(255,120,60,.95), 0 0 4px 1px rgba(255,60,160,.9)" }, { boxShadow: "0 0 0 0 rgba(255,120,60,0)" }];
+    // YouTube's glow: when the creator says "like" or "subscribe", a bright sheen sweeps across the Like and
+    // Subscribe buttons and they light up warm. Drawn inside each button: an outer glow was cut off by
+    // the scrolling action bar around Like, so only Subscribe seemed to react (Max, Nov 24: regressed)
     const parts = [...document.querySelectorAll("#stage .likechip, #stage .subbtn")];
     showPill("\u201CLike and subscribe!\u201D", 1300);
-    if (parts.length && !disabled) { parts.forEach(e => e.animate(glow, { duration: 650, iterations: 2 })); label("Creator says \"hit like\": button glows (stock)"); }
-    else label("Creator says \"hit like\": no glow", true);
+    if (!parts.length || disabled) { label("Creator says \"hit like\": no glow", true); return; }
+    parts.forEach(e => {
+      const keep = [e.style.position, e.style.overflow];
+      e.style.position = "relative"; e.style.overflow = "hidden";
+      const g = document.createElement("i");
+      g.style.cssText = "position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(105deg,rgba(255,170,90,0) 30%,rgba(255,236,200,.85) 48%,rgba(255,120,190,.6) 56%,rgba(255,170,90,0) 72%) no-repeat;background-size:260% 100%;mix-blend-mode:screen";
+      e.appendChild(g);
+      const a = g.animate([{ backgroundPosition: "130% 0", opacity: 0 }, { opacity: 1, offset: .15 }, { opacity: 1, offset: .85 }, { backgroundPosition: "-30% 0", opacity: 0 }], { duration: 700, iterations: 2, easing: "ease-in-out" });
+      e.animate([{ boxShadow: "inset 0 0 0 0 rgba(255,150,80,0)" }, { boxShadow: "inset 0 0 0 1.5px rgba(255,170,100,.9)" }, { boxShadow: "inset 0 0 0 0 rgba(255,150,80,0)" }], { duration: 700, iterations: 2 });
+      const end = () => { g.remove(); e.style.position = keep[0]; e.style.overflow = keep[1]; };
+      a.onfinish = end; onDemoStop(end);
+    });
+    label("Creator says \"hit like\": the buttons glow (stock)");
   },
   morphe_stable_caption_blocks(on) {
     const line = $("capLine"); if (!line) return;
@@ -388,13 +399,20 @@ Object.assign(DEMOS, {
     dT(() => showPill(queue ? "Queue: Play next · Add to queue" : "Saved to Watch later", 900), hold ? 600 : 150);
     label(`${hold ? "Tap and hold" : "Tap"}: ${queue ? "queue options" : "saves to Watch later"}`, false);
   },
+  // every hint the setting hides, one gesture per round (Max, Nov 24: only the first one showed): pull up
+  // on the seekbar, slide back down to cancel, hold the video for 2x
   morphe_hide_player_gesture_hints(hidden) {
-    const f = finger(); if (!f) return; const st = $("stage");
-    const hint = document.querySelector('#stage [data-k="morphe_hide_player_gesture_hints"]');
-    place(f, st.clientWidth * .42, st.clientHeight - 16); dT(() => place(f, st.clientWidth * .42, st.clientHeight - 90, 600), 120);
-    if (hint) { fadeC(hint, false); dT(() => fadeC(hint, !hidden), 300); dT(() => fadeC(hint, true), 1400); onDemoStop(() => hint.classList.remove("dz", "dzt")); }
-    label(hidden ? "Pull up on the seekbar: no hint appears" : "Pull up on the seekbar: the hint explains the gesture", hidden);
-    hideF(f, 1100);
+    const f = finger(); if (!f) return; const st = $("stage"), W = st.clientWidth, H = st.clientHeight;
+    const hint = document.querySelector('#stage [data-k="morphe_hide_player_gesture_hints"]'), pill = hint && hint.querySelector(".toastin");
+    if (pill && !pill.dataset.first) pill.dataset.first = pill.textContent;
+    const say = (txt, ms, lab) => dT(() => { if (pill) pill.textContent = txt; if (hint) fadeC(hint, !hidden); label(hidden ? `${lab}: no hint appears` : `${lab}: "${txt}"`, hidden); }, ms);
+    if (hint) fadeC(hint, false);
+    const step = demoStep % 3;
+    if (step === 0) { place(f, W * .42, H - 16); dT(() => place(f, W * .42, H - 90, 500), 120); say("Pull up for precise seeking", 320, "Pull up on the seekbar"); }
+    else if (step === 1) { place(f, W * .42, H - 90); dT(() => place(f, W * .42, H - 26, 420), 120); say("Release to cancel", 360, "Slide back down"); }
+    else { place(f, W * .7, H * .42); dT(() => f.classList.add("hold"), 150); say("2x", 300, "Hold the video"); }
+    dT(() => fadeC(hint, false), 1250); hideF(f, 1250);
+    onDemoStop(() => { if (hint) hint.classList.remove("dz", "dzt"); if (pill && pill.dataset.first) { pill.textContent = pill.dataset.first; delete pill.dataset.first; } });
   },
 });
 const liveDev = (rew) => `${miniVideo(5)}<span style="position:absolute;left:8px;top:7px;font-size:8px;font-weight:700;background:#cc0000;padding:1px 4px;border-radius:2px">LIVE</span><div class="msk" style="position:absolute;left:8%;right:8%;bottom:16%;height:3px;background:rgba(255,255,255,.3)"><div class="buf" style="position:absolute;left:${rew}%;right:0;top:0;bottom:0;background:rgba(255,255,255,.35)"></div><div class="mp" style="position:absolute;left:0;top:0;bottom:0;width:100%;background:#ff0033;transition:width .9s var(--ease)"></div></div>`;
@@ -418,25 +436,43 @@ scen("seekbar", "expand_live_stream_dvr_duration", (box, on) => {
 let MEMBERS = {};
 // ------------------------------------------------------------------ round 7 additions
 Object.assign(DEMOS, {
-  // the + button opens the segment editor: mark start and end, nudge by the time step, pick a category
-  morphe_sb_create_new_segment(on) {
-    const st = $("stage").firstElementChild; if (!st || !on) { label("The 'Create new segment' button is hidden", true, 1300); return; }
-    st.querySelectorAll(".sbedit").forEach(n => n.remove());
-    const step = Number(V("morphe_sb_create_new_segment_step")) || 150;
-    const ed = document.createElement("div"); ed.className = "sbedit";
-    ed.innerHTML = `<span class="chip">${I("prev", "ico", 'style="width:14px;height:14px"')} −${step} ms</span><span class="chip" style="background:#3ea6ff;color:#000">Start 1:30</span><span class="chip">End …</span><span class="chip">+${step} ms ${I("next", "ico", 'style="width:14px;height:14px"')}</span><span class="chip">${I("arrow", "ico", 'style="width:14px;height:14px"')} Publish</span>`;
-    st.appendChild(ed); label("Create a segment: mark start and end, adjust, publish", false, 1300);
-    dT(() => ed.remove(), 1450);
-  },
-  morphe_sb_create_new_segment_step() { DEMOS.morphe_sb_create_new_segment(true); },
-  morphe_sb_voting_button(on) {
-    const st = $("stage").firstElementChild; if (!st || !on) { label("The voting button is hidden", true, 1300); return; }
-    st.querySelectorAll(".sbedit").forEach(n => n.remove());
-    const ed = document.createElement("div"); ed.className = "sbedit";
-    ed.innerHTML = `<span class="chip">${I("like", "ico", 'style="width:14px;height:14px"')} Upvote</span><span class="chip">${I("dislike", "ico", 'style="width:14px;height:14px"')} Downvote</span><span class="chip">Change category</span>`;
-    st.appendChild(ed); label("Vote on the segments of this video", false, 1300); dT(() => ed.remove(), 1450);
-  },
+  // The + button opens the segment editor and the like button the voting menu. Each panel opens once
+  // (the finger taps its button) and stays while the setting is selected; the rounds only move the
+  // highlight through its steps. It used to be drawn again every round, so it popped in, bounced and
+  // shifted every 1.5 s (Max, Nov 24, reported before).
+  morphe_sb_create_new_segment(on) { sbPanel("morphe_sb_create_new_segment", on); },
+  morphe_sb_create_new_segment_step() { sbPanel("morphe_sb_create_new_segment_step", true); },
+  morphe_sb_voting_button(on) { sbPanel("morphe_sb_voting_button", on); },
 });
+function sbPanel(k, on) {
+  const st = $("stage").firstElementChild; if (!st) return;
+  const vote = k === "morphe_sb_voting_button", btnKey = vote ? "morphe_sb_voting_button" : "morphe_sb_create_new_segment";
+  if (!on) { st.querySelectorAll(".sbedit").forEach(n => n.remove()); label(vote ? "The voting button is hidden" : "The 'Create new segment' button is hidden", true, 1300); return; }
+  const step = Number(V("morphe_sb_create_new_segment_step")) || 150;
+  let ed = st.querySelector(`.sbedit[data-for="${btnKey}"]`);
+  if (!ed) {
+    st.querySelectorAll(".sbedit").forEach(n => n.remove());
+    ed = document.createElement("div"); ed.className = "sbedit"; ed.dataset.for = btnKey;
+    const ic = n => I(n, "ico", 'style="width:14px;height:14px"');
+    ed.innerHTML = vote
+      ? `<span class="chip">${ic("like")} Upvote</span><span class="chip">${ic("dislike")} Downvote</span><span class="chip">Change category</span>`
+      : `<span class="chip" data-s="minus">${ic("prev")} −${step} ms</span><span class="chip" data-s="start">Start <b class="sbt">1:30.000</b></span><span class="chip" data-s="end">End …</span><span class="chip" data-s="plus">+${step} ms ${ic("next")}</span><span class="chip" data-s="pub">${ic("arrow")} Publish</span>`;
+    ed.style.visibility = "hidden"; st.appendChild(ed);
+    const btn = st.querySelector(`[data-k="${btnKey}"] .pbtn`), f = finger();
+    if (btn && f) { const sr = $("stage").getBoundingClientRect(), r = btn.getBoundingClientRect(); tapAt(r.left - sr.left + r.width / 2, r.top - sr.top + r.height / 2); }
+    dT(() => { ed.style.visibility = ""; ed.animate([{ opacity: 0, transform: "translateY(-4px)" }, { opacity: 1, transform: "none" }], { duration: 200, easing: "cubic-bezier(.2,0,0,1)" }); }, 220);
+    onDemoStop(() => ed.remove());
+  }
+  const chips = [...ed.querySelectorAll(".chip")], n = demoStep;
+  const lit = i => chips.forEach((c, j) => { c.style.transition = "background .2s, color .2s"; c.style.background = j === i ? "#3ea6ff" : ""; c.style.color = j === i ? "#000" : ""; });
+  if (vote) { lit(n % 3); label(["Upvote a segment", "Downvote a segment", "Give it another category"][n % 3], false, 1300); return; }
+  if (k === "morphe_sb_create_new_segment_step") {
+    const plus = n % 2 === 0, t = ed.querySelector(".sbt"), ms = 30000 + (plus ? step : -step);
+    lit(plus ? 3 : 0); if (t) t.textContent = `1:${String(Math.floor(ms / 1000)).padStart(2, "0")}.${String(ms % 1000).padStart(3, "0")}`;
+    label(`${plus ? "+" : "−"}${step} ms: the start moves by one step`, false, 1300); return;
+  }
+  lit([1, 2, 4][n % 3]); label(["Mark where the segment starts", "Mark where it ends", "Publish it to SponsorBlock"][n % 3], false, 1300);
+}
 // Shared pieces for small "phone" scenarios: a page made of rows, a toast, a sheet.
 const pageRows = (rows) => `<div class="pg7" style="position:absolute;inset:0;background:#0f0f0f;padding:6px;display:grid;grid-template-columns:minmax(0,1fr);grid-auto-rows:max-content;gap:5px;align-content:start;font-size:7px;color:#ddd">${rows}</div>`;
 const bar7 = (w = 100, c = "#2a2a2a", h = 6) => `<i style="display:block;height:${h}px;width:${w}%;border-radius:3px;background:${c}"></i>`;
@@ -504,13 +540,26 @@ scen("watch", "copy_video_title", (box, on) => {
   at(900, () => { f.classList.remove("hold", "show"); if (on) { dev.querySelector(".tt7").style.background = "rgba(255,255,255,.12)"; toast7(dev, "Title copied"); } else toast7(dev, "Description opens", "80%"); });
   return on ? "Hold the title: it is copied" : "Hold the title: same as a tap, the description opens (stock)";
 });
+// Off: YouTube's own share panel (its title, a row of round targets with Copy link first).
+// On: Android's share sheet (OpenSystemShareSheetPatch): a drag handle, the link with its copy button,
+// people you share with, then the apps installed on the phone. Each is drawn after its real layout so
+// the difference is the panel itself, not a caption.
 scen("watch", "open_system_share_sheet", (box, on) => {
-  situation("Tapping Share");
-  box.innerHTML = device("port", playerArea(0) + `<div style="position:absolute;left:6px;top:40%;display:flex;gap:4px">${["like", "share", "save"].map(n => `<span style="background:#272727;border-radius:7px;padding:2px 5px;display:grid;place-items:center">${I(n, "ico", 'style="width:9px;height:9px"')}</span>`).join("")}</div>`);
-  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
-  at(200, () => fingerTo(f, W * .3, H * .43)); at(550, () => tapF(f));
-  at(800, () => { f.classList.remove("show"); sheet7(dev, on ? `<div style="font-weight:600">Share with</div><div style="display:flex;gap:6px">${[1, 2, 3, 4].map(i => `<span style="width:14px;height:14px;border-radius:50%;background:${AV[i]}"></span>`).join("")}</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px">${[0, 1, 2, 3].map(i => `<span style="height:12px;border-radius:3px;background:#3a3a3a"></span>`).join("")}</div>` : `<div style="font-weight:600">Share</div><div style="display:flex;gap:4px">${["#ff0033", "#25d366", "#1877f2", "#aaa"].map(c => `<span style="width:13px;height:13px;border-radius:50%;background:${c}"></span>`).join("")}</div><div>Copy link</div>`); });
-  return on ? "Share: Android's own share sheet opens" : "Share: YouTube's in-app share panel opens (stock)";
+  situation("Tapping Share under a video");
+  const pill = (ic, t, cls = "") => `<span class="${cls}" style="flex:none;display:inline-flex;align-items:center;gap:2px;background:#272727;border-radius:7px;padding:2px 5px;font-size:6px">${I(ic, "ico", 'style="width:7px;height:7px"')}${t}</span>`;
+  box.innerHTML = device("port", `<div class="dv-video" style="background:${ART[0]}"></div><div class="dv-below" style="padding:5px 5px;gap:4px"><div style="font-size:6.5px;font-weight:600;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Building a tiny cabin in the Norwegian forest</div><div style="display:flex;gap:3px;overflow:hidden">${pill("like", "48K")}${pill("share", "Share", "shr7")}${pill("save", "Save")}</div></div>`);
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger");
+  at(200, () => fingerOn(dev, f, dev.querySelector(".shr7"), .5, .5, 300)); at(600, () => tapF(f));
+  const round = (bg, ic, t) => `<span style="display:grid;justify-items:center;gap:1px;width:18px"><span style="width:13px;height:13px;border-radius:50%;background:${bg};display:grid;place-items:center">${ic ? I(ic, "ico", 'style="width:7px;height:7px"') : ""}</span><span style="font-size:4.3px;color:#ccc;white-space:nowrap">${t}</span></span>`;
+  const yt = `<div style="display:flex;justify-content:space-between;align-items:center;font-weight:600">Share${I("close", "ico", 'style="width:8px;height:8px"')}</div>
+    <div style="display:flex;justify-content:space-between">${round("#3a3a3a", "link", "Copy")}${round("#2e7d32", "", "Messages")}${round("#1565c0", "", "Email")}${round("#3a3a3a", "moreh", "More")}</div>`;
+  const sys = `<div style="justify-self:center;width:18px;height:2px;border-radius:1px;background:#777"></div>
+    <div style="display:flex;align-items:center;gap:4px;background:#2b2b2b;border-radius:5px;padding:3px"><span style="width:16px;height:10px;border-radius:2px;background:${ART[0]};flex:none"></span><span style="min-width:0;flex:1;display:grid"><span style="font-size:5.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Building a tiny cabin in the Norwegian forest</span><span style="font-size:5px;color:#aaa">youtu.be/…</span></span>${I("copy", "ico", 'style="width:7px;height:7px;flex:none"')}</div>
+    <div style="display:flex;justify-content:space-between">${[1, 2, 3, 4].map((i, n) => round(AV[i], "", ["Ana", "Leo", "Mia", "Sam"][n])).join("")}</div>
+    <div style="height:1px;background:#333"></div>
+    <div style="display:flex;justify-content:space-between">${round("#2e7d32", "", "Messages")}${round("#1565c0", "", "Email")}${round("#6a1b9a", "", "Notes")}${round("#455a64", "", "Nearby")}</div>`;
+  at(850, () => { f.classList.remove("show"); sheet7(dev, on ? sys : yt); if (on) dev.querySelector(".sh7").style.background = "#2b2c30"; });
+  return "";
 });
 scen("watch", "remove_viewer_discretion_dialog", (box, on) => {
   situation("Opening an age-sensitive video");
@@ -714,3 +763,40 @@ Object.assign(DEMOS, {
   morphe_swipe_speed_zone_height() { swipeZones(1400, true); label(`Top zone: ${V("morphe_swipe_speed_zone_height")}% of the player height`, false, 1400); },
 
 });
+
+// Video action bar layout: the pill layouts scroll their row (a finger drags it along and back), the
+// minimal one keeps four buttons and its More button opens the menu with all the others
+// moves a row's scroll with the finger that drags it (a smooth scrollTo runs on its own clock)
+function scrollTween(el, to, ms) {
+  const from = el.scrollLeft, t0 = performance.now(), ease = t => 1 - Math.pow(1 - t, 3), id = el.__tw = (el.__tw || 0) + 1;
+  const step = () => { if (!el.isConnected || el.__tw !== id) return; /* a newer move, or the demo stopped (it bumps __tw) */ const t = Math.min(1, (performance.now() - t0) / ms); el.scrollLeft = from + (to - from) * ease(t); if (t < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+DEMOS.morphe_video_action_bar_layout = v => {
+  const root = $("stage").firstElementChild, f = finger(); if (!root || !f) return;
+  const st = $("stage").getBoundingClientRect(), at = (el, fx = .5) => { const r = el.getBoundingClientRect(); return [r.left - st.left + r.width * fx, r.top - st.top + r.height / 2]; };
+  if (String(v) === "MINIMAL") {
+    const more = root.querySelector(".mtile[data-more]"); if (!more) return;
+    let menu = root.querySelector(".abmenu");
+    if (!menu) {
+      const items = [["remix", "Remix"], ["dollar", "Thanks"], ["dl", "Download"], ["clip", "Clip"], ["spark", "Ask"], ["flag", "Report"]];
+      // a small menu that opens from the More button, as YouTube's overflow menus do
+      root.insertAdjacentHTML("beforeend", `<div class="abmenu" style="position:absolute;right:10px;width:46%;z-index:20;background:#282828;border-radius:12px;padding:4px 0;box-shadow:0 6px 24px rgba(0,0,0,.6);opacity:0;scale:.92;transform-origin:85% 100%;transition:opacity .18s,scale .22s var(--ease)">${items.map(([i, t]) => `<div style="display:flex;align-items:center;gap:10px;padding:4px 12px;font-size:12px;color:#f1f1f1">${I(i, "ico", 'style="width:18px;height:18px"')}${t}</div>`).join("")}</div>`);
+      menu = root.querySelector(".abmenu");
+      const rr = root.getBoundingClientRect(), mr = more.getBoundingClientRect();
+      menu.style.top = Math.max(4, mr.top - rr.top + root.scrollTop - menu.offsetHeight - 2) + "px";
+      onDemoStop(() => root.querySelectorAll(".abmenu").forEach(n => n.remove()));
+    }
+    if (demoStep % 2 === 0) { const [x, y] = at(more); tapAt(x, y); dT(() => { more.style.background = "rgba(255,255,255,.12)"; menu.style.opacity = 1; menu.style.scale = "1"; }, 160); }
+    else { tapAt(st.width * .5, 40); dT(() => { more.style.background = ""; menu.style.opacity = 0; menu.style.scale = ".92"; }, 160); }
+    return;
+  }
+  const row = root.querySelector(".abrow"); if (!row) return;
+  const max = row.scrollWidth - row.clientWidth; if (max < 8) return;
+  // back at the start; parts whose pop origin was worked out at the clipped edge get it again
+  if (!demoStep) onDemoStop(() => { row.__tw = (row.__tw || 0) + 1; row.scrollLeft = 0; row.querySelectorAll('[style*="--pop"]').forEach(popOrigin); });
+  const fwd = demoStep % 2 === 0, [x0, y] = at(row, fwd ? .82 : .25), x1 = at(row, fwd ? .25 : .82)[0];
+  place(f, x0, y); f.classList.add("hold");
+  dT(() => { place(f, x1, y, 650); scrollTween(row, fwd ? Math.min(max, 220) : 0, 650); }, 120);
+  hideF(f, 900);
+};

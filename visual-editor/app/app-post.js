@@ -97,7 +97,26 @@ if (INAPP) {
   };
   // Action rows (import / export, export logs, links...): a tap runs Morphe's own row, so its
   // dialog or screen opens exactly as in the regular settings. Search results lead to them too.
-  const runAction = k => { try { MorpheApp.action(k); } catch (e) { snack("Update the visual editor patch to use this"); } };
+  const runAction = k => { try { MorpheApp.action(k); actionRan = true; } catch (e) { snack("Update the visual editor patch to use this"); } };
+  // Morphe's own rows can change settings behind the editor: Import / Export applies the pasted or
+  // imported text on Save (AbstractPreferenceFragment.importSettingsText, Setting.importFromJSON),
+  // and Morphe may add more such rows. When the editor gets the screen back after one (its dialog or a
+  // file picker closed), it reads Morphe's values again, so it shows what Morphe now has. They are not
+  // edits made in the editor: nothing is sent back, and the editor adds no restart prompt for them
+  // (Morphe's import asks for its restart itself, as in its own list). MorpheApp.state is the same
+  // read the editor starts with; the app can also call morpheReloadValues itself.
+  let actionRan = false;
+  window.morpheReloadValues = () => {
+    let live; try { live = JSON.parse(MorpheApp.state()); } catch (e) { return; }
+    const vals = (live && live.values) || {}, next = {};
+    for (const mk in vals) { const k = __editorKey(mk); if (k in PREF && JSON.stringify(state[k]) !== JSON.stringify(vals[mk])) next[k] = vals[mk]; }
+    if (!Object.keys(next).length) return;
+    loadPrefs(next); Object.assign(baseline, next);
+    commit();
+  };
+  const backFromAction = () => { if (!actionRan || document.hidden) return; actionRan = false; setTimeout(window.morpheReloadValues, 60); };
+  window.addEventListener("focus", backFromAction);
+  document.addEventListener("visibilitychange", backFromAction);
   document.addEventListener("click", e => {
     const row = e.target.closest("#list [data-row]");
     if (!row || !__liveActions.has(row.dataset.row)) return;

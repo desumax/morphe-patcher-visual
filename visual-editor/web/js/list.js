@@ -46,8 +46,8 @@ listSeen.observe($("list"), { subtree: true, childList: true, attributes: true, 
 function listQuiet(fn) { listNote(listSeen.takeRecords()); const r = fn(); listSeen.takeRecords(); return r; }
 // renderList hands over the screen in pieces, so an unchanged card is recognised from its text alone and is
 // neither parsed nor compared in the page: a heading's markup, or a group as an array of its cards' markup.
-const cardKey = e => e.matches(".unit") ? "u:" + (e.firstElementChild?.dataset.row || "") : e.dataset.row ? "r:" + e.dataset.row : e.dataset.h !== undefined ? "h:" + e.dataset.h : e.className;
-const srcKey = t => { const r = /data-row="([^"]+)"/.exec(t); if (r) return (t.startsWith('<div class="unit"') ? "u:" : "r:") + r[1]; const h = /data-h="([^"]*)"/.exec(t); return h ? "h:" + h[1] : t.slice(0, 48); };
+const cardKey = e => e.matches(".unit") ? "u:" + (e.firstElementChild?.dataset.row || "") : e.matches(".shared") ? "s:" + (e.querySelector(".row")?.dataset.row || "") : e.dataset.row ? "r:" + e.dataset.row : e.dataset.h !== undefined ? "h:" + e.dataset.h : e.className;
+const srcKey = t => { const r = /data-row="([^"]+)"/.exec(t); if (r) return (t.startsWith('<div class="unit"') ? "u:" : t.startsWith('<div class="shared"') ? "s:" : "r:") + r[1]; const h = /data-h="([^"]*)"/.exec(t); return h ? "h:" + h[1] : t.slice(0, 48); };
 const lockedCard = c => c.matches(".row.dis") || (c.matches(".unit") && !!c.firstElementChild?.matches(".dis"));
 function paintList(list, parts, ...marks) {
   const same = list.__cards === true && list.dataset.view === section;
@@ -508,6 +508,76 @@ const dependsOn = (k, parent) => PREF[k].parents.some(x => x.key === parent) || 
 // The setting on another screen that k was unlocked through (via the popup): k then offers "More" to reach it again.
 const borrowedParent = k => [...PREF[k].parents.map(x => x.key), ...availKeys(k)].find(x => borrowed[section] && borrowed[section].has(x) && sectionOf(x) !== section);
 
+// Rows that are a button in Morphe (it runs something instead of storing a value) get a button here too.
+// In the app a tap runs Morphe's own row (app-post.js, MorpheApp.action), so its dialog opens exactly as
+// in the regular settings; the web preview shows the same dialog with Morphe's texts.
+const ACTION_ROWS = {
+  morphe_loop_count_clear: { btn: "Clear", icon: "reset", ask: "Clear saved loop counts?", msg: "The videos of your playlists forget their loop count, and Loop video no longer turns on when a playlist plays them", ok: "Clear", done: "Saved loop counts cleared" },
+  morphe_pref_import_export: { btn: "Open", icon: "copy", run: () => importExportDialog() },
+};
+// Import / Export as Morphe's own dialog has it (AbstractPreferenceFragment.showImportExportTextDialog,
+// Setting.exportToJson / importFromJSON): the settings that differ from their default, sorted by key, as
+// JSON lines without the outer braces, editable; Export to file / Import from file; Save applies the text (a
+// setting it names takes that value, every other setting goes back to its default), Copy copies it,
+// Cancel closes. The messages are Morphe's. In the app Morphe's own dialog opens instead (app-post.js).
+const IE_KINDS = new Set(["boolean", "integer", "long", "float", "string", "enum"]);
+const ieKeys = () => Object.keys(PREF).filter(k => IE_KINDS.has(PREF[k].type));
+function exportText() {
+  const lines = ieKeys().filter(k => !sameVal(state[k], defaults[k])).sort().map(k => `${JSON.stringify(k)}:${JSON.stringify(state[k])}`);
+  return lines.join(",\n");
+}
+function importText(text) {
+  if (text === exportText()) return;
+  let t = text.trim(), json;
+  if (!/^\{/.test(t)) t = "{" + t + "}"; // Morphe adds the braces it leaves out of the export
+  try { json = JSON.parse(t); if (!json || typeof json !== "object" || Array.isArray(json)) throw new Error("Not a JSON object"); }
+  catch (e) { snack(`Import failed: ${e.message}`); return; }
+  let n = 0;
+  for (const k of ieKeys()) {
+    if (k in json) { const v = coerceVal(k, json[k]); if (!sameVal(state[k], v)) { setPref(k, v); n++; } }
+    else if (!sameVal(state[k], defaults[k])) { setPref(k, defaults[k]); n++; }
+  }
+  commit();
+  snack(Object.keys(json).length ? `Imported ${n} settings` : "Morphe settings reset to default");
+}
+function importExportDialog() {
+  openDialog(`<h2 id="dlgTitle">Import / Export</h2><textarea class="iex" id="iexText" spellcheck="false" autocomplete="off"></textarea>
+    <div class="iexrow"><button class="dbtn tonal" id="iexOut">Export to file</button><button class="dbtn tonal" id="iexIn">Import from file</button></div>
+    <div class="acts"><button class="dbtn primary" id="iexSave">Save</button><button class="dbtn tonal" id="iexCopy">Copy</button><button class="dbtn tonal" id="dBack">Cancel</button></div>`);
+  const ta = $("iexText"); ta.value = exportText();
+  if (!ta.value) setTimeout(() => ta.focus(), 60); // nothing set yet: ready for pasting, as Morphe does
+  $("iexSave").onclick = () => { const v = ta.value; closeDialog(); importText(v); };
+  $("iexCopy").onclick = () => { try { navigator.clipboard.writeText(ta.value); } catch { /* no clipboard */ } closeDialog(); };
+  $("dBack").onclick = closeDialog;
+  $("iexOut").onclick = () => {
+    try {
+      const a = document.createElement("a"), d = new Date(), pad = x => String(x).padStart(2, "0");
+      a.href = URL.createObjectURL(new Blob([ta.value], { type: "text/plain" }));
+      a.download = `YouTube_Settings_${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.txt`;
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      snack("Settings exported successfully");
+    } catch { snack("Failed to export settings"); }
+  };
+  $("iexIn").onclick = () => {
+    const f = document.createElement("input"); f.type = "file"; f.accept = "text/plain,.txt,application/json";
+    f.onchange = () => { const file = f.files && f.files[0]; if (!file) return; file.text().then(t => { ta.value = t; snack("Settings imported successfully, tap Save to apply"); }, () => snack("Failed to import settings")); };
+    f.click();
+  };
+}
+function actionFor(k) {
+  const a = ACTION_ROWS[k]; if (!a) return "";
+  return `<div class="ctl"><button class="opt actbtn" data-act="${k}">${I(a.icon)}${esc(a.btn)}</button></div>`;
+}
+function runActionRow(k) {
+  const a = ACTION_ROWS[k]; if (!a) return;
+  if (a.run && !(typeof INAPP !== "undefined" && INAPP)) return a.run();
+  // (in the app Morphe's own row runs instead, see app-post.js; this is only reached on an app build that can't)
+  if (typeof INAPP !== "undefined" && INAPP) { snack("Update the visual editor patch to use this"); return; }
+  openDialog(`<div class="di">${I(a.icon)}</div><h2 id="dlgTitle">${esc(a.ask)}</h2><p>${esc(a.msg)}</p>
+    <div class="acts"><button class="dbtn primary neg" id="dAct">${esc(a.ok)}</button><button class="dbtn tonal" id="dBack">Cancel</button></div>`);
+  $("dAct").onclick = () => { closeDialog(); snack(a.done); };
+  $("dBack").onclick = closeDialog;
+}
 // An info row Morphe opens a website from ("Tap here to open OpenRouter.ai"): the same link as a button
 function linkFor(k) {
   const m = /Tap here to open ([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+)/.exec(String(PREF[k].summary || "")); if (!m) return "";
@@ -542,7 +612,7 @@ function rowHTML(k, live) {
   else if (live && a.kind !== "scenario") { right = stateChip(k); if (!isBool) ctl = controlFor(k); }
   else if (isBool) right = swHTML();
   else if (!info) ctl = controlFor(k);
-  else ctl = linkFor(k);
+  else ctl = actionFor(k) || linkFor(k);
   // A list setting (speeds, filter words): the chips are the control, so nothing sits on the right and
   // they get the card's full width. Its Reset is a small pill beside the title, greyed out like the
   // screen's Reset until the list differs from Morphe's own (it asks before restoring).
@@ -569,11 +639,30 @@ function rowHTML(k, live) {
   const kidbtn = kids ? `<button class="kidbtn" data-kidtoggle="${k}" aria-expanded="${!collapsed.has(k)}" aria-label="${kids} sub-options">${kids}${I("expand")}</button>`
     : KIDS[k] ? kidLock(k, KIDS[k].length)
     : deepKidPill(k); // same footprint as the open/close button, so the card never changes width
-  const over = /^(hide|show) in /i.test(title(k)) && p.subScreenTitle ? `<div class="over">${esc(p.subScreenTitle)}</div>` : "";
+  const over = overOf(k) ? `<div class="over">${esc(overOf(k))}</div>` : "";
   const segCol = sbColor(k); if (segCol) cls.push("segcol");
   return `<div class="${cls.join(" ")}" data-row="${k}" data-k="${k}" tabindex="0"${segCol ? ` style="--seg-col:${segCol};--seg-ink:${inkOn(segCol)}"` : ""}>
     <div class="txt">${over}${lreset ? '<div class="ttlrow">' : ""}<div class="ttl">${ttlHTML(shownTitle(k), (dis ? I("lock", "lk") : "") + tags + kidbtn)}</div>${lreset ? lreset + "</div>" : ""}
       ${sum ? `<div class="sum">${esc(sum)}</div>` : ""}${ctl}</div>${right || goto || need ? `<div class="side">${right}${need}${goto}</div>` : ""}</div>`;
+}
+// "Hide in comments" alone does not say what is hidden: the row carries its Morphe sub-screen's title
+// ("Filter bar") above its own. Rows of one such family that end up next to each other share one card
+// with that title once (Max, Nov 24: five small "Filter bar" titles in a row were redundant). Any family
+// Morphe groups this way gets it (shareCards), wherever its rows land; a lone row keeps its small title.
+const overOf = k => /^(hide|show) in /i.test(title(k)) && PREF[k] && PREF[k].subScreenTitle ? PREF[k].subScreenTitle : "";
+function shareCards(cards) {
+  const keyOf = t => { const r = /^<div class="row[^"]*" data-row="([^"]+)"/.exec(t); return r ? r[1] : null; };
+  const out = [];
+  for (let i = 0; i < cards.length;) {
+    const k = keyOf(cards[i]), o = k && overOf(k);
+    let j = i + 1;
+    if (o) while (j < cards.length && keyOf(cards[j]) && overOf(keyOf(cards[j])) === o) j++;
+    if (j - i < 2) { out.push(cards[i]); i = j; continue; }
+    const drop = `<div class="over">${esc(o)}</div>`;
+    out.push(`<div class="shared" data-share="${esc(o)}"><div class="shead">${esc(o)}</div>${cards.slice(i, j).map(t => t.replace(drop, "")).join("")}</div>`);
+    i = j;
+  }
+  return out;
 }
 // A "Disable X" card shown as "X" with Off | On keeps Morphe's description as written, with no
 // "When Off:" lead-in (Max, Nov 23: dropped on every such card).
@@ -742,8 +831,8 @@ function renderList() {
       }
       live = [...left, ...live];
     } else live = ordered.map(withKids);
-    if (live.length) parts.push(live);
-    if (rest.length) { if (ordered.length) parts.push(`<div class="sechead" data-h="more">More settings<span class="nolive">No live preview or animation</span></div>`); parts.push(rest.map(withKids)); }
+    if (live.length) parts.push(shareCards(live));
+    if (rest.length) { if (ordered.length) parts.push(`<div class="sechead" data-h="more">More settings<span class="nolive">No live preview or animation</span></div>`); parts.push(shareCards(rest.map(withKids))); }
   } else {
     const groups = {};
     for (const k of m.misc) {
@@ -752,7 +841,7 @@ function renderList() {
       const g = (p.screenTitle || "Unplaced") + (p.subScreenTitle ? " › " + p.subScreenTitle : "");
       (groups[g] = groups[g] || []).push(k);
     }
-    for (const g of Object.keys(groups).sort()) parts.push(`<div class="gtitle" data-h="${esc(g)}">${esc(g)} · <span class="gn">${groups[g].length}</span></div>`, groups[g].map(withKids));
+    for (const g of Object.keys(groups).sort()) parts.push(`<div class="gtitle" data-h="${esc(g)}">${esc(g)} · <span class="gn">${groups[g].length}</span></div>`, shareCards(groups[g].map(withKids)));
   }
   const list = $("list");
   // sub-options that are about to fold away keep their old look (no locks popping in) while they
@@ -791,11 +880,12 @@ function renderList() {
   });
   closingOld.forEach((old, grp) => {
     // the parent's sub-options pill keeps its count until the fold is over, then turns into the
-    // lock pill: switching it at once drew the lock mid-fold
+    // lock pill: switching it at once drew the lock mid-fold. It fades in to its own resting opacity (the
+    // lock pill is dimmed): fading to full and dropping to the dim value made it flash (Max, Nov 24)
     const fold = foldingKids.get(grp), nb = list.querySelector(`[data-row="${grp}"] .kidbtn`);
     if (fold && fold.btn && nb && nb.outerHTML !== fold.btn) {
       const fresh = nb.outerHTML; nb.outerHTML = fold.btn;
-      setTimeout(() => { const cur = list.querySelector(`[data-row="${grp}"] .kidbtn`); if (cur && !list.querySelector(`[data-kids-of="${grp}"]`)?.classList.contains("open")) { cur.outerHTML = fresh; const n = list.querySelector(`[data-row="${grp}"] .kidbtn`); n?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160 }); } }, Math.max(0, fold.until - performance.now()) + 20);
+      setTimeout(() => { const cur = list.querySelector(`[data-row="${grp}"] .kidbtn`); if (cur && !list.querySelector(`[data-kids-of="${grp}"]`)?.classList.contains("open")) { cur.outerHTML = fresh; const n = list.querySelector(`[data-row="${grp}"] .kidbtn`); if (n) n.animate([{ opacity: 0 }, { opacity: getComputedStyle(n).opacity }], { duration: 160 }); } }, Math.max(0, fold.until - performance.now()) + 20);
     }
     const kin = list.querySelector(`[data-kids-of="${grp}"] > .kin`); if (!kin) return;
     // (taken clean: a card that stayed through this redraw may still wear an unlock that is playing)
@@ -1050,7 +1140,7 @@ function glideRun(box, f, t, o) {
   const split = c => { const m = /^rgba?\(([^,]+),([^,]+),([^,)]+)(?:,\s*([\d.]+))?\)$/.exec(String(c || "").replace(/\s/g, "")); return m ? [`rgb(${m[1]},${m[2]},${m[3]})`, m[4] === undefined ? 1 : +m[4]] : [c, 1]; };
   const [bgO, aTo] = split(o.bg), [fromO, aFrom] = o.fromBg ? split(o.fromBg) : [null, aTo];
   if (goo && (aTo < 1 || aFrom < 1)) o = { ...o, bg: bgO, fromBg: fromO, alpha: [aFrom, aTo] };
-  const layer = document.createElement("span"); layer.className = "glayer"; layer.setAttribute("aria-hidden", "true");
+  const layer = document.createElement("span"); layer.className = goo ? "glayer goo" : "glayer"; layer.setAttribute("aria-hidden", "true");
   layer.style.cssText = `z-index:${o.z ?? 0};width:${box.scrollWidth}px;height:${box.scrollHeight}px${goo ? `;filter:url(#${goo})` : ""}`;
   const n = Math.max(...frames.map(fr => fr.length)), R = o.radius ?? 999, last = frames.length - 1, mid = Math.round(last * .4);
   const anims = [];
@@ -1158,6 +1248,8 @@ function headBody(h) {
   const g = h.nextElementSibling; return g && g.classList.contains("group") ? [...g.children].filter(n => !n.matches(HEADS)) : [];
 }
 function syncHeads(list, before) {
+  // a shared card goes once every row in it is gone
+  list.querySelectorAll(".shared").forEach(c => c.classList.toggle("gone", ![...c.children].some(n => n.matches(".row") && !isOut(n))));
   list.querySelectorAll(HEADS).forEach(h => {
     const items = headBody(h).filter(n => !isOut(n)), show = items.length > 0, going = h.classList.contains("going");
     const gn = h.querySelector(".gn"); if (gn && show) gn.textContent = items.length;

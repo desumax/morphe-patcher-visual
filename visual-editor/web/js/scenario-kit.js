@@ -53,6 +53,16 @@ function fingerOn(dev, f, el, fx = .5, fy = .5, ms = 0) {
   const k = devScale(dev), d = dev.getBoundingClientRect(), r = el.getBoundingClientRect();
   fingerTo(f, (r.left - d.left + r.width * fx) / k - dev.clientLeft, (r.top - d.top + r.height * fy) / k - dev.clientTop, ms);
 }
+// Every "mark, then remove" story (a part of the page outlined in red, then folded away) runs on one
+// clock, so all of them change speed together (Max, Nov 24: 30% faster than the 350 / 1050 / 1700 ms
+// they had). The fold itself is .tgt7's transition (motion.css), sped up the same way.
+const MARK_T = { mark: 245, gone: 735, unmark: 1190 };
+function markGone(targets, remove, o = {}) {
+  const t = [...targets];
+  at(MARK_T.mark, () => t.forEach(e => { e.classList.remove("instant7"); if (o.reveal) e.classList.remove("gone7"); e.classList.add("mark7"); }));
+  at(MARK_T.gone, () => { if (remove) t.forEach(e => e.classList.add("gone7")); if (o.then) o.then(); });
+  at(MARK_T.unmark, () => t.forEach(e => e.classList.remove("mark7")));
+}
 // A page where one element (class tgt7) is removed when the setting is on (or added, with invert).
 function hidePage(sec, key, sit, page, o = {}) {
   scen(sec, key, (box, on) => {
@@ -61,9 +71,7 @@ function hidePage(sec, key, sit, page, o = {}) {
     const dev = box.querySelector(".dev"), t = [...dev.querySelectorAll(".tgt7")];
     const show = o.invert ? on : !on;
     if (o.invert) t.forEach(e => e.classList.add("gone7", "instant7"));
-    at(350, () => t.forEach(e => { e.classList.remove("instant7"); if (o.invert && show) e.classList.remove("gone7"); e.classList.add("mark7"); }));
-    at(1050, () => t.forEach(e => { if (!o.invert && !show) e.classList.add("gone7"); }));
-    at(1700, () => t.forEach(e => e.classList.remove("mark7")));
+    markGone(t, !o.invert && !show, { reveal: o.invert && show });
     // no caption: "Removed" / "Shown (stock)" only repeated the Hide / Show label above each phone,
     // and the marked part disappearing shows it; the phones get that room instead
     return "";
@@ -120,18 +128,46 @@ scen("feed", "feed_view_count", (box, on) => {
   box.innerHTML = device("port", pageRows(feed7(card(4, 1, "Night train to Bodø", "Fjord", "1.2M", "3d") + card(2, 2, "Cabin build, part 2", "Fjord", "84K", "1w") + card(5, 3, "Why ice is slippery", "Pocket", "410K", "2d"))));
   const dev = box.querySelector(".dev");
   if (!on) return "";
-  at(350, () => dev.querySelectorAll(".tgt7").forEach(e => e.classList.add("mark7")));
-  at(1050, () => { dev.querySelectorAll(".tgt7").forEach(e => e.classList.add("gone7")); dev.querySelectorAll(".vc7").forEach(e => { e.style.opacity = 1; }); });
-  at(1700, () => dev.querySelectorAll(".tgt7").forEach(e => e.classList.remove("mark7")));
+  markGone(dev.querySelectorAll(".tgt7"), true, { then: () => dev.querySelectorAll(".vc7").forEach(e => { e.style.opacity = 1; }) });
   return "";
 });
-hidePage("feed", "hide_account_menu", "The account menu", you7(`<div style="display:grid;gap:1px">${item7("clock", "History")}${item7("plist", "Playlists")}${tgt7(item7("spark", "Get YouTube Premium"))}${item7("dl", "Downloads")}${tgt7(item7("dollar", "Purchases and memberships"))}</div>`), { hidden: "Menu items you filtered are removed" });
+// The You tab's bottom menu, one picture for its three settings (Max, Nov 24: Downloads needs the same
+// picture as the menu filter it sits under). LayoutComponentsFilter: with "Enable Library / You bottom menu
+// filter" on, items whose name contains a line of the filter are removed (hideAccountItem, any case);
+// Downloads is a video lockup the name filter can't match, so it has its own switch.
+const YOU_MENU = [["clock", "Your videos"], ["dl", "Downloads"], ["tv", "Your movies & TV"], ["spark", "Get YouTube Premium"], ["timer", "Time watched"]];
+const youFilter = v => String(v || "").split("\n").map(x => x.trim()).filter(Boolean);
+function youMenuScen(key, plan) {
+  scen("feed", key, (box, v) => {
+    const { sit, gone } = plan(v);
+    situation(sit);
+    const rows = YOU_MENU.map(([i, t, sub]) => { const h = item7(i, sub ? `${t}<span style="color:#aaa"> · ${sub}</span>` : t); return gone(t) ? tgt7(h) : h; }).join("");
+    box.innerHTML = device("port", pageRows(you7(`<div><b style="font-size:7px">History</b><div style="display:flex;gap:3px;margin-top:2px">${[2, 4, 6].map(i => `<div style="width:26px;height:15px;border-radius:2px;background:${ART[i]}"></div>`).join("")}</div></div><div style="display:grid;gap:1px">${rows}</div>`)));
+    markGone(box.querySelectorAll(".dev .tgt7"), true);
+    return "";
+  });
+}
+const nameHit = names => t => names.some(n => t.toLowerCase().includes(n.toLowerCase()));
+// the filter's own lines when it has some, otherwise an example of what it does
+const youNames = () => { const n = youFilter(V("morphe_hide_account_menu_filter_strings")); return n.length ? { names: n, own: true } : { names: ["Premium", "Time watched"], own: false }; };
+youMenuScen("hide_account_menu", on => {
+  const { names, own } = youNames(), dl = !!V("morphe_hide_account_menu_downloads");
+  if (!on) return { sit: "The You tab's menu", gone: () => false };
+  return { sit: `${own ? "Filter" : "Filter, for example"}: ${names.join(", ")}${dl ? " and Downloads" : ""}`, gone: t => nameHit(names)(t) || (dl && t === "Downloads") };
+});
+youMenuScen("hide_account_menu_filter_strings", v => {
+  const names = youFilter(v);
+  if (names.length) return { sit: `Filter: ${names.join(", ")}`, gone: nameHit(names) };
+  const ex = ["Premium", "Time watched"]; // empty: what two lines would do
+  return { sit: `Lines like ${ex.join(" and ")} remove those items`, gone: nameHit(ex) };
+});
+youMenuScen("hide_account_menu_downloads", on => ({ sit: "The You tab's menu", gone: t => !!on && t === "Downloads" }));
 hidePage("feed", "hide_album_cards", "Searching for an artist", search7("midnight tapes", tgt7(`<div style="display:flex;gap:4px;align-items:center;padding:3px;border-radius:3px;background:#1b1b1b"><div style="width:22px;height:22px;background:${ART[6]};border-radius:2px"></div><div style="font-size:6.5px">Neon Fjord<div style="font-size:5.5px;color:#aaa">Album · 2025</div></div></div>`) + row7(2, "Midnight Tapes live") + row7(3, "Lo-fi to study to")));
 hidePage("feed", "hide_artist_cards", "Searching for an artist", search7("midnight tapes", tgt7(`<div style="display:flex;gap:5px;align-items:center;padding:3px;border-radius:3px;background:#1b1b1b"><span style="width:22px;height:22px;border-radius:50%;background:${AV[4]}"></span><div style="font-size:6.5px">Midnight Tapes<div style="font-size:5.5px;color:#aaa">Artist · 1.1M subscribers</div></div></div>`) + row7(2, "Midnight Tapes live") + row7(3, "Lo-fi to study to")));
 hidePage("feed", "hide_channel_buttons", "A channel row in search", search7("fjord timber", `<div style="display:flex;gap:5px;align-items:center"><span style="width:14px;height:14px;border-radius:50%;background:${AV[0]};flex:none"></span><div style="font-size:6.5px;line-height:1.15;flex:1;min-width:0">Fjord<div style="font-size:5.5px;color:#aaa">412K</div></div>${tgt7(`<span style="display:inline-block;padding:2px 5px;border-radius:6px;background:#f1f1f1;color:#000;font-size:6px">Subscribe</span>`, 1)}</div>` + row7(3, "Building a tiny cabin")));
 hidePage("feed", "hide_compact_banner", "Home feed: a small banner and the empty dividers", feed7(tgt7(`<div style="display:flex;gap:4px;align-items:center;padding:3px 4px;border-radius:4px;background:#1f2a3a;font-size:6px">${ico7("info", 8)}<span style="flex:1">Your feed is paused. <span style="color:#3ea6ff">Turn on history</span></span>${ico7("close", 7)}</div>`) + big7(3, "Building a tiny cabin") + tgt7(`<div style="height:7px;border-top:1px solid #2a2a2a;border-bottom:1px solid #2a2a2a;background:repeating-linear-gradient(45deg,#161616 0 3px,#0f0f0f 3px 6px)"></div>`) + row7(4, "Night train to Bodø") + tgt7(`<div style="height:7px;border-top:1px solid #2a2a2a;border-bottom:1px solid #2a2a2a;background:repeating-linear-gradient(45deg,#161616 0 3px,#0f0f0f 3px 6px)"></div>`) + row7(5, "Why ice is slippery")), { hidden: "Compact banners (small notices like this) and the empty divider strips are removed" });
 hidePage("feed", "hide_feed_flyout_menu", "The ⋮ menu of a video", feed7(big7(3, "Building a tiny cabin")) + `<div style="background:#212121;border-radius:6px 6px 0 0;padding:4px;display:grid;gap:1px;margin:0 -6px -6px">${item7("clock", "Save to Watch later")}${tgt7(item7("spark", "Ask about this video"))}${item7("share", "Share")}${tgt7(item7("flag", "Report"))}</div>`, { hidden: "Menu items you filtered are removed" });
-hidePage("feed", "hide_floating_microphone_button", "The search screen", search7("", `<div style="display:grid;gap:3px">${item7("clock", "cabin build")}${item7("clock", "lo-fi beats")}${item7("clock", "night train")}</div><div style="height:30px"></div>` + tgt7(`<div style="display:flex;justify-content:center"><span style="width:20px;height:20px;border-radius:50%;background:#ff0033;display:grid;place-items:center">${ico7("mic", 10)}</span></div>`)));
+hidePage("feed", "hide_floating_microphone_button", "The search screen", search7("", `<div style="display:grid;gap:3px">${item7("clock", "cabin build")}${item7("clock", "lo-fi beats")}${item7("clock", "night train")}</div><div style="height:30px"></div>` + `<div style="display:flex;justify-content:flex-end;padding-right:4px">${tgt7(`<span style="width:20px;height:20px;border-radius:50%;background:#ff0033;display:grid;place-items:center">${ico7("mic", 10)}</span>`, true)}</div>`)); // lower right, as Morphe says; the outline hugs the round button
 hidePage("feed", "hide_get_premium_button", "The You tab", you7(tgt7(`<div style="padding:3px 5px;border-radius:4px;background:#ff0033;font-size:6.5px;text-align:center">Get YouTube Premium</div>`) + `<div style="display:grid;gap:1px">${item7("clock", "History")}${item7("plist", "Playlists")}</div>`));
 hidePage("feed", "hide_handle", "The account menu", you7("").replace("@kari · View channel", `<span class="tgt7 w7" style="display:inline-flex">@kari ·&nbsp;</span>View channel`), { raw: false, hidden: "Your @handle is not shown" });
 hidePage("feed", "hide_help_feedback_menu", "Settings in the account menu", you7(`<div style="display:grid;gap:1px">${item7("gear", "Settings")}${item7("eye", "Your data in YouTube")}${tgt7(item7("help", "Help & feedback"))}</div>`));
@@ -180,6 +216,20 @@ scen("feed", "playlist_wide_drag_handles", (box, on) => {
   at(1000, () => { f.classList.remove("hold", "show"); toast7(dev, on ? "Easy to grab" : "Small target, often missed", "80%"); });
   return on ? "A wide drag handle on each row" : "A thin drag handle (stock)";
 });
+// Post buttons layout (LayoutComponentsFilter.PostButtonsLayout): Server keeps what YouTube sends the
+// account (the classic posts: like and dislike at the start, comments and share far off at the end);
+// Enforced turns on the grouped layout of the post template, the comment and share buttons right next to
+// like and dislike, the same for every account. The Enforced phone starts like Server and pulls together.
+scen("feed", "post_buttons_layout", (box, v) => {
+  situation("The buttons below a community post");
+  const b = (n, t = "") => `<span class="pb7" style="display:inline-flex;align-items:center;gap:1px;padding:2px;border-radius:6px;background:transparent;transition:background .3s">${ico7(n, 6)}${t ? `<span style="font-size:5px">${t}</span>` : ""}</span>`;
+  box.innerHTML = device("port", pageRows(`<div style="display:flex;gap:4px;align-items:center"><span style="width:12px;height:12px;border-radius:50%;background:${AV[0]}"></span><b style="font-size:7px;flex:1">Fjord & Timber</b>${ico7("more", 8)}</div><div style="font-size:6.5px">The roof is done! Next week: the wood stove.</div><div style="height:34px;border-radius:4px;background:${ART[0]}"></div>
+    <div class="pbr7" style="display:flex;align-items:center;gap:1px">${b("like", "2.1K")}${b("dislike")}<span class="sp7" style="flex:1 1 0;transition:flex-grow .6s var(--ease)"></span>${b("comment", "84")}${b("share")}</div>` + row7(2, "Building a tiny cabin")));
+  if (v !== "ENFORCED") return "";
+  const dev = box.querySelector(".dev");
+  at(700, () => { dev.querySelector(".sp7").style.flexGrow = "0"; dev.querySelectorAll(".pb7").forEach(x => { x.style.background = "#272727"; }); dev.querySelector(".pbr7").style.gap = "2px"; });
+  return "";
+});
 // Morphe: "A download button is shown next to the Share button of posts with images or GIFs, and a
 // download item is added to their menu" (the story used to be a long press on the image).
 scen("feed", "post_image_download", (box, on) => {
@@ -226,10 +276,36 @@ for (const [k, where, text] of [["hide_aislist_blocklist_home", "Home feed", "AI
   hidePage("feed", k, where, (/Search/.test(where) ? search7("history facts", "") : feed7("")) + row7(2, "Real video") + tgt7(row7(7, "10 CRAZY facts (AI voice)", "", text)) + row7(3, "Another real video"), { hidden: "Videos from channels on the AI slop list are removed" });
 for (const [k, where] of [["hide_aislist_warnlist_home", "Home feed"], ["hide_aislist_warnlist_search", "Search results"]])
   hidePage("feed", k, where, (/Search/.test(where) ? search7("space news", "") : feed7("")) + row7(2, "Real video") + tgt7(row7(6, "Space news daily", "", "⚠ on the AI warn list")) + row7(3, "Another real video"), { hidden: "Videos from channels on the warn list are removed" });
-for (const [k, where, page] of [["hide_filter_bar_in_comments", "Comments", top7("Comments", ["sort", "close"])], ["hide_filter_bar_in_history", "History", top7("History", ["search", "more"])], ["hide_filter_bar_in_related_videos", "Up next", player7(3)], ["hide_filter_bar_in_search", "Search results", search7("cabin", "")]])
-  hidePage("feed", k, where, page + tgt7(chips7(["All", "Videos", "Shorts", "Unwatched"])) + row7(2, "Building a tiny cabin") + row7(4, "Night train to Bodø"));
+// each place has its own filter bar: the comments' one sorts comments (CommentsFilter hides its chip_bar
+// while the player is open), the others filter videos with that page's chips
+const vids7 = row7(2, "Building a tiny cabin") + row7(4, "Night train to Bodø");
+for (const [k, where, page, chips, body] of [
+  ["hide_filter_bar_in_comments", "Comments", top7("Comments", ["sort", "close"]), ["Top", "Newest", "Timed"], cmt7(2, "Lovely build!") + cmt7(3, "Subscribed for part 2") + cmt7(4, "That view at 3:12")],
+  ["hide_filter_bar_in_history", "Watch history", top7("History", ["search", "more"]), ["All", "Videos", "Shorts", "Podcasts", "Music"], vids7],
+  ["hide_filter_bar_in_related_videos", "Up next", player7(3), ["All", "From Fjord & Timber", "Related", "Watched"], vids7],
+  ["hide_filter_bar_in_search", "Search results", search7("cabin", ""), ["All", "Shorts", "Videos", "Unwatched", "Live"], vids7]])
+  hidePage("feed", k, where, page + tgt7(chips7(chips)) + body);
 hidePage("feed", "hide_keyword_content_comments", "Comments with filtered words", top7("Comments", ["sort", "close"]) + cmt7(2, "Lovely build!") + tgt7(cmt7(4, "FREE GIFT CARDS click my profile")) + cmt7(3, "Subscribed for part 2"), { hidden: "Comments with your keywords are removed" });
 
+// Expandable cards under videos (LayoutComponentsFilter, expandable_metadata / inline_expander): the cards
+// that fold open under a video's title, such as the AI summary ("PAfeedback_genai") and the chapter or
+// music card. Hide summary card only removes the summary; Hide all removes every one of them. A card that
+// stays is tapped open, so it is clear what kind of card this is.
+scen("watch", "hide_expandable_card", (box, v) => {
+  situation("Under a video's title");
+  const card = (cls, ic, head, body) => `<div class="${cls}" style="border-radius:4px;background:#272727;padding:3px 4px;font-size:6px;display:grid;gap:2px"><div style="display:flex;gap:3px;align-items:center">${ico7(ic, 7)}<span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${head}</span>${ico7("expand", 7)}</div><div class="xb7" style="display:grid;grid-template-rows:0fr;transition:grid-template-rows .35s var(--ease)"><div style="overflow:hidden;color:#bbb;line-height:1.3">${body}</div></div></div>`;
+  const sum = card("xs7", "spark", "Summary", "Kari builds a 12 m² cabin from reclaimed pine in two weeks."), chap = card("xc7", "list", "Chapter 2 · Raising the roof", "0:00 Clearing the site<br>4:12 Raising the roof<br>9:40 The wood stove");
+  const hideSum = v === "HIDE_SUMMARY_ONLY" || v === "HIDE_ALL", hideAll = v === "HIDE_ALL";
+  box.innerHTML = device("port", pageRows(player7(0) + `<div style="font-size:7px;font-weight:600;line-height:1.25">Building a tiny cabin in the Norwegian forest</div>` + (hideSum ? tgt7(sum) : sum) + (hideAll ? tgt7(chap) : chap) + row7(2, "Night train to Bodø")));
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger");
+  markGone(dev.querySelectorAll(".tgt7"), true);
+  const keep = hideAll ? null : dev.querySelector(hideSum ? ".xc7" : ".xs7");
+  if (keep) {
+    at(1300, () => fingerOn(dev, f, keep, .5, .3, 300)); at(1650, () => tapF(f));
+    at(1850, () => { f.classList.remove("show"); keep.querySelector(".xb7").style.gridTemplateRows = "1fr"; });
+  }
+  return "";
+});
 // ---------- other screens
 hidePage("ads", "hide_fullscreen_ads", "Opening a video", player7(3) + row7(2, "Up next") + row7(4, "Up next") + `<div class="tgt7" style="position:absolute;inset:0;max-height:200px;background:#fff;color:#000;display:grid;place-items:center;font-size:7px;z-index:4"><div style="text-align:center"><b>Ad · 0:05</b><div style="font-size:6px">Install Pocket Planner</div></div></div>`, { hidden: "No full-screen ad before the video" });
 hidePage("channel", "hide_channel_tab", "A channel page", top7("Fjord & Timber", ["search", "more"]) + `<div style="height:18px;border-radius:2px;background:${ART[3]}"></div><div style="display:flex;gap:5px;font-size:5.5px;white-space:nowrap;border-bottom:1px solid #333;padding-bottom:2px"><span style="flex:none">Home</span><span style="flex:none">Videos</span>${tgt7("<span>Shorts</span>", 1)}${tgt7("<span>Store</span>", 1)}</div>` + row7(2, "Building a tiny cabin"), { hidden: "Channel tabs you filtered are removed" });
@@ -308,7 +384,7 @@ scen("look", "custom_filter", (box, on) => {
   situation("Your own custom filter");
   box.innerHTML = device("port", pageRows(feed7(big7(3, "Building a tiny cabin") + tgt7(`<div style="padding:3px;border-radius:3px;background:#1b1b1b;font-size:6px">Sponsored shelf you don't want</div>`) + row7(4, "Night train to Bodø"))));
   const dev = box.querySelector(".dev"), t = dev.querySelector(".tgt7");
-  at(400, () => t.classList.add("mark7")); at(1100, () => { if (on) t.classList.add("gone7"); }); at(1700, () => t.classList.remove("mark7"));
+  markGone([t], on);
   return on ? "Components matching your filter strings are removed" : "No custom filter (stock)";
 });
 hidePage("look", "series_tracker", "Watching a series", player7(3, `<span style="position:absolute;left:3px;bottom:3px;font-size:5.5px;background:rgba(0,0,0,.7);padding:0 3px;border-radius:2px">Ep 4</span>`) + tgt7(`<div style="display:flex;gap:3px;align-items:center;font-size:6px;padding:3px;border-radius:3px;background:#1b1b1b">${ico7("list", 7)}Cabin build · 3 of 12 watched${bar7(20, "#3ea6ff", 3)}</div>`) + row7(2, "Episode 5"), { invert: true, shown: "Your progress through a series is tracked", hidden: "No series tracker (stock)" });
@@ -358,15 +434,24 @@ scen("ambient", "disable_fullscreen_ambient_mode", (box, on) => {
 // Auto captions visibility (Max, Nov 23 PM): a video with auto-generated captions starts muted, then the
 // sound comes on. The caption line shows in the part of the story the choice allows: always, never, only
 // with sound, or only while muted.
+// Morphe (AutoCaptionsPatch): two moments turn captions on by themselves: a video previewing muted in the
+// feed, and a video starting with sound on the watch page. Each option picks which of the two may show
+// them (Max, Nov 24: the old story played both on one video, as if unmuting were the trigger).
+// "Always show" keeps YouTube's own (both); the CC button still works by hand in every case.
+SCN_HOLD.morphe_auto_captions_style = 4400; // feed, watch page, feed again
 scen("captions", "auto_captions_style", (box, v) => {
-  situation("A video starts muted, then the sound comes on");
+  situation("A muted preview in the feed, then the video with sound");
   const show = muted => v === "BOTH_ENABLED" || (muted ? v === "WITHOUT_VOLUME_ONLY" : v === "WITH_VOLUME_ONLY");
-  box.innerHTML = device("port", watch7(`<span class="snd7 badge7" style="left:3px;top:3px">${ico7("mute", 6)} Muted</span><span class="cap7" style="position:absolute;left:50%;bottom:6px;transform:translateX(-50%);font-size:6px;background:rgba(8,8,8,.78);padding:0 3px;border-radius:2px;white-space:nowrap;transition:opacity .3s;opacity:${show(true) ? 1 : 0}">so today we start the roof</span>`));
-  const dev = box.querySelector(".dev"), cap = dev.querySelector(".cap7");
-  at(1100, () => {
-    dev.querySelector(".snd7").innerHTML = `${ico7("vol", 6)} Sound on`;
-    cap.textContent = "first the rafters go up"; cap.style.opacity = show(false) ? 1 : 0;
-  });
+  const cap = (txt, on) => `<span class="cap7" style="position:absolute;left:50%;bottom:4px;transform:translateX(-50%);font-size:6px;background:rgba(8,8,8,.78);padding:0 3px;border-radius:2px;white-space:nowrap;opacity:${on ? 1 : 0};transition:opacity .3s">${txt}</span>`;
+  const sound = muted => `<span class="badge7" style="left:3px;top:3px">${ico7(muted ? "mute" : "vol", 6)} ${muted ? "Muted" : "Sound on"}</span>`;
+  box.innerHTML = device("port", pageRows(feed7(big7(3, "Building a tiny cabin", sound(true) + cap("so today we start the roof", show(true))) + row7(2, "Night train to Bodø"))));
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger");
+  at(1300, () => { const card = dev.querySelector(".pg7 > div:nth-child(3)"); if (card && f) fingerOn(dev, f, card, .5, .3); });
+  at(1600, () => { if (f) tapF(f); });
+  at(1850, () => { if (f) f.classList.remove("show"); dev.querySelector(".pg7").outerHTML = watch7(sound(false) + cap("first the rafters go up", show(false))); });
+  // under the video, the next one starts previewing muted: the story ends with both moments on screen,
+  // so every option ends looking different from the others
+  at(3400, () => { const pg = dev.querySelector(".pg7"), rows = [...pg.children].slice(-2); rows.forEach(r => r.remove()); pg.insertAdjacentHTML("beforeend", `<div style="animation:ghostin .3s">${big7(4, "Up next · Night train", sound(true) + cap("the train leaves at dawn", show(true)))}</div>`); });
   return "";
 });
 scen("captions", "auto_translate_additional_languages", (box, on) => {
@@ -693,10 +778,13 @@ scen("miniplayer", "seek_notification_media_prev_next", (box, on) => {
   at(300, () => { dev.querySelector(".nb7").innerHTML = (on ? ["prev", "pause", "next"] : ["prev", "pause", "next"]).map((n, i) => `<span style="display:grid;justify-items:center;font-size:5px">${ico7(n, 9)}${on && i !== 1 ? (i ? "+10 s" : "−10 s") : ""}</span>`).join(""); });
   return on ? "Previous and next seek back and forward instead" : "Previous and next change the video (stock)";
 });
+// Morphe: YouTube leaves 1440p and 4K out of the download qualities when it decides this device can't
+// play them; the setting offers them anyway (nothing to do with Premium: Max, Nov 24)
 scen("playback", "download_force_4k", (box, on) => {
-  situation("Downloading a video");
-  box.innerHTML = device("port", pageRows(player7(3) + `<div style="background:#212121;border-radius:5px;padding:4px;display:grid;gap:2px;font-size:6.5px"><b>Download quality</b><div>360p</div><div>720p</div><div class="q4 new7" style="width:max-content;color:${on ? "#3ea6ff" : "#555"}">${on ? "2160p (4K)" : "2160p · Premium"}</div></div>`));
-  return on ? "4K downloads are offered" : "4K downloads are locked (stock)";
+  situation("Downloading on a phone YouTube rates below 4K");
+  const q = t => `<div>${t}</div>`, extra = t => `<div class="new7" style="color:#3ea6ff">${t}</div>`;
+  box.innerHTML = device("port", pageRows(player7(3) + `<div style="background:#212121;border-radius:5px;padding:4px;display:grid;gap:2px;font-size:6.5px"><b>Download quality</b>${q("360p")}${q("720p")}${q("1080p")}${on ? extra("1440p") + extra("2160p (4K)") : `<div style="color:#777">1440p and 4K not offered</div>`}</div>`));
+  return "";
 });
 // Morphe (LiveChatTranslatePatch): a row becomes "author original (translation)" (or the translation
 // only, or the translation first, per the style setting); the translation takes the custom colour
@@ -917,8 +1005,10 @@ scen("playback", "skip_silence", (box, on) => silenceScen(box, on ? silMin(V("mo
 scen("playback", "skip_silence_minimum_pause", (box, v) => silenceScen(box, silMin(v)));
 // Playback buffer size: one phone cycles through every size by itself, no picking. Morphe multiplies how
 // much video is loaded ahead: Default ×1 (YouTube's own), Low ×2, Medium ×4, Maximum ×8 (memory capped).
-SCN_HOLD.morphe_playback_buffer_size = 10400;
-scen("playback", "playback_buffer_size", (box) => {
+SCN_HOLD.morphe_playback_buffer_size = 3600;
+// The picked size (Max, Nov 24: the story stepped through all four on its own, whatever pill was picked):
+// YouTube's own amount first, then the bar grows to the picked size and its pill lights up.
+scen("playback", "playback_buffer_size", (box, pick) => {
   const steps = [["DEFAULT", 1, "YouTube's own"], ["LOW", 2, "2× more ahead"], ["MEDIUM", 4, "4× more ahead"], ["MAXIMUM", 8, "8× ahead, fewest stalls"]];
   const name = v => entryLabel("morphe_playback_buffer_size", v), ahead = m => Math.min(76, 8 * m); // % of the bar
   // a landscape phone: the video with its loaded-ahead bar on the left, the four sizes on the right, so every word fits
@@ -928,15 +1018,16 @@ scen("playback", "playback_buffer_size", (box) => {
     <div style="position:absolute;left:58%;right:4px;top:5px;bottom:5px;display:grid;align-content:space-between;font-size:6.5px">
       <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="color:#aaa">Loaded ahead</span><b class="bx7 chg7" style="font-size:9px">×1</b></div>
       <div class="bt7" style="color:#f1f1f1;line-height:1.25;min-height:2.5em">YouTube's own</div>
-      <div class="bp7" style="display:grid;grid-template-columns:1fr 1fr;gap:2px">${steps.map(([v]) => `<span data-v="${v}" style="text-align:center;padding:2px 0;border-radius:4px;background:${v === "DEFAULT" ? "var(--on-green)" : "#2a2a2a"};transition:background .25s">${name(v)}</span>`).join("")}</div></div>`);
-  const dev = box.querySelector(".dev"), STEP = 1400;
-  at(0, () => {}); // the first size is the first drawing: keep it on screen a full step (no lead-in trim)
-  for (let n = 1; n < 8; n++) at(n * STEP, () => { // two rounds through the four sizes
-    const [v, m, txt] = steps[n % 4];
+      <div class="bp7" style="display:grid;grid-template-columns:1fr 1fr;gap:2px">${steps.map(([v]) => `<span data-v="${v}" style="text-align:center;padding:2px 0;border-radius:4px;background:${v === "DEFAULT" ? "#3a3a3a" : "#2a2a2a"};transition:background .25s">${name(v)}</span>`).join("")}</div></div>`);
+  const dev = box.querySelector(".dev");
+  const put = v => {
+    const [, m, txt] = steps.find(x => x[0] === v) || steps[0];
     dev.querySelector(".bf7").textContent = name(v); dev.querySelector(".bx7").textContent = "×" + m;
     dev.querySelector(".ba7").style.width = ahead(m) + "%"; dev.querySelector(".bt7").textContent = txt;
-    dev.querySelectorAll(".bp7 span").forEach(e => { e.style.background = e.dataset.v === v ? "var(--on-green)" : "#2a2a2a"; });
-  });
+    dev.querySelectorAll(".bp7 span").forEach(e => { e.style.background = e.dataset.v === v ? (v === "DEFAULT" ? "#3a3a3a" : "var(--on-green)") : "#2a2a2a"; });
+  };
+  at(0, () => {}); // the first drawing (YouTube's own) stays on screen before the change (no lead-in trim)
+  if (steps.some(x => x[0] === pick) && pick !== "DEFAULT") at(900, () => put(pick));
   return "";
 });
 // A comparison told in words instead of an animation: two cards the size of the phones, a heading and
@@ -968,7 +1059,7 @@ textScen("playback", "disable_drc_audio", "What you hear", {
 scen("playback", "hide_premium_video_quality", (box, on) => {
   box.innerHTML = device("port", pageRows(player7(3)) + `<div style="position:absolute;left:0;right:0;bottom:0;background:#212121;border-radius:6px 6px 0 0;padding:5px;display:grid;gap:3px;font-size:6.5px">${tgt7(`<div>1080p Premium <span style="color:#aaa">· enhanced bitrate</span></div>`)}<div>1080p</div><div>720p</div><div>Auto</div></div>`);
   const dev = box.querySelector(".dev"), t = dev.querySelector(".tgt7");
-  at(400, () => t.classList.add("mark7")); at(1100, () => { if (on) t.classList.add("gone7"); }); at(1700, () => t.classList.remove("mark7"));
+  markGone([t], on);
   return ""; // the list in the phones says it
 });
 // Default Shorts quality on mobile data / Wi-Fi: a Short opens at the default (Auto) or at the chosen quality
@@ -1042,6 +1133,9 @@ const MANUAL_PARENT = {
   // restoring free pinch zoom means nothing while pinch is switched off altogether
   morphe_restore_pinch_to_zoom: { key: "morphe_disable_fullscreen_zoom_gesture", mode: "not" },
   morphe_player_overlay_opacity: { key: "morphe_hide_player_control_buttons_background", always: true },
+  // the clear button belongs with Loop count (Morphe has them on one screen); it works whether or not the
+  // loop count is on, so it always shows in that card (Max, Nov 24)
+  morphe_loop_count_clear: { key: "morphe_loop_count", always: true },
   // with the swap on, Create lives in the top bar (its own toggle there); this one only acts on the bottom bar
   morphe_hide_create_button: { key: "morphe_swap_create_with_notifications_button", mode: "not" },
   morphe_hide_toolbar_notification_button: { key: "morphe_swap_create_with_notifications_button", mode: "not" },
