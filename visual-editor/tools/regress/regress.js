@@ -363,6 +363,124 @@ const CHECKS = [
       }
     },
   },
+  {
+    name: "ryd-off-shows-its-part",
+    report: "Nov 24: Return YouTube Dislike off left a small green square instead of the red outline and the dislike count",
+    async run() {
+      const { p, ctx } = await open();
+      const k = "morphe_ryd_enabled";
+      const r = await p.evaluate(async k => { setPicker(false); quickSection("watch"); await new Promise(r => setTimeout(r, 500)); setPref(k, false); commit(); renderStage(); select(k, "list"); await new Promise(r => setTimeout(r, 900));
+        const e = document.querySelector(`#stage [data-k="${k}"]`); if (!e) return null; const b = e.getBoundingClientRect(); return { ghost: e.classList.contains("ghost"), w: b.width, text: e.textContent.trim() }; }, k);
+      ok(r, "the dislike count is not in the preview at all");
+      ok(r.ghost && r.text && r.w > 12, `off, the dislike count is not drawn as a hidden part (ghost ${r.ghost}, "${r.text}", ${Math.round(r.w)}px wide)`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "preview-scrolls-to-where-a-setting-acts",
+    report: "Nov 24: scrolled down on the video page, Video action bar layout (and its options) and Like and Subscribe glow didn't bring the preview to the action bar",
+    async run() {
+      const { p, ctx } = await open();
+      for (const k of ["morphe_video_action_bar_layout", "morphe_disable_like_subscribe_glow"]) {
+        const r = await p.evaluate(async k => {
+          setPicker(false); quickSection("watch"); await new Promise(r => setTimeout(r, 500));
+          const sc = document.querySelector("#stage .inner-scroll"); sc.scrollTop = sc.scrollHeight; await new Promise(r => setTimeout(r, 200));
+          select(k, "list"); await new Promise(r => setTimeout(r, 1300));
+          const b = sc.getBoundingClientRect(), t = document.querySelector('#stage [data-k="morphe_hide_action_bar"]').getBoundingClientRect();
+          return t.top >= b.top - 2 && t.bottom <= b.bottom + 2;
+        }, k);
+        ok(r, `${k}: the action bar stayed out of view`);
+      }
+      await ctx.close();
+    },
+  },
+  {
+    name: "fitted-ghost-pulses-only-its-part",
+    report: "Nov 24: 'Create a Short' button hidden and selected: the whole line glowed instead of the button (the outline was right)",
+    async run() {
+      const { p, ctx } = await open();
+      const k = "morphe_hide_comments_create_a_short_button";
+      const r = await p.evaluate(async k => { setPicker(false); quickSection("comments"); await new Promise(r => setTimeout(r, 500)); setPref(k, true); commit(); renderStage(); select(k, "list"); await new Promise(r => setTimeout(r, 1600));
+        const e = document.querySelector(`#stage [data-k="${k}"]`); return { fit: e.classList.contains("fit"), ghost: e.classList.contains("ghost"), anim: getComputedStyle(e).animationName }; }, k);
+      ok(r.ghost && r.fit, "setup: the hidden button is not a fitted ghost");
+      ok(r.anim !== "ghostpulse", "the whole line pulses (the pulse belongs on the button's ring)");
+      await ctx.close();
+    },
+  },
+  {
+    name: "story-lines-as-asked",
+    report: "Nov 24: Search comments: no On sentence, Off says Not searchable; Minimal comments button and Sanitize highlighted search links: no white sentences",
+    async run() {
+      const { p, ctx } = await open();
+      const lines = k => p.evaluate(async k => { setPicker(false); quickSection(sectionOf(k)); await new Promise(r => setTimeout(r, 500)); select(k, "list"); await new Promise(r => setTimeout(r, 1500));
+        return [...document.querySelectorAll("#canvas .dl7")].map(c => [...c.querySelectorAll(".sf7")].map(e => e.offsetHeight ? e.textContent.trim() : "").join("")); }, k);
+      const sc = await lines("morphe_search_comments");
+      ok(sc[0] === "Not searchable" && !sc[1], `Search comments lines: ${JSON.stringify(sc)}`);
+      for (const k of ["morphe_minimal_comments_button", "morphe_sanitize_comments_highlighted_search_links"]) { const l = await lines(k); ok(l.length === 2 && l.every(x => !x), `${k} still has white lines: ${JSON.stringify(l)}`); }
+      await ctx.close();
+    },
+  },
+  {
+    name: "flying-comment-settings-no-whole-flash",
+    report: "Nov 24: every setting under Niconico comments flashed the whole preview; ten of them get their own animation instead",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        setPicker(false); setPref("morphe_niconico_comments", true); commit(); quickSection("danmaku"); await new Promise(r => setTimeout(r, 600));
+        const out = [];
+        for (const x of ["max_refresh_rate", "font_size", "portrait_font_size", "opacity"]) {
+          const k = "morphe_niconico_comments_" + x; select(k, "list"); await new Promise(r => setTimeout(r, 450));
+          const s = $("stage").getBoundingClientRect();
+          if ([...document.querySelectorAll("#stage .flash")].some(e => { const b = e.getBoundingClientRect(); return b.width * b.height > s.width * s.height * .6; }) || document.querySelector(".stagebox.changed")) out.push(x);
+        }
+        const own = ["ended_premieres", "hide_crowded", "live_premieres", "live_streams", "max_length", "pip", "portrait", "separate_portrait", "timed_comments", "timed_comments_with_replay"].filter(x => !SCN["morphe_niconico_comments_" + x]);
+        return { out, own };
+      });
+      ok(!r.out.length, `the whole preview flashes for: ${r.out.join(", ")}`);
+      ok(!r.own.length, `no animation of its own: ${r.own.join(", ")}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "portrait-settings-under-their-parent",
+    report: "Nov 24: Display area / Comment font size / Travel duration in portrait appeared above Separate settings for portrait, which also had no lock pill",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        setPicker(false); setPref("morphe_niconico_comments", true); setPref("morphe_niconico_comments_separate_portrait", false); commit(); quickSection("danmaku"); await new Promise(r => setTimeout(r, 700));
+        const row = k => document.querySelector(`#list [data-row="morphe_niconico_comments_${k}"]`);
+        const lock = !!row("separate_portrait")?.querySelector(".kidbtn.kidoff");
+        toggle("morphe_niconico_comments_separate_portrait"); await new Promise(r => setTimeout(r, 900));
+        const rows = [...document.querySelectorAll("#list [data-row]")].filter(e => e.offsetParent).map(e => e.dataset.row);
+        const at = x => rows.indexOf("morphe_niconico_comments_" + x);
+        return { lock, below: ["portrait_display_area", "portrait_font_size", "portrait_travel_duration"].every(x => at(x) > at("separate_portrait")) };
+      });
+      ok(r.lock, "Separate settings for portrait has no lock pill while its settings are hidden");
+      ok(r.below, "the portrait settings are not below Separate settings for portrait");
+      await ctx.close();
+    },
+  },
+  {
+    name: "disable-choice-last-and-grey",
+    report: "Nov 24: SponsorBlock: Disable sat first in Hook / Greetings (last elsewhere) and showed dark green when chosen instead of grey",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        setPicker(false); quickSection("sponsorblock"); await new Promise(r => setTimeout(r, 600));
+        const bad = [];
+        document.querySelectorAll("#list .ctl").forEach(c => { const o = [...c.querySelectorAll(".opt")]; const i = o.findIndex(e => /^disable$/i.test(e.textContent.trim())); if (i >= 0 && i !== o.length - 1) bad.push(c.closest("[data-row]")?.dataset.row); });
+        const k = Object.keys(PREF).find(k => /^morphe_sb_.*(hook|greeting|intro)/i.test(k) && entriesFor(k).some(e => /^disable$/i.test(e.label)));
+        let grey = null;
+        if (k) { const v = entriesFor(k).find(e => /^disable$/i.test(e.label)).value; setPref(k, v); commit(); renderList(); await new Promise(r => setTimeout(r, 300));
+          const b = [...document.querySelectorAll(`#list [data-row="${k}"] .opt`)].find(e => /^disable$/i.test(e.textContent.trim()));
+          grey = b && b.classList.contains("offw") && !/\(4[34], 9[02], 5[02]\)/.test(getComputedStyle(b).backgroundColor) ? true : getComputedStyle(b).backgroundColor; }
+        return { bad, k, grey };
+      });
+      ok(!r.bad.length, `Disable is not the last choice in: ${r.bad.join(", ")}`);
+      ok(r.k && r.grey === true, `a chosen Disable is not grey (${r.k}: ${r.grey})`);
+      await ctx.close();
+    },
+  },
 ];
 
 (async () => {
