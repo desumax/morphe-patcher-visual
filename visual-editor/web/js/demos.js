@@ -205,19 +205,24 @@ const DEMOS = {
     else { label("Double-tap: does nothing, no accidental likes", true); dT(() => nothing7(800), 300); }
   },
   morphe_disable_like_subscribe_glow(disabled) {
-    // YouTube draws this as an animated border around the buttons (the element Morphe removes is
-    // "animated_button_border"), not a sheen across them. Round 137 (Max): the border lights up in two
-    // pulses, in step with the two pulses of the message pill (flash7), so the cause and the glow read
-    // as one event. Drawn inside each button's edge: an outer glow is cut off by the scrolling action bar.
+    // YouTube's glow, from descriptions of the real thing rather than a guess (Max, round 138): "a quick zip
+    // of red/orange/yellow around the Subscribe button" that "lasts just a second or two" (Tubefilter, Sep
+    // 2023; 9to5Google: "a splash of color ... for a couple of seconds"). Morphe removes it as the element
+    // "animated_button_border". So: a warm arc, yellow at its head through orange to red at its tail, runs
+    // once around each button's border, fading in and out at the ends. It takes as long as the message
+    // pill's flash (900 ms), so cause and glow read as one event. Drawn on the button's own edge: an outer
+    // glow is cut off by the scrolling action bar.
     const parts = [...document.querySelectorAll("#stage .likechip, #stage .mtile[data-glow], #stage .subbtn")];
     showPill("\u201CLike and subscribe!\u201D", 1300);
     if (!parts.length || disabled) { label("Creator says \"hit like\": no glow", true); return; }
+    const N = 60, arc = a => `conic-gradient(from ${a}deg, rgba(255,0,51,0) 0deg, #ff0033 70deg, #ff7a00 125deg, #ffd21f 165deg, rgba(255,210,31,0) 180deg, rgba(255,0,51,0) 360deg)`;
+    const frames = Array.from({ length: N + 1 }, (_, i) => ({ background: arc(-90 + 360 * i / N), opacity: i < 6 ? i / 6 : i > N - 8 ? (N - i) / 8 : 1 }));
     parts.forEach(e => {
       const keep = e.style.position; e.style.position = "relative";
       const g = document.createElement("i");
-      g.style.cssText = "position:absolute;inset:0;border-radius:inherit;pointer-events:none;padding:2px;background:conic-gradient(from 0deg,#ff4e45,#ffb300,#ff4fb0,#7c5cff,#3ea6ff,#ff4e45);-webkit-mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);opacity:0";
+      g.style.cssText = "position:absolute;inset:0;border-radius:inherit;pointer-events:none;padding:2px;-webkit-mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);opacity:0";
       e.appendChild(g);
-      const a = g.animate([{ opacity: 0 }, { opacity: 1, offset: .25 }, { opacity: .4, offset: .5 }, { opacity: 1, offset: .75 }, { opacity: 0 }], { duration: 900, easing: "ease-in-out" }); // flash7's own keyframes
+      const a = g.animate(frames, { duration: 900, easing: "linear" });
       const end = () => { g.remove(); e.style.position = keep; };
       a.onfinish = end; onDemoStop(end);
     });
