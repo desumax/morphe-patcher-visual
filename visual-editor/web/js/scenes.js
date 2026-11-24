@@ -16,7 +16,13 @@ function videoFrame(i = 0, extra = "") {
   return `<div class="frame" style="background:${ART[i]}"></div>${extra}`;
 }
 
+// Another tab's preview can be this same player with its own parts added (SponsorBlock: its buttons in the
+// bottom row, segments on the seekbar, the skip button), so what is set under Player controls shows there
+// too (Max, round 136: one shared live preview). playerWith(add) draws it; add = { buttons, segs, time, over }.
+let playerAdd = null;
+function playerWith(add) { playerAdd = add; try { return SCENES.player(); } finally { playerAdd = null; } }
 SCENES.player = () => {
+  const add = playerAdd || {};
   const bgHidden = !!V("morphe_hide_player_control_buttons_background");
   const shade = bgHidden ? 0 : (Number(V("morphe_player_control_buttons_background_opacity")) / 100);
   const op = Number(V("morphe_player_overlay_opacity")) / 100;
@@ -31,9 +37,9 @@ SCENES.player = () => {
   const btn = ([k, ic], extra = "") => C(k, `<div class="pbtn" style="width:32px;height:32px">${ic}</div>`, { cls: extra });
   const on = list.filter(([k]) => shown("morphe_" + k) || (mode === "mod" && (selected === "morphe_" + k || PARENT_OF[selected] === "morphe_" + k) && !trayOpen));
   const off = list.filter(([k]) => !shown("morphe_" + k));
-  const pill = off.length && mode === "mod"
+  const pill = off.length && mode === "mod" && !playerAdd
     ? `<button class="traypill" data-tray aria-expanded="${trayOpen}" title="Buttons that are off">${I(trayOpen ? "close" : "plus")}<span>${off.length}</span></button>` : "";
-  const tray = trayOpen && off.length && mode === "mod"
+  const tray = trayOpen && off.length && mode === "mod" && !playerAdd
     ? `<div class="tray" role="group" aria-label="Buttons that are off"><div class="trayhead">Off · tap to preview, hold to add</div><div class="trayrow">${off.map(b => btn(b, "intray")).join("")}</div></div>` : "";
   return `<div class="video">
     ${videoFrame(0)}
@@ -49,10 +55,11 @@ SCENES.player = () => {
         <div class="pbtn bigbtn">${I("pause")}</div>
         ${pb("hide_player_previous_next_buttons", I("next"))}
       </div>
-      <div style="position:absolute;right:6px;bottom:18px;display:flex;gap:2px;max-width:340px;align-items:center">${pill}${on.map(b => btn(b)).join("")}${pb("hide_fullscreen_button", I("full"))}</div>
-      ${sharedTime("3:12 / 18:42", "left:12px;bottom:24px")}
-      ${sharedSeek(`<div class="buf" style="width:40%"></div><div class="played" style="width:17%"></div><div class="knob" style="left:17%"></div>`, "left:12px;right:12px;bottom:10px")}
+      <div style="position:absolute;right:6px;bottom:18px;display:flex;gap:2px;max-width:340px;align-items:center">${pill}${add.buttons || ""}${on.map(b => btn(b)).join("")}${pb("hide_fullscreen_button", I("full"))}</div>
+      ${sharedTime(add.time || "3:12 / 18:42", "left:12px;bottom:24px")}
+      ${sharedSeek(`<div class="buf" style="width:40%"></div>${add.segs || ""}<div class="played" style="width:17%"></div><div class="knob" style="left:17%"></div>`, "left:12px;right:12px;bottom:10px")}
     </div>
+    ${add.over || ""}
     ${tray}
   </div>`;
 };
@@ -169,7 +176,7 @@ SCENES.feed = () => {
     // FeedCardLayoutPatch: compact mono text buttons under the card: like, comment (opens the video with its
     // comments) and save (to Watch later), lined up under the title
     const tb = (n, t) => `<span style="display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 8px;border-radius:14px;font-size:12px;font-weight:500;color:#f1f1f1">${I(n, "ico", 'style="width:18px;height:18px"')}${t}</span>`;
-    const acts = actions ? `<div style="display:flex;gap:2px;padding:0 8px 8px 48px">${tb("like", ["48K", "12K", "3.4K"][i % 3])}${tb("comment", ["1.2K", "341", "88"][i % 3])}${tb("save", "Save")}</div>` : "";
+    const acts = actions ? `<div${i ? "" : ' data-focus="morphe_feed_card_layout"'} style="display:flex;gap:2px;padding:0 8px 8px 48px">${tb("like", ["48K", "12K", "3.4K"][i % 3])}${tb("comment", ["1.2K", "341", "88"][i % 3])}${tb("save", "Save")}</div>` : "";
     // cards: 12 dp corners, 12 dp at the sides and 6 dp above and below each card (12 between two)
     return `<div style="${cards ? "margin:6px 12px;background:#1c1c1c;border-radius:12px;overflow:hidden" : "margin-bottom:6px"}">${tn}${meta}${acts}</div>`;
   };
@@ -192,6 +199,10 @@ SCENES.feed = () => {
   </div>`;
 };
 
+// Where each part sits follows ShortsFilter (round 136 fix pass): everything in its suggestedActionsBuffer
+// (shop, tagged products, location, save music, search suggestions, Super Thanks, use sound, use template,
+// upcoming, effect, green screen, new posts, hashtag) is a pill in the row above the channel; the AI button,
+// the full video link and the sound label are items of the reel carousel, the line of labels at the bottom.
 SCENES.shorts = () => {
   const rb = (k, icon, label) => C(k, `<div style="display:grid;justify-items:center;gap:1px"><div class="pbtn" style="width:36px;height:36px;background:rgba(255,255,255,.12)">${icon}</div><span style="font-size:10px;font-weight:500;line-height:12px">${label}</span></div>`);
   return `<div style="position:relative;height:420px;background:${ART[5]};overflow:hidden" id="shortsStage">
@@ -211,17 +222,18 @@ SCENES.shorts = () => {
         ${C("hide_shorts_green_screen_button", `<span class="chip" style="height:26px;font-size:11.5px;background:rgba(0,0,0,.5)">Green screen</span>`)}
         ${C("hide_shorts_use_sound_button", `<span class="chip" style="height:26px;font-size:11.5px;background:rgba(0,0,0,.5)">${I("music")} Use sound</span>`)}
         ${C("hide_shorts_super_thanks_button", `<span class="chip" style="height:26px;font-size:11.5px;background:rgba(0,0,0,.5)">${I("dollar")} Thanks</span>`)}
-        ${C("hide_shorts_ai_button", `<span class="chip" style="height:26px;font-size:11.5px;background:rgba(0,0,0,.5)">${I("spark")} Ask</span>`)}
+        ${C("hide_shorts_location_label", `<span class="chip" style="height:26px;font-size:11.5px;background:rgba(0,0,0,.5)">📍 Lisbon</span>`)}
+        ${C("hide_shorts_hashtag_button", `<span class="chip" style="height:26px;font-size:11.5px;background:rgba(0,0,0,.5)"># cooking</span>`)}
       </div>
       ${C("hide_shorts_info_panel", `<div style="background:rgba(0,0,0,.5);border-radius:8px;padding:6px 8px;font-size:11px">${I("info", "ico", 'style="width:14px;height:14px;display:inline;vertical-align:-2px"')} Context: Snowflakes form around dust particles.</div>`)}
       ${C("hide_shorts_channel_bar", `<div style="display:flex;align-items:center;gap:8px">${av(5, 30)}<b style="font-size:13px">@tinykitchen</b>
           ${C("hide_shorts_subscribe_button", `<span class="chip" style="height:28px;background:#f1f1f1;color:#0f0f0f">Subscribe</span>`)}
           ${C("hide_shorts_join_button", `<span class="chip" style="height:28px;background:transparent;border:1px solid #fff">Join</span>`)}</div>`)}
-      ${C("hide_shorts_video_title", `<div style="font-size:13.5px;line-height:1.3">Tiny pancakes for a tiny breakfast ${C("hide_shorts_hashtag_button", `<span style="color:#9ecbff">#cooking</span>`, { tag: "span" })}</div>`)}
+      ${C("hide_shorts_video_title", `<div style="font-size:13.5px;line-height:1.3">Tiny pancakes for a tiny breakfast</div>`)}
       ${C("hide_shorts_preview_comment", `<div style="font-size:11.5px;color:#ddd;display:flex;gap:6px;align-items:center">${av(1, 18)}"I need these in my life"</div>`)}
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         ${C("hide_shorts_sound_metadata_label", `<span style="font-size:11.5px">${I("music", "ico", 'style="width:14px;height:14px;display:inline;vertical-align:-3px"')} Original sound · tinykitchen</span>`, { tag: "span" })}
-        ${C("hide_shorts_location_label", `<span style="font-size:11.5px">📍 Lisbon</span>`, { tag: "span" })}
+        ${C("hide_shorts_ai_button", `<span style="font-size:11.5px">${I("info", "ico", 'style="width:14px;height:14px;display:inline;vertical-align:-3px"')} AI</span>`, { tag: "span" })}
         ${C("hide_shorts_full_video_link_label", `<span style="font-size:11.5px">${I("play", "ico", 'style="width:14px;height:14px;display:inline;vertical-align:-3px"')} Full video</span>`, { tag: "span" })}
       </div>
     </div>

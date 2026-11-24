@@ -125,10 +125,13 @@ scen("feed", "feed_long_press_menu", (box, on) => {
 // Wi-Fi and switches to mobile data, so all three end differently.
 SCN_HOLD.morphe_playback_in_feeds = 3400;
 scen("feed", "playback_in_feeds", (box, v) => {
-  situation("A video stops in view, on Wi-Fi and then on mobile data");
+  situation(n === 2 ? "A video stops in view, on any network" : "A video stops in view, on Wi-Fi and then on mobile data");
   const n = Number(v), plays = wifi => n === 2 || (n === 1 && wifi);
   const art = `<span class="pz7" style="position:absolute;inset:0;border-radius:3px;background:inherit;transition:scale 2.4s linear"></span><span class="badge7 mu7" style="left:3px;top:3px;opacity:0;transition:opacity .2s">${ico7("mute", 6)} Muted</span><i class="pp7" style="position:absolute;left:0;bottom:0;height:2px;width:0;background:#ff0033"></i><span class="badge7 du7" style="left:auto;right:3px;top:auto;bottom:3px;transition:opacity .2s">12:04</span>`;
-  box.innerHTML = device("port", pageRows(feed7(`<div class="fd7" style="display:grid;gap:5px;transition:transform .5s var(--ease)">${row7(4, "Night train to Bodø")}${big7(3, "Building a tiny cabin", art)}${row7(2, "Lo-fi beats")}</div>`)) + `<span class="badge7 net7" style="left:4px;top:auto;bottom:6px;display:inline-grid">${[["wifi", "Wi-Fi", 1], ["phone", "Mobile data", 0]].map(([ic, t, on]) => `<span class="nt7" style="grid-area:1/1;transition:opacity .2s;opacity:${on}">${ico7(ic, 6)} ${t}</span>`).join("")}</span>`);
+  box.innerHTML = device("port", pageRows(feed7(`<div class="fd7" style="display:grid;gap:5px;transition:transform .5s var(--ease)">${row7(4, "Night train to Bodø")}${big7(3, "Building a tiny cabin", art)}${row7(2, "Lo-fi beats")}</div>`)) + (n === 2
+    // Always on: the network does not matter, so both are shown together and nothing switches (Max, round 136)
+    ? `<span class="badge7 net7" style="left:4px;top:auto;bottom:6px">${ico7("wifi", 6)} Wi-Fi + ${ico7("phone", 6)} Mobile data</span>`
+    : `<span class="badge7 net7" style="left:4px;top:auto;bottom:6px;display:inline-grid">${[["wifi", "Wi-Fi", 1], ["phone", "Mobile data", 0]].map(([ic, t, on]) => `<span class="nt7" style="grid-area:1/1;transition:opacity .2s;opacity:${on}">${ico7(ic, 6)} ${t}</span>`).join("")}</span>`));
   const dev = box.querySelector(".dev"), pp = dev.querySelector(".pp7"), pz = dev.querySelector(".pz7"), mu = dev.querySelector(".mu7"), du = dev.querySelector(".du7"), net = dev.querySelector(".net7");
   const play = (on, from) => {
     mu.style.opacity = on ? 1 : 0; du.style.opacity = on ? 0 : 1;
@@ -136,7 +139,8 @@ scen("feed", "playback_in_feeds", (box, v) => {
     if (on) { pp.animate([{ width: from + "%" }, { width: from + 22 + "%" }], { duration: 1600 * scStretch, fill: "forwards" }); pz.style.scale = "1.04"; }
     else { pp.style.width = from + "%"; pz.style.scale = "1"; }
   };
-  at(700, () => play(plays(true), 0));
+  at(60, () => play(plays(true), 0));
+  if (n === 2) return "";
   // both labels share the pill's box, so it keeps its size and place when the network changes
   at(1900, () => { net.querySelectorAll(".nt7").forEach((e, i) => { e.style.opacity = i; }); flash7(net); });
   at(2200, () => { if (!plays(false)) play(false, plays(true) ? 22 : 0); else play(true, 22); });
@@ -146,24 +150,35 @@ scen("feed", "playback_in_feeds", (box, v) => {
 // Default adds nothing (YouTube's own item, as without Morphe); Native queue opens the queue in YouTube's
 // own playlist panel; Morphe queue keeps it as a playlist on your YouTube account; client side keeps it on
 // the phone, with a Queue (n) button. The story taps the item and shows where the video went.
+// Round 136 (Max: no animation for Default; Native vs Morphe hard to tell apart): Default now opens the menu
+// too, without a queue item (AddToQueuePatch.QueueType.DEFAULT: "No queue features are added"). The three
+// queues end on different pictures of where the video went: YouTube's own queue panel under a playing video
+// (NATIVE), a private playlist in the account's playlists (MORPHE), a Queue (1) button on the phone (LOCAL).
 SCN_HOLD.morphe_queue_type = 3200;
 scen("feed", "queue_type", (box, v) => {
-  situation("Play next in queue, from a video's menu");
+  const stock = v === "DEFAULT";
+  situation(stock ? "A video's menu in the feed" : "Play next in queue, from a video's menu");
   const dots = `<span class="qd7" style="position:absolute;right:1px;top:41px;width:8px;height:8px;display:grid;place-items:center">${ico7("more", 7)}</span>`;
   box.innerHTML = device("port", pageRows(feed7(`<div style="position:relative">${big7(3, "Building a tiny cabin")}${dots}</div>${row7(4, "Night train to Bodø")}${row7(2, "Lo-fi beats")}`)));
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger");
-  at(250, () => fingerOn(dev, f, dev.querySelector(".qd7"), .5, .5, 250));
-  at(550, () => { tapF(f); sheet7(dev, sheetRows([["queue", "Play next in queue"], ["clock", "Save to Watch later"], ["plist", "Save to playlist"], ["share", "Share"]])); });
-  at(950, () => fingerOn(dev, f, dev.querySelector(".sh7 > div"), .4, .5, 250));
-  at(1300, () => tapF(f));
-  at(1500, () => {
+  const items = [["queue", "Play next in queue"], ["clock", "Save to Watch later"], ["plist", "Save to playlist"], ["share", "Share"]];
+  at(60, () => fingerOn(dev, f, dev.querySelector(".qd7"), .5, .5, 250));
+  at(400, () => { tapF(f); sheet7(dev, sheetRows(stock ? items.slice(1) : items)); });
+  if (stock) { at(800, () => { f.classList.remove("show"); toast7(dev, "No queue item: nothing is added (stock)", "30%"); }); return ""; }
+  at(800, () => fingerOn(dev, f, dev.querySelector(".sh7 > div"), .4, .5, 250));
+  at(1150, () => tapF(f));
+  at(1350, () => {
     f.classList.remove("show"); dev.querySelectorAll(".sh7,.shs7").forEach(e => e.remove());
     const add = html => dev.insertAdjacentHTML("beforeend", `<div class="qr7" style="position:absolute;left:5%;width:90%;box-sizing:border-box;bottom:6px;z-index:4;display:grid;gap:3px;animation:sheetup .3s var(--ease)">${html}</div>`);
-    const panel = (title, sub, icon) => `<div style="border-radius:4px;background:#212121;padding:4px;display:grid;grid-template-columns:minmax(0,1fr);gap:3px;box-shadow:0 -2px 8px rgba(0,0,0,.5)"><div style="display:flex;gap:3px;align-items:center;font-size:6.5px">${ico7(icon, 7)}<b>${title}</b></div><div style="color:#aaa;font-size:5.5px;margin-top:-2px">${sub}</div>${row7(3, "Building a tiny cabin")}</div>`;
-    if (v === "NATIVE") add(panel("Queue", "YouTube's playlist panel", "queue"));
-    else if (v === "MORPHE") { add(panel("Morphe queue", "a playlist on your account", "plist")); toast7(dev, "Added to queue", "16%"); }
-    else if (v === "LOCAL") { add(panel("Queue (1)", "kept on this phone", "phone")); toast7(dev, "Added to queue", "16%"); }
-    else toast7(dev, "YouTube's own queue (stock)", "40%");
+    const shell = (head, body, note) => `<div style="border-radius:5px;background:#212121;padding:4px;display:grid;grid-template-columns:minmax(0,1fr);gap:3px;box-shadow:0 -2px 8px rgba(0,0,0,.5)"><div style="display:flex;gap:3px;align-items:center;font-size:6.5px">${head}</div>${body}<div style="color:#aaa;font-size:5.5px;line-height:1.3">${note}</div></div>`;
+    const line = (art, t, sub, lead = "") => `<div style="display:flex;gap:3px;align-items:center;font-size:6px">${lead}<span style="width:20px;height:11px;border-radius:2px;background:${ART[art]};flex:none"></span><span style="min-width:0;flex:1;line-height:1.25"><span style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t}</span><span style="display:block;color:#aaa;font-size:5px">${sub}</span></span></div>`;
+    if (v === "NATIVE") add(shell(`${ico7("queue", 7)}<b style="flex:1">Queue</b><span style="color:#aaa">1 / 2</span>${ico7("close", 7)}`,
+      line(4, "Night train to Bodø", "Playing now", ico7("play", 5)) + line(3, "Building a tiny cabin", "Next"),
+      "Native: YouTube's own queue panel, under the player"));
+    else if (v === "MORPHE") { add(shell(`${ico7("plist", 7)}<b style="flex:1">Your playlists</b>`,
+      `<div style="display:flex;gap:3px;align-items:center;font-size:6px"><span style="width:20px;height:11px;border-radius:2px;background:${ART[3]};flex:none;position:relative"><i style="position:absolute;right:0;top:0;bottom:0;width:8px;background:rgba(0,0,0,.7);display:grid;place-items:center;font-size:4.5px;font-style:normal">1</i></span><span style="min-width:0;flex:1;line-height:1.25"><b style="display:block">Morphe queue</b><span style="display:block;color:#aaa;font-size:5px">Private playlist · 1 video</span></span></div>`,
+      "Morphe: a playlist on your YouTube account")); toast7(dev, "Added to queue", "16%"); }
+    else { add(shell(`${ico7("phone", 7)}<b style="flex:1">Queue (1)</b>`, line(3, "Building a tiny cabin", "Next"), "Client side: kept only on this phone")); toast7(dev, "Added to queue", "16%"); }
   });
   return "";
 });
@@ -267,14 +282,18 @@ scen("feed", "playlist_wide_drag_handles", (box, on) => {
 // account (the classic posts: like and dislike at the start, comments and share far off at the end);
 // Enforced turns on the grouped layout of the post template, the comment and share buttons right next to
 // like and dislike, the same for every account. The Enforced phone starts like Server and pulls together.
+// Round 136 (Max: "shows nothing, maybe explanation is better"): the buttons are drawn large, each side says
+// in words what it shows, and the Enforced side moves at once.
 scen("feed", "post_buttons_layout", (box, v) => {
   situation("The buttons below a community post");
-  const b = (n, t = "") => `<span class="pb7" style="display:inline-flex;align-items:center;gap:1px;padding:2px;border-radius:6px;background:transparent;transition:background .3s">${ico7(n, 6)}${t ? `<span style="font-size:5px">${t}</span>` : ""}</span>`;
+  const enforced = v === "ENFORCED";
+  const b = (n, t = "") => `<span class="pb7" style="display:inline-flex;align-items:center;gap:2px;height:13px;padding:0 4px;border-radius:7px;background:#272727;flex:none;transition:background .3s">${ico7(n, 8)}${t ? `<span style="font-size:6px">${t}</span>` : ""}</span>`;
   box.innerHTML = device("port", pageRows(`<div style="display:flex;gap:4px;align-items:center"><span style="width:12px;height:12px;border-radius:50%;background:${AV[0]}"></span><b style="font-size:7px;flex:1">Fjord & Timber</b>${ico7("more", 8)}</div><div style="font-size:6.5px">The roof is done! Next week: the wood stove.</div><div style="height:34px;border-radius:4px;background:${ART[0]}"></div>
-    <div class="pbr7" style="display:flex;align-items:center;gap:1px">${b("like", "2.1K")}${b("dislike")}<span class="sp7" style="flex:1 1 0;transition:flex-grow .6s var(--ease)"></span>${b("comment", "84")}${b("share")}</div>` + row7(2, "Building a tiny cabin")));
-  if (v !== "ENFORCED") return "";
-  const dev = box.querySelector(".dev");
-  at(700, () => { dev.querySelector(".sp7").style.flexGrow = "0"; dev.querySelectorAll(".pb7").forEach(x => { x.style.background = "#272727"; }); dev.querySelector(".pbr7").style.gap = "2px"; });
+    <div class="pbr7" style="display:flex;align-items:center;gap:3px;padding:2px 0;border-radius:8px;outline:1.5px solid transparent;outline-offset:2px;transition:outline-color .3s">${b("like", "2.1K")}${b("dislike")}<span class="sp7" style="flex:1 1 0;min-width:0;transition:flex-grow .7s var(--ease)"></span>${b("comment", "84")}${b("share")}<span class="sp8" style="flex:0 1 0;min-width:0;transition:flex-grow .7s var(--ease)"></span></div>
+    <div class="ex7" style="font-size:6.5px;line-height:1.35;color:#aaa">${enforced ? "Enforced: Comment and Share sit right next to Like, the same for every account" : "Server: whatever YouTube sends your account, here Comment and Share far at the end"}</div>` + row7(2, "Building a tiny cabin")));
+  const dev = box.querySelector(".dev"), row = dev.querySelector(".pbr7");
+  at(60, () => { row.style.outlineColor = "rgba(62,166,255,.8)"; if (enforced) { dev.querySelector(".sp7").style.flexGrow = "0"; dev.querySelector(".sp8").style.flexGrow = "1"; } });
+  at(1500, () => { row.style.outlineColor = "transparent"; });
   return "";
 });
 // Morphe: "A download button is shown next to the Share button of posts with images or GIFs, and a
@@ -485,20 +504,26 @@ scen("ambient", "disable_fullscreen_ambient_mode", (box, on) => {
 // feed, and a video starting with sound on the watch page. Each option picks which of the two may show
 // them (Max, Nov 24: the old story played both on one video, as if unmuting were the trigger).
 // "Always show" keeps YouTube's own (both); the CC button still works by hand in every case.
-SCN_HOLD.morphe_auto_captions_style = 4400; // feed, watch page, feed again
+// Round 136 (Max: "the last two buttons I don't think it's what they do"), read again from AutoCaptionsPatch:
+//   disableAutoCaptions: the caption track YouTube selects by itself when a video loads is kept only by
+//     BOTH_ENABLED and WITH_VOLUME_ONLY ("Show when unmuted");
+//   disableMuteAutoCaptions: YouTube's "captions when the phone's volume is at zero" feature stays on only
+//     for BOTH_ENABLED and WITHOUT_VOLUME_ONLY ("Show when muted").
+// So the two moments are one video: it starts with the volume up, then the phone's volume goes to zero.
+// Two readouts under the video keep both answers on screen, so every option ends different.
+SCN_HOLD.morphe_auto_captions_style = 3600;
 scen("captions", "auto_captions_style", (box, v) => {
-  situation("A muted preview in the feed, then the video with sound");
+  situation("A video starts, then the phone's volume goes to zero");
   const show = muted => v === "BOTH_ENABLED" || (muted ? v === "WITHOUT_VOLUME_ONLY" : v === "WITH_VOLUME_ONLY");
-  const cap = (txt, on) => `<span class="cap7" style="position:absolute;left:50%;bottom:4px;transform:translateX(-50%);font-size:6px;background:rgba(8,8,8,.78);padding:0 3px;border-radius:2px;white-space:nowrap;opacity:${on ? 1 : 0};transition:opacity .3s">${txt}</span>`;
-  const sound = muted => `<span class="badge7" style="left:3px;top:3px">${ico7(muted ? "mute" : "vol", 6)} ${muted ? "Muted" : "Sound on"}</span>`;
-  box.innerHTML = device("port", pageRows(feed7(big7(3, "Building a tiny cabin", sound(true) + cap("so today we start the roof", show(true))) + row7(2, "Night train to Bodø"))));
-  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger");
-  at(1300, () => { const card = dev.querySelector(".pg7 > div:nth-child(3)"); if (card && f) fingerOn(dev, f, card, .5, .3); });
-  at(1600, () => { if (f) tapF(f); });
-  at(1850, () => { if (f) f.classList.remove("show"); dev.querySelector(".pg7").outerHTML = watch7(sound(false) + cap("first the rafters go up", show(false))); });
-  // under the video, the next one starts previewing muted: the story ends with both moments on screen,
-  // so every option ends looking different from the others
-  at(3400, () => { const pg = dev.querySelector(".pg7"), rows = [...pg.children].slice(-2); rows.forEach(r => r.remove()); pg.insertAdjacentHTML("beforeend", `<div style="animation:ghostin .3s">${big7(4, "Up next · Night train", sound(true) + cap("the train leaves at dawn", show(true)))}</div>`); });
+  const cap = `<span class="cap7" style="position:absolute;left:50%;bottom:4px;transform:translateX(-50%);font-size:6px;background:rgba(8,8,8,.78);padding:0 3px;border-radius:2px;white-space:nowrap;opacity:0;transition:opacity .25s">so today we start the roof</span>`;
+  const vol = `<span class="vol7" style="position:absolute;left:50%;top:5px;transform:translateX(-50%);display:flex;align-items:center;gap:3px;padding:2px 5px;border-radius:7px;background:rgba(20,20,20,.86);font-size:5.5px">${ico7("vol", 7)}<i style="width:34px;height:2.5px;border-radius:2px;background:#555;display:block;overflow:hidden"><i class="vf7" style="display:block;height:100%;width:60%;background:#fff;transition:width .5s var(--ease)"></i></i></span>`;
+  const line = (id, txt) => `<div class="st7" data-s="${id}" style="display:flex;align-items:center;gap:4px;font-size:6.5px;line-height:1.3;opacity:.35;transition:opacity .25s"><span style="flex:1;min-width:0">${txt}</span><b class="an7" style="font-weight:600"></b></div>`;
+  box.innerHTML = device("port", pageRows(player7(3, vol + cap) + `<b style="font-size:7px">Building a tiny cabin</b><div style="display:grid;gap:3px;background:#212121;border-radius:5px;padding:4px 5px">${line("up", "Video starts, volume up")}${line("zero", "Phone volume at zero")}</div>` + row7(2, "Up next · Night train")));
+  const dev = box.querySelector(".dev"), c = dev.querySelector(".cap7");
+  const say = (id, on) => { const l = dev.querySelector(`.st7[data-s="${id}"]`); if (!l) return; l.style.opacity = 1; const a = l.querySelector(".an7"); a.textContent = on ? "Captions on" : "No captions"; a.style.color = on ? "#7fd18a" : "#aaa"; };
+  at(60, () => { c.style.opacity = show(false) ? 1 : 0; say("up", show(false)); });
+  at(1700, () => { dev.querySelector(".vf7").style.width = "0%"; const sp = dev.querySelector(".vol7 svg"); if (sp) sp.outerHTML = ico7("mute", 7); });
+  at(2150, () => { c.textContent = "first the rafters go up"; c.style.opacity = show(true) ? 1 : 0; say("zero", show(true)); });
   return "";
 });
 scen("captions", "auto_translate_additional_languages", (box, on) => {
@@ -558,7 +583,7 @@ for (const [k, where, page] of [
   hidePage("shorts", k, where, page + row7(2, "Building a tiny cabin") + tgt7(`<div><div style="display:flex;gap:3px;align-items:center;font-size:6.5px">${ico7("shorts", 8, "#ff0033")}<b>Shorts</b></div><div style="display:flex;gap:3px;margin-top:2px">${[5, 6, 7].map(i => `<div style="width:18px;height:30px;border-radius:2px;background:${ART[i]}"></div>`).join("")}</div></div>`) + row7(4, "Night train to Bodø"));
 hidePage("shorts", "hide_shorts_video_description", "A Short", `<div style="position:absolute;inset:0;background:${ART[5]}"></div><div style="position:absolute;left:5px;bottom:8px;right:20px;font-size:6px;display:grid;gap:2px"><b>@fjordtimber</b>${tgt7("<div>Roof day! Part 4 of the cabin build #diy #cabin</div>")}</div>`, { raw: true });
 hidePage("shorts", "hide_shorts_live_preview", "Shorts feed", `<div style="position:absolute;inset:0;background:${ART[5]}"></div>` + `<div class="tgt7" style="position:absolute;left:5px;top:10px;padding:2px 4px;border-radius:3px;background:#cc0000;font-size:6px">LIVE · Northern lights</div>`, { raw: true });
-hidePage("shorts", "hide_shorts_search_suggestions", "A Short", `<div style="position:absolute;inset:0;background:${ART[5]}"></div><div class="tgt7" style="position:absolute;left:5px;right:5px;top:12px;padding:2px 4px;border-radius:6px;background:rgba(0,0,0,.6);font-size:6px;display:flex;gap:3px;align-items:center">${ico7("search", 7)}Search “cabin roof”</div>`, { raw: true });
+hidePage("shorts", "hide_shorts_search_suggestions", "A Short", `<div style="position:absolute;inset:0;background:${ART[5]}"></div><div style="position:absolute;left:5px;right:22px;bottom:8px;display:grid;gap:3px;justify-items:start;font-size:6px"><div class="tgt7" style="padding:2px 5px;border-radius:7px;background:rgba(0,0,0,.6);display:flex;gap:3px;align-items:center">${ico7("search", 7)}Search “cabin roof”</div><div style="display:flex;gap:3px;align-items:center"><span style="width:9px;height:9px;border-radius:50%;background:${AV[5 % AV.length]}"></span><b>@tinykitchen</b></div><div>Tiny pancakes for a tiny breakfast</div></div>`, { raw: true }); // a suggested action: the pill above the channel (ShortsFilter), not a bar at the top
 scen("shorts", "shorts_autoplay_background", (box, on) => {
   situation("A Short ends while the app is in the background", true);
   box.innerHTML = device("port", `<div style="position:absolute;inset:0;background:#222;display:grid;place-items:center;font-size:6.5px;color:#aaa">Other app</div><div class="toastin" style="top:6px">${ico7("music", 7)} Playing: Short 1</div>`);
@@ -1073,8 +1098,8 @@ scen("playback", "playback_buffer_size", (box, pick) => {
     dev.querySelector(".ba7").style.width = ahead(m) + "%"; dev.querySelector(".bt7").textContent = txt;
     dev.querySelectorAll(".bp7 span").forEach(e => { e.style.background = e.dataset.v === v ? (v === "DEFAULT" ? "#3a3a3a" : "var(--on-green)") : "#2a2a2a"; });
   };
-  at(0, () => {}); // the first drawing (YouTube's own) stays on screen before the change (no lead-in trim)
-  if (steps.some(x => x[0] === pick) && pick !== "DEFAULT") at(900, () => put(pick));
+  // the bar starts growing as the pill is pressed (Max, Nov 24: no delay before an animation)
+  if (steps.some(x => x[0] === pick) && pick !== "DEFAULT") at(60, () => put(pick));
   return "";
 });
 // A comparison told in words instead of an animation: two cards the size of the phones, a heading and

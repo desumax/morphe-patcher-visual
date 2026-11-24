@@ -283,3 +283,16 @@ html:not(.touchwait) .dbtn:active { transform: scale(.98); }
 /* Import / Export, as Morphe's dialog (list.js importExportDialog) */
 .dlg textarea.iex { display: block; width: 100%; box-sizing: border-box; min-height: 180px; max-height: 46vh; margin: 8px 0 0; padding: 10px 12px; border: 0; border-radius: 12px; background: var(--m-c-highest, #303134); color: inherit; font: 12px/1.45 "Roboto Mono", ui-monospace, monospace; resize: vertical; white-space: pre; overflow: auto; }
 .dlg .iexrow { display: flex; gap: 8px; margin: 10px 0 2px; } .dlg .iexrow .dbtn { flex: 1 1 0; }
+
+/* a row that runs something in Morphe (Clear saved loop counts, Import / Export): a compact pill on the
+   right of its card, where the toggles sit */
+.actpill { flex: none; display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 12px; border-radius: 999px; border: 0; background: var(--m-c-high, #272727); color: var(--m-primary, #3ea6ff); font: inherit; font-size: 12.5px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+.actpill svg { width: 15px; height: 15px; fill: currentColor; }
+.theme-yt .actpill { background: #272727; color: #3ea6ff; }
+.theme-glass .actpill { background-color: var(--g-ctl); box-shadow: var(--g-ctl-edge); }
+html:not(.touchwait) .actpill:active { filter: brightness(1.25); }
+/* Morphe design: the same card list as Glass (Max, Nov 24): every setting its own rounded card, a hair apart; rows that belong together (a unit, a shared sub-screen, a zone grid) stay one card */
+.theme-m3 .group { background: none; margin: 0 10px 2px; overflow: visible; }
+.theme-m3 .group > :is(.row, .unit, .zgrid, .shared) { background-color: var(--m-c); border-radius: 22px; margin-bottom: 2px; overflow: hidden; }
+.theme-m3 .group > .row, .theme-m3 .group > .shared, .theme-m3 .group > .unit > .row:first-child, .theme-m3 .group > .zgrid, .theme-m3 .group > * + .zgrid, .theme-m3 .zgrid + * { border-top: 0; }
+.theme-m3 .group > .row.sel::before, .theme-m3 .group > .unit > .row.sel:first-child::before { top: 14px; bottom: 14px; }

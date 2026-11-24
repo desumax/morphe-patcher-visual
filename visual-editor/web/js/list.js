@@ -115,7 +115,19 @@ function paintPicker() {
     // one line: the title on the left, its toggle on the right (Max, Nov 23 PM)
     + `<div class="themerow uirow"><span class="pi">${I("palette")}</span><div class="tt">UI design${theme === "glass" && glassTier !== null ? `<small>${GLASS_TIER_NAMES[glassTier]}${typeof glassForced === "number" ? " (forced)" : ""}</small>` : ""}</div>${seg3("UI design", "ui", UI_DESIGNS, theme, uiOff())}</div>`
     + `<div class="themerow designrow"><div class="dcol"><div class="dsg"><span class="pi">${I("list")}</span><div class="tt">Settings list design</div></div><div class="drow">${seg3("Settings list design", "design", LIST_DESIGNS, design)}<button class="offnew" data-editor-off>${I("power")}Disable new design</button></div></div></div>`);
-  placeSeg3();
+  placeSeg3(); centreIcons($("pickGrid"));
+}
+// An icon's drawing rarely fills its 24 px box evenly (a gear sits a little low, a play triangle to one
+// side), so an icon centred by its box looks off centre in a round pill: each one is moved so the
+// drawing itself is centred (Max, Nov 24: "slightly offset downwards"). For any .pi icon, whatever the set.
+function centreIcons(root) {
+  root.querySelectorAll(".pi > svg").forEach(s => {
+    try {
+      const b = s.getBBox(), vb = s.viewBox.baseVal, k = (s.getBoundingClientRect().width || 20) / (vb.width || 24); if (!b.width || !b.height) return;
+      const dx = (vb.x + vb.width / 2 - (b.x + b.width / 2)) * k, dy = (vb.y + vb.height / 2 - (b.y + b.height / 2)) * k;
+      s.style.translate = Math.abs(dx) < .05 && Math.abs(dy) < .05 ? "" : `${dx.toFixed(2)}px ${dy.toFixed(2)}px`;
+    } catch { /* not drawn yet */ }
+  });
 }
 // ---- DEV ONLY: "finished" checkmarks -------------------------------------------------------------
 // Screens Max has signed off ("lock it"). Shown as a small check in the screen menu and on the tabs.
@@ -314,6 +326,10 @@ function renderStage() {
   hugComponents(st);
   st.querySelectorAll(".c").forEach(fitRing);
   const sel = st.querySelector(".c.sel"); if (sel) watchRing(sel); wakeRings();
+  // a part the selected setting just added but that is no part of its own (the action buttons of Feed card
+  // layout's longest option) is scrolled into the preview, or the change happens below its edge unseen
+  const fo = selected && st.querySelector(`[data-focus="${selected}"]`);
+  if (fo) { const sc = fo.closest(".inner-scroll"); if (sc) { const r = fo.getBoundingClientRect(), b = sc.getBoundingClientRect(); if (r.top < b.top + 4 || r.bottom > b.bottom - 4) sc.scrollTo({ top: sc.scrollTop + (r.top + r.height / 2) - (b.top + b.height / 2), behavior: "smooth" }); } }
 }
 // Opening a sheet: the menu row is tapped, the menu slides down and the sheet slides up, as in the
 // app. Going back to the menu plays it the other way. The old sheet is a copy without settings on it.
@@ -415,7 +431,10 @@ const RANGES = { font_size: [8, 48], travel_duration: [2, 15], width_dip: [100, 
 const sameVal = (a, b) => String(a) === String(b) || (a !== "" && b !== "" && a != null && b != null && !isNaN(a) && !isNaN(b) && Number(a) === Number(b));
 function controlFor(k) {
   const p = PREF[k]; const v = V(k); const dis = !parentsOk(k) ? "disabled" : "";
-  const ents = entriesFor(k).filter(e => !(OFF_LIST.has(k) && e.value === "off"));
+  let ents = entriesFor(k).filter(e => !(OFF_LIST.has(k) && e.value === "off"));
+  // a Show / Hide list keeps Morphe's order (Show all first) unless its default is another choice: then
+  // the default (the grey pill) leads on the far left (Max, Nov 24, Expandable cards under videos)
+  if (ents.length > 1 && ents.every(e => /^(show|hide)\b/i.test(String(e.label))) && !sameVal(ents[0].value, defaults[k])) ents = [...ents.filter(e => sameVal(e.value, defaults[k])), ...ents.filter(e => !sameVal(e.value, defaults[k]))];
   if (OFF_LIST.has(k) && String(v) === "off") return "";
   // up to 8 choices: a row of pills; 9 to 16 (icon styles, theme colours, qualities): a 3-column grid
   // of pills built from the same entries, so it follows whatever list Morphe ships; more: a dropdown
@@ -566,7 +585,7 @@ function importExportDialog() {
 }
 function actionFor(k) {
   const a = ACTION_ROWS[k]; if (!a) return "";
-  return `<div class="ctl"><button class="opt actbtn" data-act="${k}">${I(a.icon)}${esc(a.btn)}</button></div>`;
+  return `<button class="actpill" data-act="${k}">${I(a.icon)}${esc(a.btn)}</button>`;
 }
 function runActionRow(k) {
   const a = ACTION_ROWS[k]; if (!a) return;
@@ -612,7 +631,8 @@ function rowHTML(k, live) {
   else if (live && a.kind !== "scenario") { right = stateChip(k); if (!isBool) ctl = controlFor(k); }
   else if (isBool) right = swHTML();
   else if (!info) ctl = controlFor(k);
-  else ctl = actionFor(k) || linkFor(k);
+  else if (ACTION_ROWS[k]) right = actionFor(k); // a compact pill on the right, where the toggles sit (Max, Nov 24)
+  else ctl = linkFor(k);
   // A list setting (speeds, filter words): the chips are the control, so nothing sits on the right and
   // they get the card's full width. Its Reset is a small pill beside the title, greyed out like the
   // screen's Reset until the list differs from Morphe's own (it asks before restoring).

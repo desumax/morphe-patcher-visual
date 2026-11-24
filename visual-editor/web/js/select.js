@@ -129,12 +129,14 @@ function toggle(k) {
   const wasGhost = ghosts.has(k) || fading.has(k);
   clearGhost(k);
   const nowShown = visual ? shown(k) : null;
-  if (visual && wasShown && !nowShown) {
+  // a setting with a demo of its own doesn't fold its part away first: the demo shows it going, and the
+  // fold made the demo start late and then start again when the preview was redrawn (the finger flickered)
+  if (visual && wasShown && !nowShown && !DEMOS[k]) {
     // collapse the visible component first, then draw the new layout
     const els = [...stageEls(k)].filter(e => !e.classList.contains("intray") && e.offsetParent);
     if (els.length) {
       stageHold++;
-      const done = () => { if (!stageHold) return; stageHold = 0; renderStage(); if (selected) highlight(selected); };
+      const done = () => { if (!stageHold) return; stageHold = 0; renderStage(); if (selected) highlight(selected); if (selected && DEMOS[selected]) startDemo(selected); };
       els.forEach(e => e.classList.remove("pressing", "charging"));
       // scroll the component into view first so you see it go
       const wait = revealInStage(els) ? 360 : 0; skipReveal = true;

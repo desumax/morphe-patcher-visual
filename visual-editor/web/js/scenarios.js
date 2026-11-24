@@ -318,7 +318,7 @@ const atNow = (ms, f, side) => clock.after("steps", ms * scStretch, () => { cons
 // While a comparison is being drawn its steps are collected (scCollect) and then started together, with
 // any idle lead-in trimmed: the first thing that happens comes at most LEAD_MS after the phones appear,
 // in every story, whatever times it was written with (an 0.8 s wait with nothing moving read as lag).
-const LEAD_MS = 300;
+const LEAD_MS = 60; // Max, Nov 24: no delays anywhere, a story starts as its button is pressed
 let scCollect = null;
 const at = (ms, f) => { if (scCollect) { scCollect.push([ms, f, scSide]); return; } return atNow(ms, f, scSide); };
 // steps due at the same moment (the two phones' turns, say) run in one timer, in the order they were
@@ -615,15 +615,19 @@ SCENES.watch = () => {
   const subBtn = `<div class="chip subbtn" style="background:#f1f1f1;color:#0f0f0f">Subscribe</div>`;
   const channelChip = C("hide_channel_profile_button", `<div class="chip" style="padding:0 4px 0 4px;gap:6px">${C("hide_channel_bar", av(0, 26), { tag: "span" })}<span style="font-size:12.5px">Fjord & Timber</span>${C("hide_channel_profile_subscribe_button", `<span class="chip subbtn" style="height:26px;background:#f1f1f1;color:#0f0f0f;font-size:12px;padding:0 10px">Subscribe</span>`, { tag: "span" })}</div>`);
   const joinChip = C("hide_join_membership_button", `<div class="chip" style="background:transparent;border:1px solid #555">Join</div>`);
-  const rest = [act("hide_comments_button", "comment", "1.2K"), act("hide_share_button", "share", "Share"), act("hide_remix_button", "remix", "Remix"), act("hide_thanks_button", "dollar", "Thanks"),
-    act("hide_download_button", "dl", "Download"), act("hide_clip_button", "clip", "Clip"), act("hide_save_button", "save", "Save"), act("hide_ask_button", "spark", "Ask"),
+  const rest = [act("hide_comments_button", "comment", "1.2K"), act("hide_share_button", "share", "Share"), act("hide_save_button", "save", "Save"), act("hide_remix_button", "remix", "Remix"), act("hide_thanks_button", "dollar", "Thanks"),
+    act("hide_download_button", "dl", "Download"), act("hide_clip_button", "clip", "Clip"), act("hide_ask_button", "spark", "Ask"),
     act("hide_hype_button", "fire", "Hype"), act("hide_shop_button", "shop", "Shop"), act("hide_connect_button", "link", "Connect"), act("hide_promote_button", "speed", "Promote"), act("hide_stop_ads_button", "close", "Stop ads"),
     act("hide_report_button", "flag", "Report"), act("hide_more_button", "moreh", "")].join("");
   // minimal: five equal tiles, an icon above its text; the last one opens the menu with the other buttons
   const tile0 = (icon, label, extra = "") => `<div class="mtile" ${extra}style="flex:1 1 0;min-width:0;display:grid;justify-items:center;gap:3px;padding:6px 0;border-radius:12px;font-size:11px;color:#f1f1f1">${I(icon)}<span style="white-space:nowrap">${label}</span></div>`;
   const tile = (k, icon, label, extra) => C(k, tile0(icon, label, extra), { style: "flex:1 1 0;min-width:0;display:flex" });
-  const minimalBar = `<div class="mbar" style="display:flex;gap:2px;padding:0 8px 10px">${C("hide_like_dislike_button", `<div style="flex:1;display:flex;gap:2px">${tile0("like", `<span class="rollnum" data-n="48">48K</span>`)}${tile0("dislike", dislike || "Dislike")}</div>`, { style: "flex:2 1 0;min-width:0;display:flex" })}${tile("hide_share_button", "share", "Share")}${tile("hide_save_button", "save", "Save")}${tile("hide_more_button", "moreh", "More", 'data-more="1" ')}</div>`;
-  const actions = modern ? channelChip + joinChip + likeChip + rest : classic ? joinChip + subBtn + likeChip + rest : likeChip + rest;
+  const minimalBar = `<div class="mbar" style="display:flex;gap:2px;padding:0 8px 10px">${C("hide_like_dislike_button", `<div style="flex:1;display:flex;gap:2px">${tile0("like", `<span class="rollnum" data-n="48">48K</span>`, 'data-glow="1" ')}${tile0("dislike", dislike || "Dislike")}</div>`, { style: "flex:2 1 0;min-width:0;display:flex" })}${tile("hide_share_button", "share", "Share")}${tile("hide_save_button", "save", "Save")}${tile("hide_more_button", "moreh", "More", 'data-more="1" ')}</div>`;
+  // Round 136, read again from setVideoActionBarLayout: the classic row is built as the subscribe item first
+  // (the compact channel bar: avatar, name and Subscribe in one pill), then like and dislike, then share and
+  // save in the server's order, then every item of the minimal layout's menu. One row has no channel row
+  // above it; two rows moves that first item into its own row (name beside the avatar, Subscribe at the end).
+  const actions = modern || classic ? channelChip + joinChip + likeChip + rest : likeChip + rest;
   const rowStyle = "display:flex;gap:8px;overflow-x:auto;scrollbar-width:none";
   // the channel row above the buttons: with the subscribe button at its end (two rows, minimal), without it
   // when the button leads the row of pills (classic)
@@ -632,11 +636,11 @@ SCENES.watch = () => {
   return `<div style="background:#0f0f0f;height:330px;overflow-y:auto;scrollbar-width:thin;position:relative" class="inner-scroll">
     <div class="finger"></div>
     <div style="height:96px;position:relative">${videoFrame(0)}<div class="seek" style="bottom:0;left:0;right:0;border-radius:0"><div class="played" style="width:30%"></div></div></div>
-    <div style="padding:10px 12px ${modern ? 8 : 0}px">
+    <div style="padding:10px 12px ${modern || classic ? 8 : 0}px">
       <div style="font-size:17px;font-weight:500;line-height:1.3">${esc(VIDEOS[0].t)}</div>
       <div class="t2" style="margin-top:4px"><span class="rollnum" data-n="1.2">1.2M</span> views · ${VIDEOS[0].a} <b style="color:#fff">...more</b></div>
     </div>
-    ${modern ? "" : classicBar}
+    ${modern || classic ? "" : classicBar}
     ${C("hide_action_bar", minimal ? minimalBar : `<div class="abrow" style="${rowStyle};padding:12px 12px 10px;margin-top:-12px">${actions}</div>`, { blk: 1 })}
     ${C("hide_comments_section", `<div style="margin:0 12px 10px;background:#272727;border-radius:12px;padding:10px 12px">
         <div class="t1">Comments <span class="t2">1.2K</span></div>
@@ -739,6 +743,9 @@ function inkOn(hex) {
 const SB_BEHAVIOUR = [{ label: "Skip automatically", value: "skip" }, { label: "Skip automatically once", value: "skip-once" }, { label: "Show a skip button", value: "manual-skip" }, { label: "Show in seekbar", value: "seekbar-only" }, { label: "Disable", value: "ignore" }];
 const SB_CATS = [["sponsor", "Sponsor", "skip-once", "#00d400"], ["selfpromo", "Unpaid/Self promotion", "manual-skip", "#ffff00"], ["interaction", "Interaction reminder", "manual-skip", "#cc00ff"], ["highlight", "Highlight", "manual-skip", "#ff1684"], ["hook", "Hook/Greetings", "ignore", "#395699"], ["intro", "Intermission/Intro animation", "manual-skip", "#00ffff"], ["outro", "Endcards/Credits", "manual-skip", "#0202ed"], ["preview", "Preview/Recap", "ignore", "#008fd6"], ["filler", "Filler tangent/Jokes", "ignore", "#7300ff"], ["music_offtopic", "Music: Non-music section", "manual-skip", "#ff9900"]];
 const SB_SEGS = { sponsor: [8, 9], selfpromo: [46, 5], interaction: [30, 3], intro: [0, 3], outro: [88, 12], highlight: [60, 1], filler: [70, 6], music_offtopic: [20, 4], preview: [3, 2], hook: [36, 2] };
+// The SponsorBlock preview is the Player controls preview with SponsorBlock's parts added (playerWith), so
+// the buttons, opacity and icon style chosen under Player controls show here too. Its two buttons sit in
+// the player's bottom row with Morphe's other player buttons, the segments on the player's own seekbar.
 SCENES.sponsorblock = () => {
   const on = !!V("morphe_sb_enabled");
   const sq = !!V("morphe_sb_square_layout");
@@ -746,17 +753,14 @@ SCENES.sponsorblock = () => {
   const r = sq ? 2 : 18;
   const noseg = !!V("morphe_sb_video_length_without_segments");
   const segs = on ? SB_CATS.filter(([k]) => SB_SEGS[k] && V("morphe_sb_" + k) !== "ignore").map(([k, , , col]) => `<i data-seg="${k}" style="position:absolute;left:${SB_SEGS[k][0]}%;width:${SB_SEGS[k][1]}%;top:0;bottom:0;background:${String(V("morphe_sb_" + k + "_color") || col).replace(/^#..(......)$/, "#$1")}"></i>`).join("") : "";
-  return `<div class="video">${videoFrame(2)}<div class="scrim" style="opacity:.35"></div>
-    <div style="position:absolute;right:14px;top:12px;display:flex;gap:6px">
-      ${on ? C("sb_create_new_segment", `<div class="pbtn" style="width:34px;height:34px;border-radius:${sq ? 4 : 17}px;background:rgba(0,0,0,.35)">${I("plus")}</div>`, { also: "sb_create_new_segment_step" }) : ""}
-      ${on ? C("sb_voting_button", `<div class="pbtn" style="width:34px;height:34px;border-radius:${sq ? 4 : 17}px;background:rgba(0,0,0,.35)">${I("like")}</div>`) : ""}
-    </div>
-    ${on ? C("sb_compact_skip_button", `<div class="sbskip" style="display:flex;align-items:center;gap:6px;height:34px;padding:0 ${compact ? 10 : 14}px;border-radius:${r}px;background:rgba(0,0,0,.72);border:1px solid rgba(255,255,255,.25);font-size:12.5px;font-weight:500">${I("skip", "ico", 'style="width:18px;height:18px"')}${compact ? "Skip" : "Skip sponsor"}</div>`, { style: "position:absolute;right:12px;bottom:46px", also: "sb_square_layout" }) : ""}
-    <div class="time" style="position:absolute;left:12px;bottom:24px">1:30 / ${on && noseg ? `16:12 <span style="color:#9be89b">(14:20)</span>` : "16:12"}</div>
-    ${C("sb_enabled", `<div class="seek" style="bottom:10px;overflow:visible"><div class="buf" style="width:60%"></div>${segs}<div class="played" style="width:9%"></div><div class="knob" style="left:9%"></div></div>`, { also: "sb_video_length_without_segments", style: "position:absolute;left:0;right:0;bottom:0;height:20px" })}
-    ${on ? "" : `<div class="demo-label">SponsorBlock is off</div>`}
-    <div class="finger" id="finger"></div>
-  </div>`;
+  const sbBtn = (k, icon, o) => C(k, `<div class="pbtn" style="width:32px;height:32px;border-radius:${sq ? 4 : 16}px">${I(icon)}</div>`, o);
+  return playerWith({
+    buttons: on ? sbBtn("sb_create_new_segment", "plus", { also: "sb_create_new_segment_step" }) + sbBtn("sb_voting_button", "like") : "",
+    segs: C("sb_enabled", segs, { also: "sb_video_length_without_segments", style: "position:absolute;inset:0" }),
+    time: `3:12 / ${on && noseg ? `18:42 <span style="color:#9be89b">(16:50)</span>` : "18:42"}`,
+    over: (on ? C("sb_compact_skip_button", `<div class="sbskip" style="display:flex;align-items:center;gap:6px;height:34px;padding:0 ${compact ? 10 : 14}px;border-radius:${r}px;background:rgba(0,0,0,.72);border:1px solid rgba(255,255,255,.25);font-size:12.5px;font-weight:500">${I("skip", "ico", 'style="width:18px;height:18px"')}${compact ? "Skip" : "Skip sponsor"}</div>`, { style: "position:absolute;right:12px;bottom:58px", also: "sb_square_layout" }) : `<div class="demo-label">SponsorBlock is off</div>`)
+      + `<div class="finger" id="finger"></div>`,
+  });
 };
 def("sponsorblock", "style", "sb_enabled sb_square_layout sb_compact_skip_button sb_video_length_without_segments");
 def("sponsorblock", "vis", "sb_create_new_segment sb_voting_button");

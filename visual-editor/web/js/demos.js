@@ -208,7 +208,7 @@ const DEMOS = {
     // YouTube's glow: when the creator says "like" or "subscribe", a bright sheen sweeps across the Like and
     // Subscribe buttons and they light up warm. Drawn inside each button: an outer glow was cut off by
     // the scrolling action bar around Like, so only Subscribe seemed to react (Max, Nov 24: regressed)
-    const parts = [...document.querySelectorAll("#stage .likechip, #stage .subbtn")];
+    const parts = [...document.querySelectorAll("#stage .likechip, #stage .mtile[data-glow], #stage .subbtn")];
     showPill("\u201CLike and subscribe!\u201D", 1300);
     if (!parts.length || disabled) { label("Creator says \"hit like\": no glow", true); return; }
     parts.forEach(e => {
@@ -359,7 +359,9 @@ function startDemo(k) {
     try { fn(demoOnGhost ? !isHideKey(k) : V(k)); } catch (err) { hintFailed(k, err); return stopDemo(); }
     demoStep++;
   };
-  dT(run, 60);
+  // at once, in this same turn (Max, Nov 24: the finger came late and flickered); while a hidden part is
+  // still folding away the preview is about to be redrawn, and the redraw starts the demo (stageHold)
+  if (!stageHold) run();
   clock.every("demo", LOOP_MS, run);
 }
 const isAnimated = k => { const a = A[k]; return !!a && (a.kind === "gesture" || a.kind === "behaviour" || a.kind === "scenario" || !!DEMOS[k]); };
@@ -384,7 +386,7 @@ Object.assign(DEMOS, {
     const reset = () => { if (bub) { bub.classList.remove("dragging"); bub.style.left = ""; bub.style.opacity = ""; } if (tl) tl.textContent = "7:51"; [played, knob, ring].forEach(e => e && (e.style.transition = "")); setSeek(p0); };
     onDemoStop(reset);
     frame(p0); f.classList.add("hold");
-    const t0 = performance.now() + 180, dur = 1000, tok = clock.run("demo");
+    const t0 = performance.now() + 40, dur = 1000, tok = clock.run("demo");
     const step = now => {
       if (!clock.alive("demo", tok) || !document.body.contains(seek)) return;
       const t = Math.min(1, Math.max(0, (now - t0) / dur)), e = t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
@@ -412,7 +414,7 @@ Object.assign(DEMOS, {
   // the Shorts "Swipe up" tip: it appears over a Short, the arrow nudging up, and goes again
   morphe_hide_shorts_gesture_hints(hidden) {
     const hint = document.querySelector('#stage [data-k="morphe_hide_shorts_gesture_hints"]'); if (!hint) return;
-    fadeC(hint, false); dT(() => fadeC(hint, !hidden), 220); dT(() => fadeC(hint, false), 1250);
+    fadeC(hint, false); dT(() => fadeC(hint, !hidden), 40); dT(() => fadeC(hint, false), 1250);
     onDemoStop(() => hint.classList.remove("dz", "dzt"));
   },
   // a tap pauses the Short: the pause sign shows and, unless hidden, the paused overlay's buttons with it;
