@@ -86,6 +86,11 @@ final class WebEditorDialog extends Dialog {
     private boolean revealed;
     /** A Morphe row ran (Import / Export, say): its dialog may change values behind the editor. */
     private boolean actionRan;
+    /**
+     * Every Morphe setting's value just before a Morphe row ran, so what its dialog changed (an
+     * import replaces everything) can be told apart from edits made in the editor.
+     */
+    @Nullable private java.util.Map<String, String> beforeAction;
     /** The editor's whole screen (dark background and page): invisible until the page is ready. */
     private final FrameLayout root;
 
@@ -356,6 +361,7 @@ final class WebEditorDialog extends Dialog {
         @JavascriptInterface
         public void close() {
             Utils.runOnMainThread(() -> {
+                afterAction();
                 if (VisualEditorSettings.ENABLED.get()) leaveSettings();
                 else dismiss();
             });
@@ -370,8 +376,11 @@ final class WebEditorDialog extends Dialog {
         @JavascriptInterface
         public void action(String key) {
             Utils.runOnMainThread(() -> {
-                if (LiveSettings.runAction(key)) actionRan = true;
-                else Utils.showToastShort("Not available right now");
+                java.util.Map<String, String> before = snapshot();
+                if (LiveSettings.runAction(key)) {
+                    actionRan = true;
+                    if (beforeAction == null) beforeAction = before;
+                } else Utils.showToastShort("Not available right now");
             });
         }
 
@@ -558,8 +567,62 @@ final class WebEditorDialog extends Dialog {
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
         if (hasFocus && actionRan) {
-            actionRan = false;
+            // not cleared: a row's dialog can open a second one (the file picker of an import)
+            afterAction();
             js("window.morpheReloadValues && morpheReloadValues()");
+        }
+    }
+
+    private static java.util.Map<String, String> snapshot() {
+        java.util.Map<String, String> m = new java.util.HashMap<>();
+        try {
+            for (Setting<?> s : Setting.allLoadedSettings()) m.put(s.key, String.valueOf(s.get()));
+        } catch (Throwable ex) {
+            Logger.printException(() -> "Visual editor: could not read the settings", ex);
+        }
+        return m;
+    }
+
+    /**
+     * A Morphe row's dialog may have changed settings behind the editor. Import is the one that
+     * matters: it resets every setting its text does not name (this editor's own switch among them,
+     * since older exports do not have it) and asks for Morphe's own restart dialog on leaving.
+     * The redesign stays in charge instead: its switch stays on, the changes that need a restart
+     * join the editor's own list (so its own prompt asks), and Morphe's dialog is called off.
+     */
+    private void afterAction() {
+        java.util.Map<String, String> before = beforeAction;
+        if (before == null) return;
+        try {
+            // The switch was on, or this editor would not be open. Morphe's toggle row can still
+            // turn it off: that goes through disableEditor, which closes the editor first.
+            if (!VisualEditorSettings.ENABLED.get()) {
+                VisualEditorSettings.ENABLED.save(true);
+                VisualEditorEntry.syncRows();
+            }
+            for (Setting<?> s : Setting.allLoadedSettings()) {
+                String was = before.get(s.key);
+                if (was == null || !s.rebootApp || was.equals(String.valueOf(s.get()))) continue;
+                PendingChanges.beforeSave(s, was);
+                PendingChanges.afterSave(s);
+            }
+            clearMorpheRestart();
+        } catch (Throwable ex) {
+            Logger.printException(() -> "Visual editor: could not take over after a Morphe row", ex);
+        }
+        beforeAction = snapshot();
+    }
+
+    /** Morphe's "restart needed" flag is private: without it, its dialog does not show on leaving. */
+    private static void clearMorpheRestart() {
+        try {
+            java.lang.reflect.Field f = app.morphe.extension.shared.settings.preference.AbstractPreferenceFragment.class
+                    .getDeclaredField("restartNeeded");
+            f.setAccessible(true);
+            f.setBoolean(null, false);
+        } catch (Throwable ex) {
+            // A Morphe build without the field: its own dialog may still show, nothing else breaks.
+            Logger.printDebug(() -> "Visual editor: Morphe's restart flag was not found");
         }
     }
 
@@ -567,6 +630,7 @@ final class WebEditorDialog extends Dialog {
     public void onBackPressed() {
         web.evaluateJavascript("window.morpheBack ? (morpheBack(), 'ok') : 'none'", r -> {
             if (r == null || r.contains("none")) {
+                afterAction();
                 if (VisualEditorSettings.ENABLED.get()) leaveSettings();
                 else dismiss();
             }

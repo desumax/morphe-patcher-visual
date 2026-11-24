@@ -102,17 +102,22 @@ if (INAPP) {
   // imported text on Save (AbstractPreferenceFragment.importSettingsText, Setting.importFromJSON),
   // and Morphe may add more such rows. When the editor gets the screen back after one (its dialog or a
   // file picker closed), it reads Morphe's values again, so it shows what Morphe now has. They are not
-  // edits made in the editor: nothing is sent back, and the editor adds no restart prompt for them
-  // (Morphe's import asks for its restart itself, as in its own list). MorpheApp.state is the same
-  // read the editor starts with; the app can also call morpheReloadValues itself.
+  // edits made in the editor, so nothing is sent back. The ones that need a restart are noted by the
+  // app (MorpheApp.pending) and count as changed here too, so leaving shows the editor's own restart
+  // prompt and never Morphe's dialog. MorpheApp.state is the same read the editor starts with; the
+  // app calls morpheReloadValues itself once it has noted them.
   let actionRan = false;
   window.morpheReloadValues = () => {
     let live; try { live = JSON.parse(MorpheApp.state()); } catch (e) { return; }
     const vals = (live && live.values) || {}, next = {};
     for (const mk in vals) { const k = __editorKey(mk); if (k in PREF && JSON.stringify(state[k]) !== JSON.stringify(vals[mk])) next[k] = vals[mk]; }
-    if (!Object.keys(next).length) return;
-    loadPrefs(next); Object.assign(baseline, next);
-    commit();
+    const any = Object.keys(next).length > 0;
+    if (any) { loadPrefs(next); Object.assign(baseline, next); }
+    // what now waits for a restart: the baseline is the value YouTube still runs with
+    let p = {}, had = pendingRestart().length;
+    try { p = JSON.parse(MorpheApp.pending ? MorpheApp.pending() : "{}") || {}; } catch (e) { /* older app */ }
+    for (const mk in p) { const k = __editorKey(mk); if (k in PREF) baseline[k] = p[mk]; }
+    if (any) commit(); else if (pendingRestart().length !== had) renderBar();
   };
   const backFromAction = () => { if (!actionRan || document.hidden) return; actionRan = false; setTimeout(window.morpheReloadValues, 60); };
   window.addEventListener("focus", backFromAction);
