@@ -69,13 +69,8 @@ if (INAPP) {
   const menuTitle = document.createElement("div");
   menuTitle.className = "menutitle"; menuTitle.textContent = "Visual settings";
   $("secPill").before(menuTitle);
-  // Reset order lives in the top bar on the menu, between the title and search (Max, Nov 24: its own line
-  // under the cards cost the cards room); press.js askOrderReset, list.js keeps it greyed out until the
-  // screens have been moved
-  const ordBtn = document.createElement("button");
-  ordBtn.className = "ordreset barord"; ordBtn.dataset.orderReset = ""; ordBtn.title = "Hold a screen to move it. This restores Morphe's order.";
-  ordBtn.innerHTML = `${I("reset")}Reset order`; ordBtn.disabled = !customOrder; ordBtn.onclick = () => askOrderReset();
-  menuTitle.after(ordBtn);
+  // Reset order (list.js, shown while the menu is open) sits between the title and search
+  menuTitle.after($("barOrd"));
   $("secPill").onclick = null; $("secPill").removeAttribute("aria-haspopup"); $("secPill").tabIndex = -1;
   function setMenu(on) {
     if (!on && window.__drawBehind) window.__drawBehind(); // the screen behind the menu, not drawn yet at start (boot.js)
@@ -84,57 +79,12 @@ if (INAPP) {
     if (on) { $("scroller").scrollTop = 0; $("app").classList.remove("barhidden"); }
     pickerToggle(on);
     $("app").style.setProperty("--abh", document.querySelector(".appbar").offsetHeight + "px");
-    if (on) { if (pickDirty) paintPicker(); else fitMenu(); }
   }
-  // The card menu fills the screen without scrolling while screens are grouped into tabs (Max, Nov 24: on
-  // a 6.8" phone it was a little longer than the screen). The group cards take the height the rows under
-  // them leave, split evenly, and their contents are zoomed to it: smaller on a shorter screen (or larger
-  // text), a little larger on a taller one, never below MENU_ZOOM[0] (then the menu scrolls) or above [1].
-  const MENU_ZOOM = [.7, 1.2];
-  function fitMenu() {
-    const grid = $("pickGrid"), pk = $("picker"), pg = grid.querySelector(".pg.pgroups");
-    ordBtn.disabled = !customOrder;
-    if (!pg || !pk.clientHeight) { if (!pg) grid.classList.remove("gfit"); return; }
-    grid.classList.remove("gfit");
-    const cards = [...pg.children]; if (!cards.length) return;
-    const nat = Math.max(...cards.map(c => c.offsetHeight)), rows = Math.ceil(cards.length / 2);
-    const gs = getComputedStyle(grid), ps = getComputedStyle(pk), gap = parseFloat(gs.rowGap) || 0, rgap = parseFloat(getComputedStyle(pg).rowGap) || 0;
-    const kids = [...grid.children], rest = kids.filter(k => k !== pg).reduce((a, k) => a + k.offsetHeight + (parseFloat(getComputedStyle(k).marginTop) || 0) + (parseFloat(getComputedStyle(k).marginBottom) || 0), 0);
-    const avail = pk.clientHeight - parseFloat(ps.paddingTop) - parseFloat(ps.paddingBottom) - rest - gap * (kids.length - 1);
-    // larger only while every line still fits its card's width: a zoomed card is narrower in its own px
-    // (W / z), and the rail and paddings beside the words keep their size in them
-    let wide = MENU_ZOOM[1];
-    cards.forEach(c => c.querySelectorAll(".gc-t, .gc-tabs span").forEach(el => { const r = document.createRange(); r.selectNodeContents(el); const w = r.getBoundingClientRect().width; if (w > 0) wide = Math.min(wide, c.offsetWidth / (w + c.offsetWidth - el.clientWidth)); }));
-    const fit = (avail - rgap * (rows - 1)) / rows;
-    const want = fit / nat, z = want < 1 ? Math.max(MENU_ZOOM[0], want) : Math.min(want, Math.max(1, wide * .99));
-    const rowH = Math.max(nat * MENU_ZOOM[0], fit);
-    // height the zoom leaves over goes between the lines (up to 4.5 px each), the rest stays below them
-    const spare = Math.max(0, rowH / z - nat), most = Math.max(...cards.map(c => c.querySelectorAll(".gc-tabs span").length), 1);
-    grid.style.setProperty("--gcl", (16.5 + Math.min(4.5, spare / (most + 1))).toFixed(2) + "px");
-    grid.style.setProperty("--gch", Math.floor(rowH) + "px"); grid.style.setProperty("--gz", z.toFixed(4));
-    grid.classList.add("gfit");
-  }
-  const paintPickerAll = paintPicker;
-  // (once more on the next frame: the cards' words can still change width after the first layout)
-  let fitRaf = 0;
-  paintPicker = (...a) => { paintPickerAll(...a); fitMenu(); cancelAnimationFrame(fitRaf); fitRaf = requestAnimationFrame(fitMenu); };
-  window.addEventListener("load", () => { fitMenu(); setTimeout(fitMenu, 700); setTimeout(fitMenu, 1600); }); // and once the page has settled (late styles and fonts)
-  if (window.ResizeObserver) new ResizeObserver(() => fitMenu()).observe($("picker"));
-  if (document.fonts) { document.fonts.addEventListener("loadingdone", () => fitMenu()); document.fonts.ready.then(() => fitMenu()); } // words measured in the final font
   // Every caller that closed the dropdown (a card, search, the scrim) now leaves the menu page.
   setPicker = open => setMenu(open);
   const searchOpen = openResult;
-  openResult = k => { searchFromMenu = false; chooseCard(); const s = menuPage && sectionOf(k); if (s && s !== section) quickSection(s); setMenu(false); searchOpen(k); };
-  // A search started on the menu and closed without opening a result goes back to the menu (Max, Nov 24:
-  // it opened the screen of the last card used). Search hides the menu while it is open.
-  let searchFromMenu = false;
-  const searchSet = setSearch;
-  setSearch = on => {
-    const was = searching;
-    if (on && !was) searchFromMenu = menuPage;
-    searchSet(on);
-    if (!on && was && searchFromMenu) { searchFromMenu = false; setMenu(true); }
-  };
+  openResult = k => { const s = menuPage && sectionOf(k); if (s && s !== section) quickSection(s); setMenu(false); searchOpen(k); };
+
   const leave = () => {
     if (pendingRestart().length) return restartDialog();
     try { MorpheApp.close(); } catch (e) { /* ignore */ }

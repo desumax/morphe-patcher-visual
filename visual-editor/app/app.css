@@ -37,14 +37,7 @@ html.inapp #pickGrid .pg.pvis:not(.pgroups) .pick > span:last-child { min-width:
 html.inapp #pickGrid .pg.pvis:not(.pgroups) .pick .pt { font-size: 14.5px; line-height: 1.2; overflow-wrap: anywhere; }
 html.inapp #pickGrid .pg.pvis:not(.pgroups) .pick .ps { margin-top: 2px; }
 html.inapp #pickGrid .themerow { margin-top: 0; }
-/* grouped: the six cards fill the screen without scrolling (app-post.js fitMenu sets --gch, the row height,
-   and --gz, the zoom of each card's contents, from the screen's height) */
-html.inapp #pickGrid.gfit .pg.pgroups.pvis:not(.nx) { flex: none; grid-auto-rows: var(--gch); }
-html.inapp #pickGrid.gfit .pg.pgroups.pvis:not(.nx) .pick.gcard { zoom: var(--gz); height: calc(var(--gch) / var(--gz)); min-height: 0; }
-html.inapp #pickGrid.gfit .gcard .gc-tabs span { line-height: var(--gcl, 16.5px); }
-/* Reset order in the top bar, between the menu's title and search, only on the menu */
-html.inapp .barord { display: none; flex: none; margin: 0 4px 0 6px; padding: 6px 11px; font-size: 13px; white-space: nowrap; }
-html.inapp.menupage .barord { display: inline-flex; }
+html.inapp .appbar > .barord { margin: 0 4px 0 6px; } /* beside the menu's title (list.js #barOrd, base.css) */
 /* back swipe (app-post.js): the card menu sits behind the screen that follows the finger */
 html.inapp.peekreset #picker, html.inapp.peekreset #picker *, html.inapp.peekreset .editor { transition: none !important; }
 html.inapp.peekback #picker { z-index: 20; transition: none; pointer-events: none; will-change: transform; }

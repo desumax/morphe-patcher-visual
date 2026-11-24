@@ -122,12 +122,11 @@ function renderBar() {
   if (pickerOpen || !$("pickGrid").firstChild) paintPicker(); else { pickDirty = true; clearTimeout(pickLater); pickLater = setTimeout(() => { if (pickDirty) paintPicker(); }, 400); }
 }
 let pickDirty = false, pickLater = 0;
-// In the app the menu is the first page: no card shows as the current one until a screen has been opened
-// (Max, Nov 24: the first open already had a card marked). On the web the menu drops down over the screen
-// that is open, so that one is marked.
+// No card shows as the current one until a screen has been opened from the menu (or search): Max, Nov 24,
+// the first open already had a card marked (app and web view alike)
 let menuChosen = false;
 const chooseCard = () => { if (!menuChosen) { menuChosen = true; pickDirty = true; } }; // the menu is drawn again when it next shows
-const markCurrent = () => menuChosen || !document.documentElement.classList.contains("inapp");
+const markCurrent = () => menuChosen;
 function paintPicker() {
   pickDirty = false; clearTimeout(pickLater);
   const g = markCurrent() ? groupOf(section) : null, cur = markCurrent() ? section : null;
@@ -142,16 +141,20 @@ function paintPicker() {
   const gpick = (x, i) => { const n = tabsOf(x).reduce((a, [t]) => a + MEMBERS[t].live.length + MEMBERS[t].misc.length, 0);
     return `<button class="pick gcard" role="menuitem" data-group="${x.id}" aria-current="${x === g}" style="transition-delay:${i * 12}ms"><span class="gc-rail"><span class="pi">${I(x.icon)}</span><span class="gc-n"><b>${n}</b><small>settings</small></span></span><span class="gc-body"><span class="gc-t">${esc(x.title)}${devMarkGroup(x)}</span><span class="gc-tabs">${tabsOf(x).map(([, t]) => `<span>${esc(t)}</span>`).join("")}</span></span></button>`; };
   paint($("pickGrid"), (grouped ? `<div class="pg pvis pgroups">${GROUPS.map(gpick).join("")}</div>` : `<div class="pg pvis">${vis.map(pick).join("")}</div>` + `<div class="plaincard"><div class="ph">${I("list")}No preview · standard settings</div><div class="pg">${plain.map(pick).join("")}</div></div>`)
-    // screen order: its own line under the cards on the web; in the app the button sits in the top bar,
-    // beside the title (Max, Nov 24: room for the cards; "Hold a screen to move it" went)
-    + (document.documentElement.classList.contains("inapp") ? "" : `<div class="themerow ordrow"><button class="ordreset" data-order-reset ${customOrder ? "" : "disabled"} title="Hold a screen to move it. This restores Morphe's order.">${I("reset")}Reset order</button></div>`)
     + `<div class="themerow simrow"><div class="themetog" data-group-toggle role="menuitemcheckbox" aria-checked="${grouped}"><span class="pi">${I("layers")}</span><div class="tt">Group screens into tabs<small>Six screens instead of ${SECTIONS.length}. Each one has tabs right under the live preview, and every tab brings its own preview.</small></div><span class="sw" role="presentation" aria-checked="${grouped}"></span></div></div>`
     // UI design sits right above the list design (Max, Nov 23)
     // one line: the title on the left, its toggle on the right (Max, Nov 23 PM)
     + `<div class="themerow uirow"><span class="pi">${I("palette")}</span><div class="tt">UI design${theme === "glass" && glassTier !== null ? `<small>${GLASS_TIER_NAMES[glassTier]}${typeof glassForced === "number" ? " (forced)" : ""}</small>` : ""}</div>${seg3("UI design", "ui", UI_DESIGNS, theme, uiOff())}</div>`
     + `<div class="themerow designrow"><div class="dcol"><div class="dsg"><span class="pi">${I("list")}</span><div class="tt">Settings list design</div></div><div class="drow">${seg3("Settings list design", "design", LIST_DESIGNS, design)}<button class="offnew" data-editor-off>${I("power")}Disable new design</button></div></div></div>`);
   placeSeg3(); centreIcons($("pickGrid"));
+  $("barOrd").disabled = !customOrder;
+  fitMenuSoon();
 }
+// Reset order sits in the top bar while the menu is open, between its title and search (Max, Nov 24: its own
+// line under the cards cost them room; web and app alike). press.js askOrderReset; greyed out until the
+// screens have been moved.
+{ const b = document.createElement("button"); b.id = "barOrd"; b.className = "ordreset barord"; b.dataset.orderReset = ""; b.title = "Hold a screen to move it. This restores Morphe's order.";
+  b.innerHTML = `${I("reset")}Reset order`; b.onclick = () => askOrderReset(); $("btnSearch").before(b); }
 // An icon's drawing rarely fills its 24 px box evenly (a gear sits a little low, a play triangle to one
 // side), so an icon centred by its box looks off centre in a round pill: each one is moved so the
 // drawing itself is centred (Max, Nov 24: "slightly offset downwards"). For any .pi icon, whatever the set.
@@ -359,7 +362,42 @@ function setPicker(open) {
   $("picker").classList.toggle("open", open); $("pickScrim").classList.toggle("open", open);
   if (open) { placeSeg3(); glassSample(); } // drawn while hidden: its thumb is placed once it can be measured
   $("secPill").setAttribute("aria-expanded", String(open));
+  document.documentElement.classList.toggle("pickopen", open);
+  if (open) fitMenu();
 }
+// The card menu fills its space without scrolling while screens are grouped into tabs (Max, Nov 24: on
+// a 6.8" phone it was a little longer than the screen; the web view's menu the same). The group cards take the height the rows under
+// them leave, split evenly, and their contents are zoomed to it: smaller on a shorter screen (or larger
+// text), a little larger on a taller one, never below MENU_ZOOM[0] (then the menu scrolls) or above [1].
+const MENU_ZOOM = [.7, 1.2];
+function fitMenu() {
+  const grid = $("pickGrid"), pk = $("picker"), pg = grid.querySelector(".pg.pgroups");
+  if (!pg || !pk.clientHeight) { if (!pg) grid.classList.remove("gfit"); return; }
+  grid.classList.remove("gfit");
+  const cards = [...pg.children]; if (!cards.length) return;
+  const nat = Math.max(...cards.map(c => c.offsetHeight)), rows = Math.ceil(cards.length / 2);
+  const gs = getComputedStyle(grid), ps = getComputedStyle(pk), gap = parseFloat(gs.rowGap) || 0, rgap = parseFloat(getComputedStyle(pg).rowGap) || 0;
+  const kids = [...grid.children], rest = kids.filter(k => k !== pg).reduce((a, k) => a + k.offsetHeight + (parseFloat(getComputedStyle(k).marginTop) || 0) + (parseFloat(getComputedStyle(k).marginBottom) || 0), 0);
+  const avail = pk.clientHeight - parseFloat(ps.paddingTop) - parseFloat(ps.paddingBottom) - rest - gap * (kids.length - 1);
+  // larger only while every line still fits its card's width: a zoomed card is narrower in its own px
+  // (W / z), and the rail and paddings beside the words keep their size in them
+  let wide = MENU_ZOOM[1];
+  cards.forEach(c => c.querySelectorAll(".gc-t, .gc-tabs span").forEach(el => { const r = document.createRange(); r.selectNodeContents(el); const w = r.getBoundingClientRect().width; if (w > 0) wide = Math.min(wide, c.offsetWidth / (w + c.offsetWidth - el.clientWidth)); }));
+  const fit = (avail - rgap * (rows - 1)) / rows;
+  const want = fit / nat, z = want < 1 ? Math.max(MENU_ZOOM[0], want) : Math.min(want, Math.max(1, wide * .99));
+  const rowH = Math.max(nat * MENU_ZOOM[0], fit);
+  // height the zoom leaves over goes between the lines (up to 4.5 px each), the rest stays below them
+  const spare = Math.max(0, rowH / z - nat), most = Math.max(...cards.map(c => c.querySelectorAll(".gc-tabs span").length), 1);
+  grid.style.setProperty("--gcl", (16.5 + Math.min(4.5, spare / (most + 1))).toFixed(2) + "px");
+  grid.style.setProperty("--gch", Math.floor(rowH) + "px"); grid.style.setProperty("--gz", z.toFixed(4));
+  grid.classList.add("gfit");
+}
+// (paintPicker fits, and once more on the next frame: the cards' words can still change width after the first layout)
+let fitRaf = 0;
+const fitMenuSoon = () => { fitMenu(); cancelAnimationFrame(fitRaf); fitRaf = requestAnimationFrame(fitMenu); };
+window.addEventListener("load", () => { fitMenu(); setTimeout(fitMenu, 700); setTimeout(fitMenu, 1600); }); // and once the page has settled (late styles and fonts)
+if (window.ResizeObserver) new ResizeObserver(() => fitMenu()).observe($("picker"));
+if (document.fonts) { document.fonts.addEventListener("loadingdone", () => fitMenu()); document.fonts.ready.then(() => fitMenu()); } // words measured in the final font
 
 let stageHold = 0;
 let renderCount = 0;
@@ -1541,8 +1579,12 @@ const stripUnlock = root => { root.querySelectorAll(".ulk, .lk7.go").forEach(e =
 
 // ------------------------------------------------------------------ search
 let searching = false, query = "";
+// A search started on the screen menu and closed without opening a result goes back to the menu (Max,
+// Nov 24: it opened the screen of the last card used); search closes the menu while it is open.
+let searchFromMenu = false;
 function setSearch(on) {
   if (on === searching) return;
+  if (on) searchFromMenu = pickerOpen;
   searching = on;
   // the bar grows out of the search button to both sides, and shrinks back into it
   { const bar = $("searchBar"), b = bar.getBoundingClientRect(), r = $("btnSearch").getBoundingClientRect();
@@ -1551,7 +1593,7 @@ function setSearch(on) {
   $("btnSearch").setAttribute("aria-expanded", String(on));
   $("q").tabIndex = on ? 0 : -1; $("qClose").tabIndex = on ? 0 : -1;
   if (on) { stopDemo(); stopScenario(); setPicker(false); $("q").value = query; setTimeout(() => { $("q").focus(); $("q").select(); }, 60) /* a remembered search is selected, so one key replaces or clears it */; $("scroller").scrollTop = 0; renderList(); }
-  else { $("q").blur(); renderStage(); renderList(); }
+  else { $("q").blur(); renderStage(); renderList(); if (searchFromMenu) { searchFromMenu = false; setPicker(true); } }
 }
 const SEARCH_LITTLE = new Set(["a", "an", "the", "to", "in", "on", "of", "for", "and", "or", "into", "at", "by", "with"]);
 const SEARCH_SAME = [["swipe", "pull", "slide", "drag", "flick"], ["zoom", "pinch"], ["hide", "remove"], ["button", "btn"], ["fullscreen", "full"]];
@@ -1605,7 +1647,7 @@ $("q").addEventListener("keydown", e => { if (e.key === "Escape") { query = ""; 
 // a setting this device leaves out has no row to open: its result stays, and its reason pulses
 function openResult(k) {
   if (offDevice(k)) { const r = $("list").querySelector(`[data-res="${k}"] .need`); if (r) r.animate([{ opacity: .35 }, { opacity: 1 }, { opacity: .35 }, { opacity: 1 }], { duration: 700 }); return; }
-  setSearch(false); returnTo = null; goToSetting(k);
+  searchFromMenu = false; chooseCard(); setSearch(false); returnTo = null; goToSetting(k);
 }
 // the tab a result belongs to; a setting left out on this device keeps the tab it would be in
 const resSection = k => offDevice(k) && A[k] && SECTIONS.some(s => s.id === A[k].section) ? A[k].section : sectionOf(k);

@@ -345,6 +345,24 @@ const CHECKS = [
       }
     },
   },
+  {
+    name: "web-menu-like-app",
+    report: "Nov 24: Reset order and the menu fit had changed only in App view, not in the web view",
+    async run() {
+      for (const [w, h] of [[1280, 900], [412, 860]]) {
+        const { p, ctx } = await open("index.html", { viewport: { width: w, height: h } });
+        await p.evaluate(() => { grouped = true; renderBar(); setPicker(true); }); await sleep(600);
+        const r = await p.evaluate(() => { const pk = $("picker"), b = $("barOrd"); return { over: pk.scrollHeight - pk.clientHeight, bar: !!b && b.offsetWidth > 0, row: !!document.querySelector("#pickGrid .ordrow"), marked: !!document.querySelector('#pickGrid [aria-current="true"]') }; });
+        ok(r.over <= 1, `${w}x${h}: the web menu scrolls by ${r.over}px`);
+        ok(r.bar && !r.row, `${w}x${h}: Reset order is not in the top bar of the web view`);
+        ok(!r.marked, `${w}x${h}: a card is marked before any was opened`);
+        await p.evaluate(() => $("btnSearch").click()); await sleep(300);
+        await p.evaluate(() => $("qClose").click()); await sleep(300);
+        ok(await p.evaluate(() => pickerOpen), `${w}x${h}: closing search did not go back to the menu`);
+        await ctx.close();
+      }
+    },
+  },
 ];
 
 (async () => {

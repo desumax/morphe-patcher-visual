@@ -159,6 +159,18 @@ html #pickGrid .pg.pgroups.pvis:not(.nx) .gcard .pi svg { width: 23px; height: 2
 .gcard .gc-t { font-size: 15px; font-weight: 700; line-height: 1.25; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gcard .gc-tabs { display: flex; flex-direction: column; }
 .gcard .gc-tabs span { font-size: 12.5px; line-height: 16.5px; color: var(--m-on-var, #aaa); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* grouped: the six cards fill the menu without scrolling (list.js fitMenu sets --gch, the row height, and --gz,
+   the zoom of each card's contents, from the space the menu has; --gcl spreads the lines in a tall card).
+   On the web the menu then reaches down to the bottom of the screen, as the app's menu page does. */
+html #pickGrid.gfit .pg.pgroups.pvis:not(.nx) { flex: none; grid-auto-rows: var(--gch); }
+html #pickGrid.gfit .pg.pgroups.pvis:not(.nx) .pick.gcard { zoom: var(--gz); height: calc(var(--gch) / var(--gz)); min-height: 0; }
+#pickGrid.gfit .gcard .gc-tabs span { line-height: var(--gcl, 16.5px); }
+html:not(.inapp) .picker:has(.pg.pgroups) { bottom: 8px; max-height: none; }
+/* Reset order in the top bar while the menu is open, between its title and search; what compares or resets
+   the screen makes room for it then (the menu covers the screen) */
+.appbar > .barord { display: none; flex: none; margin-left: auto; padding: 6px 11px; font-size: 13px; white-space: nowrap; }
+html.pickopen .appbar > .barord { display: inline-flex; }
+html.pickopen .appbar .seg, html.pickopen #btnReset { display: none; }
 /* the frame's line is drawn on top of the preview (::after), not as a border around it: the clipped
    preview bled into a real border's anti-aliased corners and made them look thin and grey. The box
    itself doesn't clip (that cut the line's own edge pixels); the preview and canvas clip just inside the
