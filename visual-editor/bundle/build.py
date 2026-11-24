@@ -52,7 +52,7 @@ def main():
     ap.add_argument("--out", default=str(HERE / "out"))
     ap.add_argument("--version", required=True, help="bundle version, e.g. 0.1.0-test.9 (also names the .mpp)")
     ap.add_argument("--manifest", action="store_true",
-                    help="also point patches-bundle.json at this version's release asset (publish that release before pushing the manifest)")
+                    help="also point the repo-root patches-bundle.json (Manager feed) at this version's release asset (publish that release before pushing the manifest)")
     ap.add_argument("--skip-build", action="store_true", help="only prepare the workspace")
     args = ap.parse_args()
 
@@ -118,7 +118,7 @@ def main():
     if args.manifest:
         # Manager's feed: the version, its .mpp and the release it is attached to must agree.
         tag = "visual-editor-" + args.version.split("-", 1)[-1].replace(".", "-")
-        feed = HERE / "patches-bundle.json"
+        feed = HERE.parent.parent / "patches-bundle.json"  # repo root: Manager reads it from the repo link
         data = json.loads(feed.read_text(encoding="utf-8"))
         data.update(version=args.version, created_at=time.strftime("%Y-%m-%dT%H:%M:%S"),
                     download_url=f"https://github.com/desumax/morphe-patcher-visual/releases/download/{tag}/{target.name}")
