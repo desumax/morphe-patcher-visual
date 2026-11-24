@@ -38,6 +38,7 @@ html.inapp #pickGrid .pg.pvis:not(.pgroups) .pick .pt { font-size: 14.5px; line-
 html.inapp #pickGrid .pg.pvis:not(.pgroups) .pick .ps { margin-top: 2px; }
 html.inapp #pickGrid .themerow { margin-top: 0; }
 /* back swipe (app-post.js): the card menu sits behind the screen that follows the finger */
+html.inapp.peekreset #picker, html.inapp.peekreset #picker *, html.inapp.peekreset .editor { transition: none !important; }
 html.inapp.peekback #picker { z-index: 20; transition: none; pointer-events: none; will-change: transform; }
 html.inapp.peekback #pickScrim { display: none; }
 html.inapp.peekback .editor { z-index: 25; overflow: hidden; background: var(--m-bg); will-change: transform; }
