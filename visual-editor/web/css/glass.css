@@ -23,19 +23,22 @@
      0 Flat  = no backdrop-filter at all: the same paint, dialogs and menu near opaque.
    Locks and the search field stay near opaque in every tier. */
 .phone.theme-glass {
+  /* how strong the glass reads: every rim, lit edge and light spot is multiplied by it, and the lens
+     (layout.js GLASS_K) bends and lifts colour by the same share (Max, Nov 24 evening: 30% less) */
+  --g-k: .7;
   --g-chrome: rgba(18,18,26,.38);
-  --g-chrome-edge: inset 0 0 0 1px rgba(255,255,255,.22), inset 0 1px 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(255,255,255,.12), 0 8px 24px rgba(0,0,0,.35);
+  --g-chrome-edge: inset 0 0 0 1px rgba(255,255,255,calc(.22 * var(--g-k))), inset 0 1px 0 rgba(255,255,255,calc(.55 * var(--g-k))), inset 0 -1px 0 rgba(255,255,255,calc(.12 * var(--g-k))), 0 8px 24px rgba(0,0,0,.35);
   --g-card: rgba(255,255,255,.035);
-  --g-card-edge: inset 0 0 0 1px rgba(255,255,255,.16), inset 0 1px 0 rgba(255,255,255,.35);
+  --g-card-edge: inset 0 0 0 1px rgba(255,255,255,calc(.16 * var(--g-k))), inset 0 1px 0 rgba(255,255,255,calc(.35 * var(--g-k)));
   --g-ctl: rgba(255,255,255,.06);
-  --g-ctl-edge: inset 0 0 0 1px rgba(255,255,255,.2), inset 0 1px 0 rgba(255,255,255,.4);
-  --g-thumb-edge: inset 0 0 0 1px rgba(255,255,255,.3), inset 0 1px 0 rgba(255,255,255,.6), 0 4px 12px rgba(0,0,0,.3);
+  --g-ctl-edge: inset 0 0 0 1px rgba(255,255,255,calc(.2 * var(--g-k))), inset 0 1px 0 rgba(255,255,255,calc(.4 * var(--g-k)));
+  --g-thumb-edge: inset 0 0 0 1px rgba(255,255,255,calc(.3 * var(--g-k))), inset 0 1px 0 rgba(255,255,255,calc(.6 * var(--g-k))), 0 4px 12px rgba(0,0,0,.3);
   --g-on: rgba(43,92,52,.72); --g-off: rgba(92,43,43,.72); --g-blue: rgba(30,90,168,.78); --g-white: rgba(255,255,255,.82); --g-def: rgba(70,72,84,.62);
   --g-fill: rgba(62,166,255,.8);
   /* the slider knob: light bent by a clear pill (Max: "refract more light"): a hot spot under the top edge,
      the bright lens band at both ends, light gathered along the bottom edge, a blue glow from the fill,
      a crisp rim; painted, so it costs the same in every tier */
-  --g-knob-paint-top: radial-gradient(70% 38% at 50% 10%, rgba(255,255,255,.85), rgba(255,255,255,0) 72%), radial-gradient(80% 50% at 50% 104%, rgba(205,232,255,.6), rgba(205,232,255,0) 70%), linear-gradient(90deg, rgba(255,255,255,.4), rgba(255,255,255,0) 26%, rgba(255,255,255,0) 74%, rgba(255,255,255,.4));
+  --g-knob-paint-top: radial-gradient(70% 38% at 50% 10%, rgba(255,255,255,calc(.85 * var(--g-k))), rgba(255,255,255,calc(0 * var(--g-k))) 72%), radial-gradient(80% 50% at 50% 104%, rgba(205,232,255,calc(.6 * var(--g-k))), rgba(205,232,255,calc(0 * var(--g-k))) 70%), linear-gradient(90deg, rgba(255,255,255,calc(.4 * var(--g-k))), rgba(255,255,255,calc(0 * var(--g-k))) 26%, rgba(255,255,255,calc(0 * var(--g-k))) 74%, rgba(255,255,255,calc(.4 * var(--g-k))));
   --g-knob-tint: rgba(190,220,255,.16);
   /* What the clear knob shows of the track under it (Max, Nov 24: the blue looked flat behind the pill
      instead of bending into it): the 8px track is magnified to a bulge in the middle of the lens, the
@@ -45,10 +48,11 @@
     linear-gradient(rgba(62,166,255,0) 34%, var(--g-fill) 34% 66%, rgba(62,166,255,0) 66%) left center / 40% 100% no-repeat,
     radial-gradient(ellipse 44% 30% at 62% 50%, rgba(255,255,255,.13) 0 70%, rgba(255,255,255,0) 100%),
     linear-gradient(rgba(255,255,255,0) 34%, rgba(255,255,255,.09) 34% 66%, rgba(255,255,255,0) 66%) right center / 50% 100% no-repeat;
-  --g-knob-edge: inset 5px 0 6px -3px rgba(62,166,255,.7), inset 0 0 0 1px rgba(255,255,255,.62), inset 0 1px 1px rgba(255,255,255,.95), inset 0 -2px 3px rgba(190,225,255,.45), inset 0 0 7px rgba(120,190,255,.4), 0 0 10px rgba(62,166,255,.35), 0 4px 12px rgba(0,0,0,.35);
+  --g-knob-edge: inset 5px 0 6px -3px rgba(62,166,255,calc(.7 * var(--g-k))), inset 0 0 0 1px rgba(255,255,255,calc(.62 * var(--g-k))), inset 0 1px 1px rgba(255,255,255,calc(.95 * var(--g-k))), inset 0 -2px 3px rgba(190,225,255,calc(.45 * var(--g-k))), inset 0 0 7px rgba(120,190,255,calc(.4 * var(--g-k))), 0 0 10px rgba(62,166,255,.35), 0 4px 12px rgba(0,0,0,.35);
   --g-dlg: rgba(22,22,30,.4);
-  --g-dlg-edge: inset 0 0 0 1px rgba(255,255,255,.24), inset 0 1.5px 0 rgba(255,255,255,.55), 0 20px 50px rgba(0,0,0,.5);
+  --g-dlg-edge: inset 0 0 0 1px rgba(255,255,255,calc(.24 * var(--g-k))), inset 0 1.5px 0 rgba(255,255,255,calc(.55 * var(--g-k))), 0 20px 50px rgba(0,0,0,.5);
   --g-press: rgba(255,255,255,.16); --g-line: rgba(255,255,255,.1);
+  --g-menu-veil: rgba(0,0,0,.15);
   /* the backdrop: glows sized to the phone in px, so every copy of it lines up (glassArtPlace, layout.js) */
   --g-bg: #07090f;
   --g-bg-img: radial-gradient(120% 55% at 0% 0%, rgba(72,112,255,.46), transparent 62%), radial-gradient(90% 50% at 100% 28%, rgba(0,186,176,.32), transparent 62%), radial-gradient(110% 60% at 22% 100%, rgba(150,78,255,.36), transparent 64%), radial-gradient(80% 45% at 100% 92%, rgba(255,110,150,.2), transparent 60%);
@@ -64,8 +68,8 @@
 .phone.theme-glass .app.barhidden { --g-art-y: var(--g-art-top, 0px); }
 /* Light and Full: dialogs, the menu and the snackbar are clear glass with the lens (blur where SVG lenses are missing) */
 .phone.theme-glass:is([data-gt="1"], [data-gt="2"]) {
-  --gx-dlg: var(--g-dlg); --gx-menu: rgba(22,22,30,.5); --gx-snack: var(--g-chrome); --gx-float-fx: blur(2.5px) saturate(1.6); --gx-dlg-fx: blur(6px) saturate(1.6);
-  --gx-knob-fx: saturate(1.9) brightness(1.3); } /* the knob lifts the colour under it: per pixel, no neighbours read, so cheap */
+  --gx-dlg: var(--g-dlg); --gx-menu: rgba(22,22,30,.5); --gx-snack: var(--g-chrome); --gx-float-fx: blur(1.75px) saturate(1.42); --gx-dlg-fx: blur(4.2px) saturate(1.42);
+  --gx-knob-fx: saturate(1.63) brightness(1.21); } /* the knob lifts the colour under it: per pixel, no neighbours read, so cheap */
 
 /* the backdrop, painted again where the list must hide. The sticky preview carries it on a layer of its own,
    one bar taller than itself, that slides by the bar's height as the bar hides: a composited move, nothing
@@ -77,6 +81,9 @@
   translate: 0 calc(-1 * var(--abh, 56px)); transition: translate 260ms var(--ease); }
 .theme-glass .app.barhidden .stick::before { translate: 0 0; }
 html.inapp .phone.theme-glass #picker, html.inapp.peekback .phone.theme-glass .editor { background-color: var(--g-bg); background-image: var(--g-bg-img); background-size: var(--g-art-w, 100%) var(--g-art-h, 100%); background-position: 0 calc(-1 * var(--g-art-y, 0px)); background-repeat: no-repeat; }
+/* the screen menu is 15% darker than the editor, so its cards and words stand out (Max, Nov 24 evening):
+   a black veil over its backdrop (in the app) or its glass (on the web) */
+html.inapp .phone.theme-glass #picker { background-image: linear-gradient(var(--g-menu-veil), var(--g-menu-veil)), var(--g-bg-img); background-size: 100% 100%, var(--g-art-w, 100%) var(--g-art-h, 100%); background-position: 0 0, 0 calc(-1 * var(--g-art-y, 0px)); }
 .theme-glass .status, .theme-glass .appbar { background: transparent; }
 
 /* role: chrome */
@@ -127,13 +134,13 @@ html.inapp .phone.theme-glass #picker, html.inapp.peekback .phone.theme-glass .e
 .theme-glass .ctl .opt[aria-pressed="true"].def { background-color: var(--g-def); }
 .theme-glass .tab7[aria-selected="true"], .theme-glass .tut .ttabs span.on { background-color: var(--g-white); color: #111; }
 .theme-glass .dbtn.primary { background-color: var(--g-blue); color: #fff; }
-.theme-glass .sw::after { box-shadow: inset 0 0 0 1px rgba(255,255,255,.4), 0 2px 6px rgba(0,0,0,.3); }
+.theme-glass .sw::after { box-shadow: inset 0 0 0 1px rgba(255,255,255,calc(.4 * var(--g-k))), 0 2px 6px rgba(0,0,0,.3); }
 .theme-glass .row.sel .kind { background-color: rgba(150,195,255,.3); }
 .theme-glass .ctl.optgrid.gliding > .opt[aria-pressed="true"] { background-color: var(--g-ctl); box-shadow: var(--g-ctl-edge); }
 
 /* role: dlg */
 .theme-glass .dlg { background: var(--gx-dlg); border-radius: 30px; box-shadow: var(--g-dlg-edge); -webkit-backdrop-filter: var(--gx-dlg-fx); backdrop-filter: var(--gx-dlg-fx); }
-html .phone.theme-glass #picker { background: var(--gx-menu); border-radius: 30px; box-shadow: var(--g-dlg-edge); -webkit-backdrop-filter: var(--gx-dlg-fx); backdrop-filter: var(--gx-dlg-fx); }
+html .phone.theme-glass #picker { background: linear-gradient(var(--g-menu-veil), var(--g-menu-veil)) var(--gx-menu); border-radius: 30px; box-shadow: var(--g-dlg-edge); -webkit-backdrop-filter: var(--gx-dlg-fx); backdrop-filter: var(--gx-dlg-fx); }
 html.inapp .phone.theme-glass #picker { border-radius: 0; -webkit-backdrop-filter: none; backdrop-filter: none; }
 .theme-glass .dlg ul { background: var(--g-card); box-shadow: var(--g-card-edge); }
 .theme-glass .scrimfull { background: rgba(0,0,0,.28); }
@@ -153,7 +160,7 @@ html:not(.touchwait) .theme-glass .ctl input[type=range]:active::-webkit-slider-
 html:not(.touchwait) .theme-glass .ctl input[type=range]:active::-moz-range-thumb { transform: scale(1.22); }
 
 /* role: lock (plain paint: a cover never samples what is behind it) */
-.theme-glass .lk7:not(.go), .theme-glass .lk7.go .lkh { box-shadow: inset 0 0 0 1px rgba(255,255,255,.16), inset 0 1px 0 rgba(255,255,255,.3); }
+.theme-glass .lk7:not(.go), .theme-glass .lk7.go .lkh { box-shadow: inset 0 0 0 1px rgba(255,255,255,calc(.16 * var(--g-k))), inset 0 1px 0 rgba(255,255,255,calc(.3 * var(--g-k))); }
 .theme-glass .ctl > .lk7 .lkk { fill: #252a3a; }
 .theme-glass .tut .ok { background-image: linear-gradient(90deg, var(--m-brand-1), var(--m-brand-2)); box-shadow: var(--g-thumb-edge); }
 
@@ -170,7 +177,7 @@ html:not(.touchwait) .theme-glass .group > .row:active, html:not(.touchwait) .th
 .theme-glass .themerow { border-top-color: var(--g-line); }
 .theme-glass .row.sel { background: linear-gradient(90deg, rgba(150,195,255,.2), rgba(150,195,255,.06)); }
 .theme-glass .tut .tseg, .theme-glass .tut .tseg3, .theme-glass .tut .ttabs span:not(.on) { background-color: rgba(255,255,255,.08); }
-.theme-glass .stagebox { box-shadow: 0 0 0 1px rgba(255,255,255,.14), 0 8px 24px rgba(0,0,0,.4); }
+.theme-glass .stagebox { box-shadow: 0 0 0 1px rgba(255,255,255,calc(.14 * var(--g-k))), 0 8px 24px rgba(0,0,0,.4); }
 .theme-glass .tut { background: rgba(8,10,18,.84); } /* a full-screen cover: no blur in any tier */
 .theme-glass .tut .tlist.sel { background-color: rgba(150,195,255,.18); }
 /* ---------- end of Glass ---------- */

@@ -218,6 +218,66 @@ const CHECKS = [
       await ctx.close();
     },
   },
+  {
+    name: "comparison-layout-settles-first",
+    report: "Nov 24 (second report): Play next in queue type opened with its labels beside the phones while it waited for a choice, and on top once one was picked; the waiting outline was a whole phone beside a half phone",
+    async run() {
+      const { p, ctx } = await open();
+      // the Home tab: a tall preview, where the wrong shape shows (a short one can make labels beside right)
+      await p.evaluate(() => { setPicker(false); quickSection("feed"); }); await sleep(400);
+      const keys = await p.evaluate(() => Object.keys(SCN).filter(k => PREF[k]));
+      const bad = [];
+      for (const k of keys) {
+        await p.evaluate(k => { stopScenario(); pairMemo = null; playScenario(k); }, k); await sleep(260);
+        const r = await p.evaluate(() => {
+          const g = document.querySelector("#canvas .scbox .duo7.gen"); if (!g || !g.dataset.lay) return null;
+          // the layout a pair with these contents gets (fitDev's rule), against the one it is drawn in
+          g._measured = null; const m = measurePair(g), f = wh => wh ? fitScale(wh[0], wh[1]) : 0;
+          const S = { side: f(m.sideWH), row: f(m.rowWH), column: f(m.colWH), top: f(m.topWH) };
+          let best = S.side >= Math.max(S.row, S.column) * 1.04 ? "side" : S.row >= S.column || scTurns ? "row" : "column";
+          if (S.top >= S[best] * 1.06) best = "top";
+          const a = g.querySelector(".ask7"), side = g.querySelector(".dl7 > .side");
+          return { lay: g.dataset.lay, best, gain: S[best] / (S[g.dataset.lay] || 1), ask: a ? [a.offsetHeight, side.offsetHeight] : null };
+        });
+        if (!r) continue;
+        if (r.lay !== r.best && r.gain > 1.07) bad.push(`${k}: drawn ${r.lay}, ${r.best} is ${((r.gain - 1) * 100).toFixed(0)}% larger`);
+        if (r.ask && Math.abs(r.ask[0] - r.ask[1]) > 1) bad.push(`${k}: waiting outline ${r.ask[0]}px tall beside a ${r.ask[1]}px phone`);
+      }
+      await p.evaluate(() => stopScenario());
+      ok(keys.length > 100, `setup: only ${keys.length} comparisons found`);
+      ok(!bad.length, `${bad.length} comparison(s) start in the wrong shape:\n       ` + bad.slice(0, 12).join("\n       "));
+      await ctx.close();
+    },
+  },
+  {
+    name: "scroll-less-sensitive",
+    report: "Nov 24 evening: make the scrolling 20% less sensitive (a drag moves the list 80% of the finger's way, a fling goes on and stops, a drag taps nothing)",
+    async run() {
+      const { p, ctx } = await open("index.html", { touch: true });
+      await p.evaluate(() => { setPicker(false); $("scroller").scrollTop = 600; window.__clicks = 0; document.addEventListener("click", () => window.__clicks++, true); }); await sleep(400);
+      const cdp = await ctx.newCDPSession(p);
+      const tp = (type, y) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x: 200, y }] });
+      const s0 = await p.evaluate(() => $("scroller").scrollTop);
+      await tp("touchStart", 700);
+      for (let y = 700; y >= 400; y -= 10) { await tp("touchMove", y); await sleep(16); }
+      await sleep(120); // stand still: no fling
+      await tp("touchEnd", 400); await sleep(300);
+      const moved = await p.evaluate(() => $("scroller").scrollTop) - s0;
+      ok(Math.abs(moved - 300 * .8 + 8 * .8) < 12, `a 300px drag moved the list ${moved.toFixed(0)}px (80% is about 234)`);
+      ok(await p.evaluate(() => window.__clicks) === 0, "the drag tapped what was under the finger");
+      // a quick flick goes on after the finger lifts, then stops
+      const f0 = await p.evaluate(() => $("scroller").scrollTop);
+      await tp("touchStart", 700);
+      for (let y = 700; y >= 460; y -= 40) { await tp("touchMove", y); await sleep(8); }
+      await tp("touchEnd", 460);
+      const f1 = await p.evaluate(() => $("scroller").scrollTop); await sleep(1500);
+      const f2 = await p.evaluate(() => $("scroller").scrollTop); await sleep(300);
+      const f3 = await p.evaluate(() => $("scroller").scrollTop);
+      ok(f2 - f1 > 100, `the fling carried the list only ${(f2 - f1).toFixed(0)}px after the finger lifted`);
+      ok(Math.abs(f3 - f2) < 1, "the fling had not stopped after 1.5 s");
+      await ctx.close();
+    },
+  },
 ];
 
 (async () => {

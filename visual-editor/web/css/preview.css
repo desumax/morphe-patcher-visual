@@ -203,6 +203,9 @@
 .duo7.gen .dl7 > span.xlong { font-size: calc(var(--duopill) * .8 / var(--dsc, 1.7)); padding-block: calc(var(--duopill) / var(--dsc, 1.7) * .4911); }
 .duo7.gen .dl7 > span.ask { font-size: calc(var(--duopill) * .9 / var(--dsc, 1.7)); line-height: 1.55; white-space: nowrap; overflow: visible; max-width: none; background: #1a73e8; }
 .ask7 { box-sizing: border-box; border-radius: 12px; border: 2px dashed #555; background: rgba(255,255,255,.03); display: grid; place-items: center; padding: 6px; }
+/* the outline of a faded half phone fades at the same end, over the same length (--fade7) */
+.ask7.asktop7 { -webkit-mask-image: linear-gradient(#000 calc(100% - 26px), transparent); mask-image: linear-gradient(#000 calc(100% - 26px), transparent); }
+.ask7.askbot7 { -webkit-mask-image: linear-gradient(transparent, #000 26px); mask-image: linear-gradient(transparent, #000 26px); }
 .ask7 > span { font-size: calc(var(--duopill) * .9 / var(--dsc, 1.7)); font-weight: 600; color: #fff; background: #1a73e8; border-radius: .7em; padding: .42em .75em; text-align: center; line-height: 1.25; }
 .duo7.gen .dl7 > span.ask:empty { display: none; }
 .ctl .opt.nudge7 { animation: nudge7 .9s var(--ease) 2; }
