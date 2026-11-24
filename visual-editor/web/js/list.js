@@ -122,13 +122,19 @@ function renderBar() {
   if (pickerOpen || !$("pickGrid").firstChild) paintPicker(); else { pickDirty = true; clearTimeout(pickLater); pickLater = setTimeout(() => { if (pickDirty) paintPicker(); }, 400); }
 }
 let pickDirty = false, pickLater = 0;
+// In the app the menu is the first page: no card shows as the current one until a screen has been opened
+// (Max, Nov 24: the first open already had a card marked). On the web the menu drops down over the screen
+// that is open, so that one is marked.
+let menuChosen = false;
+const chooseCard = () => { if (!menuChosen) { menuChosen = true; pickDirty = true; } }; // the menu is drawn again when it next shows
+const markCurrent = () => menuChosen || !document.documentElement.classList.contains("inapp");
 function paintPicker() {
   pickDirty = false; clearTimeout(pickLater);
-  const g = groupOf(section);
+  const g = markCurrent() ? groupOf(section) : null, cur = markCurrent() ? section : null;
   const pick = (x, i) => {
     const m = MEMBERS[x.id];
     const sub = `${m.live.length + m.misc.length} settings`;
-    return `<button class="pick" role="menuitem" data-sec="${x.id}" aria-current="${x.id === section}" style="transition-delay:${Math.min(i, 12) * 12}ms"><span class="pi">${I(x.icon)}</span><span><div class="pt">${esc(x.title)}${devMark(x.id)}</div><div class="ps">${sub}</div></span></button>`;
+    return `<button class="pick" role="menuitem" data-sec="${x.id}" aria-current="${x.id === cur}" style="transition-delay:${Math.min(i, 12) * 12}ms"><span class="pi">${I(x.icon)}</span><span><div class="pt">${esc(x.title)}${devMark(x.id)}</div><div class="ps">${sub}</div></span></button>`;
   };
   const vis = SECTIONS.filter(x => SCENES[x.id]), plain = SECTIONS.filter(x => !SCENES[x.id]);
   // a group card (design D, Max Nov 22): a rail on the left with the icon and the number of settings,
@@ -136,8 +142,9 @@ function paintPicker() {
   const gpick = (x, i) => { const n = tabsOf(x).reduce((a, [t]) => a + MEMBERS[t].live.length + MEMBERS[t].misc.length, 0);
     return `<button class="pick gcard" role="menuitem" data-group="${x.id}" aria-current="${x === g}" style="transition-delay:${i * 12}ms"><span class="gc-rail"><span class="pi">${I(x.icon)}</span><span class="gc-n"><b>${n}</b><small>settings</small></span></span><span class="gc-body"><span class="gc-t">${esc(x.title)}${devMarkGroup(x)}</span><span class="gc-tabs">${tabsOf(x).map(([, t]) => `<span>${esc(t)}</span>`).join("")}</span></span></button>`; };
   paint($("pickGrid"), (grouped ? `<div class="pg pvis pgroups">${GROUPS.map(gpick).join("")}</div>` : `<div class="pg pvis">${vis.map(pick).join("")}</div>` + `<div class="plaincard"><div class="ph">${I("list")}No preview · standard settings</div><div class="pg">${plain.map(pick).join("")}</div></div>`)
-    // screen order: its own line under the cards, so the group switch keeps the full width for its text
-    + `<div class="themerow ordrow"><span class="ordhint">Hold a screen to move it</span><button class="ordreset" data-order-reset ${customOrder ? "" : "disabled"} title="Hold a screen to move it. This restores Morphe's order.">${I("reset")}Reset order</button></div>`
+    // screen order: its own line under the cards on the web; in the app the button sits in the top bar,
+    // beside the title (Max, Nov 24: room for the cards; "Hold a screen to move it" went)
+    + (document.documentElement.classList.contains("inapp") ? "" : `<div class="themerow ordrow"><button class="ordreset" data-order-reset ${customOrder ? "" : "disabled"} title="Hold a screen to move it. This restores Morphe's order.">${I("reset")}Reset order</button></div>`)
     + `<div class="themerow simrow"><div class="themetog" data-group-toggle role="menuitemcheckbox" aria-checked="${grouped}"><span class="pi">${I("layers")}</span><div class="tt">Group screens into tabs<small>Six screens instead of ${SECTIONS.length}. Each one has tabs right under the live preview, and every tab brings its own preview.</small></div><span class="sw" role="presentation" aria-checked="${grouped}"></span></div></div>`
     // UI design sits right above the list design (Max, Nov 23)
     // one line: the title on the left, its toggle on the right (Max, Nov 23 PM)
@@ -339,7 +346,7 @@ function endPickDrag() {
     customOrder = [...$("pickGrid").querySelectorAll(".pick")].map(c => c.dataset.sec);
     if (JSON.stringify(customOrder) === JSON.stringify(morpheOrder.filter(id => customOrder.includes(id)))) customOrder = null;
     applyOrder(); store.save(); pickSuppress = true; setTimeout(() => { pickSuppress = false; }, 50);
-    const rb = document.querySelector("[data-order-reset]"); if (rb) rb.disabled = !customOrder;
+    document.querySelectorAll("[data-order-reset]").forEach(rb => { rb.disabled = !customOrder; });
   }
   pickDrag = null;
 }

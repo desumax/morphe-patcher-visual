@@ -278,6 +278,73 @@ const CHECKS = [
       await ctx.close();
     },
   },
+  {
+    name: "ghost-leaves-no-line",
+    report: "Nov 24: going from a hidden part's setting (Create new segment button, hidden) to another (Use compact Skip button), the part narrowed away and left a red dashed line before it went (every hidden part)",
+    async run() {
+      const { p, ctx } = await open();
+      const k = "morphe_sb_create_new_segment", other = "morphe_sb_compact_skip_button";
+      await p.evaluate(k => { setPicker(false); goToSetting(k); }, k); await sleep(900);
+      // hide it (whichever value does), then select it: it shows as a ghost
+      const ok1 = await p.evaluate(async k => {
+        const els = () => [...document.querySelectorAll(`#stage [data-k="${k}"]`)];
+        for (const v of [false, true]) { setPref(k, v); commit(); await new Promise(r => setTimeout(r, 400)); if (els().some(e => e.classList.contains("off"))) break; }
+        select(k, "list"); await new Promise(r => setTimeout(r, 600));
+        return els().some(e => e.classList.contains("ghost"));
+      }, k);
+      ok(ok1, "setup: the hidden part did not show as a ghost");
+      await p.evaluate(o => select(o, "list"), other);
+      const seen = [];
+      for (const t of [160, 260, 360]) {
+        await sleep(t === 160 ? 160 : 100);
+        seen.push(await p.evaluate(k => [...document.querySelectorAll(`#stage [data-k="${k}"].leaving`)].map(e => {
+          const a = c => { const m = /rgba?\(([^)]+)\)/.exec(c); if (!m) return 0; const v = m[1].split(",").map(Number); return v.length > 3 ? v[3] : 1; };
+          const cs = getComputedStyle(e), b = getComputedStyle(e, "::before");
+          return Math.max(cs.outlineStyle !== "none" && parseFloat(cs.outlineWidth) ? a(cs.outlineColor) * parseFloat(cs.opacity) : 0, b.outlineStyle !== "none" && parseFloat(b.outlineWidth) ? a(b.outlineColor) * parseFloat(cs.opacity) : 0);
+        }), k));
+      }
+      ok(seen.some(x => x.length), "setup: the part did not fold away");
+      const worst = Math.max(0, ...seen.flat());
+      ok(worst < .05, `the folding part's dashed ring is still drawn (strength ${worst.toFixed(2)})`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "app-menu-search-and-marks",
+    report: "Nov 24: closing search opened from the menu went into the last card's screen; on first open a card was already marked as selected",
+    async run() {
+      const { f, ctx } = await open("appview.html", { viewport: { width: 900, height: 1000 } });
+      ok(await f.evaluate(() => document.documentElement.classList.contains("menupage")), "setup: the app did not open on the menu");
+      ok(await f.evaluate(() => !document.querySelector('#pickGrid [aria-current="true"]')), "a card is marked as selected on first open");
+      await f.evaluate(() => $("btnSearch").click()); await sleep(400);
+      await f.evaluate(() => $("qClose").click()); await sleep(400);
+      ok(await f.evaluate(() => document.documentElement.classList.contains("menupage")), "closing search did not go back to the menu");
+      // after a card was opened and left, that card is the marked one
+      await f.evaluate(() => document.querySelector("#pickGrid [data-group], #pickGrid [data-sec]").click()); await sleep(500);
+      await f.evaluate(() => $("btnBack").click()); await sleep(500);
+      ok(await f.evaluate(() => !!document.querySelector('#pickGrid [aria-current="true"]')), "the card just used is not marked");
+      await ctx.close();
+    },
+  },
+  {
+    name: "app-menu-fills-screen",
+    report: "Nov 24: with screens grouped, the menu was a little longer than a 6.8 inch screen; it should fill any screen without scrolling; Reset order moved into the top bar",
+    async run() {
+      for (const [w, h] of [[360, 640], [384, 760], [412, 860], [412, 915], [480, 1000]]) {
+        const { p, ctx } = await open("app/index.html", { viewport: { width: w, height: h } });
+        await p.evaluate(() => { grouped = true; renderBar(); }); await sleep(300);
+        const r = await p.evaluate(() => {
+          const pk = $("picker"), last = [...$("pickGrid").children].pop(), cut = [...document.querySelectorAll("#pickGrid .gc-t, #pickGrid .gc-tabs span")].filter(e => e.scrollWidth > e.clientWidth + 1).length;
+          const bar = document.querySelector(".appbar .barord");
+          return { over: pk.scrollHeight - pk.clientHeight, gap: pk.getBoundingClientRect().bottom - last.getBoundingClientRect().bottom, hint: /Hold a screen to move it/.test($("pickGrid").textContent), bar: !!bar && bar.offsetWidth > 0, cut };
+        });
+        ok(r.over <= 1, `${w}x${h}: the menu scrolls by ${r.over}px`);
+        ok(r.gap < 30, `${w}x${h}: ${Math.round(r.gap)}px left empty under the menu`);
+        ok(!r.hint && r.bar, `${w}x${h}: Reset order is not in the top bar (or the hint line is back)`);
+        await ctx.close();
+      }
+    },
+  },
 ];
 
 (async () => {

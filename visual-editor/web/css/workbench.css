@@ -231,7 +231,7 @@ html:not(.touchwait) .lt7[data-at="r"]:active > i { transform: translateX(calc(1
 .ordreset { display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 1px solid rgba(255,255,255,.18); color: inherit; border-radius: 18px; padding: 7px 12px; font: 500 12.5px var(--font, inherit); cursor: pointer; }
 .ordreset svg { width: 16px; height: 16px; fill: currentColor; }
 .ordreset:disabled { opacity: .38; cursor: default; }
-.themerow.ordrow { justify-content: space-between; padding-top: 4px !important; }
+.themerow.ordrow { justify-content: flex-end; padding-top: 4px !important; }
 .ordhint { font-size: 12px; color: var(--m-on-var); padding-left: 8px; }
 .doodle { display: flex; gap: 1px; font: 800 15px/1 inherit; }
 .doodle span { color: #fff; padding: 3px 3px; border-radius: 4px; display: inline-block; animation: dood 1.6s ease-in-out infinite; }
