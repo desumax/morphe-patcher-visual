@@ -5,6 +5,27 @@ Drafted with `visual-editor/bundle/changelog.py --version 0.1.0-test.N`, then ti
 The patcher engine's own changelog is in docs/PATCHER-CHANGELOG.md.
 
 
+# [0.1.0-test.12](https://github.com/desumax/morphe-patcher-visual/compare/visual-editor-test-11...visual-editor-test-12) (2026-11-24)
+
+
+### Features
+
+* **YouTube - Visual settings editor:** The grouped card menu fits the screen without scrolling
+* **YouTube - Visual settings editor:** Reset order sits in the top bar beside the title
+* **YouTube - Visual settings editor:** Closing search opened from the menu goes back to the menu
+* **YouTube - Visual settings editor:** No card is marked as selected on first open
+* **YouTube - Visual settings editor:** Hidden parts fade out with their red outline, no leftover red line
+* **YouTube - Visual settings editor:** Comparisons open in their final shape, with labels already in place
+* **YouTube - Visual settings editor:** Scrolling is 20% less sensitive, with the phone's own fling feel
+* **YouTube - Visual settings editor:** The glass is 30% softer everywhere
+* **YouTube - Visual settings editor:** The screen menu is 15% darker
+
+
+### Bug Fixes
+
+* **YouTube - Visual settings editor:** Morphe Manager shows each release's changes (it showed the same one-line text every time)
+
+
 # [0.1.0-test.11](https://github.com/desumax/morphe-patcher-visual/compare/visual-editor-test-10...visual-editor-test-11) (2026-11-24)
 
 
