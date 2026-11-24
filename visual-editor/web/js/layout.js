@@ -114,11 +114,14 @@ if (window.ResizeObserver) { const ro = new ResizeObserver(() => glassArtPlace()
 //   0 Flat:  nothing.
 // Cards and tracks never bend: they scroll, and each would be sampled again on every frame of a scroll
 // (that is what made Full glass slow on a flagship). Only what is on screen gets a lens.
-const LENS = {
+// GLASS_K: how strong the glass reads, the same share as --g-k in glass.css (Max, Nov 24 evening: 30% less):
+// each lens bends GLASS_K as far, lifts colour GLASS_K as much and blurs GLASS_K as wide as its recipe says.
+const GLASS_K = .7;
+const LENS = Object.fromEntries(Object.entries({
   chrome: { band: 16, amount: 26, sat: 1.6, blur: 2.5 }, menu: { band: 20, amount: 30, sat: 1.6, blur: 6 },
   dlg: { band: 20, amount: 30, sat: 1.6, blur: 6 },
   ctl: { band: 8, amount: 12, sat: 1.5 }, thumb: { band: 9, amount: 14, sat: 1.8 },
-};
+}).map(([r, L]) => [r, { ...L, amount: L.amount * GLASS_K, sat: +(1 + (L.sat - 1) * GLASS_K).toFixed(3), ...(L.blur ? { blur: L.blur * GLASS_K } : {}) }]));
 const LENS_ROLES = [
   { sel: ".appbar > .iconbtn, .secpill, .seg, .snack", L: "chrome", tier: 1 },
   { sel: ".dlg", L: "dlg", tier: 1 },

@@ -226,7 +226,9 @@ function fitDev(orient) {
     // a new round of the same comparison starts in the layout the last round ended in (see below): the
     // labels are then sized for that layout, not for the best one (Nov 24 round 4: sized for the best,
     // they stuck out of the preview for the first moment of a round in six comparisons)
-    const memoLay = first && !resized && pairMemo && pairMemo.k === scPlaying && pairMemo.size === canvas.clientWidth + "x" + canvas.clientHeight ? pairMemo.lay : null;
+    // (only a layout from an earlier round's pair: a pair's own first calls, made while it is still being
+    // drawn, used to fix its layout for good: Nov 24, eight comparisons began with labels beside the phones)
+    const memoLay = first && !resized && pairMemo && pairMemo.gen !== gen && pairMemo.k === scPlaying && pairMemo.size === canvas.clientWidth + "x" + canvas.clientHeight ? pairMemo.lay : null;
     const LAY_WH = { side: "sideWH", row: "rowWH", column: "colWH", top: "topWH" };
     if (first || resized) {
       const f = (wh) => wh ? fitScale(wh[0], wh[1]) : 0;
@@ -264,7 +266,7 @@ function fitDev(orient) {
     const snap = c => inPair(gen, c);
     // where each caption was last drawn (a phone may already have turned before this call)
     const before = moved ? caps.map(c => c._pos || snap(c)) : null;
-    gen.dataset.lay = pick; pairMemo = { k: scPlaying, lay: pick, size: canvas.clientWidth + "x" + canvas.clientHeight };
+    gen.dataset.lay = pick; pairMemo = { k: scPlaying, lay: pick, size: canvas.clientWidth + "x" + canvas.clientHeight, gen };
     // The final layout lands at once, captions in their final places (hidden while their gliding copies
     // move); the phones and labels glide there (pairGlide). Taking the captions out of the flow until
     // the end of the move made everything jump into place when they came back.
@@ -1537,13 +1539,23 @@ function playScenario(k, prevValue) {
   const d = defaults[k], choices = entriesFor(k).filter(e => !sameVal(e.value, d));
   const ask = !self && PREF[k].type !== "boolean" && choices.length > 1 && sameVal(V(k), d) && (prevValue === undefined || sameVal(prevValue, d));
   const draw = () => {
-    clock.start("steps"); scKey = k; scPlaying = k + "=" + JSON.stringify(vals); scStretch = stretch; scTold = toldInside(fn) || FOOT_OFF.has(k); scTurns = turnsPhone(fn) || SCN_TURNS.has(k); scCollect = [];
+    clock.start("steps"); scKey = k; scPlaying = k + "=" + JSON.stringify(vals) + (askOnly ? "?" : ""); scStretch = stretch; scTold = toldInside(fn) || FOOT_OFF.has(k); scTurns = turnsPhone(fn) || SCN_TURNS.has(k); scCollect = [];
     scDrawing = true;
     let failed = null;
     try { drawSides(); } catch (err) { failed = err; } finally { scDrawing = false; scKey = null; const list = scCollect; scCollect = null; if (!failed) startCollected(list); }
     if (failed) { hintFailed(k, failed); stopScenario(); return; } // the story broke on this build's data: the comparison closes, the editor goes on
     fitDev();
     if (!self && !SCN_NO_FLASH.has(k)) diffFlash(box);
+  };
+  // The waiting side, drawn with the pair (before it is laid out, so the pair is laid out once with it:
+  // Nov 24, Max's second report: it was added after, and the layout picked without it, labels beside
+  // the phones, stayed for the whole wait). The request sits in an outline the shape of the default
+  // side's phone, a faded half phone too when that one is (CROP7), not as a label beside it.
+  const askSide = cell => {
+    // its label keeps its room, unseen, so the outline sits level with the phone beside it
+    cell.querySelector("span").style.visibility = "hidden";
+    const dev = box.querySelector(".dl7 .dev"), c = cropOf(dev), dw = dev ? dev.style.width : "92px", dh = dev ? dev.style.height : "172px";
+    cell.querySelector(".side").innerHTML = `<div class="ask7${c ? " ask" + c + "7" : ""}" style="width:${dw};height:${c ? `calc(${dh} - ${CROP_CUT}px)` : dh}"><span>Select an option</span></div>`;
   };
   const drawSides = () => {
     if (self) {
@@ -1552,7 +1564,7 @@ function playScenario(k, prevValue) {
     } else {
       box.innerHTML = `<div class="duo7 gen">${vals.map(([, l], i) => `<div class="dl7"><span class="${NEG_WORD.has(String(l)) ? "neg" : i ? "on" : ""} ${String(l).length > 14 ? "xlong" : String(l).length > 8 ? "long" : ""}">${esc(l)}</span><div class="side"></div><div class="sf7"></div></div>`).join("")}</div>`;
       box.querySelectorAll(".dl7").forEach((cell, i) => {
-        if (i && askOnly) return; // waiting for a choice: the right phone isn't drawn (see below)
+        if (i && askOnly) return askSide(cell); // waiting for a choice: an outline instead of the right phone (see below)
         const side = { i, foot: cell.querySelector(".sf7") };
         scSide = side;
         try { const ft = fn(cell.querySelector(".side"), vals[i][0], vals[1 - i][0]); if (ft && !scTold && !side.foot.textContent) side.foot.textContent = ft; }
@@ -1577,12 +1589,6 @@ function playScenario(k, prevValue) {
   // (it plays again and again too, while it waits)
   const askRound = () => {
     askOnly = true; try { draw(); } finally { askOnly = false; }
-    const right = box.querySelectorAll(".dl7")[1];
-    // the request sits in the empty phone, not as a long label beside it (labels are beside the phones)
-    right.querySelector("span").textContent = ""; right.querySelector("span").classList.add("ask");
-    const dev = box.querySelector(".dl7 .dev"), dw = dev ? dev.style.width : "92px", dh = dev ? dev.style.height : "172px"; // the size of the default side's phone
-    right.querySelector(".side").innerHTML = `<div class="ask7" style="width:${dw};height:${dh}"><span>Select an option</span></div>`;
-    fitDev();
     clock.after("scenario", slot, askRound);
   };
   askRound();

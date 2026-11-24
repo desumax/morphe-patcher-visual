@@ -367,29 +367,48 @@ function scrollRowIntoView(k, center) {
   if (center || top < sc.scrollTop + stickH || top + row.offsetHeight > sc.scrollTop + sc.clientHeight) { progScrollUntil = performance.now() + 900; sc.scrollTo({ top: target, behavior: "smooth" }); }
 }
 
-// ------------------------------------------------------------------ rubber-band ends (iOS-like)
+// ------------------------------------------------------------------ scrolling and rubber-band ends
 // Max, Nov 24 (every design): pulling a list past its top or bottom drags it on with growing resistance
 // and it springs back when let go; a fling that runs into an end bounces a little past it.
-// While a list sits at an end its touch-action keeps only the direction that still scrolls, so a pull
-// the other way is this code's from the first move (the browser never scrolls it, and the move stays
-// cancelable). At the top the whole page moves (preview and list); at the bottom only the list moves,
-// under the pinned preview. A pull that turns back past its start scrolls by hand.
+// Max, Nov 24 evening: scrolling 20% less sensitive. A finger on the list (or the screen menu) moves it
+// SCROLL_K as far as the finger moves, and a fling leaves at SCROLL_K of the finger's speed, then slows on
+// Android's own fling curve (OverScroller's spline and friction, flingPlan), so it feels like the phone's
+// other lists, only shorter. The list does its own vertical scrolling for that: its touch-action keeps
+// only sideways panning (strips, sliders) and pinch for the browser; a scrolling box inside it keeps its
+// own native scrolling. At the top the whole page moves (preview and list); at the bottom only the list
+// moves, under the pinned preview. Mouse wheels and trackpads scroll natively.
 const RUBBER_REDUCED = matchMedia("(prefers-reduced-motion: reduce)");
+const SCROLL_K = .8;
+// Android's fling (SplineOverScroller): the distance and time a fling at v px/s travels, and the shape of
+// its slowing down (a table of the position along the way, 0 to 1)
+const FLING_NB = 100, FLING_POS = (() => {
+  const P = new Float64Array(FLING_NB + 1), I = .35, P1 = .5 * I, P2 = 1 - (1 - I);
+  let xMin = 0;
+  for (let i = 0; i < FLING_NB; i++) {
+    const a = i / FLING_NB; let xMax = 1, x = 0, coef = 0;
+    for (let n = 0; n < 60; n++) { x = xMin + (xMax - xMin) / 2; coef = 3 * x * (1 - x); const tx = coef * ((1 - x) * P1 + x * P2) + x * x * x; if (Math.abs(tx - a) < 1e-5) break; if (tx > a) xMax = x; else xMin = x; }
+    P[i] = coef * ((1 - x) * .5 + x) + x * x * x;
+  }
+  P[FLING_NB] = 1; return P;
+})();
+function flingPlan(v) { // v in CSS px/s; Android works in device px with its screen density
+  const dpr = window.devicePixelRatio || 1, fr = .015 * 9.80665 * 39.37 * 160 * dpr * .84, DR = Math.log(.78) / Math.log(.9);
+  const l = Math.log(.35 * Math.abs(v) * dpr / fr);
+  return { dist: Math.sign(v) * fr * Math.exp(DR / (DR - 1) * l) / dpr, dur: 1000 * Math.exp(l / (DR - 1)) };
+}
 function rubberBand(sc, topEl, botEl) {
   if (!sc || !topEl || !botEl) return;
-  let pull = null, last = { s: 0, t: 0, v: 0 }, bounce = null;
+  let pull = null, last = { s: 0, t: 0, v: 0 }, bounce = null, flingRaf = 0, selfUntil = 0;
   const room = () => Math.max(0, sc.scrollHeight - sc.clientHeight);
-  const atTop = () => sc.scrollTop <= .5, atBot = () => sc.scrollTop >= room() - .5;
-  const ends = () => {
-    const t = atTop(), b = atBot();
-    sc.style.touchAction = t && b ? "pan-x pinch-zoom" : t ? "pan-x pan-down pinch-zoom" : b ? "pan-x pan-up pinch-zoom" : "";
-  };
+  sc.style.touchAction = "pan-x pinch-zoom";
   // iOS's rubber curve, half as far (Max, Nov 24: "reduce the bounciness by 50%"): 1:2 at first, never
-  // more than half the list's height
+  // more than half the list's height; measured in finger px past the end
   const RUBBER_K = .5;
   const rubber = d => { const D = sc.clientHeight || 600, x = Math.abs(d); return Math.sign(d) * (1 - 1 / (x * .55 / D + 1)) * D * RUBBER_K; };
   const put = (el, y) => { el.style.translate = y ? `0 ${y}px` : ""; };
   const stopBounce = () => { if (bounce) { bounce.cancel(); bounce = null; } };
+  const stopFling = () => { if (flingRaf) { cancelAnimationFrame(flingRaf); flingRaf = 0; } };
+  const scrollTo = y => { selfUntil = performance.now() + 120; sc.scrollTop = y; };
   // back to rest on a critically damped spring from offset y (px) with velocity v (px/s)
   const settle = (el, y, v = 0) => {
     stopBounce(); put(el, 0);
@@ -399,48 +418,78 @@ function rubberBand(sc, topEl, botEl) {
     bounce = el.animate(fr, { duration: 500, easing: "linear" });
     bounce.onfinish = () => { bounce = null; };
   };
+  // a fling that runs into an end goes on a little past it, then comes back (at most about 17 px)
+  const hitEnd = (atTop, vel) => { if (!RUBBER_REDUCED.matches) settle(atTop ? topEl : botEl, 0, Math.min(3000, Math.abs(vel)) * .5 * RUBBER_K * (atTop ? 1 : -1)); };
+  const fling = v => {
+    stopFling();
+    const plan = flingPlan(v); if (!(plan.dur > 16) || Math.abs(plan.dist) < 1) return;
+    const s0 = sc.scrollTop, t0 = performance.now(); let at = s0;
+    const step = now => {
+      flingRaf = 0;
+      if (Math.abs(sc.scrollTop - at) > 1) return; // something else scrolled the list: it wins
+      const x = Math.min(1, (now - t0) / plan.dur), i = Math.min(FLING_NB - 1, Math.floor(x * FLING_NB)), d = FLING_POS[i + 1] - FLING_POS[i];
+      const y = s0 + plan.dist * (FLING_POS[i] + d * (x * FLING_NB - i)), vel = d * FLING_NB * plan.dist / plan.dur * 1000, R = room();
+      if (y <= 0 || y >= R) { scrollTo(y <= 0 ? 0 : R); if (x < 1) hitEnd(y <= 0, vel); return; }
+      scrollTo(y); at = sc.scrollTop;
+      if (x < 1) flingRaf = requestAnimationFrame(step);
+    };
+    flingRaf = requestAnimationFrame(step);
+  };
+  // a box inside the list that scrolls up and down itself keeps the finger
+  const innerY = t => { for (let e = t; e && e !== sc && e.nodeType === 1; e = e.parentElement) if (e.scrollHeight > e.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(e).overflowY)) return true; return false; };
   sc.addEventListener("touchstart", e => {
-    stopBounce(); put(topEl, 0); put(botEl, 0);
-    if (e.touches.length !== 1 || RUBBER_REDUCED.matches) { pull = null; return; }
+    const caught = !!flingRaf;
+    eatEnd(); stopFling(); stopBounce(); put(topEl, 0); put(botEl, 0);
+    if (e.touches.length !== 1 || innerY(e.target)) { pull = null; return; }
     const t = e.touches[0];
-    pull = { x: t.clientX, y: t.clientY, top: atTop(), bot: atBot(), on: false, s0: sc.scrollTop };
+    pull = { x: t.clientX, y: t.clientY, s0: sc.scrollTop, on: false, pts: [], caught, over: 0 };
   }, { passive: true });
   sc.addEventListener("touchmove", e => {
     if (!pull) return;
     const t = e.touches[0], dx = t.clientX - pull.x, dy = t.clientY - pull.y;
     if (!pull.on) {
-      if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) { pull = null; return; }
+      if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) { pull = null; return; } // sideways: the browser's
       if (Math.abs(dy) < 8) return;
-      if (!(pull.top && dy > 0 || pull.bot && dy < 0)) { pull = null; return; } // the browser scrolls this one
-      pull.on = true; pull.y += Math.sign(dy) * 8; pull.dir = Math.sign(dy);
+      pull.on = true; pull.y += Math.sign(dy) * 8;
+      document.documentElement.classList.add("touchwait"); // no press looks while the list moves (as when the browser scrolled)
     }
     if (e.cancelable) e.preventDefault();
-    const d = t.clientY - pull.y;
-    if (d * pull.dir > 0) { // still pulling past the end
-      if (sc.scrollTop !== pull.s0) sc.scrollTop = pull.s0;
-      put(pull.dir > 0 ? topEl : botEl, rubber(d)); pull.d = d;
-    } else { // turned back past the start: scroll by hand
-      put(topEl, 0); put(botEl, 0); pull.d = 0;
-      sc.scrollTop = Math.max(0, Math.min(room(), pull.s0 - d));
-    }
+    const now = performance.now(); pull.pts.push([now, t.clientY]);
+    while (pull.pts.length > 2 && now - pull.pts[0][0] > 100) pull.pts.shift();
+    const R = room(), s = pull.s0 - (t.clientY - pull.y) * SCROLL_K, rub = !RUBBER_REDUCED.matches;
+    put(topEl, 0); put(botEl, 0); pull.over = 0;
+    if (s < 0 && rub) { scrollTo(0); pull.over = rubber(-s / SCROLL_K); pull.el = topEl; put(topEl, pull.over); }
+    else if (s > R && rub) { scrollTo(R); pull.over = -rubber((s - R) / SCROLL_K); pull.el = botEl; put(botEl, pull.over); }
+    else scrollTo(Math.max(0, Math.min(R, s)));
   }, { passive: false });
-  const end = () => {
-    const p = pull; pull = null;
-    if (p && p.on && p.d) settle(p.dir > 0 ? topEl : botEl, rubber(p.d));
+  // the click a lifted finger may still bring: a tap that stops a fling only stops it (as on the phone's own
+  // lists), and a finger that moved the list taps nothing
+  // (only that click: the next touch ends the wait)
+  let eat = null;
+  const eatEnd = () => { if (eat) { document.removeEventListener("click", eat, true); eat = null; } };
+  const eatClick = () => { eatEnd(); eat = ev => { ev.stopPropagation(); ev.preventDefault(); eatEnd(); }; document.addEventListener("click", eat, true); setTimeout(eatEnd, 400); };
+  const end = e => {
+    const p = pull; pull = null; if (!p) return;
+    if (!p.on) { if (p.caught && e.type === "touchend") eatClick(); return; }
+    if (e.type === "touchend") eatClick();
+    if (p.over) { settle(p.el, p.over); return; }
+    if (e.type !== "touchend") return;
+    // the finger's speed over its last 100 ms (least squares), none when it stood still before lifting
+    const pts = p.pts, now = performance.now();
+    if (pts.length < 2 || now - pts[pts.length - 1][0] > 40) return;
+    const n = pts.length, mt = pts.reduce((a, q) => a + q[0], 0) / n, my = pts.reduce((a, q) => a + q[1], 0) / n;
+    let num = 0, den = 0; pts.forEach(([t, y]) => { num += (t - mt) * (y - my); den += (t - mt) ** 2; });
+    const vf = den ? Math.max(-8000, Math.min(8000, num / den * 1000)) : 0; // px/s, as Android's maximum fling
+    if (Math.abs(vf) >= 50) fling(-vf * SCROLL_K);
   };
   sc.addEventListener("touchend", end); sc.addEventListener("touchcancel", end);
   sc.addEventListener("scroll", () => {
     const now = performance.now(), s = sc.scrollTop, dt = now - last.t;
     if (dt > 0 && dt < 100) last.v = (s - last.s) / dt * 1000; else last.v = 0;
-    // a fling that runs into an end goes on a little past it, then comes back
-    if (!pull && Math.abs(last.v) > 600 && !RUBBER_REDUCED.matches && (s <= .5 && last.s > .5 || s >= room() - .5 && last.s < room() - .5)) {
-      const up = s <= .5, v = Math.min(3000, Math.abs(last.v)) * .5 * RUBBER_K * (up ? 1 : -1); // at most about 17 px past the end
-      settle(up ? topEl : botEl, 0, v);
-    }
-    last.s = s; last.t = now; ends();
+    // a wheel or trackpad fling (the browser's own) that runs into an end bounces too
+    if (!pull && now > selfUntil && Math.abs(last.v) > 600 && (s <= .5 && last.s > .5 || s >= room() - .5 && last.s < room() - .5)) hitEnd(s <= .5, last.v);
+    last.s = s; last.t = now;
   }, { passive: true });
-  const ro = new ResizeObserver(ends); ro.observe(botEl); ro.observe(sc);
-  ends();
 }
 rubberBand($("scroller"), $("content"), $("list"));
 rubberBand($("picker"), $("pickGrid"), $("pickGrid"));
