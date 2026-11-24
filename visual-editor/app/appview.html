@@ -24,6 +24,18 @@ a.web:hover, button:hover { background: var(--btn-h); }
 .bar { display: flex; gap: 8px; }
 .toast { position: absolute; left: 50%; bottom: 24px; transform: translate(-50%, 12px); max-width: 86%; background: #f1f1f1; color: #0f0f0f; font-size: 13px; padding: 10px 14px; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.5); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; text-align: center; }
 .toast.on { opacity: 1; transform: translate(-50%, 0); }
+.bar a.web { display: none; }
+/* On a phone (or any small window) a drawn phone inside the real one left the editor at 70% of its size,
+   and nothing usable sideways. There the editor fills the screen, as it does in the app, and only a
+   slim bar stays for Back, reopening and the way to the web preview. */
+@media (max-width: 520px), (max-height: 620px) {
+  body { padding: 0; gap: 0; height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
+  header { display: none; }
+  .phone { width: 100%; height: auto; flex: 1 1 0; min-height: 0; border: 0; border-radius: 0; box-shadow: none; transform: none !important; margin: 0 !important; }
+  .bar { flex: none; width: 100%; gap: 6px; padding: 5px 8px calc(5px + env(safe-area-inset-bottom, 0px)); justify-content: center; background: var(--bg); }
+  .bar a.web { display: inline-block; }
+  .bar button, .bar a.web { padding: 6px 12px; font-size: 12px; }
+}
 </style>
 </head>
 <body>
@@ -35,13 +47,15 @@ a.web:hover, button:hover { background: var(--btn-h); }
 <div class="bar">
   <button id="back" title="The phone's Back gesture">Back</button>
   <button id="again">Open the editor again</button>
+  <a class="web" href="index.html">Web preview</a>
 </div>
 <script>
 const frame = document.getElementById("app"), toast = document.getElementById("toast");
 let tt = 0;
 function say(t) { toast.textContent = t; toast.classList.add("on"); clearTimeout(tt); tt = setTimeout(() => toast.classList.remove("on"), 2600); }
 const phone = document.querySelector(".phone");
-function fit() { const k = Math.min(1, (innerHeight - 150) / 912, (innerWidth - 32) / 428); phone.style.transform = k < 1 ? `scale(${k})` : ""; phone.style.marginBottom = k < 1 ? `${-912 * (1 - k)}px` : ""; }
+const small = matchMedia("(max-width: 520px), (max-height: 620px)"); // the editor fills the screen (see the styles)
+function fit() { const k = small.matches ? 1 : Math.min(1, (innerHeight - 150) / 912, (innerWidth - 32) / 428); phone.style.transform = k < 1 ? `scale(${k})` : ""; phone.style.marginBottom = k < 1 ? `${-912 * (1 - k)}px` : ""; }
 addEventListener("resize", fit); fit();
 document.getElementById("again").onclick = () => { frame.src = "app/index.html"; };
 // Back does what the phone's Back does: the page handles it, or the editor is left
@@ -61,8 +75,8 @@ document.querySelectorAll(".edge").forEach(strip => {
   });
   strip.addEventListener("pointermove", e => {
     if (!g) return;
-    const k = phone.getBoundingClientRect().width / 428; // the phone may be scaled down
-    g.p = Math.min(1, Math.max(0, (g.edge ? g.x - e.clientX : e.clientX - g.x) / (k * 428 * 0.45)));
+    const w = phone.getBoundingClientRect().width; // the phone may be scaled down, or fill the screen
+    g.p = Math.min(1, Math.max(0, (g.edge ? g.x - e.clientX : e.clientX - g.x) / (w * 0.45)));
     g.w.morpheBackProgress && g.w.morpheBackProgress(g.p);
   });
   const end = () => {

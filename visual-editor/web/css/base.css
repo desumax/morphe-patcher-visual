@@ -74,6 +74,8 @@ button { font: inherit; color: inherit; }
 .status { height: 26px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; font-size: 12px; color: var(--m-on); font-weight: 500; background: var(--m-bg); }
 .status .dots { display: flex; gap: 5px; align-items: center; }
 .status .dots i { width: 14px; height: 9px; border: 1.5px solid var(--m-on); border-radius: 2px; display: block; }
+/* the editor fills a real phone's screen here: the drawn status bar ("9:41 5G") would sit under the real one */
+@media (max-width: 860px) { .status { display: none; } }
 
 .appbar { flex: none; display: flex; align-items: center; gap: 6px; padding: 6px 10px 8px 4px; background: var(--m-bg); position: relative; z-index: 30; }
 .iconbtn { width: 40px; height: 40px; border-radius: 50%; border: 0; background: transparent; display: grid; place-items: center; cursor: pointer; flex: none; transition: background var(--dur) var(--ease), transform var(--dur-short) var(--ease); }
