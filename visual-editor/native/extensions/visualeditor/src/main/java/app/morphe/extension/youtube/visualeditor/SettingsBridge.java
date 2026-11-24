@@ -14,7 +14,6 @@ import androidx.annotation.Nullable;
 
 import app.morphe.extension.shared.Logger;
 import app.morphe.extension.shared.settings.Setting;
-import app.morphe.extension.shared.settings.preference.AbstractPreferenceFragment;
 
 /**
  * Reads and writes the real Morphe settings through the same Setting API the regular screens use.
@@ -72,14 +71,11 @@ final class SettingsBridge {
             PendingChanges.beforeSave(s, String.valueOf(s.get()));
             s.saveFromString(newValue);
             PendingChanges.afterSave(s);
-            if (s.rebootApp) markRestart();
-        } catch (RuntimeException ex) {
+            // No AbstractPreferenceFragment.setRestartNeeded() here: Morphe then forces a restart
+            // when its settings close, which would undo "Save for later". The editor asks itself.
+        } catch (RuntimeException | LinkageError ex) {
+            // LinkageError: an older Morphe build without a method this one calls (saveFromString)
             Logger.printException(() -> "Visual editor: could not save " + s.key + ": " + newValue, ex);
         }
-    }
-
-    private static void markRestart() {
-        // The regular Morphe screens ask for the restart when settings are closed: same flag.
-        AbstractPreferenceFragment.setRestartNeeded();
     }
 }

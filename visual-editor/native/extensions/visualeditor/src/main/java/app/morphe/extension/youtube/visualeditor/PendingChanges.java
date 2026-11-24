@@ -116,14 +116,14 @@ final class PendingChanges {
      * The page's own list of changes waiting for a restart, {key: running value as JSON}. Adds the
      * ones not noted yet (a running value already noted is older, so it is kept).
      */
-    static void merge(String json) {
+    static void merge(String json, java.util.Set<String> allowed) {
         try {
             JSONObject in = new JSONObject(json), c = load();
             boolean changed = false;
             for (Iterator<String> it = in.keys(); it.hasNext(); ) {
                 String key = it.next();
                 Setting<?> s = SettingsBridge.setting(key);
-                if (s == null || !s.rebootApp || c.has(key)) continue;
+                if (!allowed.contains(key) || s == null || !s.rebootApp || c.has(key)) continue;
                 Object v = in.opt(key);
                 if (v == null || v == JSONObject.NULL) continue;
                 String running = String.valueOf(v);
@@ -189,7 +189,7 @@ final class PendingChanges {
             try {
                 s.saveFromString(c.optString(key));
                 done.add(key);
-            } catch (RuntimeException ex) {
+            } catch (RuntimeException | LinkageError ex) {
                 Logger.printException(() -> "Visual editor: could not reset " + key, ex);
             }
         }

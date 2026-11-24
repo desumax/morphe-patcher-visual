@@ -7,6 +7,7 @@
 
 package app.morphe.extension.youtube.visualeditor;
 
+import android.preference.EditTextPreference;
 import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceGroup;
@@ -58,6 +59,7 @@ final class LiveSettings {
         // Every leaf row in list order, local to this read so no Preference (and through it the
         // settings activity) is kept once the editor closes.
         List<Row> actionRows = new ArrayList<>();
+        ACTIONS.clear();
         if (root != null) walk(root, null, null, 0, rows, actionRows);
         PreferenceTree tree = PreferenceTree.get();
         Set<String> settingKeys = new HashSet<>();
@@ -84,6 +86,14 @@ final class LiveSettings {
                     if (p instanceof ListPreference l) putEntries(m, l.getEntries(), l.getEntryValues());
                     putText(m, "screenTitle", r.screen);
                     putText(m, "subScreenTitle", r.sub);
+                    // A row drawn by its own Preference class (button order, gesture action,
+                    // channel whitelist and the like) edits a structured value a plain text field
+                    // would break: flagged "custom", and a tap can open Morphe's own row.
+                    if (!(p instanceof TwoStatePreference || p instanceof ListPreference || p instanceof EditTextPreference)
+                            && !(s instanceof BooleanSetting)) {
+                        m.put("custom", true);
+                        ACTIONS.put(s.key, new WeakReference<>(p));
+                    }
                 } else {
                     putText(m, "title", n.title);
                     if (n.entries == null) putText(m, "summary", n.summary);
@@ -109,7 +119,6 @@ final class LiveSettings {
     private static final Map<String, WeakReference<Preference>> ACTIONS = new HashMap<>();
 
     private static void addActions(JSONObject out, Set<String> settingKeys, List<Row> actionRows) {
-        ACTIONS.clear();
         int n = 0;
         for (Row r : actionRows) {
             Preference p = r.pref;

@@ -74,6 +74,12 @@ final class WebEditorDialog extends Dialog {
     private final WebView web;
     /** Live titles, entries, defaults and availability, read on the main thread before the page loads. */
     private String meta = "{}";
+    /**
+     * The settings this visit's rows edit (from meta, action rows left out). Only these values go
+     * to the page and only these may be saved: Morphe keeps many settings loaded that have no row
+     * (deprecated ones it migrates, tokens, internal state), and those stay out of the editor.
+     */
+    private final java.util.Set<String> editable = new java.util.HashSet<>();
     private final long openedAt = SystemClock.uptimeMillis();
     /** The settings list behind the editor, hidden until the editor closes so it never flashes. */
     @Nullable private View hiddenList;
@@ -164,7 +170,20 @@ final class WebEditorDialog extends Dialog {
             }
         }
         try {
-            meta = LiveSettings.meta().toString();
+            JSONObject m = LiveSettings.meta();
+            for (java.util.Iterator<String> it = m.keys(); it.hasNext(); ) {
+                String k = it.next();
+                JSONObject row = m.optJSONObject(k);
+                if (row != null && !"action".equals(row.optString("type"))) editable.add(k);
+            }
+            // SponsorBlock draws its category rows in code (no row of their own): while its screen
+            // is in this build, its settings are editable too, its private user id excepted.
+            if (editable.contains("morphe_sb_enabled")) {
+                for (Setting<?> s : Setting.allLoadedSettings()) {
+                    if (s.key.startsWith("morphe_sb_") && !s.key.contains("private_user_id")) editable.add(s.key);
+                }
+            }
+            meta = m.toString();
         } catch (Throwable ex) {
             Logger.printException(() -> "Visual editor: live settings unavailable", ex);
         }
@@ -252,6 +271,7 @@ final class WebEditorDialog extends Dialog {
             try {
                 JSONObject values = new JSONObject();
                 for (Setting<?> s : Setting.allLoadedSettings()) {
+                    if (!editable.contains(s.key)) continue;
                     try {
                         Object v = s.get();
                         if (v instanceof Enum<?> e) values.put(s.key, e.name());
@@ -276,7 +296,7 @@ final class WebEditorDialog extends Dialog {
         @JavascriptInterface
         public void set(String key, String json) {
             Utils.runOnMainThread(() -> {
-                Setting<?> s = Setting.getSettingFromPath(key);
+                Setting<?> s = editable.contains(key) ? Setting.getSettingFromPath(key) : null;
                 if (s == null) return;
                 String value = fromJson(s, json);
                 if (value == null) {
@@ -366,7 +386,7 @@ final class WebEditorDialog extends Dialog {
         /** "Save for later": the page's list of changes waiting for a restart, {key: running value}. */
         @JavascriptInterface
         public void savePending(String json) {
-            Utils.runOnMainThread(() -> PendingChanges.merge(json));
+            Utils.runOnMainThread(() -> PendingChanges.merge(json, editable));
         }
 
         /**
