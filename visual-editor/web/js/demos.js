@@ -16,7 +16,7 @@ let demoStep = 0;
 //   overlay    guides drawn over the player (swipe zones and their style, size and colours).
 // Comparisons (Off / On side by side) are not demos: they live in scenarios.js (scen()).
 const DEMO_TYPES = {
-  transient: "hide_player_gesture_hints seekbar_thumbnail_preview sb_create_new_segment sb_create_new_segment_step sb_voting_button",
+  transient: "hide_player_gesture_hints hide_shorts_gesture_hints hide_shorts_paused_overlay_buttons seekbar_thumbnail_preview sb_create_new_segment sb_create_new_segment_step sb_voting_button",
   gesture: "tap_to_seek slide_to_seek disable_precise_seeking_gesture swipe_seek disable_shorts_double_tap_to_like swap_save_and_queue_actions",
   toast: "remember_playback_speed_last_selected_toast remember_video_quality_last_selected_toast",
   motion: "exit_fullscreen disable_like_subscribe_glow stable_caption_blocks niconico_comments",
@@ -193,7 +193,15 @@ const DEMOS = {
     const W = $("stage").clientWidth;
     tapAt(W * .45, 170); dT(() => tapAt(W * .45, 170), 180);
     const h = $("heart");
-    if (!disabled && h) { dT(() => { h.style.transform = "translate(-50%,-50%) scale(1)"; }, 260); dT(() => { h.style.transform = "translate(-50%,-50%) scale(0)"; }, 900); dT(() => showPill("Liked", 800), 300); label("Double-tap: likes the Short (stock)"); }
+    // the like itself shows where it lands: the Like button turns on (filled, popping), then the next round
+    // starts unliked (Max, Nov 24: "the like button doesn't get triggered"); 12K stays 12K, as YouTube rounds
+    const lb = document.querySelector('#stage [data-k="morphe_hide_shorts_like_button"]'), lbtn = lb && lb.querySelector(".pbtn");
+    const unlike = () => { if (lbtn) lbtn.classList.remove("liked7"); };
+    if (!disabled && h) {
+      dT(() => { h.style.transform = "translate(-50%,-50%) scale(1)"; }, 260); dT(() => { h.style.transform = "translate(-50%,-50%) scale(0)"; }, 900);
+      dT(() => { if (lbtn) lbtn.classList.add("liked7"); }, 300);
+      dT(unlike, 1380); onDemoStop(unlike); label("Double-tap: likes the Short (stock)");
+    }
     else { label("Double-tap: does nothing, no accidental likes", true); dT(() => nothing7(800), 300); }
   },
   morphe_disable_like_subscribe_glow(disabled) {
@@ -401,6 +409,24 @@ Object.assign(DEMOS, {
   },
   // every hint the setting hides, one gesture per round (Max, Nov 24: only the first one showed): pull up
   // on the seekbar, slide back down to cancel, hold the video for 2x
+  // the Shorts "Swipe up" tip: it appears over a Short, the arrow nudging up, and goes again
+  morphe_hide_shorts_gesture_hints(hidden) {
+    const hint = document.querySelector('#stage [data-k="morphe_hide_shorts_gesture_hints"]'); if (!hint) return;
+    fadeC(hint, false); dT(() => fadeC(hint, !hidden), 220); dT(() => fadeC(hint, false), 1250);
+    onDemoStop(() => hint.classList.remove("dz", "dzt"));
+  },
+  // a tap pauses the Short: the pause sign shows and, unless hidden, the paused overlay's buttons with it;
+  // a second tap plays it again and both go
+  morphe_hide_shorts_paused_overlay_buttons(hidden) {
+    const st = $("stage"), W = st.clientWidth, H = st.clientHeight, ov = document.querySelector('#stage [data-k="morphe_hide_shorts_paused_overlay_buttons"]'), host = $("shortsStage");
+    if (!ov || !host) return;
+    fadeC(ov, false); tapAt(W * .45, H * .29);
+    const sign = document.createElement("div"); sign.className = "psign7"; sign.innerHTML = I("play"); host.appendChild(sign);
+    dT(() => { sign.classList.add("on"); fadeC(ov, !hidden); }, 160);
+    dT(() => tapAt(W * .45, H * .29), 1050);
+    dT(() => { sign.classList.remove("on"); fadeC(ov, false); }, 1200);
+    onDemoStop(() => { sign.remove(); ov.classList.remove("dz", "dzt"); });
+  },
   morphe_hide_player_gesture_hints(hidden) {
     const f = finger(); if (!f) return; const st = $("stage"), W = st.clientWidth, H = st.clientHeight;
     const hint = document.querySelector('#stage [data-k="morphe_hide_player_gesture_hints"]'), pill = hint && hint.querySelector(".toastin");

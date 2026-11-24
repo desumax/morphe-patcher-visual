@@ -196,7 +196,7 @@ function renderTabs() {
   const g = groupOf(section), tabs = tabsOf(g), key = tabs.map(x => x[0]).join(" ");
   if (box.dataset.key === key && box.children.length) { if (box.dataset.sel !== section) markTab(section); return; }
   glideStop(box);
-  paint(box, tabs.map(([id, t]) => `<button class="tab7" role="tab" data-tab="${id}" aria-selected="${id === section}"><span class="ol">${esc(t)}${devMark(id)}</span></button>`).join(""));
+  paint(box, tabs.map(([id, t]) => `<button class="tab7" role="tab" data-tab="${id}" aria-selected="${id === section}"><span class="ol"><span class="tx">${esc(t)}</span>${devMark(id)}</span></button>`).join(""));
   box.dataset.key = key; box.dataset.sel = section;
   const cur = box.querySelector('[aria-selected="true"]');
   if (cur) box.scrollTo({ left: cur.offsetLeft - (box.clientWidth - cur.offsetWidth) / 2, behavior: "smooth" });
@@ -211,7 +211,7 @@ function markTab(id) {
   // tab's fill was still the old dark one, so the glide was dark and the tab turned white only after it
   settled(tabs, () => { tabs.forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === id))); box.dataset.sel = id; });
   const cur = box.querySelector('[aria-selected="true"]'); if (!cur) return;
-  if (was) { const cs = getComputedStyle(cur); glideRun(box, was, gRect(cur, box), { bg: settledBg(cur), radius: parseFloat(cs.borderTopLeftRadius) || 0, z: 0, done: () => { cur.style.transition = "none"; requestAnimationFrame(() => { cur.style.transition = ""; }); } }); }
+  if (was) { const cs = getComputedStyle(cur); glideRun(box, was, gRect(cur, box), { bg: settledBg(cur), radius: parseFloat(cs.borderTopLeftRadius) || 0, z: 0, done: () => { cur.style.transitionProperty = "transform"; requestAnimationFrame(() => { cur.style.transitionProperty = ""; }); } }); }
   box.scrollTo({ left: cur.offsetLeft - (box.clientWidth - cur.offsetWidth) / 2, behavior: "smooth" });
 }
 // Screen menu order: Morphe's own order by default (its settings screens, then their sub-screens);
@@ -1113,16 +1113,17 @@ function glideNow(box) {
   let best = null; g.layer.querySelectorAll("i").forEach(e => { const r = gRect(e, box); if (r.w > 1 && r.h > 1 && (!best || r.w * r.h > best.w * best.h)) best = r; });
   return best;
 }
-function glideStop(box) { const g = box._glide; if (g) { box._glide = null; g.anims.forEach(a => a.cancel()); g.layer.remove(); box.classList.remove("gliding"); } }
+function glideStop(box) { const g = box._glide; if (g) { box._glide = null; g.anims.forEach(a => a.cancel()); g.layer.remove(); box.classList.remove("gliding"); (g.path || []).forEach(c => c.classList.remove("gpath")); } }
 // o: bg (the new colour), fromBg (the old one, if it differs), radius (the thumb's corner), z (layer
 // stacking), done (called once the colour has landed or the glide was replaced)
 // Every glide takes the chosen element's final colour, never a value caught mid-transition (Max, Nov 24:
 // "there's a delay before it turns white"). settled(els, fn) runs a state change with the elements'
 // transitions off for that frame; settledBg(el) reads an element's settled background.
+// Only colours are held: a pressed part still eases back from its press (transform), it used to snap.
 function settled(els, fn) {
-  const list = [...els]; list.forEach(e => { e.style.transition = "none"; });
+  const list = [...els]; list.forEach(e => { e.style.transitionProperty = "transform"; });
   fn(); list.forEach(e => void e.offsetWidth);
-  requestAnimationFrame(() => list.forEach(e => { e.style.transition = ""; }));
+  requestAnimationFrame(() => list.forEach(e => { e.style.transitionProperty = ""; }));
 }
 function settledBg(el) {
   const keep = el.style.transition; el.style.transition = "none";
@@ -1135,6 +1136,13 @@ function glideRun(box, f, t, o) {
   const STEP = 1000 / 60, frames = [];
   for (let d = 0; d < M.end; d += STEP) frames.push(M.draw(f, t, d));
   frames.push([{ x: t.x, y: t.y, w: t.w, h: t.h }]);
+  // a motion's last frames that no longer move (under half a pixel from the end) are dropped: the control's
+  // own fill takes over as soon as the colour has landed, not a quarter second later
+  // (a blob melting inside the landed fill can't be seen either)
+  const near = (b, e) => Math.abs(Math.max(0, b.w) - Math.max(0, e.w)) < .5 && Math.abs(Math.max(0, b.h) - Math.max(0, e.h)) < .5 && (b.w < .5 || b.h < .5 || Math.abs(b.x - e.x) < .5 && Math.abs(b.y - e.y) < .5) && (b.o ?? 1) > .98;
+  const inside = b => b.w < .5 || b.h < .5 || b.x >= t.x - .5 && b.y >= t.y - .5 && b.x + b.w <= t.x + t.w + .5 && b.y + b.h <= t.y + t.h + .5;
+  const still = fr => { const landed = fr.some(b => near(b, t)); return fr.every((b, i) => near(b, frames[frames.length - 1][i] || { x: 0, y: 0, w: 0, h: 0 }) || landed && inside(b)); };
+  while (frames.length > 3 && still(frames[frames.length - 2])) frames.splice(frames.length - 2, 1);
   // the goo filter turns a see-through colour (a glass switch's off thumb) to nothing: the blobs are
   // drawn opaque and the layer carries the colour's own see-through instead
   const split = c => { const m = /^rgba?\(([^,]+),([^,]+),([^,)]+)(?:,\s*([\d.]+))?\)$/.exec(String(c || "").replace(/\s/g, "")); return m ? [`rgb(${m[1]},${m[2]},${m[3]})`, m[4] === undefined ? 1 : +m[4]] : [c, 1]; };
@@ -1142,23 +1150,38 @@ function glideRun(box, f, t, o) {
   if (goo && (aTo < 1 || aFrom < 1)) o = { ...o, bg: bgO, fromBg: fromO, alpha: [aFrom, aTo] };
   const layer = document.createElement("span"); layer.className = goo ? "glayer goo" : "glayer"; layer.setAttribute("aria-hidden", "true");
   layer.style.cssText = `z-index:${o.z ?? 0};width:${box.scrollWidth}px;height:${box.scrollHeight}px${goo ? `;filter:url(#${goo})` : ""}`;
+  // Only transform and opacity move, so the compositor plays the glide by itself: a phone draws the new
+  // screen on the main thread while a tab's glide runs, and a glide that animated sizes and corners froze
+  // there and skipped half its way (Max, Nov 24: "changed but not fixed"). Each blob is drawn once at its
+  // resting size (or its largest, if it melts away) and scaled from there; a colour change is a second
+  // blob in the old colour fading out on top.
   const n = Math.max(...frames.map(fr => fr.length)), R = o.radius ?? 999, last = frames.length - 1, mid = Math.round(last * .4);
-  const anims = [];
+  const anims = [], twin = o.fromBg && o.fromBg !== o.bg;
   for (let i = 0; i < n; i++) {
-    const e = document.createElement("i"); e.style.backgroundColor = o.bg; layer.appendChild(e);
-    const kf = frames.map((fr, j) => {
-      const b = fr[i] || { x: t.x + t.w / 2, y: t.y + t.h / 2, w: 0, h: 0 }, w = Math.max(0, b.w), h = Math.max(0, b.h);
-      const k = { transform: `translate(${b.x}px,${b.y}px)`, width: w + "px", height: h + "px", borderRadius: Math.max(0, Math.min(b.r ?? R, w / 2, h / 2)) + "px", opacity: b.o ?? 1 };
-      if (o.fromBg && o.fromBg !== o.bg && (j === 0 || j === mid)) k.backgroundColor = j === 0 ? o.fromBg : o.bg;
-      return k;
-    });
+    const at = fr => fr[i] || { x: t.x + t.w / 2, y: t.y + t.h / 2, w: 0, h: 0 };
+    const rest = at(frames[last]); let W = Math.max(0, rest.w), H = Math.max(0, rest.h), rr = rest.r;
+    if (W < 1 || H < 1) frames.forEach(fr => { const b = at(fr); if (b.w * b.h > W * H) { W = b.w; H = b.h; rr = b.r; } });
+    if (W < 1 || H < 1) continue;
+    const css = `width:${W}px;height:${H}px;border-radius:${Math.max(0, Math.min(rr ?? R, W / 2, H / 2))}px`;
+    const kf = frames.map(fr => { const b = at(fr), w = Math.max(0, b.w), h = Math.max(0, b.h); return { transform: `translate(${b.x}px,${b.y}px) scale(${w / W},${h / H})`, opacity: b.o ?? 1 }; });
+    const e = document.createElement("i"); e.style.cssText = css; e.style.backgroundColor = o.bg; layer.appendChild(e);
     anims.push(e.animate(kf, { duration: last * STEP, easing: "linear", fill: "forwards" }));
+    if (twin) {
+      const e2 = document.createElement("i"); e2.style.cssText = css; e2.style.backgroundColor = o.fromBg; layer.appendChild(e2);
+      anims.push(e2.animate(kf.map((k, j) => ({ ...k, opacity: k.opacity * Math.max(0, 1 - j / mid) })), { duration: last * STEP, easing: "linear", fill: "forwards" }));
+    }
   }
+  if (!anims.length) { if (o.done) o.done(false); return; }
   if (o.alpha) anims.push(layer.animate([{ opacity: o.alpha[0] }, { opacity: o.alpha[1], offset: .4 }, { opacity: o.alpha[1] }], { duration: last * STEP, fill: "forwards" }));
+  // the parts the colour passes over lose their glass lens while it moves (a lens bends the fill into
+  // streaks and lifts the part above it); the others keep theirs, so nothing else flickers when it ends
+  const x0 = Math.min(f.x, t.x) - 4, x1 = Math.max(f.x + f.w, t.x + t.w) + 4, y0 = Math.min(f.y, t.y) - 4, y1 = Math.max(f.y + f.h, t.y + t.h) + 4;
+  const path = [...box.children].filter(c => { if (c.classList.contains("glayer")) return false; const r = gRect(c, box); return r.x < x1 && r.x + r.w > x0 && r.y < y1 && r.y + r.h > y0; });
+  path.forEach(c => c.classList.add("gpath"));
   box.prepend(layer); box.classList.add("gliding");
-  const g = box._glide = { layer, anims, done: o.done };
+  const g = box._glide = { layer, anims, done: o.done, path };
   // the control's own fill comes back without its transitions (done turns them off for a frame)
-  anims[0].onfinish = () => { if (box._glide !== g) return; box._glide = null; if (o.done) o.done(false); box.classList.remove("gliding"); void box.offsetWidth; layer.remove(); };
+  anims[0].onfinish = () => { if (box._glide !== g) return; box._glide = null; if (o.done) o.done(false); box.classList.remove("gliding"); path.forEach(c => c.classList.remove("gpath")); void box.offsetWidth; layer.remove(); };
 }
 // Every two-state toggle glides like the other choices (Max, Nov 23: "Group screens into tabs" and the
 // Original/Morphe toggle still slid on their own). One helper for all of them: a switch (.sw, its thumb is
@@ -1219,7 +1242,7 @@ function optGlide() {
   const from = f.bg ? f : { x: t.x + t.w * .3, y: t.y + t.h * .25, w: t.w * .4, h: t.h * .5 };
   glideRun(box, from, t, { bg: settledBg(on), fromBg: f.bg, radius: parseFloat(cs.borderTopLeftRadius) || 0, z: 1, done: () => {
     // hand back to the pill without its background transition flashing it on the last frame
-    on.style.transition = "none"; requestAnimationFrame(() => { on.style.transition = ""; }); } });
+    on.style.transitionProperty = "transform"; requestAnimationFrame(() => { on.style.transitionProperty = ""; }); } });
 }
 const OPT_PAD = 6; // the least room beside a pill's text
 const LCHIP_CHROME = 8 + 2 + 22 + 2; // left padding, gap, remove button, right padding (4 speeds a row in a ~300px card)

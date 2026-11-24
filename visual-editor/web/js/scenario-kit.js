@@ -120,6 +120,53 @@ scen("feed", "feed_long_press_menu", (box, on) => {
   at(1100, () => { f.classList.remove("hold", "show"); if (on) sheet7(dev, sheetRows([["clock", "Save to Watch later"], ["plist", "Save to playlist"], ["dl", "Download"], ["share", "Share"], ["close", "Not interested"]])); else { dev.querySelector(".pg7").style.filter = "brightness(.6)"; toast7(dev, "Inline preview plays", "40%"); } });
   return on ? "Hold a video: its menu opens" : "Hold a video: it starts an inline preview (stock)";
 });
+// Playback in feeds (YouTube's own "Playback in feeds" setting, kept in Morphe's menu): a video that stops
+// in view starts a muted preview in its thumbnail: Always on, only on Wi-Fi, or never. The story starts on
+// Wi-Fi and switches to mobile data, so all three end differently.
+SCN_HOLD.morphe_playback_in_feeds = 3400;
+scen("feed", "playback_in_feeds", (box, v) => {
+  situation("A video stops in view, on Wi-Fi and then on mobile data");
+  const n = Number(v), plays = wifi => n === 2 || (n === 1 && wifi);
+  const art = `<span class="pz7" style="position:absolute;inset:0;border-radius:3px;background:inherit;transition:scale 2.4s linear"></span><span class="badge7 mu7" style="left:3px;top:3px;opacity:0;transition:opacity .2s">${ico7("mute", 6)} Muted</span><i class="pp7" style="position:absolute;left:0;bottom:0;height:2px;width:0;background:#ff0033"></i><span class="badge7 du7" style="left:auto;right:3px;top:auto;bottom:3px;transition:opacity .2s">12:04</span>`;
+  box.innerHTML = device("port", pageRows(feed7(`<div class="fd7" style="display:grid;gap:5px;transition:transform .5s var(--ease)">${row7(4, "Night train to Bodø")}${big7(3, "Building a tiny cabin", art)}${row7(2, "Lo-fi beats")}</div>`)) + `<span class="badge7 net7" style="left:4px;top:auto;bottom:6px;display:inline-grid">${[["wifi", "Wi-Fi", 1], ["phone", "Mobile data", 0]].map(([ic, t, on]) => `<span class="nt7" style="grid-area:1/1;transition:opacity .2s;opacity:${on}">${ico7(ic, 6)} ${t}</span>`).join("")}</span>`);
+  const dev = box.querySelector(".dev"), pp = dev.querySelector(".pp7"), pz = dev.querySelector(".pz7"), mu = dev.querySelector(".mu7"), du = dev.querySelector(".du7"), net = dev.querySelector(".net7");
+  const play = (on, from) => {
+    mu.style.opacity = on ? 1 : 0; du.style.opacity = on ? 0 : 1;
+    pp.getAnimations().forEach(a => a.cancel());
+    if (on) { pp.animate([{ width: from + "%" }, { width: from + 22 + "%" }], { duration: 1600 * scStretch, fill: "forwards" }); pz.style.scale = "1.04"; }
+    else { pp.style.width = from + "%"; pz.style.scale = "1"; }
+  };
+  at(700, () => play(plays(true), 0));
+  // both labels share the pill's box, so it keeps its size and place when the network changes
+  at(1900, () => { net.querySelectorAll(".nt7").forEach((e, i) => { e.style.opacity = i; }); flash7(net); });
+  at(2200, () => { if (!plays(false)) play(false, plays(true) ? 22 : 0); else play(true, 22); });
+  return "";
+});
+// Play next in queue type (AddToQueuePatch.QueueType): what "Play next in queue" in a video's menu does.
+// Default adds nothing (YouTube's own item, as without Morphe); Native queue opens the queue in YouTube's
+// own playlist panel; Morphe queue keeps it as a playlist on your YouTube account; client side keeps it on
+// the phone, with a Queue (n) button. The story taps the item and shows where the video went.
+SCN_HOLD.morphe_queue_type = 3200;
+scen("feed", "queue_type", (box, v) => {
+  situation("Play next in queue, from a video's menu");
+  const dots = `<span class="qd7" style="position:absolute;right:1px;top:41px;width:8px;height:8px;display:grid;place-items:center">${ico7("more", 7)}</span>`;
+  box.innerHTML = device("port", pageRows(feed7(`<div style="position:relative">${big7(3, "Building a tiny cabin")}${dots}</div>${row7(4, "Night train to Bodø")}${row7(2, "Lo-fi beats")}`)));
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger");
+  at(250, () => fingerOn(dev, f, dev.querySelector(".qd7"), .5, .5, 250));
+  at(550, () => { tapF(f); sheet7(dev, sheetRows([["queue", "Play next in queue"], ["clock", "Save to Watch later"], ["plist", "Save to playlist"], ["share", "Share"]])); });
+  at(950, () => fingerOn(dev, f, dev.querySelector(".sh7 > div"), .4, .5, 250));
+  at(1300, () => tapF(f));
+  at(1500, () => {
+    f.classList.remove("show"); dev.querySelectorAll(".sh7,.shs7").forEach(e => e.remove());
+    const add = html => dev.insertAdjacentHTML("beforeend", `<div class="qr7" style="position:absolute;left:5%;width:90%;box-sizing:border-box;bottom:6px;z-index:4;display:grid;gap:3px;animation:sheetup .3s var(--ease)">${html}</div>`);
+    const panel = (title, sub, icon) => `<div style="border-radius:4px;background:#212121;padding:4px;display:grid;grid-template-columns:minmax(0,1fr);gap:3px;box-shadow:0 -2px 8px rgba(0,0,0,.5)"><div style="display:flex;gap:3px;align-items:center;font-size:6.5px">${ico7(icon, 7)}<b>${title}</b></div><div style="color:#aaa;font-size:5.5px;margin-top:-2px">${sub}</div>${row7(3, "Building a tiny cabin")}</div>`;
+    if (v === "NATIVE") add(panel("Queue", "YouTube's playlist panel", "queue"));
+    else if (v === "MORPHE") { add(panel("Morphe queue", "a playlist on your account", "plist")); toast7(dev, "Added to queue", "16%"); }
+    else if (v === "LOCAL") { add(panel("Queue (1)", "kept on this phone", "phone")); toast7(dev, "Added to queue", "16%"); }
+    else toast7(dev, "YouTube's own queue (stock)", "40%");
+  });
+  return "";
+});
 // Show view count on thumbnails: Morphe moves the count from the line under the title to the bottom left
 // of the thumbnail (it does not add or remove it). Both phones start as stock; the On phone's count moves.
 scen("feed", "feed_view_count", (box, on) => {

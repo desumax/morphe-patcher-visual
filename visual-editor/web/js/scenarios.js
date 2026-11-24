@@ -1145,12 +1145,18 @@ scen("fullscreen", "volume_boost", (box, on) => {
 // ------------------------------------------------------------------ shorts player extras
 SCENES.shorts = (base => () => {
   let html = base();
-  const paused = `${C("hide_shorts_paused_overlay_buttons", `<div style="display:flex;gap:10px">${["Remix", "Save music"].map((t, i) => i === 1 ? C("hide_shorts_save_sound_button", `<span class="chip" style="height:28px;background:rgba(0,0,0,.55)">${I("music")} ${t}</span>`, { tag: "span" }) : `<span class="chip" style="height:28px;background:rgba(0,0,0,.55)">${I("remix")} ${t}</span>`).join("")}</div>`, { style: "position:absolute;left:50%;top:30%;transform:translateX(-50%)" })}`;
+  // Drawn from ShortsFilter: the paused overlay is "lens_paused_state" / "shorts_paused_state", the buttons
+  // YouTube lays over a paused Short (Google Lens search, Remix); it shows only while paused, so its demo
+  // pauses the Short. 'Save music' (bookmark icon), 'New posts' (box pencil) and Upcoming (bell) are
+  // suggested actions ("suggested_action"): pills in the row above the channel, like Shop or Use sound.
+  // The gesture hint is the "Swipe up" tip YouTube inflates over the first Shorts (a ViewStub).
+  const chip = (k, icon, t) => C(k, `<span class="chip" style="height:26px;font-size:11.5px;background:rgba(0,0,0,.5)">${icon ? I(icon) + " " : ""}${t}</span>`);
+  const paused = C("hide_shorts_paused_overlay_buttons", `<div style="display:flex;gap:10px">${[["search", "Search"], ["remix", "Remix"]].map(([ic, t]) => `<span class="chip" style="height:30px;background:rgba(0,0,0,.55)">${I(ic)} ${t}</span>`).join("")}</div>`, { style: "position:absolute;left:50%;top:39%;translate:-50% 0;z-index:3" });
   const top = `<div style="position:absolute;left:10px;top:8px;display:flex;gap:6px;align-items:center">
-    ${C("hide_shorts_new_posts_button", `<span class="chip" style="height:26px;font-size:11.5px;background:rgba(0,0,0,.5)">New posts</span>`, { tag: "span" })}
-    ${C("hide_shorts_upcoming_button", `<span class="chip" style="height:26px;font-size:11.5px;background:rgba(0,0,0,.5)">${I("bell")} Upcoming</span>`, { tag: "span" })}
     ${C("hide_shorts_auto_dubbed_label", `<span class="chip" style="height:22px;font-size:10.5px;background:rgba(0,0,0,.5)">Auto-dubbed</span>`, { tag: "span" })}</div>`;
-  const hint = C("hide_shorts_gesture_hints", `<div class="toastin" style="position:static;transform:none">Swipe up for more</div>`, { style: "position:absolute;left:50%;top:52%;transform:translateX(-50%)" });
+  const hint = C("hide_shorts_gesture_hints", `<div class="toastin shint7" style="position:static;transform:none"><span class="sharrow7">${I("up")}</span>Swipe up for more</div>`, { style: "position:absolute;left:50%;top:16%;translate:-50% 0;z-index:3" });
+  const sugg = chip("hide_shorts_save_sound_button", "bookmark", "Save music") + chip("hide_shorts_new_posts_button", "pencil", "New posts") + chip("hide_shorts_upcoming_button", "bell", "Upcoming");
+  html = html.replace(/(<div style="display:flex;flex-wrap:wrap;gap:6px">)/, `$1${sugg}`);
   return html.replace('<div id="heart"', paused + top + hint + '<div id="heart"');
 })(SCENES.shorts);
 // Shorts "more" menu: picking one of its settings opens the sheet, as on the phone

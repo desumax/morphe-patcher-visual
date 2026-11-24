@@ -88,7 +88,10 @@ const ghostTimers = new Map();
 const stageEls = k => document.querySelectorAll(`#stage [data-k="${k}"]`);
 function clearGhost(k) { (ghostTimers.get(k) || []).forEach(clearTimeout); ghostTimers.delete(k); ghosts.delete(k); fading.delete(k); stageEls(k).forEach(e => { e.classList.remove("leaving", "ghost-out"); e.getAnimations().forEach(a => a.cancel()); }); }
 function ghost(k, grow = true) {
-  const already = ghosts.has(k) || fading.has(k);
+  // a part still folding away (you came back quickly) unfolds again from where it is, not from nothing
+  // or at full size at once (Max, Nov 24: quick switching made the previews clip each other)
+  const already = ghosts.has(k);
+  stageEls(k).forEach(sizeSnap);
   clearGhost(k);
   ghosts.add(k);
   stageEls(k).forEach(e => { e.getAnimations().forEach(a => a.cancel()); e.classList.remove("ghost-out", "leaving"); e.classList.add("ghost"); hugWidth(e); if (grow && !already && !e.classList.contains("intray")) sizeAnim(e, true); });
@@ -151,7 +154,17 @@ function axisOf(el) {
   if (ps && !ps.display.includes("flex") && !ps.display.includes("grid") && cs.display.startsWith("inline")) return "w";
   return "h";
 }
+// One size motion per part at a time. A new one starts from where the running one has the part now
+// (sizeSnap reads that before anything cancels it), and only the latest motion may lift the clipping:
+// an unfold that finished under a fold used to drop overflow:hidden, and the folding part's content
+// painted over its neighbours (quick switching between Shorts settings, Max, Nov 24).
+function sizeSnap(el) {
+  const a = el._sizeA; if (!a || a.playState !== "running" || el._sizeFrom) return;
+  const r = el.getBoundingClientRect(); el._sizeFrom = { w: r.width, h: r.height, o: +getComputedStyle(el).opacity };
+}
 function sizeAnim(el, show, ms = SIZE_MS) {
+  sizeSnap(el); const from = el._sizeFrom; el._sizeFrom = null;
+  if (el._sizeA) { const p = el._sizeA; el._sizeA = null; p.cancel(); }
   const ax = axisOf(el), r = el.getBoundingClientRect(), cs = getComputedStyle(el);
   let full, zero;
   if (ax === "w") {
@@ -166,10 +179,13 @@ function sizeAnim(el, show, ms = SIZE_MS) {
   else { full = { opacity: 1, transform: cs.transform === "none" ? "scale(1)" : cs.transform }; zero = { opacity: 0, transform: (cs.transform === "none" ? "" : cs.transform + " ") + "scale(.8)" }; }
   if (!r.width && !r.height && ax !== "none") return null;
   el.classList.add("sizing");
-  const a = el.animate(show ? [zero, full] : [full, zero], { duration: ms, easing: "cubic-bezier(.4,0,.2,1)", fill: show ? "none" : "forwards" });
+  let start = show ? zero : full;
+  if (from && ax !== "none") { start = { ...start, opacity: from.o }; if (ax === "w") start.width = from.w + "px"; else start.height = from.h + "px"; }
+  const a = el.animate([start, show ? full : zero], { duration: ms, easing: "cubic-bezier(.4,0,.2,1)", fill: show ? "none" : "forwards" });
+  el._sizeA = a;
   // a collapsed element keeps overflow:hidden until it is hidden for good, otherwise its content
   // would paint at full size for a frame between the end of the animation and display:none
-  if (show) a.onfinish = a.oncancel = () => el.classList.remove("sizing", "sizew", "sizei");
+  if (show) a.onfinish = a.oncancel = () => { if (el._sizeA !== a && el._sizeA) return; if (el._sizeA === a) el._sizeA = null; el.classList.remove("sizing", "sizew", "sizei"); };
   return a;
 }
 // A card changed through its own control stays where it is on screen: whatever else moves (the preview

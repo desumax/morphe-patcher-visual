@@ -11,7 +11,7 @@
 .dprev .row .sum { display: none; }
 /* glideRun (list.js): the blobs that carry a choice's colour, over the box and under its labels */
 .glayer { position: absolute; left: 0; top: 0; pointer-events: none; }
-.glayer > i { position: absolute; left: 0; top: 0; contain: layout style; will-change: transform; }
+.glayer > i { position: absolute; left: 0; top: 0; contain: layout style; will-change: transform, opacity; transform-origin: 0 0; }
 .seg3.gliding .seg3-th, .lt7.gliding > i { visibility: hidden; }
 /* the two-state toggles (toggleGlide) and the tutorial's small pickers (pickGlide) */
 .sw.gliding::after, .seg.gliding::before, .tut .tseg.gliding::before { visibility: hidden; }
@@ -22,12 +22,20 @@
 .tut .tseg3, .tut .ttabs { position: relative; isolation: isolate; }
 .tut .tseg3.gliding > b.on, .tut .ttabs.gliding > span.on { background: transparent; transition: none; }
 .tabs7 { position: relative; isolation: isolate; }
-.tab7 > .ol { position: relative; z-index: 1; }
-.tabs7.gliding > .tab7[aria-selected="true"] { background: transparent !important; box-shadow: none !important; }
-.tabs7.gliding > .tab7 > .ol { color: #fff; mix-blend-mode: difference; } /* a label stays readable wherever the light fill is under it */
-/* the glass lens on the parts of a gliding box (tabs, and chosen thumbs in Full) bent the moving fill into
-   streaks and cut the labels' blend off from it: the parts go without it while the fill moves (Max, Nov 24) */
-.gliding > :not(.glayer) { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+/* the labels are positioned without a stacking context of their own (no z-index), so they paint over the
+   moving fill and the label text can blend with it; the dev marker beside it keeps its colour */
+.tab7 > .ol { position: relative; }
+.tab7 > .ol > .tx { position: relative; }
+/* while the fill moves, the chosen tab looks like the others (its own pill, under the fill), as option
+   pills do; the fill lands on it and its own white takes over in the same place (Max, Nov 24) */
+.tabs7.gliding > .tab7[aria-selected="true"] { background: var(--m-c-high, #272727) !important; color: var(--m-on, #f1f1f1) !important; transition-property: transform !important; } /* it changes look at once (a fade from white showed as a grey pill) */
+.theme-yt .tabs7.gliding > .tab7[aria-selected="true"] { background: #272727 !important; color: #f1f1f1 !important; }
+.theme-glass .tabs7.gliding > .tab7[aria-selected="true"] { background: var(--g-ctl) !important; box-shadow: var(--g-ctl-edge) !important; }
+.tabs7.gliding > .tab7 > .ol > .tx { color: #fff; mix-blend-mode: difference; } /* a label stays readable wherever the light fill is under it */
+/* the glass lens on the parts the fill passes over (tabs, and chosen thumbs in Full) bent the moving fill
+   into streaks and cut the labels' blend off from it: those parts go without it while the fill moves; the
+   rest keep it, so nothing else flickers when the fill lands (glideRun marks them .gpath) */
+.gliding > .gpath { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
 /* paint() (list.js): while a redraw's mark passes run, nothing transitions */
 .painting, .painting * { transition: none !important; }
 /* round 9 scenario kit */
