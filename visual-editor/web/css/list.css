@@ -144,14 +144,14 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 /* dialog (Manager AppDialog: 28dp corners, 0.95 scale-in, 220ms) */
 /* the scrim fades only its own colour, so a popup that grows out of its row (openDialog) is solid from
    the first frame; .closing keeps it on screen while it shrinks back into the row */
-.dlgscrim { position: absolute; inset: 0; z-index: 70; display: grid; place-items: center; padding: 24px; visibility: hidden; pointer-events: none; transition: visibility 0s linear var(--dur); --scrim: rgba(0,0,0,.55); }
+.dlgscrim { position: absolute; inset: 0; z-index: 70; display: grid; place-items: center; padding: 24px; visibility: hidden; pointer-events: none; transition: visibility 0s linear calc(var(--dur) / 1.5); --scrim: rgba(0,0,0,.55); }
 /* the dark layer fades by opacity (the compositor draws it), not by repainting a colour every frame */
-.dlgscrim::before { content: ""; position: absolute; inset: 0; background: var(--scrim); opacity: 0; transition: opacity var(--dur) var(--ease); }
+.dlgscrim::before { content: ""; position: absolute; inset: 0; background: var(--scrim); opacity: 0; transition: opacity calc(var(--dur) / 1.5) var(--ease); }
 .dlgscrim.open { visibility: visible; pointer-events: auto; transition: none; }
 .dlgscrim.open::before { opacity: 1; }
 .dlgscrim.closing { visibility: visible; }
 .dlgscrim > .dlg { position: relative; will-change: transform, opacity; }
-.dlg { width: 100%; max-width: 380px; background: var(--m-c-high); border-radius: var(--r-xl); padding: 24px; opacity: 0; transform: scale(.95); transition: transform var(--spring-dur) var(--spring), opacity var(--dur) var(--ease); }
+.dlg { width: 100%; max-width: 380px; background: var(--m-c-high); border-radius: var(--r-xl); padding: 24px; opacity: 0; transform: scale(.95); transition: transform calc(var(--spring-dur) / 1.5) var(--spring), opacity calc(var(--dur) / 1.5) var(--ease); } /* 1.5x as fast (Max, Nov 24) */
 .dlgscrim.open .dlg { opacity: 1; transform: none; }
 .dlg .di { width: 40px; height: 40px; margin: 0 auto 12px; display: grid; place-items: center; }
 .dlg .di svg { width: 28px; height: 28px; fill: var(--m-warning); }
