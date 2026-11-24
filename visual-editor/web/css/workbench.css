@@ -126,7 +126,7 @@ pre.json { background: var(--m-c-lowest); border: 1px solid var(--line); border-
 /* two-way toggle naming both states (clean design) */
 .lt7 { flex: none; position: relative; display: inline-grid; grid-template-columns: 1fr 1fr; align-items: stretch; width: auto; height: 34px; padding: 2px; /* 20% taller than 28px (Max, Nov 20) */ border: 0; border-radius: 999px; background: var(--m-c-highest, #303134); cursor: pointer; font: inherit; font-size: 12px; font-weight: 600; touch-action: manipulation; isolation: isolate; }
 .lt7 > i { position: absolute; z-index: -1; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 2px); border-radius: 999px; background: var(--m-primary, #3ea6ff);
-  transition: transform .42s cubic-bezier(.3, 1.35, .45, 1), background-color .32s var(--ease), width .2s var(--ease); }
+  transition: transform var(--spring-dur-l) var(--spring), background-color .32s var(--ease), width var(--spring-dur) var(--spring); }
 .lt7[data-at="r"] > i { transform: translateX(100%); }
 .lt7[data-tone="neg"] > i { background: #5c2b2b; }
 html:not(.touchwait) .lt7:active > i { width: calc(50% + 4px); } /* the thumb stretches a little under the finger */

@@ -64,20 +64,22 @@ document.getElementById("back").onclick = () => {
   if (w && typeof w.morpheBack === "function") w.morpheBack(); else say("Back leaves the editor");
 };
 addEventListener("keydown", e => { if (e.key === "Escape" || e.key === "Backspace" && !/input|textarea/i.test(e.target.tagName)) document.getElementById("back").click(); });
-// predictive back: progress follows the drag, letting go past a third of the way goes back
+// predictive back: progress follows the drag, letting go past a third of the way goes back; the
+// finger's place goes along in the page's own px, as the app sends it (the phone may be scaled)
+const pageX = e => { const r = frame.getBoundingClientRect(); return (e.clientX - r.left) * frame.offsetWidth / (r.width || 1); };
 document.querySelectorAll(".edge").forEach(strip => {
   let g = null;
   strip.addEventListener("pointerdown", e => {
     const w = frame.contentWindow; if (!w) return;
     strip.setPointerCapture(e.pointerId);
     g = { x: e.clientX, edge: Number(strip.dataset.edge), p: 0, w };
-    w.morpheBackStart && w.morpheBackStart(g.edge);
+    w.morpheBackStart && w.morpheBackStart(g.edge, pageX(e));
   });
   strip.addEventListener("pointermove", e => {
     if (!g) return;
     const w = phone.getBoundingClientRect().width; // the phone may be scaled down, or fill the screen
     g.p = Math.min(1, Math.max(0, (g.edge ? g.x - e.clientX : e.clientX - g.x) / (w * 0.45)));
-    g.w.morpheBackProgress && g.w.morpheBackProgress(g.p);
+    g.w.morpheBackProgress && g.w.morpheBackProgress(g.p, pageX(e));
   });
   const end = () => {
     if (!g) return;

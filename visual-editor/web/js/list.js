@@ -13,6 +13,33 @@ const $ = id => document.getElementById(id);
 // A class set after something read a style plays its transition: that was the Player icon style flash
 // (greyed parts faded on every redraw). Phones inside comparisons are not painted this way: their
 // stories draw and then change on purpose, on their own clock.
+// iOS-like value changes (Max, Nov 24, every design): a number or label that changes cross-fades, the old
+// text blurring away over the new one as it comes into focus. el already shows the new text; was is the old.
+// The old text is a short-lived copy laid exactly over el (placed, measured, corrected: the preview phone
+// is scaled), so nothing around it moves. Used by the list's descriptions and value readouts (renderList),
+// a slider's readout while it is dragged (press.js) and the screen's name in the top bar (renderBar).
+function textSwap(el, was, ms = 240) {
+  if (!el || !el.isConnected || was == null || was === el.textContent || GLIDE_REDUCED.matches) return;
+  if (el._tsGhost) { el._tsGhost.remove(); el._tsGhost = null; }
+  if (el.offsetWidth && el.parentElement) {
+    const g = el.cloneNode(false); g.textContent = was; g.removeAttribute("id"); g.removeAttribute("data-val-of"); g.setAttribute("aria-hidden", "true");
+    Object.assign(g.style, { position: "absolute", left: el.offsetLeft + "px", top: el.offsetTop + "px", width: el.offsetWidth + "px", margin: "0", pointerEvents: "none" });
+    el.after(g); el._tsGhost = g;
+    const er = el.getBoundingClientRect(), gr = g.getBoundingClientRect(), k = er.width / el.offsetWidth || 1;
+    g.style.left = el.offsetLeft + (er.left - gr.left) / k + "px"; g.style.top = el.offsetTop + (er.top - gr.top) / k + "px";
+    g.animate([{ opacity: 1, filter: "blur(0px)" }, { opacity: 0, filter: "blur(4px)" }], { duration: ms * .75, easing: "ease-in", fill: "forwards" })
+      .onfinish = () => { g.remove(); if (el._tsGhost === g) el._tsGhost = null; };
+  }
+  el.animate([{ opacity: 0, filter: "blur(4px)" }, { opacity: 1, filter: "blur(0px)" }], { duration: ms, easing: "ease-out" });
+}
+// a card's description and value readout, by setting, to compare after a redraw of the same screen
+const rowTexts = list => new Map([...list.querySelectorAll(".row[data-row]")].map(r => [r.dataset.row, [r.querySelector(":scope > .txt > .sum")?.textContent, r.querySelector(".ctl .val")?.textContent]]));
+function swapRowTexts(list, was) {
+  list.querySelectorAll(".row[data-row]").forEach(r => {
+    const w = was.get(r.dataset.row); if (!w) return;
+    textSwap(r.querySelector(":scope > .txt > .sum"), w[0]); textSwap(r.querySelector(".ctl .val"), w[1]);
+  });
+}
 function paint(el, html, ...marks) {
   el.__cards = false; // drawn whole: paintList has nothing of its own to keep here
   el.classList.add("painting");
@@ -85,7 +112,8 @@ const secInfo = () => SECTIONS.find(s => s.id === section);
 
 function renderBar() {
   const s = secInfo(), g = groupOf(section);
-  $("secLabel").textContent = grouped ? g.title : s.title;
+  const labWas = $("secLabel").textContent;
+  $("secLabel").textContent = grouped ? g.title : s.title; textSwap($("secLabel"), labWas);
   $("secIcon").innerHTML = `<path d="${P[grouped ? g.icon : s.icon] || P.list}"/>`;
   renderTabs();
   $("btnReset").disabled = mode !== "mod" || !Object.keys(PREF).some(k => JSON.stringify(state[k]) !== JSON.stringify(defaults[k]));
@@ -279,7 +307,7 @@ $("pickGrid").addEventListener("pointerdown", e => {
   pickDrag = { card, x: e.clientX, y: e.clientY, on: false, t: setTimeout(() => {
     if (!pickDrag) return; pickDrag.on = true; card.classList.add("lifted"); card.parentElement.classList.add("arranging");
     try { card.setPointerCapture(e.pointerId); } catch { /* ignore */ }
-    if (navigator.vibrate) try { navigator.vibrate(12); } catch { /* ignore */ }
+    tapFeel("lift");
   }, LONG) };
 });
 $("pickGrid").addEventListener("pointermove", e => {
@@ -296,7 +324,7 @@ $("pickGrid").addEventListener("pointermove", e => {
     const list = [...grid.children]; const after = list.indexOf(over) > list.indexOf(card);
     // FLIP the siblings so they slide into place
     const first = new Map(list.map(c => [c, [c.offsetLeft, c.offsetTop]]));
-    grid.insertBefore(card, after ? over.nextSibling : over);
+    grid.insertBefore(card, after ? over.nextSibling : over); tapFeel("snap");
     list.forEach(c => { if (c === card) return; const [l, t] = first.get(c); if (l !== c.offsetLeft || t !== c.offsetTop) c.animate([{ transform: `translate(${l - c.offsetLeft}px, ${t - c.offsetTop}px)` }, { transform: "none" }], { duration: 180, easing: "cubic-bezier(.2,0,0,1)" }); });
     pickDrag.x += card.offsetLeft - before.left; pickDrag.y += card.offsetTop - before.top;
     card.style.transform = `translate(${e.clientX - pickDrag.x}px, ${e.clientY - pickDrag.y}px) scale(1.04)`;
@@ -917,7 +945,9 @@ function renderList() {
   // a locked card that unlocks loses its "Take me there" and its "needs ..." line: the card eases to its new
   // height and the two fade where they were, instead of the card snapping shorter (Max, Nov 23)
   const lockedWas = new Map(); if (list.dataset.view === section) list.querySelectorAll(".row.dis[data-row]").forEach(r => { const sd = r.querySelector(":scope > .side"); if (!sd || !r.offsetHeight || sd.offsetParent !== r) return; lockedWas.set(r.dataset.row, { h: r.offsetHeight, side: sd.cloneNode(true), x: sd.offsetLeft, y: sd.offsetTop, w: sd.offsetWidth }); });
+  const textsWere = list.dataset.view === section ? rowTexts(list) : null;
   const fresh = paintList(list, parts, mergeZonePreview); list.dataset.view = section;
+  if (textsWere) requestAnimationFrame(() => { if (list.dataset.view === section) swapRowTexts(list, textsWere); });
   const goneNow = listQuiet(() => { fitOpts(fresh); return hideLocked(list); });
   midFold.forEach((h, grp) => {
     const box = list.querySelector(`[data-kids-of="${grp}"]`), left = (foldingKids.get(grp)?.until ?? 0) - performance.now(); if (!box || left < 30) return;
@@ -1114,12 +1144,14 @@ function gSpring(t, k, z) {
 const gLerp = (a, b, p) => a + (b - a) * p;
 // each motion: the blobs at d ms from the old place f to the new place t ({x, y, w, h} in the box)
 const GLIDE_MOTION = {
-  // D1 "Smooth pour" (Max chose it, Nov 23): a critically damped spring, so no bounce at the end; the old
+  // D1 "Smooth pour" (Max chose it, Nov 23): the drop travels on a critically damped spring; the old
   // fill drains into a drop as it leaves and the drop melts into the new fill as it lands, so the colour
   // is always somewhere. Its goo neck is a little wider than goo's (stdDeviation 7, alpha 18 -7).
+  // iOS-like landing (Max, Nov 24): the new fill grows on its own underdamped spring from the moment the
+  // drop is 40% of the way (113 ms), so it swells about 6% past its size and settles, like a press let go.
   pour: { goo: [7, 18, -7], end: 800, draw: (f, t, d) => {
     const sm = x => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
-    const [p, v0] = gSpring(d, 150, 1), v = v0 * 1.6, oldK = 1 - sm(p / .55), newK = sm((p - .4) / .57);
+    const [p, v0] = gSpring(d, 150, 1), v = v0 * 1.6, oldK = 1 - sm(p / .55), newK = d < 113 ? 0 : gSpring(d - 113, 180, .66)[0];
     const fx = f.x + f.w / 2, fy = f.y + f.h / 2, tx = t.x + t.w / 2, ty = t.y + t.h / 2, hor = Math.abs(tx - fx) >= Math.abs(ty - fy);
     const bell = Math.pow(Math.max(0, 1 - Math.abs(2 * p - 1)), .35), s0 = Math.min(f.h, t.h) * .95 * bell, sp = Math.min(1, Math.abs(v) * .6);
     const dw = s0 * (hor ? 1 + sp * .8 : 1 - sp * .2), dh = s0 * (hor ? 1 - sp * .2 : 1 + sp * .8), on = p > .005 && p < .995 ? 1 : 0;
@@ -1573,8 +1605,68 @@ function commit() { window.__drawBehind = null; applyAppColors(); renderBar(); r
 
 // ------------------------------------------------------------------ restart handling
 const pendingRestart = () => Object.keys(PREF).filter(k => PREF[k].rebootApp && JSON.stringify(state[k]) !== JSON.stringify(baseline[k]));
-function openDialog(html) { paint($("dlgBox"), html); $("dlg").classList.add("open"); glassSample(); setTimeout(() => $("dlgBox").querySelector("button")?.focus(), 50); }
-function closeDialog() { $("dlg").classList.remove("open"); }
+// iOS-like cards (Max, Nov 24, every design): a popup grows out of the row, button or preview part that
+// was just tapped and shrinks back into it when it closes. It starts clipped to that part's size and
+// place and opens on the shared spring (--spring), so its text never squashes. Without a tap just before
+// it (the Back key, a timer, a popup opened from another popup) it springs up in place (CSS). Closing
+// finds the row again by its key when the list was redrawn meanwhile (a choice was made).
+let cardTap = null, cardOrigin = null, cardAnim = null;
+document.addEventListener("pointerdown", e => {
+  const el = e.target.closest && e.target.closest("#app .row, #app button, #app .c, #app .pick");
+  cardTap = el && !el.closest("#dlg") ? { el: el.closest(".row") || el, key: el.closest("[data-row]")?.dataset.row, t: performance.now() } : null;
+}, true);
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function cardRect(o) {
+  if (!o) return null;
+  let el = o.el;
+  if (!el.isConnected && o.key) el = document.querySelector(`#list [data-row="${CSS.escape(o.key)}"]`);
+  if (!el || !el.isConnected) return null;
+  const r = el.getBoundingClientRect();
+  return r.width > 4 && r.height > 4 ? r : null;
+}
+// [the part's frame, the popup's own frame] (page px are turned into the popup's px: the preview phone is scaled)
+function cardFrames(box, r) {
+  const b = box.getBoundingClientRect(), k = b.width / box.offsetWidth || 1, w = box.offsetWidth, h = box.offsetHeight;
+  const ow = Math.min(w, r.width / k), oh = Math.min(h, r.height / k), x = (w - ow) / 2, y = (h - oh) / 2;
+  const dx = (r.left + r.width / 2 - b.left - b.width / 2) / k, dy = (r.top + r.height / 2 - b.top - b.height / 2) / k;
+  const R = parseFloat(getComputedStyle(box).borderTopLeftRadius) || 0;
+  return [{ transform: `translate(${dx}px, ${dy}px)`, clipPath: `inset(${y}px ${x}px round ${Math.min(R, 14)}px)` },
+    { transform: "translate(0px, 0px)", clipPath: `inset(0px 0px round ${R}px)` }];
+}
+function cardStop() {
+  const a = cardAnim; cardAnim = null; if (a) a.cancel();
+  $("dlg").classList.remove("closing"); $("dlgBox").style.transition = "";
+}
+// the CSS transition is held while the frames play: a running transition would win over them
+function cardPlay(frames, o, done) {
+  const box = $("dlgBox"); box.style.transition = "none";
+  const a = cardAnim = box.animate(frames, o);
+  a.onfinish = () => { if (cardAnim !== a) return; cardAnim = null; box.style.transition = ""; if (done) done(); };
+}
+function openDialog(html) {
+  const dlg = $("dlg"), box = $("dlgBox"), was = dlg.classList.contains("open");
+  let r = null;
+  if (!was) {
+    cardStop();
+    cardOrigin = cardTap && performance.now() - cardTap.t < 1500 ? cardTap : null; cardTap = null;
+    r = !GLIDE_REDUCED.matches && cardRect(cardOrigin);
+    if (r) box.style.transition = "none"; // measured at its open size, not mid-transition
+  }
+  paint(box, html); dlg.classList.add("open"); glassSample();
+  if (r) { const [from, to] = cardFrames(box, r); cardPlay([{ ...from, opacity: .5 }, { offset: .3, opacity: 1 }, { ...to, opacity: 1 }], { duration: 560, easing: cssVar("--spring") || "ease-out" }); }
+  setTimeout(() => box.querySelector("button")?.focus(), 50);
+}
+function closeDialog() {
+  const dlg = $("dlg"), box = $("dlgBox");
+  if (!dlg.classList.contains("open")) return;
+  cardStop(); // measured at its open place, not mid-spring
+  const r = !GLIDE_REDUCED.matches && cardRect(cardOrigin), f = r && cardFrames(box, r);
+  cardOrigin = null;
+  dlg.classList.remove("open");
+  if (!f) return;
+  dlg.classList.add("closing"); // stays visible while it shrinks back (taps already go through)
+  cardPlay([{ ...f[1], opacity: 1 }, { offset: .7, opacity: .9 }, { ...f[0], opacity: 0 }], { duration: 340, easing: "cubic-bezier(.32, .72, 0, 1)" }, () => dlg.classList.remove("closing"));
+}
 // Changes that only apply after YouTube restarts (Max, Nov 20). Values are saved as soon as they are
 // changed; leaving asks what to do with these: restart now, keep them for later, or reset them to the
 // values YouTube runs with. Opening the editor again with some still waiting asks the same in reverse.

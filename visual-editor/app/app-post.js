@@ -127,44 +127,92 @@ if (INAPP) {
     if (!row || !__liveActions.has(row.dataset.row)) return;
     e.stopPropagation(); select(row.dataset.row, "list"); runAction(row.dataset.row);
   }, true);
-  // Predictive back (Android 14+): while the Back gesture is held on a screen, the screen shrinks
-  // toward the finger's side and the card menu shows behind it. Letting go goes to the menu,
-  // swiping back in cancels. The app forwards the gesture's progress; elsewhere it does nothing.
+  // Back swipe, iOS-like (Max, Nov 24, every design): while the Back gesture is held on a screen, the
+  // screen follows the finger sideways with a shadow on its edge, and the card menu comes in behind it
+  // from a little to the side (parallax) and brightens. Letting go slides the screen the rest of the way
+  // and the menu takes over; swiping back in springs it back (--spring). The app forwards the system
+  // gesture (Android 14+ predictive back) with the finger's place (x, in page px); a swipe in from the
+  // left edge of the page does the same where the system leaves that edge to the app (three-button
+  // navigation, older Android). Without x (an older app) the progress stands in for the finger.
   let peek = null;
   const ed = document.querySelector(".editor"), pk = $("picker");
   const canPeek = () => !menuPage && !$("dlg").classList.contains("open") && !($("tut") && $("tut").classList.contains("on")) && !searching;
-  const peekDraw = p => {
-    const e = 1 - Math.pow(1 - Math.min(1, Math.max(0, p)), 2); // ease out, like the system's
-    ed.style.transform = `translateX(${(peek.edge === 1 ? -1 : 1) * 18 * e}px) scale(${1 - 0.1 * e})`;
-    ed.style.borderRadius = `${28 * e}px`;
-    pk.style.opacity = String(0.4 + 0.6 * e);
+  const peekW = () => ed.offsetWidth || innerWidth;
+  // f: how far the screen has gone (0 = in place, 1 = gone)
+  const peekDraw = f => {
+    const s = peek.edge === 1 ? -1 : 1, w = peekW();
+    peek.f = f;
+    ed.style.transform = `translateX(${s * f * w}px)`;
+    ed.style.boxShadow = `${-s * 6}px 0 24px rgba(0,0,0,${(.45 * (1 - f * .6)).toFixed(3)})`;
+    pk.style.transform = `translateX(${-s * 30 * (1 - f)}%)`;
+    pk.style.opacity = String(.7 + .3 * f);
+  };
+  const peekAt = (p, x) => {
+    if (typeof x === "number" && isFinite(x)) return Math.min(1, Math.max(0, (peek.edge === 1 ? peek.x - x : x - peek.x) / peekW()));
+    return Math.min(1, Math.max(0, p)) * .45; // an older app: the progress only
   };
   const peekEnd = () => {
     document.documentElement.classList.remove("peekback");
-    ed.style.transition = ed.style.transform = ed.style.borderRadius = ed.style.opacity = pk.style.opacity = "";
+    ed.style.transition = ed.style.transform = ed.style.boxShadow = ed.style.opacity = pk.style.opacity = pk.style.transform = pk.style.transition = "";
     peek = null;
   };
-  window.morpheBackStart = edge => {
+  // from where the screen is to f, then done (the spring when it comes back, a quick glide when it leaves)
+  const peekTo = (f, ms, ease, done) => {
+    const t = `${ms}ms ${ease}`;
+    ed.style.transition = `transform ${t}, box-shadow ${t}`; pk.style.transition = `transform ${t}, opacity ${t}`;
+    peekDraw(f); peek.timer = setTimeout(done, ms + 20);
+  };
+  window.morpheBackStart = (edge, x) => {
     if (!canPeek()) return;
-    peek = { edge };
+    if (peek) { clearTimeout(peek.timer); peekEnd(); }
+    peek = { edge: edge === 1 ? 1 : 0, x: typeof x === "number" && isFinite(x) ? x : (edge === 1 ? peekW() : 0), f: 0 };
     pk.classList.add("open"); // the menu, drawn behind the screen
     document.documentElement.classList.add("peekback");
-    ed.style.transition = "none"; peekDraw(0);
+    ed.style.transition = pk.style.transition = "none"; peekDraw(0);
   };
-  window.morpheBackProgress = p => { if (peek) peekDraw(p); };
+  window.morpheBackProgress = (p, x) => { if (peek && !peek.timer) peekDraw(peekAt(p, x)); };
   window.morpheBackCancel = () => {
-    if (!peek) return;
-    ed.style.transition = "transform 200ms var(--ease), border-radius 200ms var(--ease)"; peekDraw(0);
-    setTimeout(() => { if (!peek) return; pk.classList.remove("open"); peekEnd(); }, 210);
+    if (!peek || peek.timer) return;
+    peekTo(0, 460, "var(--spring)", () => { if (!peek) return; pk.classList.remove("open"); peekEnd(); });
   };
   const keyBack = window.morpheBack;
   window.morpheBack = () => {
     if (!peek) return keyBack();
-    // the gesture was let go: the screen finishes leaving, then the menu page takes over
-    ed.style.transition = "transform 160ms var(--ease), opacity 160ms var(--ease)";
-    ed.style.transform = `translateX(${(peek.edge === 1 ? -1 : 1) * 30}px) scale(.86)`; ed.style.opacity = "0"; pk.style.opacity = "1";
-    setTimeout(() => { peekEnd(); setMenu(true); }, 170);
+    if (peek.timer) return;
+    // the gesture was let go: the screen slides the rest of the way, then the menu page takes over
+    const left = 1 - peek.f;
+    peekTo(1, Math.round(140 + 160 * left), "cubic-bezier(.2, .8, .3, 1)", () => { peekEnd(); setMenu(true); });
   };
+  // the page's own edge swipe (where the system doesn't take the edge)
+  (() => {
+    let sw = null;
+    document.addEventListener("touchstart", e => {
+      sw = null;
+      const t = e.touches[0];
+      if (e.touches.length !== 1 || t.clientX > 20 || !canPeek() || peek) return;
+      sw = { x: t.clientX, y: t.clientY, on: false, lx: t.clientX, lt: performance.now(), v: 0 };
+    }, { capture: true, passive: true });
+    document.addEventListener("touchmove", e => {
+      if (!sw) return;
+      const t = e.touches[0], dx = t.clientX - sw.x, dy = t.clientY - sw.y;
+      if (!sw.on) {
+        if (Math.abs(dy) > 10 && Math.abs(dy) > dx) { sw = null; return; }
+        if (dx < 10) return;
+        sw.on = true; window.morpheBackStart(0, t.clientX);
+        if (!peek) { sw = null; return; }
+      }
+      if (e.cancelable) e.preventDefault();
+      const now = performance.now(); if (now > sw.lt) sw.v = (t.clientX - sw.lx) / (now - sw.lt) * 1000;
+      sw.lx = t.clientX; sw.lt = now;
+      window.morpheBackProgress(0, t.clientX);
+    }, { capture: true, passive: false });
+    const end = () => {
+      const s = sw; sw = null;
+      if (!s || !s.on || !peek) return;
+      if (peek.f > .33 || s.v > 500) window.morpheBack(); else window.morpheBackCancel();
+    };
+    document.addEventListener("touchend", end, true); document.addEventListener("touchcancel", end, true);
+  })();
   setMenu(true);
   // Tell the app the first screen is drawn, so it can fade the editor in (no loading frames).
   // The screen behind the menu is drawn after the app has faded the editor in (boot.js).

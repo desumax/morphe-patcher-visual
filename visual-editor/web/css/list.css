@@ -142,10 +142,13 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .snack button { border: 0; background: transparent; color: #005FAC; font-weight: 600; cursor: pointer; padding: 6px 8px; }
 
 /* dialog (Manager AppDialog: 28dp corners, 0.95 scale-in, 220ms) */
-.dlgscrim { position: absolute; inset: 0; background: rgba(0,0,0,.55); z-index: 70; display: grid; place-items: center; padding: 24px; opacity: 0; pointer-events: none; transition: opacity var(--dur) var(--ease); }
-.dlgscrim.open { opacity: 1; pointer-events: auto; }
-.dlg { width: 100%; max-width: 380px; background: var(--m-c-high); border-radius: var(--r-xl); padding: 24px; transform: scale(.95); transition: transform var(--dur) var(--ease); }
-.dlgscrim.open .dlg { transform: none; }
+/* the scrim fades only its own colour, so a popup that grows out of its row (openDialog) is solid from
+   the first frame; .closing keeps it on screen while it shrinks back into the row */
+.dlgscrim { position: absolute; inset: 0; background-color: transparent; z-index: 70; display: grid; place-items: center; padding: 24px; visibility: hidden; pointer-events: none; transition: background-color var(--dur) var(--ease), visibility 0s linear var(--dur); }
+.dlgscrim.open { background-color: rgba(0,0,0,.55); visibility: visible; pointer-events: auto; transition: background-color var(--dur) var(--ease); }
+.dlgscrim.closing { visibility: visible; }
+.dlg { width: 100%; max-width: 380px; background: var(--m-c-high); border-radius: var(--r-xl); padding: 24px; opacity: 0; transform: scale(.95); transition: transform var(--spring-dur) var(--spring), opacity var(--dur) var(--ease); }
+.dlgscrim.open .dlg { opacity: 1; transform: none; }
 .dlg .di { width: 40px; height: 40px; margin: 0 auto 12px; display: grid; place-items: center; }
 .dlg .di svg { width: 28px; height: 28px; fill: var(--m-warning); }
 .dlg h2 { margin: 0 0 8px; font-size: 22px; font-weight: 500; text-align: center; color: var(--m-on); text-wrap: balance; }
@@ -219,7 +222,7 @@ html:not(.touchwait) .dbtn:active { transform: scale(.98); }
 .tut .tic { display: grid; place-items: center; width: 26px; height: 26px; }
 .tut .tic svg { width: 18px; height: 18px; fill: var(--m-on); }
 .tut .tseg { position: relative; display: grid; grid-template-columns: 1fr 1fr; border-radius: 999px; padding: 2px; background: #303134; isolation: isolate; }
-.tut .tseg::before { content: ""; position: absolute; z-index: -1; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 2px); border-radius: 999px; background: var(--m-brand-1); transform: translateX(100%); transition: transform 300ms var(--ease), background-color 300ms var(--ease); }
+.tut .tseg::before { content: ""; position: absolute; z-index: -1; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 2px); border-radius: 999px; background: var(--m-brand-1); transform: translateX(100%); transition: transform var(--spring-dur-l) var(--spring), background-color 300ms var(--ease); }
 .tut .tseg:has(#tOrig.on)::before { transform: none; background: var(--yt-red); }
 .tut .tseg b { font-size: 10px; font-weight: 600; padding: 3px 7px; text-align: center; border-radius: 999px; color: var(--m-on-var); transition: color 300ms var(--ease); }
 .tut .tseg #tOrig.on { color: #fff; }

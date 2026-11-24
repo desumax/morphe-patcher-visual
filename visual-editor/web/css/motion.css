@@ -138,3 +138,13 @@
 /* tapping the card flashes the part of the preview it belongs to */
 .tut .tb.flash { animation: tflash .9s var(--ease); }
 @keyframes tflash { 0%, 50%, 100% { outline-color: var(--ring-on); } 25%, 75% { outline-color: transparent; } }
+
+/* ------------------------------------------------------------------ iOS-like motion (Max, Nov 24, every design)
+   role: press. A pressed control sinks a little and springs back with a small overshoot when it is let go
+   (--spring, base.css). Glass has the same role with its own press colours (glass.css); these are the
+   Original and Morphe designs. Each list keeps the transitions the part already had. A dragged tab
+   (.lift) keeps its lift. */
+.phone:not(.theme-glass) .ctl .opt { transition: background var(--dur) var(--ease), transform var(--spring-dur) var(--spring); }
+.phone:not(.theme-glass) :is(.seg3 button, .seg button) { transition: color 300ms var(--ease), transform var(--spring-dur) var(--spring); }
+.phone:not(.theme-glass) :is(.tab7, .kidbtn, .ordreset, .offnew, .goto, .dbtn) { transition: transform var(--spring-dur) var(--spring); }
+html:not(.touchwait) .phone:not(.theme-glass) :is(.ctl .opt, .tab7, .seg3 button, .seg button, .kidbtn, .ordreset, .offnew):not(.lift):active { transform: scale(.96); }

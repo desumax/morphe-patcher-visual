@@ -366,3 +366,79 @@ function scrollRowIntoView(k, center) {
   const target = center ? top - stickH - (sc.clientHeight - stickH) / 2 + row.offsetHeight / 2 : top - stickH - 8;
   if (center || top < sc.scrollTop + stickH || top + row.offsetHeight > sc.scrollTop + sc.clientHeight) { progScrollUntil = performance.now() + 900; sc.scrollTo({ top: target, behavior: "smooth" }); }
 }
+
+// ------------------------------------------------------------------ rubber-band ends (iOS-like)
+// Max, Nov 24 (every design): pulling a list past its top or bottom drags it on with growing resistance
+// and it springs back when let go; a fling that runs into an end bounces a little past it.
+// While a list sits at an end its touch-action keeps only the direction that still scrolls, so a pull
+// the other way is this code's from the first move (the browser never scrolls it, and the move stays
+// cancelable). At the top the whole page moves (preview and list); at the bottom only the list moves,
+// under the pinned preview. A pull that turns back past its start scrolls by hand.
+const RUBBER_REDUCED = matchMedia("(prefers-reduced-motion: reduce)");
+function rubberBand(sc, topEl, botEl) {
+  if (!sc || !topEl || !botEl) return;
+  let pull = null, last = { s: 0, t: 0, v: 0 }, bounce = null;
+  const room = () => Math.max(0, sc.scrollHeight - sc.clientHeight);
+  const atTop = () => sc.scrollTop <= .5, atBot = () => sc.scrollTop >= room() - .5;
+  const ends = () => {
+    const t = atTop(), b = atBot();
+    sc.style.touchAction = t && b ? "pan-x pinch-zoom" : t ? "pan-x pan-down pinch-zoom" : b ? "pan-x pan-up pinch-zoom" : "";
+  };
+  // iOS's rubber curve: 1:1 at first, never more than the list's height
+  const rubber = d => { const D = sc.clientHeight || 600, x = Math.abs(d); return Math.sign(d) * (1 - 1 / (x * .55 / D + 1)) * D; };
+  const put = (el, y) => { el.style.translate = y ? `0 ${y}px` : ""; };
+  const stopBounce = () => { if (bounce) { bounce.cancel(); bounce = null; } };
+  // back to rest on a critically damped spring from offset y (px) with velocity v (px/s)
+  const settle = (el, y, v = 0) => {
+    stopBounce(); put(el, 0);
+    const w = 16, fr = [];
+    for (let t = 0; t <= .5; t += 1 / 60) { const x = (y + (v + w * y) * t) * Math.exp(-w * t); fr.push({ translate: `0 ${x.toFixed(2)}px` }); }
+    fr.push({ translate: "0 0px" });
+    bounce = el.animate(fr, { duration: 500, easing: "linear" });
+    bounce.onfinish = () => { bounce = null; };
+  };
+  sc.addEventListener("touchstart", e => {
+    stopBounce(); put(topEl, 0); put(botEl, 0);
+    if (e.touches.length !== 1 || RUBBER_REDUCED.matches) { pull = null; return; }
+    const t = e.touches[0];
+    pull = { x: t.clientX, y: t.clientY, top: atTop(), bot: atBot(), on: false, s0: sc.scrollTop };
+  }, { passive: true });
+  sc.addEventListener("touchmove", e => {
+    if (!pull) return;
+    const t = e.touches[0], dx = t.clientX - pull.x, dy = t.clientY - pull.y;
+    if (!pull.on) {
+      if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) { pull = null; return; }
+      if (Math.abs(dy) < 8) return;
+      if (!(pull.top && dy > 0 || pull.bot && dy < 0)) { pull = null; return; } // the browser scrolls this one
+      pull.on = true; pull.y += Math.sign(dy) * 8; pull.dir = Math.sign(dy);
+    }
+    if (e.cancelable) e.preventDefault();
+    const d = t.clientY - pull.y;
+    if (d * pull.dir > 0) { // still pulling past the end
+      if (sc.scrollTop !== pull.s0) sc.scrollTop = pull.s0;
+      put(pull.dir > 0 ? topEl : botEl, rubber(d)); pull.d = d;
+    } else { // turned back past the start: scroll by hand
+      put(topEl, 0); put(botEl, 0); pull.d = 0;
+      sc.scrollTop = Math.max(0, Math.min(room(), pull.s0 - d));
+    }
+  }, { passive: false });
+  const end = () => {
+    const p = pull; pull = null;
+    if (p && p.on && p.d) settle(p.dir > 0 ? topEl : botEl, rubber(p.d));
+  };
+  sc.addEventListener("touchend", end); sc.addEventListener("touchcancel", end);
+  sc.addEventListener("scroll", () => {
+    const now = performance.now(), s = sc.scrollTop, dt = now - last.t;
+    if (dt > 0 && dt < 100) last.v = (s - last.s) / dt * 1000; else last.v = 0;
+    // a fling that runs into an end goes on a little past it, then comes back
+    if (!pull && Math.abs(last.v) > 600 && !RUBBER_REDUCED.matches && (s <= .5 && last.s > .5 || s >= room() - .5 && last.s < room() - .5)) {
+      const up = s <= .5, v = Math.min(3000, Math.abs(last.v)) * .5 * (up ? 1 : -1); // at most about 34 px past the end
+      settle(up ? topEl : botEl, 0, v);
+    }
+    last.s = s; last.t = now; ends();
+  }, { passive: true });
+  const ro = new ResizeObserver(ends); ro.observe(botEl); ro.observe(sc);
+  ends();
+}
+rubberBand($("scroller"), $("content"), $("list"));
+rubberBand($("picker"), $("pickGrid"), $("pickGrid"));

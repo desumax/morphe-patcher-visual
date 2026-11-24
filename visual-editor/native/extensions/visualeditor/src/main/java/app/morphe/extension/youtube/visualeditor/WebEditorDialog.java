@@ -18,6 +18,7 @@ import android.os.SystemClock;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.util.Base64;
+import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -61,6 +62,7 @@ import app.morphe.extension.shared.settings.Setting;
  *   disableEditor() turn the new design off and show the regular Morphe list
  *   restart()      restart YouTube to apply settings that need it
  *   vibrate(ms)    haptics for the demos
+ *   haptic(kind)   the phone's own light system haptics under the finger: toggle, tick, snap, lock, lift
  * The pages are served from the editor's own extension (WebAssets) under a private https origin;
  * every other request is refused, so the editor never touches the network.
  */
@@ -446,6 +448,33 @@ final class WebEditorDialog extends Dialog {
             });
         }
 
+        /**
+         * Light taps under the finger (iOS-like feel, Max, Nov 24): the system's own haptics, so they are
+         * crisp on any motor and follow the phone's touch-feedback setting. toggle: a setting switched;
+         * tick: a slider step; snap: a dragged tab or card took a new place; lock: a locked setting was
+         * tried; lift: a hold picked something up.
+         */
+        @JavascriptInterface
+        public void haptic(String kind) {
+            final int c;
+            final int sdk = Build.VERSION.SDK_INT;
+            switch (kind == null ? "" : kind) {
+                case "toggle": c = sdk >= 34 ? HapticFeedbackConstants.TOGGLE_ON : sdk >= 23 ? HapticFeedbackConstants.CONTEXT_CLICK : HapticFeedbackConstants.VIRTUAL_KEY; break;
+                case "tick": c = sdk >= 34 ? HapticFeedbackConstants.SEGMENT_FREQUENT_TICK : HapticFeedbackConstants.CLOCK_TICK; break;
+                case "snap": c = sdk >= 34 ? HapticFeedbackConstants.SEGMENT_TICK : HapticFeedbackConstants.CLOCK_TICK; break;
+                case "lock": c = sdk >= 30 ? HapticFeedbackConstants.REJECT : HapticFeedbackConstants.LONG_PRESS; break;
+                case "lift": c = HapticFeedbackConstants.LONG_PRESS; break;
+                default: c = HapticFeedbackConstants.CLOCK_TICK;
+            }
+            Utils.runOnMainThread(() -> {
+                try {
+                    web.performHapticFeedback(c);
+                } catch (Throwable ignored) {
+                    // haptics are optional
+                }
+            });
+        }
+
         @JavascriptInterface
         public void vibrate(int ms) {
             try {
@@ -516,20 +545,29 @@ final class WebEditorDialog extends Dialog {
     @Nullable private Object backCallback; // an OnBackAnimationCallback on Android 14+
 
     /**
-     * Android 14+: forwards the Back gesture's progress to the page, so a screen can shrink and show
-     * the card menu behind it while the gesture is held (window.morpheBackStart / Progress / Cancel).
+     * Android 14+: forwards the Back gesture's progress and the finger's place to the page, so a screen
+     * can follow the finger and show the card menu behind it while the gesture is held
+     * (window.morpheBackStart / Progress / Cancel).
      * Letting go runs the usual Back. Where the app hasn't opted into predictive back, the system
      * ignores this and onBackPressed() is called as before.
      */
+    /** Screen px to the page's px (CSS px), for the Back gesture's finger place. */
+    private float pagePx(float px) {
+        float d = activity.getResources().getDisplayMetrics().density;
+        return d > 0 ? px / d : px;
+    }
+
     private void registerPredictiveBack() {
         if (Build.VERSION.SDK_INT < 34 || backCallback != null) return;
         try {
             android.window.OnBackAnimationCallback cb = new android.window.OnBackAnimationCallback() {
+                // the finger's place goes along in page px (the page is drawn at the screen's density),
+                // so the screen can follow the finger exactly
                 @Override public void onBackStarted(android.window.BackEvent e) {
-                    js("window.morpheBackStart && morpheBackStart(" + e.getSwipeEdge() + ")");
+                    js("window.morpheBackStart && morpheBackStart(" + e.getSwipeEdge() + "," + pagePx(e.getTouchX()) + ")");
                 }
                 @Override public void onBackProgressed(android.window.BackEvent e) {
-                    js("window.morpheBackProgress && morpheBackProgress(" + e.getProgress() + ")");
+                    js("window.morpheBackProgress && morpheBackProgress(" + e.getProgress() + "," + pagePx(e.getTouchX()) + ")");
                 }
                 @Override public void onBackCancelled() {
                     js("window.morpheBackCancel && morpheBackCancel()");

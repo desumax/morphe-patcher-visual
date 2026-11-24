@@ -439,3 +439,23 @@ const clock = (() => {
   };
   return api;
 })();
+
+// ------------------------------------------------------------------ haptics (iOS-like)
+// Max, Nov 24 (every design): light taps under the finger. tapFeel(kind):
+//   "toggle" a setting switched (afterChange)   "tick" a slider moved a step
+//   "snap"   a dragged tab or card took a new place   "lock" a locked setting was tried
+//   "lift"   a hold picked up a tab or card to move
+// In the app they are the phone's own system haptics (MorpheApp.haptic: crisp, and they follow the
+// phone's touch-feedback setting); an older app or a browser gets a short vibration instead. Only in
+// answer to the finger or a key: nothing buzzes on its own (a redraw, a demo, start-up), and two taps
+// closer than 30 ms are one. The haptic settings' demos keep their own longer buzz (scenarios.js buzz).
+let feelAct = 0, feelLast = 0;
+["pointerdown", "pointermove", "keydown", "input"].forEach(t => addEventListener(t, e => { if (t !== "pointermove" || e.buttons) feelAct = performance.now(); }, { capture: true, passive: true }));
+const HAPTIC_MS = { toggle: 10, tick: 4, snap: 6, lock: 14, lift: 12 };
+function tapFeel(kind) {
+  const now = performance.now();
+  if (now - feelAct > 1200 || now - feelLast < 30) return;
+  feelLast = now;
+  try { if (window.MorpheApp && typeof MorpheApp.haptic === "function") { MorpheApp.haptic(kind); return; } } catch { /* an older app: vibrate */ }
+  try { navigator.vibrate && navigator.vibrate(HAPTIC_MS[kind] || 8); } catch { /* not supported */ }
+}

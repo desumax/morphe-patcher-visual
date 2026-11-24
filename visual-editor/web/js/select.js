@@ -124,7 +124,7 @@ const canToggle = k => { const p = PREF[k]; return !!p && (OFF_LIST.has(k) || p.
 function toggle(k) {
   const p = PREF[k];
   if (mode === "orig") setMode("mod");
-  if (!parentsOk(k)) { pointToParents(k); snack(needText(k)); return; }
+  if (!parentsOk(k)) { tapFeel("lock"); pointToParents(k); snack(needText(k)); return; }
   const before = state[k];
   if (OFF_LIST.has(k)) { if (String(state[k]) === "off") setPref(k, offListPick[k] || entriesFor(k).find(e => e.value !== "off" && e.value !== "en").value); else { offListPick[k] = state[k]; setPref(k, "off"); } }
   else if (p.type === "boolean") setPref(k, !state[k]);
@@ -232,7 +232,7 @@ function afterChange(k, before) {
   commit(); select(k); settle();
   // the whole preview only pulses when nothing in it stands for this setting
   const sb = document.querySelector(".stagebox"); if (sb && !document.querySelector(`#stage [data-k="${k}"], #stage [data-also~="${k}"]`) && !proxyEls(k).length) { sb.classList.remove("changed"); void sb.offsetWidth; sb.classList.add("changed"); }
-  try { navigator.vibrate && navigator.vibrate(20); } catch { /* ignore */ }
+  tapFeel("toggle");
   if (SCN[k]) playScenario(k, before);
   // teleport back to the setting that was waiting on this one
   if (returnTo && parentsOk(returnTo.key) && dependsOn(returnTo.key, k)) {

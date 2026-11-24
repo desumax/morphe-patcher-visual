@@ -137,7 +137,7 @@ html .phone.theme-glass #picker { background: var(--gx-menu); border-radius: 30p
 html.inapp .phone.theme-glass #picker { border-radius: 0; -webkit-backdrop-filter: none; backdrop-filter: none; }
 .theme-glass .dlg ul { background: var(--g-card); box-shadow: var(--g-card-edge); }
 .theme-glass .scrimfull { background: rgba(0,0,0,.28); }
-.theme-glass .dlgscrim { background: rgba(0,0,0,.4); }
+.theme-glass .dlgscrim.open { background-color: rgba(0,0,0,.4); }
 
 /* role: fill and the slider (lab: an 8px clear track, a blue fill, a 34x24 glass pill that grows while held) */
 .theme-glass .ctl input[type=range] { -webkit-appearance: none; appearance: none; height: 28px; background: transparent; }
@@ -158,8 +158,8 @@ html:not(.touchwait) .theme-glass .ctl input[type=range]:active::-moz-range-thum
 .theme-glass .tut .ok { background-image: linear-gradient(90deg, var(--m-brand-1), var(--m-brand-2)); box-shadow: var(--g-thumb-edge); }
 
 /* role: press */
-.theme-glass :is(.ctl .opt, .tab7, .seg3 button, .seg button, .secpill, .kidbtn, .ordreset, .offnew, .goto, .dbtn, .pick, .iconbtn) { transition: transform .16s var(--ease), background-color .16s var(--ease), color .3s var(--ease); }
-html:not(.touchwait) .theme-glass :is(.ctl .opt, .tab7, .seg3 button, .seg button, .secpill, .kidbtn, .ordreset, .offnew, .goto, .dbtn, .pick, .iconbtn):active { transform: scale(.96); }
+.theme-glass :is(.ctl .opt, .tab7, .seg3 button, .seg button, .secpill, .kidbtn, .ordreset, .offnew, .goto, .dbtn, .pick, .iconbtn) { transition: transform var(--spring-dur) var(--spring), background-color .16s var(--ease), color .3s var(--ease); }
+html:not(.touchwait) .theme-glass :is(.ctl .opt, .tab7, .seg3 button, .seg button, .secpill, .kidbtn, .ordreset, .offnew, .goto, .dbtn, .pick, .iconbtn):not(.lift):not(.lifted):active { transform: scale(.96); }
 html:not(.touchwait) .theme-glass :is(.ctl .opt, .tab7, .kidbtn, .ordreset, .offnew, .pick):not([aria-pressed="true"]):not([aria-selected="true"]):not([aria-current="true"]):active { background-color: var(--g-press); }
 html:not(.touchwait) .theme-glass .lt7:active { background-color: var(--g-press); }
 html:not(.touchwait) .theme-glass :is(.ctl .opt[aria-pressed="true"], .tab7[aria-selected="true"], .goto, .dbtn):active { filter: brightness(1.18); }

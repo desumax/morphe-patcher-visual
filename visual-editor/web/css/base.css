@@ -31,6 +31,10 @@
   --sp-s: 8px; --sp-l: 16px;
   --dur: 220ms; --dur-short: 180ms; --dur-axis: 300ms;
   --ease: cubic-bezier(.4, 0, .2, 1);
+  /* iOS-like spring (Max, Nov 24, every design): a damped spring (damping .68) that passes its end at 40%
+     of the time, overshoots by about 5% and settles. Presses, toggle thumbs, glides and cards use it. */
+  --spring: linear(0, 0.019, 0.07, 0.143, 0.23, 0.323, 0.419, 0.513, 0.602, 0.684, 0.758, 0.822, 0.877, 0.924, 0.962, 0.992, 1.015, 1.031, 1.043, 1.05, 1.054, 1.054, 1.053, 1.05, 1.046, 1.041, 1.036, 1.03, 1.025, 1.021, 1.016, 1.012, 1.009, 1.006, 1.004, 1.002, 1, 0.999, 0.998, 0.998, 1);
+  --spring-dur: 460ms; --spring-dur-l: 560ms;
   --disabled: .38;
   /* YouTube preview */
   --yt-chip: #272727; --yt-red: #ff0033; --yt-blue: #3ea6ff;
@@ -78,11 +82,11 @@ button { font: inherit; color: inherit; }
 @media (max-width: 860px) { .status { display: none; } }
 
 .appbar { flex: none; display: flex; align-items: center; gap: 6px; padding: 6px 10px 8px 4px; background: var(--m-bg); position: relative; z-index: 30; }
-.iconbtn { width: 40px; height: 40px; border-radius: 50%; border: 0; background: transparent; display: grid; place-items: center; cursor: pointer; flex: none; transition: background var(--dur) var(--ease), transform var(--dur-short) var(--ease); }
+.iconbtn { width: 40px; height: 40px; border-radius: 50%; border: 0; background: transparent; display: grid; place-items: center; cursor: pointer; flex: none; transition: background var(--dur) var(--ease), transform var(--spring-dur) var(--spring); }
 .iconbtn:hover { background: rgba(227,226,230,.08); }
 html:not(.touchwait) .iconbtn:active { transform: scale(.92); }
 .iconbtn svg { width: 24px; height: 24px; fill: var(--m-on); }
-.secpill { display: flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px 0 10px; border-radius: 999px; border: 0; background: var(--m-c-high); cursor: pointer; min-width: 0; flex: 1 1 auto; max-width: max-content; transition: background var(--dur) var(--ease), transform var(--dur-short) var(--ease); }
+.secpill { display: flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px 0 10px; border-radius: 999px; border: 0; background: var(--m-c-high); cursor: pointer; min-width: 0; flex: 1 1 auto; max-width: max-content; transition: background var(--dur) var(--ease), transform var(--spring-dur) var(--spring); }
 .secpill:hover { background: var(--m-c-highest); }
 html:not(.touchwait) .secpill:active { transform: scale(.96); }
 .secpill svg { width: 20px; height: 20px; fill: var(--m-primary); flex: none; }
@@ -97,7 +101,7 @@ html:not(.touchwait) .secpill:active { transform: scale(.96); }
    Original, the project's blue on Morphe. A tap anywhere on it switches. */
 .seg { --seg-on: var(--m-brand-1); --seg-on-ink: #fff; margin-left: auto; position: relative; display: grid; grid-template-columns: 1fr 1fr; background: var(--m-c-highest, #303134); border-radius: 999px; padding: 2px; flex: none; cursor: pointer; isolation: isolate; }
 .theme-yt .seg { background: #303134; }
-.seg::before { content: ""; position: absolute; z-index: -1; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 2px); border-radius: 999px; background: var(--seg-on); transform: translateX(100%); transition: transform 300ms var(--ease), background-color 300ms var(--ease); }
+.seg::before { content: ""; position: absolute; z-index: -1; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 2px); border-radius: 999px; background: var(--seg-on); transform: translateX(100%); transition: transform var(--spring-dur-l) var(--spring), background-color 300ms var(--ease); }
 .seg:has(#btnOrig[aria-pressed="true"])::before { transform: none; background: var(--yt-red); }
 .seg button { border: 0; background: transparent; height: 28px; padding: 0 10px; border-radius: 999px; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--m-on-var); cursor: pointer; transition: color 300ms var(--ease); }
 .seg #btnMod[aria-pressed="true"] { color: var(--seg-on-ink); }

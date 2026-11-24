@@ -168,14 +168,14 @@ $("list").addEventListener("click", e => {
 });
 $("list").addEventListener("input", e => {
   const t = e.target; const k = t.dataset && t.dataset.set; if (!k || t.tagName === "SELECT") return;
-  if (t.type === "range") { const f = t.max > t.min ? (t.value - t.min) / (t.max - t.min) : 0; t.style.setProperty("--pct", f * 100 + "%"); t.style.setProperty("--pf", f); } // the filled part of a styled track (it ends under the knob's middle)
+  if (t.type === "range") { tapFeel("tick"); /* each input is a step: a light tick under the finger */ const f = t.max > t.min ? (t.value - t.min) / (t.max - t.min) : 0; t.style.setProperty("--pct", f * 100 + "%"); t.style.setProperty("--pf", f); } // the filled part of a styled track (it ends under the knob's middle)
   // a number box applies each keystroke straight away (the box keeps focus), like a slider does
   const num = t.type === "number" && t.value !== "" && isFinite(t.value);
   if (t.type === "range" || t.type === "color" || num) {
     ensureMod();
     if (!("before" in t.dataset)) t.dataset.before = JSON.stringify(state[k] ?? null);
     setPref(k, t.type === "color" ? fromColor(k, t.value) : Number(t.value));
-    const lab = document.querySelector(`[data-val-of="${k}"]`); if (lab) lab.textContent = t.value;
+    const lab = document.querySelector(`[data-val-of="${k}"]`); if (lab) { const was = lab.textContent; lab.textContent = t.value; textSwap(lab, was, 150); }
     // redrawn without the selection pop: it flashed the preview on every step of the slider
     // a slider with a live overlay (swipe overlay look, zone sizes) redraws only that overlay: redrawing
     // the whole preview on every step flashed parts of it
@@ -202,7 +202,7 @@ const tabDrag = { justDragged: false };
     if (e.button > 0) return;
     const t = e.target.closest("[data-tab]");
     st = { x: e.clientX, sl: box.scrollLeft, t, mode: null, id: e.pointerId };
-    if (t) st.hold = setTimeout(() => { if (!st || st.mode) return; st.mode = "lift"; t.classList.add("lift"); box.setPointerCapture(st.id); try { navigator.vibrate && navigator.vibrate(15); } catch { /* ignore */ } }, 450);
+    if (t) st.hold = setTimeout(() => { if (!st || st.mode) return; st.mode = "lift"; t.classList.add("lift"); box.setPointerCapture(st.id); tapFeel("lift"); }, 450);
   });
   box.addEventListener("pointermove", e => {
     if (!st) return;
@@ -212,7 +212,7 @@ const tabDrag = { justDragged: false };
     if (st.mode === "lift") {
       const tabs = [...box.querySelectorAll(".tab7")], me = st.t;
       const over = tabs.find(o => { if (o === me) return false; const r = o.getBoundingClientRect(); return e.clientX > r.left && e.clientX < r.right; });
-      if (over) { const r = over.getBoundingClientRect(); over.parentNode.insertBefore(me, e.clientX < r.left + r.width / 2 ? over : over.nextSibling); }
+      if (over) { const r = over.getBoundingClientRect(), nx = me.nextSibling; over.parentNode.insertBefore(me, e.clientX < r.left + r.width / 2 ? over : over.nextSibling); if (me.nextSibling !== nx) tapFeel("snap"); }
       const br = box.getBoundingClientRect(); if (e.clientX > br.right - 24) box.scrollLeft += 8; else if (e.clientX < br.left + 24) box.scrollLeft -= 8;
     }
   });
