@@ -15,7 +15,7 @@ if (INAPP) {
     if (!started) { started = true; carryPending(); return; }
     for (const k of keys) {
       if (!(k in LIVE.values)) continue;
-      try { MorpheApp.set(k, JSON.stringify(state[k])); } catch (e) { /* ignore */ }
+      try { MorpheApp.set(__morpheKey(k), JSON.stringify(state[k])); } catch (e) { /* ignore */ }
     }
   };
   // Changes saved earlier that still wait for a restart (Morphe keeps the values YouTube runs with):
@@ -25,12 +25,12 @@ if (INAPP) {
   function carryPending() {
     let p = {};
     try { p = JSON.parse(MorpheApp.pending ? MorpheApp.pending() : "{}") || {}; } catch (e) { /* older app */ }
-    for (const k in p) if (k in PREF) { baseline[k] = p[k]; __pendingAtOpen.push(k); }
+    for (const mk in p) { const k = __editorKey(mk); if (k in PREF) { baseline[k] = p[mk]; __pendingAtOpen.push(k); } }
     if (__pendingAtOpen.length) { renderBar(); pendingDialog(__pendingAtOpen); } // "Changes not applied yet": apply and restart, continue, or reset
   }
   // Leaving with "Save for later": the values are already saved; Morphe keeps the list for next time.
   window.savePendingForLater = () => {
-    const o = {}; for (const k of pendingRestart()) o[k] = baseline[k];
+    const o = {}; for (const k of pendingRestart()) o[__morpheKey(k)] = baseline[k];
     try { MorpheApp.savePending(JSON.stringify(o)); } catch (e) { /* older app */ }
   };
   // "Reset": every change waiting for a restart goes back to the value YouTube runs with.
@@ -42,6 +42,7 @@ if (INAPP) {
   };
   // Morphe kept another value (a confirmation was declined, or the value was refused).
   window.morpheSetValue = (k, json) => {
+    k = __editorKey(k); // Morphe's key for a setting the editor knows under another (app-pre.js)
     if (!(k in PREF)) return;
     try { loadPrefs({ [k]: JSON.parse(json) }); } catch (e) { return; }
     commit();
@@ -53,7 +54,7 @@ if (INAPP) {
   classicParentsOk = k => (__liveAvail[k] === true ? true : catalogueParentsOk(k));
   window.morpheAvailability = map => {
     let changed = false;
-    for (const k in map) if (k in __liveAvail && __liveAvail[k] !== map[k]) { __liveAvail[k] = map[k]; changed = true; }
+    for (const mk in map) { const k = __editorKey(mk); if (k in __liveAvail && __liveAvail[k] !== map[mk]) { __liveAvail[k] = map[mk]; changed = true; } }
     if (changed) commit();
   };
   // The leave and reopen prompts (restartDialog, pendingDialog in list.js) run Morphe's own actions here.

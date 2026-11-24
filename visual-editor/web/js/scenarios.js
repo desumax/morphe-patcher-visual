@@ -1377,6 +1377,7 @@ function duoValues(k, prev) {
 }
 function playScenario(k, prevValue) {
   const fn = SCN[k]; if (!fn) return;
+  if (!hintOk(k, V(k), prevValue === undefined ? V(k) : prevValue, ...duoValues(k, prevValue).map(s => s[0]))) return; // a value without a story: shown plainly (core.js)
   clock.start("scenario"); clock.stop("steps");
   const canvas = $("canvas"); const stick = $("stick");
   // a tab with no preview opens the preview area for the comparison; stopping it closes the area again
@@ -1405,7 +1406,9 @@ function playScenario(k, prevValue) {
   const draw = () => {
     clock.start("steps"); scStretch = stretch; scTold = toldInside(fn) || FOOT_OFF.has(k); scTurns = turnsPhone(fn) || SCN_TURNS.has(k); scCollect = [];
     scDrawing = true;
-    try { drawSides(); } finally { scDrawing = false; const list = scCollect; scCollect = null; startCollected(list); }
+    let failed = null;
+    try { drawSides(); } catch (err) { failed = err; } finally { scDrawing = false; const list = scCollect; scCollect = null; if (!failed) startCollected(list); }
+    if (failed) { hintFailed(k, failed); stopScenario(); return; } // the story broke on this build's data: the comparison closes, the editor goes on
     fitDev();
     if (!self && !SCN_NO_FLASH.has(k)) diffFlash(box);
   };

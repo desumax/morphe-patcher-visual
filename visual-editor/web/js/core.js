@@ -184,6 +184,17 @@ const tabsOf = g => { const base = g.tabs.filter(([t]) => SECTIONS.some(s => s.i
 //   behaviour BehaviourPreview   (playback behaviour, animated)
 // Keys are written without the "morphe_" prefix.
 const A = {};
+// Hints the installed Morphe has outgrown (in the app, see app-pre.js): a list value this editor has
+// no story for (Morphe adds and renames values often), or a story that failed on live data. Such a
+// value is shown plainly: no comparison, no animation, never a guess drawn as if it were known.
+const STALE_VALUES = {}; // key -> Set of values (as strings) the hints don't know
+const BROKEN = new Set(); // keys whose story threw
+const hintOk = (k, ...vals) => !BROKEN.has(k) && !(STALE_VALUES[k] && vals.some(v => STALE_VALUES[k].has(String(v))));
+// A story failed: it is not played again in this visit, and the error still reaches the console and the checks.
+function hintFailed(k, err) { BROKEN.add(k); setTimeout(() => { throw err; }); }
+// A setting whose kind changed under its key (a switch that became a list): every hint written for the
+// old kind goes, and the setting is a plain row.
+function dropHints(k) { delete A[k]; if (typeof SCN !== "undefined") delete SCN[k]; if (typeof DEMOS !== "undefined") delete DEMOS[k]; }
 const def = (section, kind, keys, extra = {}) => keys.split(/\s+/).filter(Boolean).forEach(k => { A["morphe_" + k] = { section, kind, ...extra }; });
 
 def("player", "vis", "hide_collapse_button hide_autoplay_button hide_captions_button hide_cast_button hide_settings_button hide_player_previous_next_buttons hide_fullscreen_button");
@@ -300,6 +311,8 @@ function initialValue(p) {
     if (vals.length && !vals.includes(d)) return vals[0];
     return d;
   }
+  // a default Morphe works out while it runs (computedDefault in the catalogue): a list opens on its first choice
+  if (d == null && vals.length) return vals[0];
   return d ?? "";
 }
 const defaults = {};

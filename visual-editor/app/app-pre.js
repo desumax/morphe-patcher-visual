@@ -19,6 +19,53 @@ if (INAPP) {
     try { MorpheApp.fallback(); } catch (e) { try { MorpheApp.close(); } catch (e2) { /* ignore */ } }
   }
   try { localStorage.removeItem(LS + "-baseline"); } catch (e) { /* storage unavailable */ }
+  // Text read from Morphe's rows is cleaned before it is used: Morphe marks a new setting by appending
+  // an invisible character (U+2060, with a dot drawn on it) to its title and to its screen's title,
+  // which would end up in titles, in search and in the "Hide X" / "Show X" reading of the clean design.
+  const cleanText = s => typeof s === "string" ? s.replace(/[\u200b-\u200d\u2060-\u2064\ufeff\ufffc]/g, "").trim() : s;
+  for (const m of Object.values(LIVE.meta || {})) {
+    if (!m || typeof m !== "object") continue;
+    for (const f of ["title", "summary", "summaryOn", "summaryOff", "screenTitle", "subScreenTitle"]) if (typeof m[f] === "string") m[f] = cleanText(m[f]);
+    if (Array.isArray(m.entries)) m.entries = m.entries.filter(e => Array.isArray(e) && e.length > 1).map(([label, value]) => [cleanText(String(label ?? value)), value]);
+  }
+  // A setting Morphe knows under another key than this editor's catalogue does. Inside the editor it
+  // keeps the catalogue's key, so its preview, animation and place in the list stay; at the border to
+  // Morphe (reading values, saving, availability, pending changes) the key is translated.
+  //   catalogue key -> Morphe's key (RENAMED) and back (BACK)
+  const RENAMED = {}, BACK = {};
+  window.__morpheKey = k => RENAMED[k] || k;
+  window.__editorKey = k => BACK[k] || k;
+  const KIND = { boolean: "switch", enum: "text", string: "text", integer: "number", long: "number", float: "number" };
+  function bridgeRenames(cat, skip) {
+    const meta = LIVE.meta || {}, values = LIVE.values || {};
+    const known = new Set(cat.preferences.map(p => p.key));
+    const bridge = (mine, theirs) => {
+      RENAMED[mine] = theirs; BACK[theirs] = mine;
+      meta[mine] = meta[theirs]; delete meta[theirs];
+      if (theirs in values) { values[mine] = values[theirs]; delete values[theirs]; }
+    };
+    const lost = () => cat.preferences.filter(p => p.type && KIND[p.type] && !(p.key in meta) && !skip(p.key));
+    const fresh = () => Object.keys(meta).filter(k => !known.has(k) && !(k in BACK) && meta[k] && KIND[meta[k].type] && !/^morphe_visual_editor_/.test(k));
+    // 1. Renames Morphe recorded itself (catalogue.renames, old key -> new key, from its migrations):
+    //    an older build of the patches still has the row under the old key.
+    const ren = cat.renames || {};
+    for (const p of lost()) {
+      const olds = Object.keys(ren).filter(o => { let k = o; for (let i = 0; i < 8 && k in ren; i++) { k = ren[k]; if (k === p.key) return true; } return false; });
+      const hit = olds.filter(o => o in meta && !known.has(o) && !(o in BACK) && KIND[meta[o].type] === KIND[p.type]);
+      if (hit.length === 1) bridge(p.key, hit[0]);
+    }
+    // 2. A rename after this catalogue was made: one catalogue row without a row in Morphe, and one row
+    //    of Morphe the catalogue doesn't know, with the same title and the same kind of control. The
+    //    screen decides between rows that share a title ("Hide Subscribe button" exists four times);
+    //    anything not one-to-one is left alone and shows as a plain new row.
+    const norm = s => cleanText(String(s || "")).toLowerCase();
+    for (const sig of [x => [norm(x.title), norm(x.screenTitle), norm(x.subScreenTitle), KIND[x.type]].join("\n"), x => [norm(x.title), KIND[x.type]].join("\n")]) {
+      const a = {}, b = {};
+      for (const p of lost()) if (p.title) (a[sig(p)] = a[sig(p)] || []).push(p.key);
+      for (const k of fresh()) if (meta[k].title) (b[sig(meta[k])] = b[sig(meta[k])] || []).push(k);
+      for (const s in b) if (b[s].length === 1 && a[s] && a[s].length === 1) bridge(a[s][0], b[s][0]);
+    }
+  }
   const cmpV = (a, b) => { const x = String(a).split(".").map(Number), y = String(b).split(".").map(Number); for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d; } return 0; };
   // THE ONE PLACE that decides which rows the in-app editor has. boot.js calls it once the
   // preview's own rows are assembled (the catalogue, then SponsorBlock's categories).
@@ -37,6 +84,7 @@ if (INAPP) {
     const meta = LIVE.meta || {}, values = LIVE.values || {};
     const sbScreen = "morphe_sb_enabled" in meta;
     const sbKeys = new Set(SB_CATS.map(([c]) => "morphe_sb_" + c));
+    bridgeRenames(cat, k => sbKeys.has(k));
     const exists = k => k in meta || (sbScreen && sbKeys.has(k) && k in values);
     cat.preferences = cat.preferences.filter(p => exists(p.key));
     // the SponsorBlock scene draws only the categories this build has
@@ -70,6 +118,7 @@ if (INAPP) {
       // a read-only counter stays read-only and a list stays a list.
       if (FAMILY[m.type] && FAMILY[m.type] === FAMILY[p.type]) p.type = m.type;
       else if (m.type && TYPE_WIDGET[m.type] && liveType(m) !== p.type && !(m.type === "action" && p.type == null)) {
+        dropHints(p.key); // the preview and animation were made for the old kind of control
         p.type = liveType(m);
         p.widget = Array.isArray(m.entries) && m.entries.length ? "ListPreference" : TYPE_WIDGET[m.type];
         delete p.entryVariants; delete p.versionDefault; delete p.summaryOn; delete p.summaryOff;
@@ -79,6 +128,9 @@ if (INAPP) {
       if (m.summary != null) p.summary = m.summary;
       if (p.type === "boolean") { if (m.summaryOn != null) p.summaryOn = m.summaryOn; if (m.summaryOff != null) p.summaryOff = m.summaryOff; }
       if (Array.isArray(m.entries) && m.entries.length) {
+        // values this editor's stories were not written for (added or renamed since): shown plainly (core.js)
+        const mine = [...(p.entries || []), ...(p.entryVariants || []).flatMap(v => v.entries || [])].map(e => String(e.value));
+        if (mine.length) { const news = m.entries.map(e => String(e[1])).filter(v => !mine.includes(v)); if (news.length) STALE_VALUES[p.key] = new Set(news); }
         p.entries = m.entries.map(([label, value]) => ({ label, value }));
         delete p.entryVariants;
         delete RUNTIME_ENTRIES[p.key];

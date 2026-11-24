@@ -336,7 +336,9 @@ function startDemo(k) {
     if (selected !== k) return stopDemo();
     demoOnGhost = DEMO_TYPE[k] === "transient" && (ghosts.has(k) || fading.has(k));
     // previewed while hidden: play the story of the element being there (a hide key's "shown" value is false)
-    fn(demoOnGhost ? !isHideKey(k) : V(k)); demoStep++;
+    if (!hintOk(k, V(k))) return stopDemo(); // a value without a story: shown plainly (core.js)
+    try { fn(demoOnGhost ? !isHideKey(k) : V(k)); } catch (err) { hintFailed(k, err); return stopDemo(); }
+    demoStep++;
   };
   dT(run, 60);
   clock.every("demo", LOOP_MS, run);

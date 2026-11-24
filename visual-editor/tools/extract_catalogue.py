@@ -71,23 +71,40 @@ def split_top(s):
     if cur.strip(): out.append(cur.strip())
     return out
 
+class Computed(str):
+    """A default Morphe works out while it runs (a method call, a device check): there is no value to
+    copy, so the catalogue records the expression apart from the default and leaves the default empty."""
+
+# Named number constants the defaults use (NICONICO_COMMENTS_MAX_LENGTH_NO_LIMIT = 0), by name.
+def load_constants():
+    consts = {}
+    for f in (ROOT / "extensions").rglob("*.java"):
+        if not any(part in ("shared", "shared-youtube", "youtube") for part in f.relative_to(ROOT / "extensions").parts[:1]): continue
+        for m in re.finditer(r'static\s+final\s+(?:int|long|float|double)\s+(\w+)\s*=\s*(-?[\d_.]+)[LlFfDd]?\s*;', f.read_text(errors="ignore")):
+            consts.setdefault(m.group(1), m.group(2).replace("_", ""))
+    return consts
+
+CONSTS = load_constants()
+
+def strip_comments(raw):
+    # comments go, string literals stay whole ("https://..." is not a comment)
+    return re.sub(r'("(?:\\.|[^"\\])*")|/\*.*?\*/|//[^\n]*', lambda m: m.group(1) or '', raw, flags=re.S).strip()
+
 def norm_default(t, raw):
-    raw = raw.strip()
+    raw = strip_comments(raw)
     if raw in ("TRUE", "true", "Boolean.TRUE"): return True
     if raw in ("FALSE", "false", "Boolean.FALSE"): return False
-    if t in ("IntegerSetting", "LongSetting"):
-        try: return int(raw.rstrip("L"))
-        except ValueError: return raw
-    if t == "FloatSetting":
-        try: return float(raw.rstrip("f"))
-        except ValueError: return raw
+    if t in ("IntegerSetting", "LongSetting", "FloatSetting"):
+        num = CONSTS.get(raw.split(".")[-1], raw) if re.fullmatch(r'[\w.]*[A-Z_][A-Z0-9_]*', raw) else raw
+        try: return float(num.rstrip("fFdD")) if t == "FloatSetting" else int(num.rstrip("lL").replace("_", ""))
+        except ValueError: return Computed(raw)
     if t == "StringSetting":
         m = re.fullmatch(r'"(.*)"', raw, re.S)
-        return bytes(m.group(1), "utf-8").decode("unicode_escape") if m else raw
+        return bytes(m.group(1), "utf-8").decode("unicode_escape") if m else Computed(raw)
     if t == "EnumSetting":
-        m = re.search(r'\.(\w+)$', raw)
-        return m.group(1) if m else raw
-    return raw
+        m = re.fullmatch(r'[\w.]*?\b([A-Z][A-Z0-9_]*)', raw)
+        return m.group(1) if m else Computed(raw)
+    return Computed(raw)
 
 def load_settings():
     files = [
@@ -95,9 +112,25 @@ def load_settings():
         "extensions/shared-youtube/library/src/main/java/app/morphe/extension/shared/settings/SharedYouTubeSettings.java",
         "extensions/youtube/src/main/java/app/morphe/extension/youtube/settings/Settings.java",
     ]
-    settings, field_to_key = {}, {}
+    # Morphe has moved its declarations between files before (BaseSettings became SharedSettings, the
+    # shared YouTube file was split off): a file that is gone is skipped with a warning, and any other
+    # file of the YouTube extensions that declares "morphe_" settings is read too, so a move or a new
+    # file changes nothing here.
+    missing = [f for f in files if not (ROOT / f).exists()]
+    for f in missing: print("warning: settings file not found, skipped:", f, file=sys.stderr)
+    files = [f for f in files if f not in missing]
+    for sub in ("shared", "shared-youtube", "youtube"):
+        for jf in sorted((ROOT / "extensions" / sub).rglob("*.java")):
+            rel = str(jf.relative_to(ROOT))
+            if rel in files or "/settings/" not in rel: continue
+            if re.search(r'public\s+static\s+final\s+\w+Setting(?:<[^>]*>)?\s+\w+\s*=\s*new\s+\w+Setting(?:<[^>]*>)?\(\s*"morphe_', jf.read_text(errors="ignore")):
+                print("note: settings also declared in", rel, file=sys.stderr); files.append(rel)
+    if not files: sys.exit("no settings declarations found under " + str(ROOT / "extensions"))
+    settings, field_to_key, renames = {}, {}, {}
+    texts = []
     for f in files:
         text = (ROOT / f).read_text()
+        texts.append(text)
         # remember the "// Section" comment that precedes each declaration
         section = None
         for line_no, line in enumerate(text.splitlines()):
@@ -107,8 +140,12 @@ def load_settings():
             decl_t, field, cls, key, rest = m.groups()
             args = split_top(rest)
             default = norm_default(cls, args[0]) if args else None
-            vd = re.match(r'VersionCheckPatch\.IS_(\d+)_(\d+)_OR_GREATER\s*\?\s*(.+?)\s*:\s*(.+)$', args[0].strip()) if args else None
+            vd = re.match(r'(?:VersionCheckPatch\.)?IS_(\d+)_(\d+)_OR_GREATER\s*\?\s*(.+?)\s*:\s*(.+)$', strip_comments(args[0])) if args else None
             version_default = {"when": "V(%d,%d)" % (int(vd.group(1)), int(vd.group(2))), "then": norm_default(cls, vd.group(3)), "else": norm_default(cls, vd.group(4))} if vd else None
+            if version_default and any(isinstance(version_default[x], Computed) for x in ("then", "else")): version_default = None
+            computed = None
+            if version_default: default = version_default["else"] # the value on the oldest supported version
+            elif isinstance(default, Computed): computed, default = str(default), None
             flags = [a for a in args[1:] if a in ("true", "false", "TRUE", "FALSE")]
             dialog = next((a.strip('"') for a in args[1:] if a.startswith('"')), None)
             avail = next((a for a in args[1:] if "parent" in a or "Availability" in a), None)
@@ -124,10 +161,21 @@ def load_settings():
                 "dialog": res("@string/" + dialog) if dialog else None,
                 "availability": avail,
                 "versionDefault": version_default,
+                "computedDefault": computed,
                 "sourceSection": sec,
                 "sourceFile": f.split("/")[-1],
             }
             field_to_key[field] = key
+    # Renamed settings: Morphe keeps the old key as a DEPRECATED_ field and copies its value over with
+    # migrateOldSettingToNew(OLD, NEW). The map (old key -> new key) lets the editor serve a build of
+    # Morphe from before a rename, and lets check_drift.py name the replacement of a stale hint.
+    any_key = {}
+    for text in texts:
+        for m in re.finditer(r'static\s+final\s+\w+(?:<[^>]*>)?\s+(\w+)\s*=\s*new\s+\w+(?:<[^>]*>)?\(\s*"([^"]+)"', text): any_key.setdefault(m.group(1), m.group(2))
+    for text in texts:
+        for m in re.finditer(r'migrateOldSettingToNew\(\s*(\w+)\s*,\s*(\w+)\s*\)', text):
+            a, b = any_key.get(m.group(1)), any_key.get(m.group(2))
+            if a and b and a != b: renames[a] = b
     # resolve parent(FIELD) references into keys
     for s in settings.values():
         a = s.get("availability")
@@ -140,9 +188,9 @@ def load_settings():
         s["parents"] = deps
         s["customAvailability"] = re.findall(r'new (?:\w+\.)*(\w+Availability)', a)
         s["availabilityArgs"] = {m.group(1): m.group(2).split(".")[-1] for m in re.finditer(r'new (?:\w+\.)*(\w+Availability)\(\s*([\w.]+)\s*\)', a)}
-    return settings, field_to_key
+    return settings, field_to_key, renames
 
-SETTINGS, FIELD_TO_KEY = load_settings()
+SETTINGS, FIELD_TO_KEY, RENAMES = load_settings()
 
 # --------------------------------------------------------------- availability rules
 # Setting.Availability classes decide when Morphe greys a preference out. Their isAvailable()
@@ -508,6 +556,7 @@ for key, p in PREFS.items():
         "parents": s.get("parents", []),
         "customAvailability": s.get("customAvailability", []),
         **({"versionDefault": s["versionDefault"]} if s.get("versionDefault") else {}),
+        **({"computedDefault": s["computedDefault"]} if s.get("computedDefault") else {}),
         "screen": o["screen"],
         "screenTitle": SCREEN_TITLES.get(o["screen"]),
         "subScreen": o["subScreen"],
@@ -563,6 +612,7 @@ out = {
     "screens": SCREEN_TITLES,
     "preferences": catalogue,
     "internalSettings": internal,
+    "renames": dict(sorted(RENAMES.items())),
 }
 OUT.write_text(json.dumps(out, indent=1, ensure_ascii=False))
 print(json.dumps(out["counts"]))
