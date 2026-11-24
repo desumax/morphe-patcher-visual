@@ -27,6 +27,11 @@
 /* a hidden setting that is selected stays revealed and pulses slowly in red until you pick another one */
 .stage .c.ghost.sel:not(.leaving):not(.charging):not(.flash) { animation: ghostpulse 1.8s ease-in-out .5s infinite; }
 @keyframes ghostpulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,0,51,0), inset 0 0 0 999px rgba(255,0,51,0); } 50% { box-shadow: 0 0 0 4px rgba(255,0,51,.35), inset 0 0 0 999px rgba(255,0,51,.16); } }
+/* a ghost folding away (unghost: it narrows to nothing) fades with its dashed ring: the ring stayed at full
+   strength and ended as a red line where the part had been (Max, Nov 24: Create new segment button to Use
+   compact Skip button; every hidden part). A transition beats the !important opacity above. */
+.stage .c.ghost.leaving { opacity: 0 !important; outline-color: transparent !important; transition: opacity 260ms var(--ease), outline-color 120ms var(--ease) !important; }
+.stage .c.fit.ghost.leaving::before { outline-color: transparent; transition: outline-color 120ms var(--ease); }
 .c.ghost-out { opacity: 0 !important; transition: opacity 450ms var(--ease) !important; animation: none; }
 @keyframes ghostin { from { opacity: 0; } }
 .c.intray { opacity: .55; outline: 1.5px dashed rgba(255,255,255,.5); outline-offset: 1px; border-radius: 8px; }

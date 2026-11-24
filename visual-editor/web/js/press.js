@@ -246,7 +246,7 @@ $("pickGrid").addEventListener("click", e => {
     renderStage(); store.save(); if (grouped) tutOnce("groups"); return;
   }
   const gb = e.target.closest("[data-group]");
-  if (gb) { const g = GROUPS.find(x => x.id === gb.dataset.group), tabs = tabsOf(g), id = lastTab[g.id] && tabs.some(([t]) => t === lastTab[g.id]) ? lastTab[g.id] : tabs[0][0]; returnTo = null;
+  if (gb) { const g = GROUPS.find(x => x.id === gb.dataset.group), tabs = tabsOf(g), id = lastTab[g.id] && tabs.some(([t]) => t === lastTab[g.id]) ? lastTab[g.id] : tabs[0][0]; returnTo = null; chooseCard();
     if (menuCovers()) { quickSection(id); setPicker(false); } else { setPicker(false); switchSection(id); } return; }
   // leaves the new design for Morphe's own settings screen; in the app the patch's switch at the top
   // of Morphe's settings turns it back on
@@ -260,14 +260,15 @@ $("pickGrid").addEventListener("click", e => {
     };
     return;
   }
-  if (e.target.closest("[data-order-reset]")) {
+  if (e.target.closest("[data-order-reset]")) { askOrderReset(); return; }
+  const b = e.target.closest("[data-sec]"); if (!b) return; returnTo = null; chooseCard();
+  if (menuCovers()) { quickSection(b.dataset.sec); setPicker(false); } else { setPicker(false); switchSection(b.dataset.sec); } });
+// Reset order: from the menu's own row (web) or the top bar beside the menu's title (app)
+function askOrderReset() {
     openDialog(`<div class="di">${I("reset")}</div><h2 id="dlgTitle">Reset screen order?</h2><p>The screens go back to Morphe's own order. Your settings are not changed.</p><div class="acts"><button class="dbtn primary" data-dlg-ok>Reset</button><button class="dbtn tonal" data-dlg-cancel>Cancel</button></div>`);
     $("dlgBox").querySelector("[data-dlg-cancel]").onclick = closeDialog;
     $("dlgBox").querySelector("[data-dlg-ok]").onclick = () => { customOrder = null; applyOrder(); renderBar(); store.save(); closeDialog(); snack("Screens are back in Morphe's order"); };
-    return;
-  }
-  const b = e.target.closest("[data-sec]"); if (!b) return; returnTo = null;
-  if (menuCovers()) { quickSection(b.dataset.sec); setPicker(false); } else { setPicker(false); switchSection(b.dataset.sec); } });
+}
 document.addEventListener("keydown", e => { if (e.key === "Escape") { setPicker(false); closeDialog(); if (searching) { query = ""; setSearch(false); } } });
 function setMode(m) {
   const was = mode; mode = m;
