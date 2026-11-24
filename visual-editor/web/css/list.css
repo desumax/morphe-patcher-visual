@@ -87,7 +87,7 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
    other than the default, grey for the default, red for Off
    or Hide (NEG_WORD), the same tokens as the toggles and the Off / On labels (.dl7 > span) */
 .ctl .opt[aria-pressed="true"] { background: var(--on-green); border-color: var(--on-green); color: var(--on-green-ink); }
-.ctl .opt[aria-pressed="true"].def { background: #3a3a3a; border-color: #3a3a3a; color: #fff; } /* the default (Auto, Default): neutral, like its side in the comparison */
+.ctl .opt[aria-pressed="true"]:is(.def, .offw) { background: #3a3a3a; border-color: #3a3a3a; color: #fff; } /* the default (Auto, Default): neutral, like its side in the comparison */
 .ctl .opt[aria-pressed="true"].neg { background: #5c2b2b; border-color: #5c2b2b; color: #ffd9d6; }
 /* optGlide: one thumb carries the pressed colour from the old pill to the new one */
 .ctl.optgrid { position: relative; isolation: isolate; }

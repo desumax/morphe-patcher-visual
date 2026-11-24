@@ -156,3 +156,5 @@
 .phone:not(.theme-glass) :is(.seg3 button, .seg button) { transition: color 300ms var(--ease), transform var(--spring-dur) var(--spring); }
 .phone:not(.theme-glass) :is(.tab7, .kidbtn, .ordreset, .offnew, .goto, .dbtn) { transition: transform var(--spring-dur) var(--spring); }
 html:not(.touchwait) .phone:not(.theme-glass) :is(.ctl .opt, .tab7, .seg3 button, .seg button, .kidbtn, .ordreset, .offnew):not(.lift):active { transform: scale(.96); }
+/* a dialog or a text-selection bar in a comparison phone pops in from a little smaller (Select text, Nov 24) */
+@keyframes dlgin7 { from { opacity: 0; scale: .92; } }

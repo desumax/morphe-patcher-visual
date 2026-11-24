@@ -394,6 +394,9 @@ const stateWord = (k, on) => { const c = design === "clean" && cleanOf(k); retur
 const cleanBroken = k => design === "clean" && PREF[k] && PREF[k].type === "boolean" && !OFF_LIST.has(k) && !cleanOf(k);
 // Hide / Off always sit on the left and Show / On on the right; a thumb slides to the current one
 const NEG_WORD = new Set(["Hide", "Off"]);
+// a choice that turns the thing off (SponsorBlock's Disable): grey when chosen, like a default, never the green
+// of a choice that does something (Max, Nov 24), and it stays at the end of its row (controlFor)
+const OFF_CHOICE = /^(disable|disabled|none|never|nothing)$/i;
 function toggleHTML(k) {
   const c = cleanOf(k), on = !!V(k), [l0, l1] = c.labels, cur = on ? l1 : l0;
   const [left, right] = NEG_WORD.has(l0) ? [l0, l1] : [l1, l0];

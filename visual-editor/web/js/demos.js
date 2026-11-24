@@ -558,17 +558,32 @@ scen("comments", "copy_comments", (box, on) => {
   at(1100, () => { f.classList.remove("hold", "show"); if (on) toast7(dev, "Comment copied"); else sheet7(dev, ["Report", "Block user"].map(t => `<div>${t}</div>`).join("")); });
   return on ? "Hold a comment: its text is copied" : "Hold a comment: only the report menu (stock)";
 });
+// Morphe (CommentsSearchFilter): a search button beside the comments panel's close button opens a "Search
+// comments" dialog (hint "Words to search for"; Clear, Cancel, Search). Search reloads the panel with only the
+// loaded comments that contain all the words, and the button's icon is filled while a search is on.
 scen("comments", "search_comments", (box, on) => {
   const list = ["The wood stove at 12:04 is pure cosiness", "Which stove model is that?", "Subscribed for part 2", "Stove + rain = perfect"];
-  box.innerHTML = device("port", pageRows(`<div style="display:flex;align-items:center;gap:4px"><b style="font-size:8px;flex:1">Comments</b>${on ? `<span class="srch7" style="width:10px;height:10px;display:grid;place-items:center">${I("search", "ico", 'style="width:10px;height:10px"')}</span>` : ""}</div><div class="q7" style="height:0;overflow:hidden;transition:height .25s"><div style="height:12px;border-radius:6px;background:#2c2c2c;padding:0 5px;line-height:12px;color:#aaa"></div></div>${list.map((t, i) => cmt7(i + 1, t)).join("")}`));
+  const icon = fill => `<span class="srch7" style="width:11px;height:11px;display:grid;place-items:center;border-radius:50%;transition:background .2s;${fill ? "background:#f1f1f1" : ""}">${I("search", "ico", `style="width:8px;height:8px;${fill ? "fill:#0f0f0f" : ""}"`)}</span>`;
+  box.innerHTML = device("port", pageRows(`<div style="display:flex;align-items:center;gap:5px"><b style="font-size:8px;flex:1">Comments</b>${on ? icon(false) : ""}${I("close", "ico", 'style="width:9px;height:9px"')}</div><div class="cl7" style="display:grid;gap:5px;transition:opacity .2s">${list.map((t, i) => cmt7([2, 5, 3, 1][i], t)).join("")}</div>`));
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
-  if (!on) return "No way to search the loaded comments (stock)"; // no pill: the comments fill the phone, and it sat on them
-  at(200, () => fingerTo(f, W * .88, H * .055)); at(550, () => tapF(f));
-  at(750, () => { f.classList.remove("show"); dev.querySelector(".q7").style.height = "14px"; });
-  const q = dev.querySelector(".q7 div"); "stove".split("").forEach((ch, i) => at(950 + i * 110, () => { q.textContent += ch; }));
-  at(1600, () => dev.querySelectorAll(".cm7").forEach((c, i) => { if (!/stove/i.test(list[i])) { c.style.transition = "opacity .25s, height .3s"; c.style.opacity = "0"; later(() => { c.style.display = "none"; }, 260); } }));
-  return "Search button: shows only the loaded comments with your words";
+  if (!on) return "Not searchable";
+  const spot = q => { const e = dev.querySelector(q), r = e.getBoundingClientRect(), d = dev.getBoundingClientRect(), z = d.width / W; return [(r.left - d.left + r.width / 2) / z, (r.top - d.top + r.height / 2) / z]; };
+  at(150, () => fingerTo(f, ...spot(".srch7"))); at(450, () => tapF(f));
+  at(650, () => {
+    f.classList.remove("show");
+    dev.insertAdjacentHTML("beforeend", `<div class="dim7" style="position:absolute;inset:0;background:rgba(0,0,0,.55);animation:ghostin .2s var(--ease);z-index:5"></div><div class="dlg7" style="position:absolute;left:8%;right:8%;top:24%;background:#282828;border-radius:7px;padding:7px;display:grid;gap:6px;font-size:6.5px;color:#ddd;z-index:6;animation:dlgin7 .25s var(--ease)"><b style="font-size:8px;color:#fff">Search comments</b><div style="border-bottom:1px solid #3ea6ff;padding:2px 1px;font-size:7px"><span class="q7" style="color:#fff"></span><span class="ph7" style="color:#888">Words to search for</span></div><div style="display:flex;gap:7px;font-weight:600;color:#3ea6ff"><span style="flex:1">Clear</span><span>Cancel</span><span class="go7">Search</span></div></div>`);
+  });
+  "stove".split("").forEach((ch, i) => at(950 + i * 110, () => { dev.querySelector(".ph7")?.remove(); const q = dev.querySelector(".q7"); if (q) q.textContent += ch; }));
+  at(1650, () => fingerTo(f, ...spot(".go7"))); at(1900, () => tapF(f));
+  // the panel reloads with the matches only, and the button stays filled
+  at(2100, () => {
+    f.classList.remove("show"); dev.querySelectorAll(".dim7, .dlg7").forEach(n => n.remove());
+    const cl = dev.querySelector(".cl7"), s7 = dev.querySelector(".srch7"); cl.style.opacity = "0";
+    later(() => { cl.innerHTML = list.map((t, i) => /stove/i.test(t) ? cmt7([2, 5, 3, 1][i], t.replace(/stove/i, m => `<b style="color:#fff">${m}</b>`)) : "").join(""); cl.style.opacity = "1"; s7.style.background = "#f1f1f1"; s7.querySelector("svg").style.fill = "#0f0f0f"; }, 220);
+  });
+  return "";
 });
+SCN_HOLD.morphe_search_comments = 3400;
 scen("channel", "channel_search", (box, on) => {
   const ico = (c) => I("search", "ico", `style="width:10px;height:10px;${c ? "fill:" + c : ""}"`);
   box.innerHTML = device("port", pageRows(`<div class="top7" style="height:14px;display:flex;align-items:center;justify-content:flex-end;gap:6px;white-space:nowrap;overflow:hidden">${on ? `<span style="display:grid;place-items:center;width:14px;height:14px;border-radius:50%;background:rgba(62,166,255,.18)">${ico("#3ea6ff")}</span>` : ""}${ico()}</div><div style="height:22px;border-radius:4px;background:${ART[3]}"></div><div style="display:flex;gap:4px;align-items:center"><span style="width:16px;height:16px;border-radius:50%;background:${AV[0]}"></span><b style="font-size:8px">Fjord &amp; Timber</b></div><div class="body7" style="display:grid;gap:5px">${bar7(80)}${bar7(60)}${[0, 1, 2].map(i => `<div style="display:flex;gap:4px;align-items:center"><div style="width:26px;height:15px;border-radius:2px;background:${ART[i + 1]}"></div>${bar7(50)}</div>`).join("")}</div>`));
@@ -591,14 +606,38 @@ scen("channel", "channel_search", (box, on) => {
   });
   return on ? "Second search button: results only from this channel" : "Search button: searches all of YouTube (stock)";
 });
+// Morphe (CopyTextPatch.showSelectTextDialog): holding a description or a post opens a "Select text" dialog
+// with the whole text, selectable (setTextIsSelectable), and Cancel / "Copy all"; Copy all puts it all on the
+// clipboard with "Text copied to clipboard". So On: hold, the dialog opens, a word is held and the selection
+// dragged over a part, Android's own Copy bar copies just that part.
 scen("description", "copy_select_text", (box, on) => {
   situation("Holding the description text");
-  box.innerHTML = device("port", pageRows(`<b style="font-size:8px">Description</b><span class="d7" style="line-height:1.35">Two weeks, one 12 m² cabin and a lot of <span class="w7">reclaimed pine</span>.</span>${bar7(90)}${bar7(70)}`));
+  const txt = `Two weeks, one 12 m² cabin and a lot of <span class="w7" style="border-radius:2px;transition:background .25s">reclaimed</span><span class="w8" style="border-radius:2px;transition:background .25s"> pine</span>.`;
+  box.innerHTML = device("port", pageRows(`<b style="font-size:8px">Description</b><span class="d7" style="line-height:1.35">${txt.replace(/class="w[78]"/g, "")}</span>${bar7(90)}${bar7(70)}`));
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
   at(200, () => holdAt(f, W * .45, H * .13));
-  at(900, () => { f.classList.remove("hold", "show"); if (!on) { toast7(dev, "Nothing happens", "60%"); return; } const w = dev.querySelector(".w7"); w.style.background = "rgba(62,166,255,.45)"; w.style.borderRadius = "2px"; dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:6%;background:#333">Copy · Select all · Share</div>`); });
-  return on ? "Hold the description: select any part and copy it" : "Hold the description: nothing to select (stock)";
+  if (!on) { at(900, () => { f.classList.remove("hold", "show"); toast7(dev, "Nothing to select", "60%"); }); return "Hold the description: nothing to select (stock)"; }
+  at(800, () => {
+    f.classList.remove("hold", "show");
+    dev.insertAdjacentHTML("beforeend", `<div style="position:absolute;inset:0;background:rgba(0,0,0,.55);animation:ghostin .2s var(--ease);z-index:5"></div><div class="dlg7" style="position:absolute;left:8%;right:8%;top:22%;background:#282828;border-radius:7px;padding:7px;display:grid;gap:5px;font-size:6.5px;color:#ddd;z-index:6;animation:dlgin7 .25s var(--ease)"><b style="font-size:8px;color:#fff">Select text</b><span style="line-height:1.4">${txt}</span><div style="display:flex;justify-content:flex-end;gap:8px;font-weight:600;color:#3ea6ff"><span>Cancel</span><span class="all7">Copy all</span></div></div>`);
+  });
+  // hold a word: it is selected with its two handles, then the end handle is dragged to take in the next word
+  const sel = (el, on2) => { if (el) el.style.background = on2 ? "rgba(62,166,255,.45)" : ""; };
+  const spot = q => { const e = dev.querySelector(q), r = e.getBoundingClientRect(), d = dev.getBoundingClientRect(), z = d.width / W; return [(r.left - d.left) / z, (r.top - d.top) / z, r.width / z, r.height / z]; };
+  at(1300, () => { const [x, y, w, h] = spot(".dlg7 .w7"); holdAt(f, x + w * .5, y + h * .5); });
+  at(1750, () => { sel(dev.querySelector(".dlg7 .w7"), true); f.classList.remove("hold"); });
+  at(1950, () => { const [x, y, w, h] = spot(".dlg7 .w8"); fingerTo(f, x + w, y + h * .5, 450); });
+  at(2400, () => {
+    sel(dev.querySelector(".dlg7 .w8"), true); f.classList.remove("show");
+    const y = spot(".dlg7 .w7")[1]; // Android's bar sits over the selection, kept inside the screen
+    dev.insertAdjacentHTML("beforeend", `<div class="bar7" style="position:absolute;left:50%;translate:-50% 0;top:${y - 15}px;display:flex;gap:6px;padding:2px 6px;border-radius:4px;background:#3c3c3c;font-size:6px;white-space:nowrap;color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.5);z-index:7;animation:dlgin7 .2s var(--ease)"><span class="cp7">Copy</span><span>Select all</span><span>Share</span></div>`);
+  });
+  at(2900, () => { const [x, y, w, h] = spot(".bar7 .cp7"); fingerTo(f, x + w / 2, y + h / 2); });
+  at(3150, () => { tapF(f); });
+  at(3400, () => { f.classList.remove("show"); dev.querySelector(".bar7")?.remove(); toast7(dev, "\u201Creclaimed pine\u201D copied", "92%"); });
+  return "Hold the description: select any part of it and copy it";
 });
+SCN_HOLD.morphe_copy_select_text = 4400;
 scen("watch", "copy_video_title", (box, on) => {
   situation("Holding the video title");
   box.innerHTML = device("port", playerArea(0) + `<div style="position:absolute;left:6px;right:6px;top:38%;font-size:8px;font-weight:600;line-height:1.3" class="tt7">Building a tiny cabin in the Norwegian forest</div>`);

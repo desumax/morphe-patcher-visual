@@ -25,7 +25,10 @@
 .c.ghost { opacity: .6 !important; outline: 1.5px dashed var(--yt-red) !important; display: revert; animation: ghostin var(--dur) var(--ease); }
 .c.ghost > * { visibility: visible !important; }
 /* a hidden setting that is selected stays revealed and pulses slowly in red until you pick another one */
-.stage .c.ghost.sel:not(.leaving):not(.charging):not(.flash) { animation: ghostpulse 1.8s ease-in-out .5s infinite; }
+/* (not a fitted one: its pulse is on its ring, ::before below. The fit rule that turned this off was the
+   weaker selector, so a hidden part in a wide wrapper pulsed across the whole line: 'Create a Short' button,
+   Max, Nov 24) */
+.stage .c.ghost.sel:not(.fit):not(.leaving):not(.charging):not(.flash) { animation: ghostpulse 1.8s ease-in-out .5s infinite; }
 @keyframes ghostpulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,0,51,0), inset 0 0 0 999px rgba(255,0,51,0); } 50% { box-shadow: 0 0 0 4px rgba(255,0,51,.35), inset 0 0 0 999px rgba(255,0,51,.16); } }
 /* a ghost folding away (unghost: it narrows to nothing) fades with its dashed ring: the ring stayed at full
    strength and ended as a red line where the part had been (Max, Nov 24: Create new segment button to Use

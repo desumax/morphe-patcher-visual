@@ -198,7 +198,7 @@ function centreIcons(root) {
 // Screens Max has signed off ("lock it"). Shown as a small check in the screen menu and on the tabs.
 // To remove before shipping: delete this block, the .devdone CSS rule, and the three devMark /
 // devMarkGroup calls (screen menu card, group card, tab).
-const DEV_DONE = new Set(["player", "seekbar", "fullscreen", "flyout", "endscreen"]); // section ids, e.g. "player"
+const DEV_DONE = new Set(["player", "seekbar", "fullscreen", "flyout", "endscreen", "playback", "behaviour", "captions", "sponsorblock"]); // section ids, e.g. "player"
 // settings Max approved without a preview: a tab id approves all of its settings that have none, a key one setting
 const NO_PREVIEW_OK = new Set(["fullscreen", "player", "morphe_custom_seekbar_thumb_file", "morphe_swipe_seek_sensitivity"]);
 const devMark = id => DEV_DONE.has(id) ? `<span class="devdone" title="Finished (development marker)">✓</span>` : "";
@@ -538,12 +538,15 @@ function controlFor(k) {
   // cards under videos, then Play next in queue type, whose default is Native queue). Lists that count
   // (speeds, qualities, sizes: most labels carry a number) keep their order, a default in the middle of a
   // scale would read wrong; so do the long ones drawn as a grid or a dropdown.
-  if (ents.length > 1 && ents.length <= 8 && !sameVal(ents[0].value, defaults[k]) && ents.filter(e => /\d/.test(String(e.label))).length * 2 < ents.length)
+  // A default that turns the thing off (Disable) stays at the end where Morphe puts it (Max, Nov 24: Hook/Greetings
+  // had Disable first while every other SponsorBlock row ends with it).
+  const offDef = ents.some(e => sameVal(e.value, defaults[k]) && OFF_CHOICE.test(String(e.label)));
+  if (ents.length > 1 && ents.length <= 8 && !offDef && !sameVal(ents[0].value, defaults[k]) && ents.filter(e => /\d/.test(String(e.label))).length * 2 < ents.length)
     ents = [...ents.filter(e => sameVal(e.value, defaults[k])), ...ents.filter(e => !sameVal(e.value, defaults[k]))];
   if (OFF_LIST.has(k) && String(v) === "off") return "";
   // up to 8 choices: a row of pills; 9 to 16 (icon styles, theme colours, qualities): a 3-column grid
   // of pills built from the same entries, so it follows whatever list Morphe ships; more: a dropdown
-  if (ents.length && ents.length <= 16) return `<div class="ctl optgrid">${ents.map(e => `<button class="opt${NEG_WORD.has(String(e.label)) ? " neg" : ""}${sameVal(e.value, defaults[k]) ? " def" : ""}" data-set="${k}" data-val="${esc(e.value)}" aria-pressed="${sameVal(e.value, v)}" ${dis}><span class="ol">${esc(e.label)}</span></button>`).join("")}</div>`; // .ol: the label sits over the gliding colour, the colour over the pill borders
+  if (ents.length && ents.length <= 16) return `<div class="ctl optgrid">${ents.map(e => `<button class="opt${NEG_WORD.has(String(e.label)) ? " neg" : ""}${sameVal(e.value, defaults[k]) ? " def" : ""}${OFF_CHOICE.test(String(e.label)) ? " offw" : ""}" data-set="${k}" data-val="${esc(e.value)}" aria-pressed="${sameVal(e.value, v)}" ${dis}><span class="ol">${esc(e.label)}</span></button>`).join("")}</div>`; // .ol: the label sits over the gliding colour, the colour over the pill borders
   if (ents.length) return `<div class="ctl"><select data-set="${k}" ${dis} aria-label="${esc(shownTitle(k))}">${ents.map(e => `<option value="${esc(e.value)}" ${sameVal(e.value, v) ? "selected" : ""}>${esc(e.label)}</option>`).join("")}</select></div>`;
   if (p.type === "integer" || p.type === "float" || p.type === "long") {
     const r = Object.entries(RANGES).find(([n]) => k.includes(n));

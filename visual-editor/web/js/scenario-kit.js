@@ -224,6 +224,33 @@ youMenuScen("hide_account_menu_filter_strings", v => {
   return { sit: `Lines like ${ex.join(" and ")} remove those items`, gone: nameHit(ex) };
 });
 youMenuScen("hide_account_menu_downloads", on => ({ sit: "The You tab's menu", gone: t => !!on && t === "Downloads" }));
+// The comments carousel under a video (CommentsFilter.onCommentsLoaded: video_metadata_carousel). Its pages
+// have titles such as Comments, Ask, Community, Hype, Listen; with "Enable comments carousel filter" on,
+// every page whose title contains a line of "Comments carousel filter" is taken out (title.contains, case as
+// typed), and taking out every page hides the whole comments section. One picture for both settings, the
+// carousel's pages laid out two by two so all of them fit the small phone.
+const CAROUSEL = [["comment", "Comments", "1.2K · Lovely build!"], ["spark", "Ask", "Ask about this video"], ["fire", "Hype", "Hype this video"], ["plist", "Community", "Fjord & Timber posted"]];
+function carouselScen(key, plan) {
+  scen("comments", key, (box, v) => {
+    const { sit, gone } = plan(v);
+    situation(sit, true);
+    const cards = CAROUSEL.map(([i, t, sub]) => { const h = `<div style="min-width:0;padding:3px 4px;border-radius:4px;background:#272727;display:grid;gap:1px"><b style="display:flex;gap:1.5px;align-items:center;font-size:5.6px;white-space:nowrap">${ico7(i, 6)}${t}</b><span style="font-size:5px;color:#aaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${sub}</span></div>`; return gone(t) ? `<div class="tgt7" style="min-width:0">${h}</div>` : h; }).join("");
+    box.innerHTML = device("port", pageRows(player7(3) + `<b style="font-size:7px">Building a tiny cabin</b><div style="display:grid;grid-template-columns:1fr 1fr;gap:3px">${cards}</div>` + row7(2, "Night train to Bodø") + row7(4, "Lo-fi beats")));
+    markGone(box.querySelectorAll(".dev .tgt7"), true);
+    return "";
+  });
+}
+const carouselNames = v => youFilter(v);
+carouselScen("hide_comments_carousel", on => {
+  const own = carouselNames(V("morphe_hide_comments_carousel_filter_strings")), names = own.length ? own : ["Ask", "Hype"];
+  if (!on) return { sit: "The comments carousel under a video", gone: () => false };
+  return { sit: `${own.length ? "Filter" : "Filter, for example"}: ${names.join(", ")}`, gone: t => names.some(n => t.includes(n)) };
+});
+carouselScen("hide_comments_carousel_filter_strings", v => {
+  const names = carouselNames(v);
+  if (names.length) return { sit: `Filter: ${names.join(", ")}`, gone: t => names.some(n => t.includes(n)) };
+  return { sit: "Lines like Ask and Hype take those pages out", gone: t => t === "Ask" || t === "Hype" };
+});
 hidePage("feed", "hide_album_cards", "Searching for an artist", search7("midnight tapes", tgt7(`<div style="display:flex;gap:4px;align-items:center;padding:3px;border-radius:3px;background:#1b1b1b"><div style="width:22px;height:22px;background:${ART[6]};border-radius:2px"></div><div style="font-size:6.5px">Neon Fjord<div style="font-size:5.5px;color:#aaa">Album · 2025</div></div></div>`) + row7(2, "Midnight Tapes live") + row7(3, "Lo-fi to study to")));
 hidePage("feed", "hide_artist_cards", "Searching for an artist", search7("midnight tapes", tgt7(`<div style="display:flex;gap:5px;align-items:center;padding:3px;border-radius:3px;background:#1b1b1b"><span style="width:22px;height:22px;border-radius:50%;background:${AV[4]}"></span><div style="font-size:6.5px">Midnight Tapes<div style="font-size:5.5px;color:#aaa">Artist · 1.1M subscribers</div></div></div>`) + row7(2, "Midnight Tapes live") + row7(3, "Lo-fi to study to")));
 hidePage("feed", "hide_channel_buttons", "A channel row in search", search7("fjord timber", `<div style="display:flex;gap:5px;align-items:center"><span style="width:14px;height:14px;border-radius:50%;background:${AV[0]};flex:none"></span><div style="font-size:6.5px;line-height:1.15;flex:1;min-width:0">Fjord<div style="font-size:5.5px;color:#aaa">412K</div></div>${tgt7(`<span style="display:inline-block;padding:2px 5px;border-radius:6px;background:#f1f1f1;color:#000;font-size:6px">Subscribe</span>`, 1)}</div>` + row7(3, "Building a tiny cabin")));
@@ -545,7 +572,6 @@ scen("captions", "fix_transcript", (box, on) => {
   return on ? "The transcript loads" : "The transcript fails to load on patched builds (stock)";
 });
 for (const [k, sit, html] of [
-  ["hide_comments_carousel", "Comments under a video", `<div style="display:flex;gap:3px;overflow:hidden">${[2, 4, 6].map(i => `<div style="width:30px;height:20px;border-radius:3px;background:#272727;flex:none;font-size:5px;padding:2px">Top comment</div>`).join("")}</div>`],
   ["hide_comments_live_chat_donators_bar", "Live chat", `<div style="display:flex;gap:3px">${[1, 3, 5].map(i => `<span style="padding:0 4px;border-radius:6px;background:${["#1e88e5", "#ffb300", "#e53935"][i % 3]};font-size:5.5px">€${i * 2}</span>`).join("")}</div>`],
   ["hide_comments_live_chat_scroll_to_bottom_button", "Scrolling up in live chat", `<div style="display:flex;justify-content:center"><span style="width:14px;height:14px;border-radius:50%;background:#3ea6ff;display:grid;place-items:center">${ico7("down", 9, "#000")}</span></div>`],
   ["hide_comments_live_chat_tooltips", "Live chat", `<div style="padding:3px 4px;border-radius:3px;background:#3ea6ff;color:#000;font-size:6px;line-height:1.25;width:max-content;max-width:100%">Subscribers-only chat</div>`],
@@ -625,6 +651,22 @@ scen("shorts", "skip_live_shorts", (box, on) => {
   at(400, () => fingerTo(f, W * .5, H * .7)); at(600, () => { fingerTo(f, W * .5, H * .25, 400); swipeShort7(dev, on ? ART[6] : ART[0], 400, on ? "" : live); });
   at(1100, () => { f.classList.remove("show"); if (on) toast7(dev, "Live Short skipped", "50%"); });
   return on ? "Live streams in the Shorts feed are skipped" : "Live streams show up between Shorts (stock)";
+});
+// Morphe (QuickActionsMarginPatch): the quick actions container under the fullscreen seekbar gets a top
+// margin of this many dp. The row stays at the bottom of the screen, so the space opens above it: the
+// seekbar and time go up. Drawn larger than true size (a 92 px phone), with the gap measured.
+scen("watch", "quick_actions_top_margin", (box, v) => {
+  situation("Fullscreen: the seekbar over the quick actions", true);
+  const m = Number(v) || 0, px = dp => Math.round(dp * .45);
+  const qa = ["like", "dislike", "comment", "save", "share", "plist"].map(n => `<span style="flex:none;display:grid;place-items:center;width:15px;height:10px;border-radius:5px;background:rgba(255,255,255,.16)">${ico7(n, 6, "#fff")}</span>`).join("");
+  box.innerHTML = device("land", `<div style="position:absolute;inset:0;background:${ART[3]}"></div><div style="position:absolute;inset:0;background:linear-gradient(transparent 45%,rgba(0,0,0,.55))"></div>
+    <div class="up7" style="position:absolute;left:8px;right:8px;bottom:19px;transition:translate .5s var(--ease)"><b style="display:block;font-size:5.5px;margin-bottom:2px">21:40 / 41:05</b><div style="height:2px;border-radius:1px;background:rgba(255,255,255,.35)"><div style="width:52%;height:100%;background:#f00;border-radius:1px"></div></div></div>
+    <div class="gap7" style="position:absolute;right:4px;bottom:19px;width:2px;height:0;border:solid #ffd21f;border-width:1px 0;background:linear-gradient(#ffd21f,#ffd21f) center/1px 100% no-repeat;transition:height .5s var(--ease);opacity:${m ? 1 : 0}"></div>
+    <div style="position:absolute;left:8px;right:8px;bottom:4px;display:flex;gap:3px">${qa}</div>`);
+  const dev = box.querySelector(".dev"), up = dev.querySelector(".up7"), gap = dev.querySelector(".gap7");
+  // the margin opens on its side as you watch; the default side has none
+  if (m) at(350, () => { up.style.translate = `0 -${px(m)}px`; gap.style.height = px(m) + "px"; dev.insertAdjacentHTML("beforeend", `<b class="new7" style="position:absolute;right:9px;bottom:${19 + px(m) / 2}px;translate:0 50%;font-size:5.5px;color:#ffd21f">${m} dp</b>`); });
+  return m ? `${m} dp of space above the quick actions` : "The seekbar sits right on the quick actions (stock)";
 });
 scen("fullscreen", "swipe_ignore_when_locked", (box, on) => {
   situation("Swiping while the screen is locked"); // no blue line (Max, Nov 20)
@@ -1260,7 +1302,11 @@ function buildKids() {
       // with several required parents, the nearest one is the one that itself needs the others
       // (Audio time stretching needs the speed menu and Audio pitch controls: it belongs under the latter)
       const ps = (PREF[k].parents || []).map(x => x.key).filter(ok);
-      const near = ps.find(x => ps.some(y => y !== x && (PREF[x]?.parents || []).some(z => z.key === y))) || ps[0];
+      // and of a chain, the deepest: the one that needs the most of the others (Display area in portrait needs
+      // Niconico comments, Show in portrait and Separate settings for portrait: it belongs under the last, which
+      // needs both others; picking the first match put it under Show in portrait, above its real parent, Max, Nov 24)
+      const needs = x => ps.filter(y => y !== x && (PREF[x]?.parents || []).some(z => z.key === y)).length;
+      const near = ps.reduce((b, x) => needs(x) > (b ? needs(b) : 0) ? x : b, null) || ps[0];
       const par = MANUAL_PARENT[k] && set.has(MANUAL_PARENT[k].key) ? MANUAL_PARENT[k].key : near || (shared ? null : avKeys[0]);
       if (par && !NO_NEST.has(k)) PARENT_OF[k] = par;
     }
@@ -1296,3 +1342,125 @@ function placeLabel(id) {
   if (grouped) { const g = groupOf(id), t = g.tabs.find(([x]) => x === id); return `${g.title} › ${t ? t[1] : id}`; }
   return SECTIONS.find(s => s.id === id)?.title || "Other";
 }
+
+// ---------- Flying comments (Niconico comments), the settings under it that change when or how comments fly.
+// Read from NiconicoCommentsController / YouTubeChatSource / NiconicoCommentsOverlayView (Max, Nov 24: each of
+// these gets its own animation; the others under it, such as Max refresh rate, can't be drawn and don't flash).
+const NICO7 = ["8888888", "the stove!!", "cosy", "wow", "need this cabin", "lol", "草"];
+// one comment flies right to left across the area (.na7), in a lane, at its own pace
+function nico7(area, text, lane, o = {}) {
+  if (!area || !area.isConnected) return null;
+  const fs = o.fs || 6, e = document.createElement("span");
+  e.className = "nc7"; e.textContent = text;
+  e.style.cssText = `position:absolute;left:100%;top:${2 + lane * fs * 1.25}px;white-space:nowrap;font-size:${fs}px;font-weight:700;color:${o.color || "#fff"};text-shadow:0 0 2px #000,0 0 2px #000;${o.css || ""}`;
+  area.appendChild(e);
+  const w = area.clientWidth + e.offsetWidth + 4;
+  const a = e.animate([{ transform: "translateX(0)" }, { transform: `translateX(-${w}px)` }], { duration: o.ms || 2400, easing: "linear" });
+  a.onfinish = () => e.remove();
+  return e;
+}
+// a stream of comments, one every `gap` ms from `from`, lanes taken in turn
+function nicoRun(dev, list, { from = 250, gap = 330, lanes = 3, fs, ms, area = ".na7" } = {}) {
+  list.forEach((t, i) => at(from + i * gap, () => nico7(dev.querySelector(area), t, i % lanes, { fs, ms })));
+}
+const naLayer = (css = "") => `<div class="na7" style="position:absolute;left:0;right:0;top:0;bottom:0;overflow:hidden;${css}"></div>`;
+const badge7n = (t, bg) => `<span style="position:absolute;left:5px;top:5px;z-index:2;padding:1px 4px;border-radius:3px;background:${bg};font-size:5.5px;font-weight:700">${t}</span>`;
+// YouTubeChatSource: a video's kind decides whether its chat flies (live stream, Premiere playing, ended Premiere)
+for (const [key, sit, badge, bg, on1, off1] of [
+  ["niconico_comments_live_streams", "A live stream", "● LIVE", "#cc0000", "The live chat flies across the video", "No flying comments on live streams"],
+  ["niconico_comments_live_premieres", "A Premiere that is playing now", "PREMIERE", "#3a3a3a", "The Premiere's chat flies across the video", "No flying comments while a Premiere plays"],
+  ["niconico_comments_ended_premieres", "A Premiere that has ended, with its chat replay", "Premiered 2 days ago", "rgba(0,0,0,.6)", "Its chat replay flies across the video", "No flying comments on ended Premieres"]]) {
+  scen("danmaku", key, (box, on) => {
+    situation(sit, true);
+    box.innerHTML = device("land", `<div style="position:absolute;inset:0;background:${ART[3]}"></div>${badge7n(badge, bg)}${naLayer()}`);
+    const dev = box.querySelector(".dev");
+    if (on) nicoRun(dev, NICO7); else at(300, () => toast7(dev, "No flying comments", "50%"));
+    return on ? on1 : off1;
+  });
+}
+// NiconicoCommentsOverlayView.setHideCrowdedComments: when every lane of the display area is taken, a new
+// comment is dropped instead of being drawn over the others
+scen("danmaku", "niconico_comments_hide_crowded", (box, on) => {
+  situation("A busy chat, the display area set small", true);
+  box.innerHTML = device("land", `<div style="position:absolute;inset:0;background:${ART[3]}"></div>${naLayer("bottom:auto;height:34%;outline:1px dashed rgba(255,255,255,.3)")}`);
+  const dev = box.querySelector(".dev"), area = () => dev.querySelector(".na7");
+  // eight comments in a burst, two lanes: the first two take the lanes, the rest arrive while they are full
+  const burst = ["8888888", "the stove!!", "cosy", "wow", "need this cabin", "lol", "草", "nice"];
+  burst.forEach((t, i) => at(250 + i * 140, () => {
+    if (!on || i < 2) return void nico7(area(), t, i % 2, { ms: 2600 });
+    if (i < 4) { const e = nico7(area(), t, i % 2, { ms: 2600, css: "opacity:.25" }); if (e) e.animate([{ opacity: .9 }, { opacity: 0 }], { duration: 420, fill: "forwards" }); } // dropped: a ghost that fades at the edge
+  }));
+  at(1700, () => toast7(dev, on ? "Full: 6 dropped, none overlap" : "Comments pile on each other", "72%"));
+  return on ? "When the area is full, new comments are dropped" : "New comments are drawn over the others (stock)";
+});
+// NiconicoCommentsController: a comment longer than the limit is never shown (100 is "no limit")
+scen("danmaku", "niconico_comments_max_length", (box, v) => {
+  const max = Number(v) || 100, none = max >= 100;
+  situation("A long comment in the chat", true);
+  box.innerHTML = device("land", `<div style="position:absolute;inset:0;background:${ART[3]}"></div>${naLayer()}`);
+  const dev = box.querySelector(".dev"), long = "the most relaxing cabin build I have seen in my whole life";
+  ["cosy", long, "wow", "8888888"].forEach((t, i) => at(250 + i * 380, () => {
+    const e = nico7(dev.querySelector(".na7"), t, i % 3, { ms: 2800 });
+    if (e && t === long && !none) { e.style.textDecoration = "line-through"; e.style.color = "#ff6b6b"; e.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 500, delay: 250, fill: "forwards" }); }
+  }));
+  at(1500, () => toast7(dev, none ? "Every comment flies" : `1 comment over ${max} characters hidden`, "72%"));
+  return none ? "Comments of any length fly" : `Comments over ${max} characters are hidden`;
+});
+// NiconicoCommentsController: in picture-in-picture the comments are drawn scaled down to fit the window
+scen("danmaku", "niconico_comments_pip", (box, on) => {
+  situation("Picture-in-picture over the home screen", true);
+  box.innerHTML = device("port", pageRows(feed7(row7(2, "Night train to Bodø") + row7(4, "Lo-fi beats") + row7(5, "Aurora timelapse"))) + `<div style="position:absolute;right:4px;bottom:22px;width:52px;height:30px;border-radius:3px;overflow:hidden;background:${ART[3]};box-shadow:0 2px 6px rgba(0,0,0,.6);z-index:3">${naLayer()}</div>`);
+  const dev = box.querySelector(".dev");
+  if (on) nicoRun(dev, NICO7.slice(0, 5), { fs: 3.6, lanes: 4, ms: 1900 }); else at(400, () => toast7(dev, "No comments in the window", "40%"));
+  return on ? "The comments shrink to fit the window" : "No comments in picture-in-picture";
+});
+// NiconicoCommentsController.shouldShow: in portrait only with "Show in portrait"; in landscape always
+scen("danmaku", "niconico_comments_portrait", (box, on) => {
+  situation("Turning the phone upright", true);
+  box.innerHTML = device("land", playerArea(3, naLayer()));
+  const dev = box.querySelector(".dev");
+  nicoRun(dev, NICO7.slice(0, 3), { gap: 300 });
+  at(1300, () => turn(dev, "port"));
+  if (on) nicoRun(dev, NICO7.slice(3), { from: 2000, gap: 300, fs: 4.5, ms: 1800 });
+  else at(2000, () => toast7(dev, "Only in landscape", "60%"));
+  return on ? "Comments keep flying in portrait" : "Comments stop when the phone is upright";
+});
+// NiconicoCommentsController.usesPortraitSettings: portrait uses its own font size, travel duration and
+// display area (the "in portrait" settings) instead of the landscape ones
+scen("danmaku", "niconico_comments_separate_portrait", (box, on) => {
+  situation("Turning the phone upright", true);
+  box.innerHTML = device("land", playerArea(3, naLayer()));
+  const dev = box.querySelector(".dev");
+  const fsL = Number(V("morphe_niconico_comments_font_size")) || 20, fsP0 = Number(V("morphe_niconico_comments_portrait_font_size")) || 20;
+  const fsP = on ? (fsP0 === fsL ? Math.round(fsL * .6) : fsP0) : fsL; // the same values: an example of a smaller portrait size
+  const durP = on ? (Number(V("morphe_niconico_comments_portrait_travel_duration")) || 7) : (Number(V("morphe_niconico_comments_travel_duration")) || 7);
+  const areaP = on ? (Number(V("morphe_niconico_comments_portrait_display_area")) || 100) : (Number(V("morphe_niconico_comments_display_area")) || 100);
+  nicoRun(dev, NICO7.slice(0, 3), { gap: 300 });
+  at(1300, () => turn(dev, "port"));
+  at(1900, () => { const a = dev.querySelector(".na7"); if (a) a.style.bottom = (100 - areaP) + "%"; });
+  // the landscape size in the small portrait player reads as big; its own size fits it
+  nicoRun(dev, NICO7.slice(3), { from: 2000, gap: 320, fs: 6 * fsP / fsL, ms: 260 * durP, lanes: 2 });
+  at(2300, () => toast7(dev, on ? `Portrait: ${fsP} sp, its own` : `Portrait: ${fsL} sp, as landscape`, "78%"));
+  return on ? "Portrait gets its own size, speed and area" : "Portrait uses the landscape size, speed and area";
+});
+SCN_HOLD.morphe_niconico_comments_portrait = SCN_HOLD.morphe_niconico_comments_separate_portrait = 3800;
+// YouTubeChatSource: on a video without a chat, top comments with a time in them (1:23) fly at that time
+scen("danmaku", "niconico_comments_timed_comments", (box, on) => {
+  situation("A video without a chat, a comment says 1:23", true);
+  box.innerHTML = device("port", playerArea(3, naLayer() + `<b class="tc7" style="position:absolute;left:4px;bottom:3px;font-size:5.5px;text-shadow:0 0 2px #000">1:20</b>`));
+  const dev = box.querySelector(".dev"), below = dev.querySelector(".dv-below");
+  below.style.cssText = "font-size:6px;gap:4px;padding:5px"; below.innerHTML = `<b style="font-size:6.5px">Comments</b>${cmt7(2, `<span style="color:#3ea6ff">1:23</span> the stove is lit!`)}${cmt7(5, "Lovely build")}`;
+  [21, 22, 23].forEach((s, i) => at(450 + i * 450, () => { const t = dev.querySelector(".tc7"); if (t) t.textContent = "1:" + s; }));
+  at(1350, () => { if (on) nico7(dev.querySelector(".na7"), "the stove is lit!", 1, { ms: 2200, fs: 5 }); else toast7(dev, "Nothing flies", "22%"); });
+  return on ? "At 1:23 that comment flies across" : "Only chat flies; this video has none";
+});
+// YouTubeChatSource: on replays of live streams and Premieres, the timed comments are added to the chat replay
+scen("danmaku", "niconico_comments_timed_comments_with_replay", (box, on) => {
+  situation("A live stream replay with its chat", true);
+  box.innerHTML = device("land", `<div style="position:absolute;inset:0;background:${ART[3]}"></div>${badge7n("Chat replay", "rgba(0,0,0,.6)")}${naLayer()}`);
+  const dev = box.querySelector(".dev");
+  nicoRun(dev, ["8888888", "cosy", "lol", "wow"], { gap: 420 });
+  if (on) at(620, () => nico7(dev.querySelector(".na7"), "1:23 the stove is lit!", 2, { ms: 2400, css: "color:#9fd3ff" }));
+  at(1400, () => toast7(dev, on ? "Chat replay + timed comments" : "Chat replay only", "72%"));
+  return on ? "The chat replay and timed comments fly together" : "Only the chat replay flies (stock)";
+});

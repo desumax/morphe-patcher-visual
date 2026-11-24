@@ -678,10 +678,10 @@ SCENES.watch = () => {
   //   other button in a "More actions" menu, the subscribe button in the channel row.
   const layout = V("morphe_video_action_bar_layout");
   const modern = layout === "DEFAULT", minimal = layout === "MINIMAL", two = layout === "CLASSIC_TWO_ROWS", classic = layout === "CLASSIC";
-  const ryd = !!V("morphe_ryd_enabled");
-  const dislike = ryd ? (V("morphe_ryd_dislike_percentage") ? "4%" : "2.1K") : "";
+  // the dislike count always exists: off, it's hidden like any other element, so its outline and ghost show
+  const dislike = V("morphe_ryd_dislike_percentage") ? "4%" : "2.1K", rydOn = !!V("morphe_ryd_enabled");
   const act = (k, icon, label) => C(k, `<div class="chip">${I(icon)}${label}</div>`);
-  const likeChip = C("hide_like_dislike_button", `<div class="chip likechip" style="padding:0;gap:0"><span style="display:flex;gap:6px;align-items:center;padding:0 10px 0 12px;border-right:1px solid #444">${I("like")}<span class="rollnum" data-n="48">48K</span></span><span style="padding:0 12px;display:flex;gap:6px;align-items:center">${I("dislike")}${C("ryd_enabled", !dislike ? "" : `<span>${dislike}</span>`, { tag: "span", also: "ryd_dislike_percentage" })}</span></div>`);
+  const likeChip = C("hide_like_dislike_button", `<div class="chip likechip" style="padding:0;gap:0"><span style="display:flex;gap:6px;align-items:center;padding:0 10px 0 12px;border-right:1px solid #444">${I("like")}<span class="rollnum" data-n="48">48K</span></span><span style="padding:0 12px;display:flex;gap:6px;align-items:center">${I("dislike")}${C("ryd_enabled", `<span>${dislike}</span>`, { tag: "span", also: "ryd_dislike_percentage" })}</span></div>`);
   const subBtn = `<div class="chip subbtn" style="background:#f1f1f1;color:#0f0f0f">Subscribe</div>`;
   const channelChip = C("hide_channel_profile_button", `<div class="chip" style="padding:0 4px 0 4px;gap:6px">${C("hide_channel_bar", av(0, 26), { tag: "span" })}<span style="font-size:12.5px">Fjord & Timber</span>${C("hide_channel_profile_subscribe_button", `<span class="chip subbtn" style="height:26px;background:#f1f1f1;color:#0f0f0f;font-size:12px;padding:0 10px">Subscribe</span>`, { tag: "span" })}</div>`);
   const joinChip = C("hide_join_membership_button", `<div class="chip" style="background:transparent;border:1px solid #555">Join</div>`);
@@ -692,7 +692,7 @@ SCENES.watch = () => {
   // minimal: five equal tiles, an icon above its text; the last one opens the menu with the other buttons
   const tile0 = (icon, label, extra = "") => `<div class="mtile" ${extra}style="flex:1 1 0;min-width:0;display:grid;justify-items:center;gap:3px;padding:6px 0;border-radius:12px;font-size:11px;color:#f1f1f1">${I(icon)}<span style="white-space:nowrap">${label}</span></div>`;
   const tile = (k, icon, label, extra) => C(k, tile0(icon, label, extra), { style: "flex:1 1 0;min-width:0;display:flex" });
-  const minimalBar = `<div class="mbar" style="display:flex;gap:2px;padding:0 8px 10px">${C("hide_like_dislike_button", `<div style="flex:1;display:flex;gap:2px">${tile0("like", `<span class="rollnum" data-n="48">48K</span>`, 'data-glow="1" ')}${tile0("dislike", dislike || "Dislike")}</div>`, { style: "flex:2 1 0;min-width:0;display:flex" })}${tile("hide_share_button", "share", "Share")}${tile("hide_save_button", "save", "Save")}${tile("hide_more_button", "moreh", "More", 'data-more="1" ')}</div>`;
+  const minimalBar = `<div class="mbar" style="display:flex;gap:2px;padding:0 8px 10px">${C("hide_like_dislike_button", `<div style="flex:1;display:flex;gap:2px">${tile0("like", `<span class="rollnum" data-n="48">48K</span>`, 'data-glow="1" ')}${tile0("dislike", rydOn ? dislike : "Dislike")}</div>`, { style: "flex:2 1 0;min-width:0;display:flex" })}${tile("hide_share_button", "share", "Share")}${tile("hide_save_button", "save", "Save")}${tile("hide_more_button", "moreh", "More", 'data-more="1" ')}</div>`;
   // Round 136, read again from setVideoActionBarLayout: the classic row is built as the subscribe item first
   // (the compact channel bar: avatar, name and Subscribe in one pill), then like and dislike, then share and
   // save in the server's order, then every item of the minimal layout's menu. One row has no channel row
@@ -721,7 +721,8 @@ SCENES.watch = () => {
   </div>`;
 };
 def("watch", "vis", "hide_channel_profile_button hide_channel_profile_subscribe_button hide_comments_button hide_connect_button");
-def("watch", "style", "ryd_enabled ryd_dislike_percentage");
+def("watch", "vis", "ryd_enabled");
+def("watch", "style", "ryd_dislike_percentage");
 // Extra panels (emergency, medical, crowdfunding) go above the related videos on every layout.
 const watchExtras = html => html
     .replace(/(<div class="c[^"]*" data-k="morphe_hide_player_related_videos")/, `${C("hide_emergency_box", `<div style="margin:0 12px 10px;background:#3b1f1f;border-radius:12px;padding:10px 12px"><div class="t1" style="font-size:13px">Emergency information</div><div class="t2">Call 112 for emergency services in Norway</div></div>`, { blk: 1 })}
@@ -1481,16 +1482,19 @@ const FOOT_OFF = new Set([
   "morphe_disable_auto_hide_navigation_bar", // the bar staying or sliding away is drawn (Max, Nov 20)
   "morphe_disable_player_popup_panels", // the panels jumping open or waiting, and the phones' messages, say it (Max, Nov 23)
   "morphe_download_force_4k", "morphe_sb_auto_hide_skip_button", "morphe_disable_fullscreen_ambient_mode", // the phones say it (Max, Nov 23 PM)
+  "morphe_minimal_comments_button", "morphe_sanitize_comments_highlighted_search_links", // the button and the link are drawn: no white lines, the phones get the room (Max, Nov 24)
 ]);
 let askOnly = false; // drawing only the default side while the other waits for a choice
 const SCN_NO_FLASH = new Set(["morphe_disable_drc_audio", "morphe_post_buttons_layout"]); // its differences are the whole text card: no blue flash (Max, Nov 23)
-const SCN_SELF_DUO = new Set(["morphe_disable_player_popup_panels", "morphe_playback_buffer_size", "morphe_skip_silence_minimum_pause", "morphe_hide_account_menu_filter_strings"]); // one phone that tells all values itself (a text: what it holds now)
-const DUO_OTHER = { morphe_speed_tap_and_hold: 4 };
+const SCN_SELF_DUO = new Set(["morphe_disable_player_popup_panels", "morphe_playback_buffer_size", "morphe_skip_silence_minimum_pause", "morphe_hide_account_menu_filter_strings", "morphe_hide_comments_carousel_filter_strings"]); // one phone that tells all values itself (a text: what it holds now)
+const DUO_OTHER = { morphe_speed_tap_and_hold: 4, morphe_quick_actions_top_margin: 24, morphe_niconico_comments_max_length: 30 };
+const DUO_UNIT = { morphe_quick_actions_top_margin: " dp", morphe_niconico_comments_max_length: " characters" }; // the slider's unit on its Off / On labels
 // Short words beside the phones where Morphe's option names don't read as a contrast on their own
 // ("Default" next to "Disabled, always show the autoplay countdown"; Max, Nov 20). Only the comparison
 // labels change; the list keeps Morphe's names.
 const DUO_LABEL = {
   morphe_continue_watching_prompt: { DEFAULT: "Asks to continue", DISABLED: "Never asks", ALWAYS_COUNTDOWN: "Countdown only" },
+  morphe_niconico_comments_max_length: { 100: "No limit" }, // Settings.NICONICO_COMMENTS_MAX_LENGTH_NO_LIMIT
 };
 function duoValues(k, prev) {
   const p = PREF[k];
@@ -1502,7 +1506,7 @@ function duoValues(k, prev) {
     if (!c) return [[false, "Off"], [true, "On"]];
     const [l0, l1] = c.labels; return NEG_WORD.has(l0) ? [[false, l0], [true, l1]] : [[true, l1], [false, l0]];
   }
-  const ents = entriesFor(k), lab = v => DUO_LABEL[k]?.[v] || ents.find(e => sameVal(e.value, v))?.label || String(v) + (/speed/.test(k) ? "×" : "");
+  const ents = entriesFor(k), lab = v => DUO_LABEL[k]?.[v] || ents.find(e => sameVal(e.value, v))?.label || String(v) + (DUO_UNIT[k] || (/speed/.test(k) ? "×" : ""));
   const d = defaults[k], cur = V(k);
   // a clearer contrast than the next step up for a few settings (2x vs 4x speed)
   if (DUO_OTHER[k] !== undefined && sameVal(cur, d) && (prev === undefined || sameVal(prev, d))) return [[d, lab(d)], [DUO_OTHER[k], lab(DUO_OTHER[k])]];

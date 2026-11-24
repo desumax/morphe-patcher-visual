@@ -15,6 +15,15 @@ $("snackUndo").onclick = () => { if (undoFn) undoFn(); undoFn = null; $("snack")
 // at the element that does the behaviour: its parent's element (Playback speed button for "Tap to
 // cycle speeds"), or a named one (the seekbar for the seekbar colour and thumb settings).
 const PROXY_K = { morphe_seekbar_custom_color: "morphe_hide_seekbar" };
+// Where a setting without a part of its own acts in the preview, so selecting it (or picking one of its
+// options) scrolls the preview there first (Max, Nov 24: scrolled down on the video page, "Video action bar
+// layout" and "Like and Subscribe glow" left the action bar out of view). Its proxy part when it has one.
+const FOCUS_K = { morphe_video_action_bar_layout: '[data-k="morphe_hide_action_bar"]', morphe_disable_like_subscribe_glow: '[data-k="morphe_hide_action_bar"]' };
+function focusEls(k) {
+  const pr = proxyEls(k); if (pr.length) return pr;
+  return FOCUS_K[k] ? [...document.querySelectorAll(`#stage ${FOCUS_K[k]}`)].filter(e => e.getClientRects().length) : [];
+}
+const coversStage = e => { const s = $("stage").getBoundingClientRect(), r = e.getBoundingClientRect(); return r.width * r.height > s.width * Math.min(s.height, 420) * .8; };
 function proxyEls(k) {
   const q = x => [...document.querySelectorAll(`#stage [data-k="${x}"], #stage [data-also~="${x}"]`)].filter(e => e.getClientRects().length && (!e.classList.contains("off") || e.classList.contains("ghost")));
   if (q(k).length) return [];
@@ -55,7 +64,9 @@ function highlight(k, flash = true, reveal = false) {
   document.querySelectorAll(`[data-k="${k}"], [data-row="${k}"], [data-also~="${k}"]`).forEach(e => e.classList.add("sel"));
   document.querySelectorAll("#list .sum.open").forEach(e => { if (!e.closest(".row.sel")) e.classList.remove("open"); }); document.querySelectorAll(`#list [data-row="${k}"] > .txt > .sum.long:not(.open)`).forEach(unfold);
   const els = [...document.querySelectorAll(`#stage [data-k="${k}"], #stage [data-also~="${k}"]`)];
-  const proxy = els.length ? [] : proxyEls(k);
+  // a parent's part that covers the whole preview (the flying comments layer) doesn't flash for the settings
+  // under it: the whole preview lit up for every one of them, saying nothing (Max, Nov 24: Niconico comments)
+  const proxy = els.length ? [] : proxyEls(k).filter(e => !coversStage(e));
   const finish = () => { els.forEach(e => {
     fitOutline(e);
     // big components (bars, shelves) only glow: scaling them up looked like the whole preview jumping
@@ -66,7 +77,8 @@ function highlight(k, flash = true, reveal = false) {
   if (!reveal || skipReveal) { skipReveal = false; return finishAll(); }
   // wait until a growing (ghost-revealed or restored) element has its full size, then scroll to it
   const liveEls = () => [...document.querySelectorAll(`#stage [data-k="${k}"], #stage [data-also~="${k}"]`)];
-  const go = () => { if (selected !== k) return; const live = liveEls(); els.splice(0, els.length, ...live); fT(finishAll, revealInStage(live) ? 340 : 0); };
+  // a setting with no part of its own still scrolls to where it acts (focusEls), without an outline of its own
+  const go = () => { if (selected !== k) return; const live = liveEls(); els.splice(0, els.length, ...live); fT(finishAll, revealInStage(live.length ? live : focusEls(k)) ? 340 : 0); };
   fT(() => {
     if (selected !== k) return;
     const growing = liveEls().flatMap(e => e.getAnimations()).filter(a => a.playState === "running" && isFinite(a.effect?.getComputedTiming().endTime) && a.effect?.getComputedTiming().fill !== "forwards");
