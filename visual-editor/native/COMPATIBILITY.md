@@ -75,7 +75,7 @@ The web editor's scenes and animations name the settings they draw (`../web/js`)
 | The editor's own settings (on, tabs) | `VisualEditorSettings` in the editor's own package, not `Settings.java`. |
 | Opening the editor | A preference class in the editor's package, inflated from the generated XML like any other. |
 | Morphe Manager, the patcher, other patches | Not touched. In the standalone test bundle it is the only patch and is on by default; it needs the Morphe Patches bundle in the same run (Manager: Expert mode, both bundles, at least one patch that adds Morphe settings). |
-| Text | The entry switch and "Open visual editor" row are English literals for now, outside upstream's translation workflow. An upstream PR needs them as string resources. |
+| Text | The entry switch is an English literal for now, outside upstream's translation workflow. An upstream PR needs it as a string resource. |
 
 The developer can rename, move, add or remove settings exactly as today. The editor follows
 without any change on their side.

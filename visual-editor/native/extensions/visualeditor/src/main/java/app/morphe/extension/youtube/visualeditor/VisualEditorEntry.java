@@ -25,13 +25,13 @@ import app.morphe.extension.shared.Utils;
 /**
  * Where the editor joins the regular Morphe settings. The patch calls {@link #onSettingsInitializing}
  * at the start of the Morphe settings fragment's initialize(); the rows are added right after
- * Morphe has built, translated and sorted its own list. Nothing in Morphe's code or resources is changed: two rows are added
- * to the top of the live list, above About.
+ * Morphe has built, translated and sorted its own list. Nothing in Morphe's code or resources is changed: one row, the switch,
+ * is added to the top of the live list, above About (Max, Nov 24: the old "Open visual editor"
+ * row beside it did nothing useful and was removed; the switch opens the editor).
  */
 @SuppressWarnings({"deprecation", "unused"})
 public final class VisualEditorEntry {
     static final String KEY_SWITCH = "morphe_visual_editor_entry_switch";
-    static final String KEY_OPEN = "morphe_visual_editor_entry_open";
 
     /** The live, translated Morphe settings list. The editor reads titles and entries from it. */
     private static WeakReference<PreferenceScreen> liveRoot = new WeakReference<>(null);
@@ -110,7 +110,7 @@ public final class VisualEditorEntry {
             PreferenceScreen root = fragment.getPreferenceScreen();
             if (root == null) return;
             liveRoot = new WeakReference<>(root);
-            if (root.findPreference(KEY_OPEN) != null) return; // initialize() ran again
+            if (root.findPreference(KEY_SWITCH) != null) return; // initialize() ran again
 
             Context context = root.getContext();
             int top = Integer.MAX_VALUE;
@@ -131,42 +131,24 @@ public final class VisualEditorEntry {
             toggle.setSummaryOn("On: settings open in the visual editor");
             toggle.setSummaryOff("Off: settings open as the regular list");
             toggle.setChecked(VisualEditorSettings.ENABLED.get());
-            toggle.setOrder(top - 2);
-
-            Preference open = new Preference(context);
-            open.setKey(KEY_OPEN);
-            open.setPersistent(false);
-            open.setTitle("Open visual editor");
-            open.setSummary("Live preview of each YouTube screen: tap an element to find its setting, hold it to change it");
-            open.setOrder(top - 1);
-            open.setEnabled(VisualEditorSettings.ENABLED.get());
+            toggle.setOrder(top - 1);
 
             if (model != null) {
                 // Same row look as the entry it now sits above (icon layout or not).
                 // Same row as About: EntrySwitch adds the switch beside it when that row has no
                 // widget frame (test 3 showed no switch; borrowing a switch row misaligned it).
                 toggle.setLayoutResource(model.getLayoutResource());
-                open.setLayoutResource(model.getLayoutResource());
-                if (model.getIcon() != null) {
-                    toggle.setIcon(model.getIcon());
-                    open.setIcon(model.getIcon());
-                }
+                if (model.getIcon() != null) toggle.setIcon(model.getIcon());
             }
 
             toggle.setOnPreferenceChangeListener((p, value) -> {
                 boolean on = Boolean.TRUE.equals(value);
                 VisualEditorSettings.ENABLED.save(on);
-                open.setEnabled(on);
                 if (on) show(fragment.getActivity());
-                return true;
-            });
-            open.setOnPreferenceClickListener(p -> {
-                show(fragment.getActivity());
                 return true;
             });
 
             root.addPreference(toggle);
-            root.addPreference(open);
 
             Activity activity = fragment.getActivity();
             if (VisualEditorSettings.ENABLED.get() && !webViewTooOld && activity != null && autoOpenedIn.get() != activity) {
@@ -220,7 +202,7 @@ public final class VisualEditorEntry {
         }
     }
 
-    /** Updates the switch and the "Open" row after the editor changed its own on setting. */
+    /** Updates the switch after the editor changed its own on setting. */
     static void syncRows() {
         try {
             PreferenceScreen root = liveRoot.get();
@@ -228,8 +210,6 @@ public final class VisualEditorEntry {
             boolean on = VisualEditorSettings.ENABLED.get();
             Preference sw = root.findPreference(KEY_SWITCH);
             if (sw instanceof SwitchPreference toggle) toggle.setChecked(on);
-            Preference open = root.findPreference(KEY_OPEN);
-            if (open != null) open.setEnabled(on);
         } catch (Throwable ex) {
             Logger.printException(() -> "Visual editor: could not update its rows", ex);
         }
