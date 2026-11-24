@@ -5,6 +5,32 @@ Drafted with `visual-editor/bundle/changelog.py --version 0.1.0-test.N`, then ti
 The patcher engine's own changelog is in docs/PATCHER-CHANGELOG.md.
 
 
+# [0.1.0-test.11](https://github.com/desumax/morphe-patcher-visual/compare/visual-editor-test-10...visual-editor-test-11) (2026-11-24)
+
+
+### Features
+
+* **YouTube - Visual settings editor:** The two phones of a comparison stay level whatever their labels (Play next in queue type moved up and down between options)
+* **YouTube - Visual settings editor:** The top bar always comes back at the top of the list (it could stay hidden after Show on Mute button until a small scroll down and up)
+* **YouTube - Visual settings editor:** The list stretches half as far past its ends
+* **YouTube - Visual settings editor:** Opening a screen from the card menu shows only that screen (the last one's preview frame flashed first)
+* **YouTube - Visual settings editor:** With screens not grouped, each menu card is one compact row in Morphe's order
+* **YouTube - Visual settings editor:** Comparison labels fit from the first moment of each round (six comparisons stuck out briefly)
+* **YouTube - Visual settings editor:** A glide's travelling colour keeps the glass edge of the part it lands on, and the part's own fill takes over in the same frame (no grey fade or label flash at the end)
+
+
+### Bug Fixes
+
+* **YouTube - Visual settings editor:** A back swipe that is started and then let go no longer flashes the screen or leaves a see-through menu fading over it
+* **YouTube - Visual settings editor:** The regular Morphe list no longer shows for a moment before the visual editor opens
+* **YouTube - Visual settings editor:** Only delay with Bluetooth audio pills no longer overlap on small phones
+
+
+### Performance Improvements
+
+* **YouTube - Visual settings editor:** Popups open and close 1.5x as fast
+
+
 # [0.1.0-test.10](https://github.com/desumax/morphe-patcher-visual/compare/visual-editor-test-9...visual-editor-test-10) (2026-11-24)
 
 
