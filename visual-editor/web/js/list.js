@@ -278,7 +278,7 @@ function markTab(id) {
   // tab's fill was still the old dark one, so the glide was dark and the tab turned white only after it
   settled(tabs, () => { tabs.forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === id))); box.dataset.sel = id; });
   const cur = box.querySelector('[aria-selected="true"]'); if (!cur) return;
-  if (was) { const cs = getComputedStyle(cur); glideRun(box, was, gRect(cur, box), { bg: settledBg(cur), radius: parseFloat(cs.borderTopLeftRadius) || 0, z: 0, done: () => { cur.style.transitionProperty = "transform"; requestAnimationFrame(() => { cur.style.transitionProperty = ""; }); } }); }
+  if (was) { const cs = getComputedStyle(cur); glideRun(box, was, gRect(cur, box), { bg: settledBg(cur), rim: settledRim(cur), radius: parseFloat(cs.borderTopLeftRadius) || 0, z: 0, done: () => { cur.style.transitionProperty = "transform"; requestAnimationFrame(() => { cur.style.transitionProperty = ""; }); } }); }
   box.scrollTo({ left: cur.offsetLeft - (box.clientWidth - cur.offsetWidth) / 2, behavior: "smooth" });
 }
 // Screen menu order: Morphe's own order by default (its settings screens, then their sub-screens);
@@ -1187,9 +1187,28 @@ const GLIDE_MOTION = {
       { x: f.x + f.w * (1 - out) * .15, y: f.y + f.h * (1 - out) * .15, w: f.w * (1 - (1 - out) * .3), h: f.h * (1 - (1 - out) * .3), o: out }]; } },
 };
 // the goo filter of a motion ([blur, alpha gain, alpha offset]), made once per motion
-function gooFilter([sd, a, b]) {
-  const id = `gGoo${sd}_${a}_${-b}`;
-  if (!document.getElementById(id)) document.body.insertAdjacentHTML("beforeend", `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="${id}" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur in="SourceGraphic" stdDeviation="${sd}"/><feColorMatrix mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 ${a} ${b}" result="g"/><feComposite in="SourceGraphic" in2="g" operator="atop"/></filter></svg>`);
+// Nov 24 round 3 (Max: a toggle's travelling pill lost the reflective glass edge, which came back only
+// when the glide ended): the goo filter turns every box-shadow into nothing, so the filter now draws the
+// landing part's own rim itself (its inset shadows: a ring of n px, a highlight shifted by x/y px) around
+// the merged shape, wherever it is. The colour then looks like the part it lands on all the way.
+function rimParts(sh) {
+  if (!sh || sh === "none") return [];
+  return sh.split(/,(?![^(]*\))/).map(x => x.trim()).filter(x => /\binset\b/.test(x)).map(x => {
+    const c = (/rgba?\([^)]*\)/.exec(x) || [""])[0], n = x.replace(c, "").replace("inset", "").trim().split(/\s+/).map(parseFloat);
+    const m = /rgba?\(([^,]+),([^,]+),([^,)]+)(?:,([^)]+))?\)/.exec(c.replace(/\s/g, ""));
+    return m && { rgb: [+m[1] / 255, +m[2] / 255, +m[3] / 255], a: m[4] === undefined ? 1 : +m[4], x: n[0] || 0, y: n[1] || 0, b: n[2] || 0, s: n[3] || 0 };
+  }).filter(q => q && !q.b && q.a > 0 && (q.s > 0 || q.x || q.y));
+}
+function gooFilter([sd, a, b], rim) {
+  const parts = rimParts(rim), tag = parts.length ? "_r" + [...JSON.stringify(parts)].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7).toString(36) : "";
+  const id = `gGoo${sd}_${a}_${-b}${tag}`;
+  if (!document.getElementById(id)) {
+    const fx = parts.map((q, i) => (q.s > 0 ? `<feMorphology in="g" operator="erode" radius="${q.s}" result="e${i}"/>` : "")
+      + (q.x || q.y ? `<feOffset in="${q.s > 0 ? "e" + i : "g"}" dx="${q.x}" dy="${q.y}" result="e${i}"/>` : "")
+      + `<feComposite in="g" in2="e${i}" operator="out" result="b${i}"/><feColorMatrix in="b${i}" type="matrix" values="0 0 0 0 ${q.rgb[0]}  0 0 0 0 ${q.rgb[1]}  0 0 0 0 ${q.rgb[2]}  0 0 0 ${q.a} 0" result="w${i}"/>`).join("");
+    const merge = parts.length ? `<feMerge><feMergeNode in="c"/>${parts.map((q, i) => `<feMergeNode in="w${i}"/>`).join("")}</feMerge>` : "";
+    document.body.insertAdjacentHTML("beforeend", `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="${id}" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur in="SourceGraphic" stdDeviation="${sd}"/><feColorMatrix mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 ${a} ${b}" result="g"/><feComposite in="SourceGraphic" in2="g" operator="atop" result="c"/>${fx}${merge}</filter></svg>`);
+  }
   return id;
 }
 // a part's place in a box, in the box's own coordinates (padding box, scrolled content included)
@@ -1217,10 +1236,15 @@ function settledBg(el) {
   const keep = el.style.transition; el.style.transition = "none";
   const bg = getComputedStyle(el).backgroundColor; void el.offsetWidth; el.style.transition = keep; return bg;
 }
+// the part's settled rim (its box-shadow), drawn around the moving colour by the goo filter
+function settledRim(el) {
+  const keep = el.style.transition; el.style.transition = "none";
+  const sh = getComputedStyle(el).boxShadow; void el.offsetWidth; el.style.transition = keep; return sh;
+}
 function glideRun(box, f, t, o) {
   const prev = box._glide; glideStop(box); if (prev && prev.done) prev.done(true);
   if (GLIDE_REDUCED.matches || Math.hypot(t.x - f.x, t.y - f.y) < 1 && Math.abs(t.w - f.w) < 1) { if (o.done) o.done(false); return; }
-  const M = GLIDE_MOTION[glideStyle] || GLIDE_MOTION.pour, goo = M.goo && gooFilter(M.goo);
+  const M = GLIDE_MOTION[glideStyle] || GLIDE_MOTION.pour, goo = M.goo && gooFilter(M.goo, o.rim);
   const STEP = 1000 / 60, frames = [];
   for (let d = 0; d < M.end; d += STEP) frames.push(M.draw(f, t, d));
   frames.push([{ x: t.x, y: t.y, w: t.w, h: t.h }]);
@@ -1273,8 +1297,16 @@ function glideRun(box, f, t, o) {
   // control's own fill, rim and label colour come back under the landed colour, which then fades out over
   // GLIDE_HANDOFF ms instead of vanishing in one frame
   anims[0].onfinish = () => {
-    if (box._glide !== g) return; box._glide = null; if (o.done) o.done(false); box.classList.remove("gliding"); path.forEach(c => c.classList.remove("gpath"));
+    if (box._glide !== g) return; box._glide = null;
+    // Nov 24 round 3: the part's own fill must be in place in this very frame. A finished animation's
+    // event runs just before the frame's rAF callbacks, so a "transitions off until the next rAF" in done
+    // was undone before the style was worked out, and a glass tab faded from see-through grey to white
+    // (and its label from light to dark) after the colour had landed: settled() works the style out at once.
+    settled([...box.children].filter(c => c !== layer), () => { if (o.done) o.done(false); box.classList.remove("gliding"); path.forEach(c => c.classList.remove("gpath")); });
     if (box._handoff) box._handoff.remove();
+    // a see-through colour (a glass tab's white) over the same colour adds up to a brighter one while it
+    // fades: it goes at once, as the colour now carries the part's rim and matches it
+    if (aTo < 1) { layer.remove(); return; }
     box._handoff = layer;
     layer.animate([{ opacity: 1 }, { opacity: 0 }], { duration: GLIDE_HANDOFF, easing: "ease-out", fill: "forwards" }).onfinish = () => { layer.remove(); if (box._handoff === layer) box._handoff = null; };
   };
@@ -1290,7 +1322,7 @@ function thumbBox(x) {
   let r;
   if (th) r = gRect(th, x);
   else { const m = cs.transform && cs.transform !== "none" ? new window.DOMMatrixReadOnly(cs.transform) : null; r = { x: parseFloat(cs.left) + (m ? m.e : 0), y: parseFloat(cs.top) + (m ? m.f : 0), w: parseFloat(cs.width), h: parseFloat(cs.height) }; }
-  return { r, bg: cs.backgroundColor, rad: parseFloat(cs.borderTopLeftRadius) || 0 };
+  return { r, bg: cs.backgroundColor, rim: cs.boxShadow, rad: parseFloat(cs.borderTopLeftRadius) || 0 };
 }
 function toggleGlide(x, was, now, put) {
   if (!x || !x.isConnected || !x.offsetWidth || String(was) === String(now)) { put(now); return; }
@@ -1299,7 +1331,7 @@ function toggleGlide(x, was, now, put) {
   put(now); void x.offsetWidth; const t = thumbBox(x); // read at once: the style object is live
   if (running) f.r = running;
   put(was); void x.offsetWidth; x.classList.remove("still"); void x.offsetWidth; put(now); // the labels' colour still eases
-  glideRun(x, f.r, t.r, { bg: t.bg, fromBg: f.bg, radius: t.rad, z: x.matches(".sw") ? 1 : -1 });
+  glideRun(x, f.r, t.r, { bg: t.bg, fromBg: f.bg, rim: t.rim, radius: t.rad, z: x.matches(".sw") ? 1 : -1 });
 }
 // The Original/Morphe toggle in the top bar
 function modeButtons(was, now) {
@@ -1314,7 +1346,7 @@ function pickSnap(box, sel = ".on") {
 }
 function pickGlide(box, f, sel = ".on", z = -1) {
   const n = box && box.querySelector(`:scope > ${sel}`); if (!f || !n) return;
-  glideRun(box, f.r, gRect(n, box), { bg: settledBg(n), fromBg: f.bg, radius: f.rad, z });
+  glideRun(box, f.r, gRect(n, box), { bg: settledBg(n), fromBg: f.bg, rim: settledRim(n), radius: f.rad, z });
 }
 // Option pills: optSnap runs before the state changes (the grid is redrawn), optGlide once the new grid
 // is laid out, in every option grid (list rows and the "needs" popup).
@@ -1336,7 +1368,7 @@ function optGlide() {
   const cs = getComputedStyle(on), t = gRect(on, box);
   // nothing was picked before: the colour grows out of the tapped pill
   const from = f.bg ? f : { x: t.x + t.w * .3, y: t.y + t.h * .25, w: t.w * .4, h: t.h * .5 };
-  glideRun(box, from, t, { bg: settledBg(on), fromBg: f.bg, radius: parseFloat(cs.borderTopLeftRadius) || 0, z: 1, done: () => {
+  glideRun(box, from, t, { bg: settledBg(on), fromBg: f.bg, rim: settledRim(on), radius: parseFloat(cs.borderTopLeftRadius) || 0, z: 1, done: () => {
     // hand back to the pill without its background transition flashing it on the last frame
     on.style.transitionProperty = "transform"; requestAnimationFrame(() => { on.style.transitionProperty = ""; }); } });
 }
@@ -1640,6 +1672,8 @@ const pendingRestart = () => Object.keys(PREF).filter(k => PREF[k].rebootApp && 
 // it (the Back key, a timer, a popup opened from another popup) it springs up in place (CSS). Closing
 // finds the row again by its key when the list was redrawn meanwhile (a choice was made).
 let cardTap = null, cardOrigin = null, cardAnim = null;
+// Nov 24 round 3 (Max: "too slow, increase animation by 50%"): 520 and 300 ms played 1.5x as fast
+const DLG_OPEN_MS = 350, DLG_CLOSE_MS = 200;
 document.addEventListener("pointerdown", e => {
   const el = e.target.closest && e.target.closest("#app .row, #app button, #app .c, #app .pick");
   // the button or pill itself when one was tapped (Max, Nov 24: it grew from the whole row, not the button),
@@ -1687,7 +1721,7 @@ function openDialog(html) {
     if (r) box.style.transition = "none"; // measured at its open size, not mid-transition
   }
   paint(box, html); dlg.classList.add("open"); glassSample();
-  if (r) { const [from, to] = cardFrames(box, r); cardPlay([{ ...from, opacity: 0 }, { offset: .25, opacity: 1 }, { ...to, opacity: 1 }], { duration: 520, easing: cssVar("--spring") || "ease-out" }); }
+  if (r) { const [from, to] = cardFrames(box, r); cardPlay([{ ...from, opacity: 0 }, { offset: .25, opacity: 1 }, { ...to, opacity: 1 }], { duration: DLG_OPEN_MS, easing: cssVar("--spring") || "ease-out" }); }
   setTimeout(() => box.querySelector("button")?.focus(), 50);
 }
 function closeDialog() {
@@ -1699,7 +1733,7 @@ function closeDialog() {
   dlg.classList.remove("open");
   if (!f) return;
   dlg.classList.add("closing"); // stays visible while it shrinks back (taps already go through)
-  cardPlay([{ ...f[1], opacity: 1 }, { offset: .55, opacity: .85 }, { ...f[0], opacity: 0 }], { duration: 300, easing: "cubic-bezier(.4, 0, .2, 1)" }, () => dlg.classList.remove("closing"));
+  cardPlay([{ ...f[1], opacity: 1 }, { offset: .55, opacity: .85 }, { ...f[0], opacity: 0 }], { duration: DLG_CLOSE_MS, easing: "cubic-bezier(.4, 0, .2, 1)" }, () => dlg.classList.remove("closing"));
 }
 // Changes that only apply after YouTube restarts (Max, Nov 20). Values are saved as soon as they are
 // changed; leaving asks what to do with these: restart now, keep them for later, or reset them to the
@@ -1784,7 +1818,7 @@ function placeSeg3(root = $("pickGrid")) {
     const to = [on.offsetLeft, on.offsetWidth], from = seg3From[seg.dataset.seg]; delete seg3From[seg.dataset.seg];
     seg.classList.add("th"); // shown first, so its starting place is drawn and the move animates
     th.style.transition = "none"; th.style.left = to[0] + "px"; th.style.width = to[1] + "px";
-    if (from) { const cs = getComputedStyle(th), y = th.offsetTop, h = th.offsetHeight; glideRun(seg, { x: from[0], y, w: from[1], h }, { x: to[0], y, w: to[1], h }, { bg: cs.backgroundColor, radius: parseFloat(cs.borderTopLeftRadius) || 0, z: -1 }); }
+    if (from) { const cs = getComputedStyle(th), y = th.offsetTop, h = th.offsetHeight; glideRun(seg, { x: from[0], y, w: from[1], h }, { x: to[0], y, w: to[1], h }, { bg: cs.backgroundColor, rim: cs.boxShadow, radius: parseFloat(cs.borderTopLeftRadius) || 0, z: -1 }); }
     requestAnimationFrame(() => { th.style.transition = ""; });
   });
 }
@@ -1859,8 +1893,25 @@ window.addEventListener("resize", () => { if (barStays()) $("app").classList.rem
 { const bar = document.querySelector(".appbar"); if (bar && window.ResizeObserver) new ResizeObserver(() => $("app").style.setProperty("--abh", bar.offsetHeight + "px")).observe(bar); }
 {
   let lastY = 0, acc = 0, barMoveUntil = 0;
+  // Nov 24 (Max: after Show on Mute button the top bar stayed hidden at the top of the list; only a small
+  // scroll down and up again brought it back): a hidden bar at the top, or over a list too short to
+  // scroll past it, is never right. Scrolls that came during a jump, a hold or the bar's own move were
+  // ignored, and once the list sits at its top no scroll can come any more (pulling past the end only
+  // stretches it), so the bar stayed hidden. barCheck brings it back from any of those, on every screen:
+  // at every scroll (before anything is ignored), when a scroll or fling ends, when a finger lifts and
+  // when the list changes size.
+  const barCheck = () => {
+    const sc = $("scroller"), app = $("app"); if (!app.classList.contains("barhidden")) return;
+    const bar = document.querySelector(".appbar"), abh = bar ? bar.offsetHeight : 56;
+    if (sc.scrollTop < 8 || sc.scrollHeight - sc.clientHeight <= abh + 24) { app.classList.remove("barhidden"); acc = 0; barMoveUntil = performance.now() + 320; }
+  };
+  window.barCheck = barCheck;
+  $("scroller").addEventListener("scrollend", barCheck, { passive: true });
+  ["pointerup", "pointercancel", "touchend", "touchcancel"].forEach(t => document.addEventListener(t, () => { barCheck(); setTimeout(barCheck, 360); }, { passive: true, capture: true }));
+  if (window.ResizeObserver) new ResizeObserver(() => requestAnimationFrame(barCheck)).observe($("content"));
   $("scroller").addEventListener("scroll", () => {
     const sc = $("scroller"), y = sc.scrollTop, app = $("app"), d = y - lastY; lastY = y;
+    barCheck();
     if (app.classList.contains("searching") || pickerOpen || barStays()) { app.classList.remove("barhidden"); acc = 0; return; }
     // only your own scrolling moves the bar: jumps to a setting (and holds) leave it where it is
     if (performance.now() < progScrollUntil || press) { acc = 0; return; }

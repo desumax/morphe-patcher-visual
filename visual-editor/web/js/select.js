@@ -249,6 +249,17 @@ function fromColor(k, hex) { const cur = String(state[k] || ""); const alpha = c
 function ensureMod() { if (mode === "orig") { mode = "mod"; modeButtons("orig", "mod"); } }
 function coerce(k, v) { const t = PREF[k].type; if (t === "integer" || t === "long" || t === "float") return Number(v); if (t === "boolean") return v === true || v === "true"; return v; }
 
+// Opening a screen from a menu that covers the editor (the app's card menu): the new screen is drawn
+// at once, before the menu goes, so nothing of the screen that was open before shows for a moment
+// (Max, Nov 24: Player > back > App flashed the Player preview's frame, a hitch on every card).
+function quickSection(id) {
+  if (id === section) return;
+  stopDemo(); stopScenario();
+  section = id; selected = null; peekKid = null; peekPar = null; trayOpen = false; lastTab[groupOf(id).id] = id;
+  window.__drawBehind = null; // drawn here, not the old screen first (boot.js)
+  $("scroller").scrollTop = 0; renderAll();
+}
+const menuCovers = () => document.documentElement.classList.contains("menupage");
 function switchSection(id, after) {
   if (id === section) { after && after(); return; }
   const from = SECTIONS.findIndex(s => s.id === section), to = SECTIONS.findIndex(s => s.id === id);

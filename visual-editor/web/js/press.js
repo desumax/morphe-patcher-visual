@@ -246,7 +246,8 @@ $("pickGrid").addEventListener("click", e => {
     renderStage(); store.save(); if (grouped) tutOnce("groups"); return;
   }
   const gb = e.target.closest("[data-group]");
-  if (gb) { const g = GROUPS.find(x => x.id === gb.dataset.group), tabs = tabsOf(g); setPicker(false); returnTo = null; switchSection(lastTab[g.id] && tabs.some(([t]) => t === lastTab[g.id]) ? lastTab[g.id] : tabs[0][0]); return; }
+  if (gb) { const g = GROUPS.find(x => x.id === gb.dataset.group), tabs = tabsOf(g), id = lastTab[g.id] && tabs.some(([t]) => t === lastTab[g.id]) ? lastTab[g.id] : tabs[0][0]; returnTo = null;
+    if (menuCovers()) { quickSection(id); setPicker(false); } else { setPicker(false); switchSection(id); } return; }
   // leaves the new design for Morphe's own settings screen; in the app the patch's switch at the top
   // of Morphe's settings turns it back on
   if (e.target.closest("[data-editor-off]")) {
@@ -265,7 +266,8 @@ $("pickGrid").addEventListener("click", e => {
     $("dlgBox").querySelector("[data-dlg-ok]").onclick = () => { customOrder = null; applyOrder(); renderBar(); store.save(); closeDialog(); snack("Screens are back in Morphe's order"); };
     return;
   }
-  const b = e.target.closest("[data-sec]"); if (!b) return; setPicker(false); returnTo = null; switchSection(b.dataset.sec); });
+  const b = e.target.closest("[data-sec]"); if (!b) return; returnTo = null;
+  if (menuCovers()) { quickSection(b.dataset.sec); setPicker(false); } else { setPicker(false); switchSection(b.dataset.sec); } });
 document.addEventListener("keydown", e => { if (e.key === "Escape") { setPicker(false); closeDialog(); if (searching) { query = ""; setSearch(false); } } });
 function setMode(m) {
   const was = mode; mode = m;

@@ -968,7 +968,7 @@ scen("playback", "remember_live_stream_position", (box, on) => {
 scen("playback", "video_delay_bluetooth_only", (box, on) => {
   situation("Bluetooth headphones, then the phone speaker");
   const ms = Number(V("morphe_video_delay")) > 0 ? Number(V("morphe_video_delay")) : 200;
-  const sync = ok => `${ico7(ok ? "check" : "close", 7, ok ? "#4caf50" : "#ff6b6b")} ${ok ? "Picture and sound in sync" : "Picture lags the sound"}`;
+  const sync = ok => `${ico7(ok ? "check" : "close", 7, ok ? "#4caf50" : "#ff6b6b")} ${ok ? "In sync" : "Picture lags sound"}`; // short: two lines reached the Delay pill on a small phone (Nov 24 test)
   box.innerHTML = device("port", watch7(`<span class="out7 badge7" style="left:3px;top:3px">${ico7("headset", 6)} Bluetooth</span><span class="dl8 badge7" style="right:3px;top:3px">Delay ${ms} ms</span>` + prog7(35)));
   const dev = box.querySelector(".dev");
   toast7(dev, sync(true), "78%");

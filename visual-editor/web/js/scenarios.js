@@ -223,10 +223,15 @@ function fitDev(orient) {
     // given its scale, and measured again with its labels at their real size
     // (a few rounds: a label that wraps differently at its real size changes the pair's width, and so its scale)
     // (again when the preview changed size: the labels keep their size on screen at the new scale)
+    // a new round of the same comparison starts in the layout the last round ended in (see below): the
+    // labels are then sized for that layout, not for the best one (Nov 24 round 4: sized for the best,
+    // they stuck out of the preview for the first moment of a round in six comparisons)
+    const memoLay = first && !resized && pairMemo && pairMemo.k === scPlaying && pairMemo.size === canvas.clientWidth + "x" + canvas.clientHeight ? pairMemo.lay : null;
+    const LAY_WH = { side: "sideWH", row: "rowWH", column: "colWH", top: "topWH" };
     if (first || resized) {
       const f = (wh) => wh ? fitScale(wh[0], wh[1]) : 0;
       for (let n = 0, m = measurePair(gen); n < 4; n++) {
-        const best = scTurns ? Math.max(f(m.rowWH), f(m.sideWH), f(m.topWH)) : Math.max(f(m.rowWH), f(m.colWH), f(m.sideWH), f(m.topWH)), was = parseFloat(gen.style.getPropertyValue("--dsc")) || 0;
+        const best = memoLay && m[LAY_WH[memoLay]] ? f(m[LAY_WH[memoLay]]) : scTurns ? Math.max(f(m.rowWH), f(m.sideWH), f(m.topWH)) : Math.max(f(m.rowWH), f(m.colWH), f(m.sideWH), f(m.topWH)), was = parseFloat(gen.style.getPropertyValue("--dsc")) || 0;
         gen.style.setProperty("--dsc", best.toFixed(3)); if (Math.abs(best - was) < .005) break;
         m = measurePair(gen);
       }
@@ -239,7 +244,7 @@ function fitDev(orient) {
     // a new round of the same comparison starts in the layout the last round ended in (Max, Nov 24: Show
     // only in fullscreen flashed its labels beside the phones at each restart, before the turn put them
     // back on top): every round looks the same, and only a real change (another preview size) re-picks
-    if (first && !resized && pairMemo && pairMemo.k === scPlaying && pairMemo.size === canvas.clientWidth + "x" + canvas.clientHeight && S[pairMemo.lay]) pick = pairMemo.lay;
+    if (memoLay && S[memoLay]) pick = memoLay;
     // a caption changing mid-story must not flip the layout back and forth or nudge the size:
     // keep the current layout (and scale) unless the new one is clearly better
     // (not when the preview itself changed size: then the pair takes the layout a new pair would get there,
@@ -314,7 +319,7 @@ let scTold = false;
 // A story that turns a phone keeps its two phones side by side: stacked phones would have to swap to side
 // by side as one turns (or back), and on the way the moving phone crosses the other. Read from the code.
 let scTurns = false;
-let scPlaying = null, pairMemo = null; // the comparison on screen, and the layout its pair has now (fitDev)
+let scPlaying = null, pairMemo = null; // the comparison on screen (setting and the values compared: another value has other labels, Nov 24 round 4), and the layout its pair has now (fitDev)
 const turnsPhone = fn => /\b(turn|turnTo|rotate)\(/.test(String(fn));
 const SCN_TURNS = new Set(); // stories whose turn is in a helper they are given (gestureScen's result)
 const toldInside = fn => /toast7\(|check7\(|toastin/.test(String(fn));
@@ -1532,7 +1537,7 @@ function playScenario(k, prevValue) {
   const d = defaults[k], choices = entriesFor(k).filter(e => !sameVal(e.value, d));
   const ask = !self && PREF[k].type !== "boolean" && choices.length > 1 && sameVal(V(k), d) && (prevValue === undefined || sameVal(prevValue, d));
   const draw = () => {
-    clock.start("steps"); scKey = k; scPlaying = k; scStretch = stretch; scTold = toldInside(fn) || FOOT_OFF.has(k); scTurns = turnsPhone(fn) || SCN_TURNS.has(k); scCollect = [];
+    clock.start("steps"); scKey = k; scPlaying = k + "=" + JSON.stringify(vals); scStretch = stretch; scTold = toldInside(fn) || FOOT_OFF.has(k); scTurns = turnsPhone(fn) || SCN_TURNS.has(k); scCollect = [];
     scDrawing = true;
     let failed = null;
     try { drawSides(); } catch (err) { failed = err; } finally { scDrawing = false; scKey = null; const list = scCollect; scCollect = null; if (!failed) startCollected(list); }

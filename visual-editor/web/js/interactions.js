@@ -384,8 +384,10 @@ function rubberBand(sc, topEl, botEl) {
     const t = atTop(), b = atBot();
     sc.style.touchAction = t && b ? "pan-x pinch-zoom" : t ? "pan-x pan-down pinch-zoom" : b ? "pan-x pan-up pinch-zoom" : "";
   };
-  // iOS's rubber curve: 1:1 at first, never more than the list's height
-  const rubber = d => { const D = sc.clientHeight || 600, x = Math.abs(d); return Math.sign(d) * (1 - 1 / (x * .55 / D + 1)) * D; };
+  // iOS's rubber curve, half as far (Max, Nov 24: "reduce the bounciness by 50%"): 1:2 at first, never
+  // more than half the list's height
+  const RUBBER_K = .5;
+  const rubber = d => { const D = sc.clientHeight || 600, x = Math.abs(d); return Math.sign(d) * (1 - 1 / (x * .55 / D + 1)) * D * RUBBER_K; };
   const put = (el, y) => { el.style.translate = y ? `0 ${y}px` : ""; };
   const stopBounce = () => { if (bounce) { bounce.cancel(); bounce = null; } };
   // back to rest on a critically damped spring from offset y (px) with velocity v (px/s)
@@ -432,7 +434,7 @@ function rubberBand(sc, topEl, botEl) {
     if (dt > 0 && dt < 100) last.v = (s - last.s) / dt * 1000; else last.v = 0;
     // a fling that runs into an end goes on a little past it, then comes back
     if (!pull && Math.abs(last.v) > 600 && !RUBBER_REDUCED.matches && (s <= .5 && last.s > .5 || s >= room() - .5 && last.s < room() - .5)) {
-      const up = s <= .5, v = Math.min(3000, Math.abs(last.v)) * .5 * (up ? 1 : -1); // at most about 34 px past the end
+      const up = s <= .5, v = Math.min(3000, Math.abs(last.v)) * .5 * RUBBER_K * (up ? 1 : -1); // at most about 17 px past the end
       settle(up ? topEl : botEl, 0, v);
     }
     last.s = s; last.t = now; ends();
