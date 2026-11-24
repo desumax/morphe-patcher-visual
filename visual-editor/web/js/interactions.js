@@ -45,7 +45,7 @@ function fitSums(root = $("list"), keep = new Set()) {
   const sizes = els.map(el => [parseFloat(getComputedStyle(el).lineHeight) || 17.5, el.scrollHeight]);
   els.forEach((el, i) => {
     const [lh, full] = sizes[i];
-    el.classList.toggle("long", full > lh * 2 + 3); el.style.setProperty("--full", full + "px");
+    el.classList.toggle("long", full > lh * 2 + 3); // (how far it unfolds is CSS's: .sum.open, max-content)
     const want = el.classList.contains("long") && !!el.closest(".row.sel");
     if (!want) el.classList.remove("open"); else if (keep.has(el)) el.classList.add("open"); else if (!el.classList.contains("open")) unfold(el);
   });

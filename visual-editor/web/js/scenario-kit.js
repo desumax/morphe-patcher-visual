@@ -751,7 +751,8 @@ scen("playback", "do_not_remember_loop_video", (box, on) => {
   box.innerHTML = device("port", watch7(`<span class="lp7" style="position:absolute;right:3px;top:3px;width:12px;height:12px;border-radius:50%;background:rgba(62,166,255,.9);display:grid;place-items:center">${ico7("loop", 8, "#000")}</span>`));
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
   at(300, () => fingerTo(f, W * .5, H * .45)); at(600, () => tapF(f));
-  at(850, () => { f.classList.remove("show"); dev.querySelector(".pg7 > div").style.background = ART[2]; const l = dev.querySelector(".lp7"); if (on) l.style.background = "rgba(0,0,0,.5)"; toast7(dev, on ? "Loop is off again" : "Still looping", "80%"); });
+  // the next video fades in (it used to replace the picture in one frame)
+  at(850, () => { f.classList.remove("show"); const v = dev.querySelector(".pg7 > div"); v.style.background = ART[2]; v.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240, easing: "cubic-bezier(.4,0,.2,1)" }); const l = dev.querySelector(".lp7"); if (on) l.style.background = "rgba(0,0,0,.5)"; toast7(dev, on ? "Loop is off again" : "Still looping", "80%"); });
   return on ? "Loop switches off for each new video" : "Loop stays on for the next videos (stock)";
 });
 // Morphe (ForceFullscreenLandscapePatch): on tablets and other large screens only (phones already open

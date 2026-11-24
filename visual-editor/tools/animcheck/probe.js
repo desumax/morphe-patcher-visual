@@ -60,6 +60,14 @@
     if (shown) {
       q(".dev", canvas).forEach(dev => {
         const r = rect(dev), cell = dev.closest(".dl7"), side = cell ? [...cell.parentElement.children].indexOf(cell) : -1;
+        // a faded half phone (web/js/scenarios.js CROP7, .crop7): the cut end is masked out and takes no
+        // room, so only the part that is shown counts (the cut, scaled like the phone, read from --cut7)
+        const cut = parseFloat(getComputedStyle(dev).getPropertyValue("--cut7")) || 0;
+        if (cut && dev.classList.contains("crop7")) {
+          const k = r.h / (dev.offsetHeight || 1) || 1;
+          if (dev.classList.contains("cbot7")) r.t += cut * k; else r.b -= cut * k;
+          r.h = r.b - r.t;
+        }
         const m = getComputedStyle(dev).transform.match(/^matrix\(([^,]+), ([^,]+)/);
         s.devs.push({ id: idOf(dev), r, side, clip: clipOf(dev, stick), turning: !!m && Math.abs(parseFloat(m[2])) > .02 });
         artOf(dev, r, s.art);
