@@ -144,7 +144,7 @@ function toggle(k) {
     }
   }
   afterChange(k, before);
-  if (visual && !wasShown && nowShown) stageEls(k).forEach(e => { if (wasGhost || e.closest(".tray")) { e.classList.remove("reveal"); void e.offsetWidth; e.classList.add("reveal"); } else sizeAnim(e, true); });
+  if (visual && !wasShown && nowShown) stageEls(k).forEach(e => { if (wasGhost || e.closest(".tray")) { e.classList.remove("reveal"); void e.offsetWidth; e.classList.add("reveal"); } else if (!DEMOS[k]) sizeAnim(e, true); }); // a part with a demo is brought in by the demo itself: unfolding it at the same time clipped it as the demo began (Seekbar thumbnails, round 139)
 }
 // Collapse or expand a component along the axis it takes space in.
 const SIZE_MS = 280;
@@ -270,13 +270,30 @@ function switchSection(id, after) {
 // its main switch. Every setting of that screen flashes on arrival, so the result reads as the whole
 // screen and not as the one card it landed on (Max, round 137: "Post buttons" led to "Comment button").
 const screenKids = k => CAT.preferences.filter(p => p.subScreen === k && p.type && p.type !== "screen" && inVersion(p.key) && sectionOf(p.key));
+// null when no setting carries the screen's name: then no single card stands for it (goToSetting)
 function screenLead(k) {
   const kids = screenKids(k), t = String(title(k)).toLowerCase();
-  return (kids.find(p => title(p.key) === title(k)) || kids.find(p => String(title(p.key)).toLowerCase().startsWith(t)) || kids.find(p => p.type === "boolean") || kids[0] || {}).key || null;
+  return (kids.find(p => title(p.key) === title(k)) || kids.find(p => String(title(p.key)).toLowerCase().startsWith(t)) || {}).key || null;
 }
 function goToSetting(k, after) {
-  const lead = PREF[k] && PREF[k].type === "screen" ? screenLead(k) : null;
-  if (lead) return goToSetting(lead, () => { screenKids(k).forEach(p => document.querySelectorAll(`#list [data-row="${p.key}"]`).forEach(el => { if (el.offsetParent) flashRow(el); })); after && after(); });
+  const isScreen = PREF[k] && PREF[k].type === "screen", kids = isScreen ? screenKids(k) : [];
+  const flashKids = () => kids.forEach(p => document.querySelectorAll(`#list [data-row="${p.key}"]`).forEach(el => { if (el.offsetParent) flashRow(el); }));
+  const lead = isScreen ? screenLead(k) : null;
+  if (lead) return goToSetting(lead, () => { flashKids(); after && after(); });
+  // A screen with no setting of its own name ("Action buttons", "Shorts player", "Navigation bar"): it used
+  // to land on its first on/off setting in Morphe's order, an arbitrary card ("Disable Like and Subscribe
+  // glow" for Action buttons). Now it opens the tab that holds most of the screen's settings, at the
+  // topmost of them in the editor's own order, and all of them flash (round 139 audit: 22 of 31 screens).
+  if (isScreen && kids.length) {
+    const count = {}; kids.forEach(p => { const sec = sectionOf(p.key); count[sec] = (count[sec] || 0) + 1; });
+    const sec = Object.keys(count).sort((x, y) => count[y] - count[x])[0], set = new Set(kids.map(p => p.key));
+    switchSection(sec, () => {
+      const first = [...document.querySelectorAll("#list [data-row]")].find(el => set.has(el.dataset.row) && el.offsetParent);
+      if (first) select(first.dataset.row, "list", true);
+      fT(() => { flashKids(); after && after(); }, 380);
+    });
+    return;
+  }
   if (PREF[k] && PREF[k].type === "screen") { // a sub-screen: open the editor screen and show it from the top
     switchSection(sectionOf(k), () => { $("scroller").scrollTo({ top: 0 }); const pill = $("secPill"); if (pill) { pill.classList.remove("attn"); void pill.offsetWidth; pill.classList.add("attn"); } after && after(); });
     return;

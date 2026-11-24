@@ -514,7 +514,7 @@ scen("ambient", "disable_fullscreen_ambient_mode", (box, on) => {
 // Round 137 (Max: hard to read): no small print. The two moments are two videos on one screen, each with a
 // readout in the standard pill size (volume up / volume at zero) and its caption line drawn large or not at
 // all; the second one lights up after the first, and both stay, so every option ends on its own picture.
-SCN_HOLD.morphe_auto_captions_style = 3200;
+SCN_HOLD.morphe_auto_captions_style = 2560; // 20% faster (Max, round 139)
 scen("captions", "auto_captions_style", (box, v) => {
   situation("A video starts with sound, and with the phone's volume at zero");
   const show = muted => v === "BOTH_ENABLED" || (muted ? v === "WITHOUT_VOLUME_ONLY" : v === "WITH_VOLUME_ONLY");
@@ -528,7 +528,7 @@ scen("captions", "auto_captions_style", (box, v) => {
   const dev = box.querySelector(".dev");
   const play = (id, on) => { const e = dev.querySelector(`.ac7[data-s="${id}"]`); if (!e) return; e.style.opacity = 1; const c = e.querySelector(on ? ".cap7" : ".cc7"); c.style.opacity = 1; flash7(c); };
   at(60, () => play("up", show(false)));
-  at(1400, () => play("zero", show(true)));
+  at(1120, () => play("zero", show(true)));
   return "";
 });
 scen("captions", "auto_translate_additional_languages", (box, on) => {

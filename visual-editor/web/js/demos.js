@@ -387,7 +387,10 @@ Object.assign(DEMOS, {
       if (bub) { const half = 50, x = Math.min(Math.max(xAt(pct) - pr.left, half + 4), pr.width - half - 4); bub.style.left = x + "px"; }
       if (tl) tl.textContent = fmt(total, pct);
     };
-    const reset = () => { if (bub) { bub.classList.remove("dragging"); bub.style.left = ""; bub.style.opacity = ""; } if (tl) tl.textContent = "7:51"; [played, knob, ring].forEach(e => e && (e.style.transition = "")); setSeek(p0); };
+    // the bubble's resting place is an inline left of its own: clearing it dropped the bubble to the left edge,
+    // half outside the preview, between two rounds (Max, round 139: "starts with the thumbnail clipped")
+    if (bub && bub.dataset.left0 === undefined) bub.dataset.left0 = bub.style.left;
+    const reset = () => { if (bub) { bub.classList.remove("dragging"); bub.style.left = bub.dataset.left0 || ""; bub.style.opacity = ""; } if (tl) tl.textContent = "7:51"; [played, knob, ring].forEach(e => e && (e.style.transition = "")); setSeek(p0); };
     onDemoStop(reset);
     frame(p0); f.classList.add("hold");
     const t0 = performance.now() + 40, dur = 1000, tok = clock.run("demo");
@@ -440,9 +443,11 @@ Object.assign(DEMOS, {
     const say = (txt, ms, lab) => dT(() => { if (pill) pill.textContent = txt; if (hint) fadeC(hint, !hidden); label(hidden ? `${lab}: no hint appears` : `${lab}: "${txt}"`, hidden); }, ms);
     if (hint) fadeC(hint, false);
     const step = demoStep % 3;
+    // every one of these is a press that stays down, so the finger shows its hold circle for all three (Max, round 139)
+    f.classList.add("hold");
     if (step === 0) { place(f, W * .42, H - 16); dT(() => place(f, W * .42, H - 90, 500), 120); say("Pull up for precise seeking", 320, "Pull up on the seekbar"); }
     else if (step === 1) { place(f, W * .42, H - 90); dT(() => place(f, W * .42, H - 26, 420), 120); say("Release to cancel", 360, "Slide back down"); }
-    else { place(f, W * .7, H * .42); dT(() => f.classList.add("hold"), 150); say("2x", 300, "Hold the video"); }
+    else { place(f, W * .7, H * .42); say("2x", 300, "Hold the video"); }
     dT(() => fadeC(hint, false), 1250); hideF(f, 1250);
     onDemoStop(() => { if (hint) hint.classList.remove("dz", "dzt"); if (pill && pill.dataset.first) { pill.textContent = pill.dataset.first; delete pill.dataset.first; } });
   },

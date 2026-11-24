@@ -432,12 +432,12 @@ scen("player", "fullscreen_video_scale_button_fullscreen_only", (box, on) => {
   box.innerHTML = device("port", playerArea(0, btn));
   const dev = box.querySelector(".dev"), b = box.querySelector(".scb");
   // Start in the new state: with the option on, the portrait player never shows the button.
+  // No sentences under the phones (FOOT_OFF): the phones get that room and the button says it.
   b.style.opacity = on ? "0" : "1";
-  setFoot(on ? "Portrait: no video scale button" : "Portrait: the button is shown");
-  at(1300, () => { rotate(dev, "land"); b.style.opacity = "1"; setFoot("Fullscreen: the button is shown"); });
-  // the loop ends as it began: same captions as the first portrait state
-  at(2500, () => { rotate(dev, "port"); b.style.opacity = on ? "0" : "1"; setFoot(on ? "Portrait: no video scale button" : "Portrait: the button is shown"); });
-  return on ? "Portrait: no video scale button" : "Portrait: the button is shown";
+  at(1300, () => { rotate(dev, "land"); b.style.opacity = "1"; flash7(b); });
+  // the loop ends as it began
+  at(2500, () => { rotate(dev, "port"); b.style.opacity = on ? "0" : "1"; });
+  return "";
 });
 scen("player", "copy_video_link_with_timestamp_button", (box, on) => {
   // The "Copy video link" button: a tap and a tap-and-hold copy two different links. This option
@@ -1392,6 +1392,7 @@ const SC_TOTAL = 11000;
 // white lines per side, messages in the phones) with the ones that look like repeats flagged, so a
 // redundant line is found from that list and its key added here, instead of a blanket rule.
 const FOOT_OFF = new Set([
+  "morphe_fullscreen_video_scale_button_fullscreen_only", // the button is there or not, in each turn of the phone: drawn (Max, round 139: no white sentences)
   "morphe_auto_translate_additional_languages", // "More languages in the auto-translate list": the list is drawn
   "morphe_open_channel_of_live_avatar", // "The avatar opens the channel": the channel page opens in the phone
   "morphe_shorts_player_type", // "Opens in the Shorts player": the Off / On labels say it
