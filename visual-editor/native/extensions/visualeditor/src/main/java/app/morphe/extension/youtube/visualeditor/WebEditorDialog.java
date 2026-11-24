@@ -179,8 +179,8 @@ final class WebEditorDialog extends Dialog {
             // SponsorBlock draws its category rows in code (no row of their own): while its screen
             // is in this build, its settings are editable too, its private user id excepted.
             if (editable.contains("morphe_sb_enabled")) {
-                for (Setting<?> s : Setting.allLoadedSettings()) {
-                    if (s.key.startsWith("morphe_sb_") && !s.key.contains("private_user_id")) editable.add(s.key);
+                for (Setting<?> setting : Setting.allLoadedSettings()) {
+                    if (setting.key.startsWith("morphe_sb_") && !setting.key.contains("private_user_id")) editable.add(setting.key);
                 }
             }
             meta = m.toString();
