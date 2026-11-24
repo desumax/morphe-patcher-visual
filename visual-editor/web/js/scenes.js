@@ -119,7 +119,7 @@ SCENES.watch = () => {
     </div>
     ${C("hide_channel_bar", `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px">${av(0, 32)}<div style="flex:1;min-width:0"><span class="t1">${VIDEOS[0].c}</span> <span class="t2">412K</span></div>
       ${C("hide_join_membership_button", `<div class="chip" style="background:transparent;border:1px solid #555">Join</div>`)}
-      <div class="chip" style="background:#f1f1f1;color:#0f0f0f">Subscribe</div></div>`)}
+      <div class="chip subbtn" style="background:#f1f1f1;color:#0f0f0f">Subscribe</div></div>`)}
     ${C("hide_action_bar", `<div style="${rowStyle};padding:0 12px 10px">${actions}</div>`)}
     ${C("hide_comments_section", `<div style="margin:0 12px 10px;background:#272727;border-radius:12px;padding:10px 12px">
         <div class="t1">Comments <span class="t2">1.2K</span></div>
@@ -222,7 +222,7 @@ SCENES.shorts = () => {
       </div>
     </div>
     ${C("hide_shorts_navigation_bar", navBarStatic(), { style: "position:absolute;left:0;right:0;bottom:0" })}
-    <div id="heart" style="position:absolute;left:50%;top:40%;transform:translate(-50%,-50%) scale(0);transition:transform .25s;z-index:30">${I("heart", "ico", 'style="width:80px;height:80px;fill:#ff0033"')}</div>
+    <div id="heart" style="position:absolute;left:50%;top:40%;transform:translate(-50%,-50%) scale(0);transition:transform .25s;z-index:70">${I("heart", "ico", 'style="width:80px;height:80px;fill:#fff;filter:drop-shadow(0 2px 8px rgba(0,0,0,.55))"')}</div>
     <div class="finger" id="finger"></div>
   </div>`;
 };
@@ -232,7 +232,7 @@ function navBar(plain) {
   const narrow = !!V("morphe_narrow_navigation_buttons");
   const style = V("morphe_navigation_bar_style");
   const bg = plain ? "rgba(15,15,15,.96)" : style === "TRANSLUCENT" ? "rgba(15,15,15,.7)" : style === "TRANSPARENT" ? "transparent" : style === "OPAQUE" ? "#000" : "#0f0f0f";
-  const lab = t => C("hide_navigation_button_labels", `<span style="font-size:10px;display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t}</span>`, { tag: "span", style: "max-width:100%" });
+  const lab = t => C("hide_navigation_button_labels", `<span style="font-size:10px;display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t}</span>`, { tag: "span", style: "max-width:100%;min-width:0;overflow:hidden" });
   const tab = (k, icon, t, extra = "") => C(k, `<div style="display:grid;justify-items:center;gap:2px;position:relative;min-width:0">${icon}${lab(t)}${extra}</div>`, { cls: "ntab" });
   const dot = C("hide_navigation_new_content_dot", `<span style="position:absolute;left:calc(50% + 7px);top:-1px;width:7px;height:7px;border-radius:50%;background:#ff0033;display:block"></span>`, { tag: "span", style: "position:absolute;inset:0;pointer-events:auto" });
   const center = swap

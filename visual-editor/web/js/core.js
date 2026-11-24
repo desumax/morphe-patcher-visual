@@ -351,6 +351,7 @@ const unitOf = k => {
 // A setting it can't read (no title) keeps Morphe's look and is listed at the end of its screen.
 let design = "clean";
 const CLEAN_RE = /^(hide|show|enable|disable)\s+(.+)$/i;
+const CLEAN_MODE = new Set(["morphe_native_snackbar"]);
 function cleanOf(k) {
   const p = PREF[k]; if (!p || p.type !== "boolean" || OFF_LIST.has(k)) return null;
   const t = p.title && p.title.trim(); if (!t) return null;
@@ -360,7 +361,9 @@ function cleanOf(k) {
   const rest = m[2].trim(); if (!rest) return null;
   // "Show only in fullscreen" names no object: "Only in fullscreen: Hide | Show" would read backwards
   // (Show only = hidden elsewhere), so such a title keeps its words and Off / On
-  if (/^only\b/i.test(rest)) return { title: t, labels: ["Off", "On"] };
+  // The same for a title that chooses how something is shown, not whether: "Show dislikes as percentage"
+  // (Hide would hide no dislikes) and the snackbar setting (the messages show either way).
+  if (/^only\b/i.test(rest) || (/^show$/i.test(m[1]) && /\sas\s/i.test(rest)) || CLEAN_MODE.has(k)) return { title: t, labels: ["Off", "On"] };
   const nice = rest.charAt(0).toUpperCase() + rest.slice(1);
   const verb = m[1].toLowerCase();
   const labels = verb === "hide" ? ["Show", "Hide"] : verb === "show" ? ["Hide", "Show"]

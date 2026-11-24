@@ -19,7 +19,7 @@ const DEMO_TYPES = {
   transient: "hide_player_gesture_hints seekbar_thumbnail_preview sb_create_new_segment sb_create_new_segment_step sb_voting_button",
   gesture: "tap_to_seek slide_to_seek disable_precise_seeking_gesture swipe_seek disable_shorts_double_tap_to_like swap_save_and_queue_actions",
   toast: "remember_playback_speed_last_selected_toast remember_video_quality_last_selected_toast",
-  motion: "exit_fullscreen autoplay_mode disable_like_subscribe_glow stable_caption_blocks niconico_comments narrow_navigation_buttons",
+  motion: "exit_fullscreen disable_like_subscribe_glow stable_caption_blocks niconico_comments",
   overlay: "swipe_left_zone swipe_right_zone swipe_top_zone swipe_overlay_style swipe_overlay_background_opacity swipe_text_overlay_size swipe_overlay_progress_volume_color swipe_overlay_progress_brightness_color swipe_overlay_progress_speed_color swipe_zone_width swipe_overlay_timeout swipe_speed_step swipe_speed_sensitivity swipe_zone_preview swipe_speed_zone_height",
 };
 const DEMO_TYPE = {};
@@ -111,6 +111,9 @@ function placePill(d, host) {
   }
   d.style.top = best + "px";
 }
+// A gesture that the setting leaves without effect says so, in the same words as the comparisons
+// ("Nothing happens"): a finger moving over a preview where nothing answers looked broken.
+const nothing7 = (ms = 1100) => showPill("Nothing happens", ms);
 const DEMOS = {
   morphe_tap_to_seek(on) {
     const seek = $("seek"); if (!seek) return;
@@ -118,7 +121,7 @@ const DEMOS = {
     const pct = [72, 30, 55, 88, 12][demoStep % 5];
     tapAt(r.left - st.left + r.width * pct / 100, r.top - st.top + r.height / 2); onDemoStop(() => setSeek(17));
     if (on) { dT(() => setSeek(pct), 120); label(`Tap on seekbar: jumps to ${fmt(18 * 60 + 42, pct)}`); }
-    else label("Tap on seekbar: nothing happens. Stock YouTube needs a drag.", true);
+    else { label("Tap on seekbar: nothing happens. Stock YouTube needs a drag.", true); dT(() => nothing7(900), 200); }
   },
   morphe_slide_to_seek(on) {
     const f = finger(); if (!f) return; const W = $("stage").clientWidth;
@@ -144,7 +147,12 @@ const DEMOS = {
       dT(() => { film.style.display = "flex"; cards.forEach((c, i) => c.animate([{ opacity: 0, transform: "translateY(10px) scale(.92)" }, { opacity: 1, transform: "none" }], { duration: 320, delay: Math.abs(i - 2) * 45, easing: ease, fill: "backwards" })); }, 430);
       dT(() => film.animate([{ opacity: 1 }, { opacity: 0, transform: "translateY(4px)" }], { duration: 220, easing: ease, fill: "forwards" }), 1050);
       label("Pull up on the seekbar: precise seeking opens");
-    } else label("Pull up on the seekbar: precise seeking stays off", true);
+    } else {
+      // a gesture that is off has no hint: "Pull up for precise seeking" beside "Nothing happens" contradicted itself
+      const hint = document.querySelector('#stage [data-k="morphe_hide_player_gesture_hints"]');
+      if (hint) { const was = hint.style.visibility; hint.style.visibility = "hidden"; onDemoStop(() => { hint.style.visibility = was; }); }
+      label("Pull up on the seekbar: precise seeking stays off", true); dT(() => nothing7(700), 500);
+    }
     const close = () => { film.style.display = "none"; film.getAnimations().forEach(a => a.cancel()); };
     dT(close, 1290); hideF(f, 1150); onDemoStop(close);
   },
@@ -178,24 +186,23 @@ const DEMOS = {
   morphe_swipe_seek(on) {
     const f = finger(); if (!f) return; const W = $("stage").clientWidth;
     place(f, W * .35, 80); dT(() => place(f, W * .7, 80, 650), 150);
-    if (on) { { const t = seekJump(); label(`Swipe sideways in fullscreen: +${t}, release to seek`); showPill(`+${t}  ▸▸`); } } else label("Swipe sideways: does nothing (stock)", true);
+    if (on) { { const t = seekJump(); label(`Swipe sideways in fullscreen: +${t}, release to seek`); showPill(`+${t}  ▸▸`); } } else { label("Swipe sideways: does nothing (stock)", true); dT(() => nothing7(800), 300); }
     hideF(f, 1100);
   },
   morphe_disable_shorts_double_tap_to_like(disabled) {
     const W = $("stage").clientWidth;
     tapAt(W * .45, 170); dT(() => tapAt(W * .45, 170), 180);
     const h = $("heart");
-    if (!disabled && h) { dT(() => { h.style.transform = "translate(-50%,-50%) scale(1)"; }, 260); dT(() => { h.style.transform = "translate(-50%,-50%) scale(0)"; }, 900); label("Double-tap: likes the Short (stock)"); }
-    else label("Double-tap: does nothing, no accidental likes", true);
-  },
-  morphe_autoplay_mode(v) {
-    const cd = document.querySelector("#stage .cd");
-    if (cd) { let n = 5; cd.textContent = n; const t = dEvery(() => { n--; if (n < 1 || !document.body.contains(cd)) { clearInterval(t); return; } cd.textContent = n; }, 250); }
-    label(`Autoplay: ${entryLabel("morphe_autoplay_mode", v)}`, v === "OFF");
+    if (!disabled && h) { dT(() => { h.style.transform = "translate(-50%,-50%) scale(1)"; }, 260); dT(() => { h.style.transform = "translate(-50%,-50%) scale(0)"; }, 900); dT(() => showPill("Liked", 800), 300); label("Double-tap: likes the Short (stock)"); }
+    else { label("Double-tap: does nothing, no accidental likes", true); dT(() => nothing7(800), 300); }
   },
   morphe_disable_like_subscribe_glow(disabled) {
-    const chip = document.querySelector("#stage .likechip");
-    if (chip && !disabled) { chip.animate([{ boxShadow: "0 0 0 0 rgba(62,166,255,0)" }, { boxShadow: "0 0 10px 3px rgba(62,166,255,.8)" }, { boxShadow: "0 0 0 0 rgba(62,166,255,0)" }], { duration: 1100 }); label("Creator says \"hit like\": button glows (stock)"); }
+    // YouTube's glow is a warm, coloured shimmer on Like and on Subscribe. It is drawn in those colours
+    // (not in the blue the editor uses to point at a part), on both buttons, twice.
+    const glow = [{ boxShadow: "0 0 0 0 rgba(255,120,60,0)" }, { boxShadow: "0 0 12px 4px rgba(255,120,60,.95), 0 0 4px 1px rgba(255,60,160,.9)" }, { boxShadow: "0 0 0 0 rgba(255,120,60,0)" }];
+    const parts = [...document.querySelectorAll("#stage .likechip, #stage .subbtn")];
+    showPill("\u201CLike and subscribe!\u201D", 1300);
+    if (parts.length && !disabled) { parts.forEach(e => e.animate(glow, { duration: 650, iterations: 2 })); label("Creator says \"hit like\": button glows (stock)"); }
     else label("Creator says \"hit like\": no glow", true);
   },
   morphe_stable_caption_blocks(on) {
@@ -242,7 +249,7 @@ function swipeDemo(side, action, prefix = "", still = false, hold = 100) {
     else { place(f, x, H * .75); dT(() => place(f, x, H * .25, 800), 120); }
   }
   const sideName = side === "top" ? "Top" : side === "left" ? "Left" : "Right";
-  if (!action || action === "OFF") { label(`${sideName} swipe: does nothing (off)`, true); hud.style.display = "none"; }
+  if (!action || action === "OFF") { label(`${sideName} swipe: does nothing (off)`, true); hud.style.display = "none"; if (!still) dT(() => nothing7(800), 300); }
   else {
     const ic = action === "VOLUME" ? "vol" : action === "BRIGHTNESS" ? "bright" : "speed";
     const style = state.morphe_swipe_overlay_style || "HORIZONTAL";
@@ -250,9 +257,12 @@ function swipeDemo(side, action, prefix = "", still = false, hold = 100) {
     const bgA = (Number(V("morphe_swipe_overlay_background_opacity")) || 0) / 100;
     const col = argb(V(action === "VOLUME" ? "morphe_swipe_overlay_progress_volume_color" : action === "BRIGHTNESS" ? "morphe_swipe_overlay_progress_brightness_color" : "morphe_swipe_overlay_progress_speed_color"), "#fff");
     const ts = Math.max(8, Math.min(30, Number(V("morphe_swipe_text_overlay_size")) || 14)) * .8;
-    const txt = `<span class="hv" style="font-size:${ts}px;font-weight:600;color:#fff;font-variant-numeric:tabular-nums">${action === "SPEED" ? "1.0x" : "20"}</span>`;
+    const txt = `<span class="hv" style="font-size:${ts}px;font-weight:600;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap">${action === "SPEED" ? "1.0x" : "20"}</span>`;
     let inner;
-    if (circ) inner = `<div style="width:64px;height:64px;border-radius:50%;background:conic-gradient(${col} var(--p,0%),rgba(255,255,255,.25) 0);display:grid;place-items:center"><div style="width:52px;height:52px;border-radius:50%;background:rgba(0,0,0,${bgA});display:grid;place-items:center">${I(ic)}${txt}</div></div>`;
+    // The minimal styles are Morphe's own reductions: the ring keeps a larger icon and loses its number,
+    // the horizontal and vertical ones keep icon and number and lose the bar.
+    if (circ) inner = `<div style="width:64px;height:64px;border-radius:50%;background:conic-gradient(${col} var(--p,0%),rgba(255,255,255,.25) 0);display:grid;place-items:center"><div style="width:52px;height:52px;border-radius:50%;background:rgba(0,0,0,${bgA});display:grid;place-items:center">${min ? `<span style="display:grid;transform:scale(1.5)">${I(ic)}</span>` : I(ic) + txt}</div></div>`;
+    else if (min) inner = `<div style="display:${vert ? "grid" : "flex"};justify-items:center;align-items:center;gap:${vert ? 6 : 8}px;background:rgba(0,0,0,${bgA});padding:8px ${vert ? 8 : 12}px;border-radius:${vert ? 14 : 18}px">${I(ic)}${txt}</div>`;
     else if (vert) inner = `<div style="display:grid;justify-items:center;gap:6px;background:rgba(0,0,0,${bgA});padding:8px;border-radius:14px">${I(ic)}<div style="width:6px;height:80px;background:rgba(255,255,255,.25);border-radius:3px;position:relative"><div style="position:absolute;bottom:0;left:0;right:0;height:var(--p,0%);background:${col};border-radius:3px"></div></div>${txt}</div>`;
     else inner = `<div style="display:flex;align-items:center;gap:8px;background:rgba(0,0,0,${bgA});padding:8px 12px;border-radius:18px">${I(ic)}<div style="width:110px;height:5px;background:rgba(255,255,255,.25);border-radius:3px;position:relative"><div style="position:absolute;left:0;top:0;bottom:0;width:var(--p,0%);background:${col};border-radius:3px"></div></div>${txt}</div>`;
     hud.innerHTML = inner; hud.style.display = "block";
@@ -299,9 +309,9 @@ const VOL_STEPS = { STEPS_5: 5, STEPS_10: 10, STEPS_15: 15, STEPS_20: 20, STEPS_
 const volSteps = () => VOL_STEPS[V("morphe_swipe_volume_steps")] || 15; // device default: 15 on most phones
 function volAt(fr) {
   const steps = volSteps(), dist = Math.max(1, Number(V("morphe_swipe_volume_distance")) || 10), start = Math.round(steps * .2);
-  const n = Math.min(steps, start + Math.floor(fr * (steps - start) * (10 / dist) + 1e-6)); return [n / steps, `${n} / ${steps}`];
+  const n = Math.min(steps, start + Math.floor(fr * (steps - start) * (10 / dist) + 1e-6)); return [n / steps, VE("morphe_volume_boost") ? Math.round(n / steps * 100) + "%" : String(n)]; // Morphe shows the step alone ("4"), or a percentage once Volume boost allows more than 100
 }
-function brightAt(fr) { const sens = Math.max(1, Number(V("morphe_swipe_brightness_sensitivity")) || 1), p = Math.min(100, Math.round(20 + 80 * fr / sens)); return [p / 100, p + "%"]; }
+function brightAt(fr) { const sens = Math.max(1, Number(V("morphe_swipe_brightness_sensitivity")) || 1), p = Math.min(100, Math.round(20 + 80 * fr / sens)); return [p / 100, p + (String(V("morphe_swipe_overlay_style")).startsWith("VERTICAL") ? "" : "%")]; } // the vertical bar has no room for the sign (as in Morphe)
 const swipeDead = () => Math.max(0, Math.min(.6, (Number(V("morphe_swipe_threshold")) || 0) / 300));
 // "Seek swipe sensitivity" (100 by default) scales how far a sideways swipe seeks
 const seekJump = () => { const s = Math.max(0, Math.round(90 * (Number(V("morphe_swipe_seek_sensitivity")) || 100) / 100)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
@@ -447,7 +457,7 @@ scen("comments", "search_comments", (box, on) => {
   const list = ["The wood stove at 12:04 is pure cosiness", "Which stove model is that?", "Subscribed for part 2", "Stove + rain = perfect"];
   box.innerHTML = device("port", pageRows(`<div style="display:flex;align-items:center;gap:4px"><b style="font-size:8px;flex:1">Comments</b>${on ? `<span class="srch7" style="width:10px;height:10px;display:grid;place-items:center">${I("search", "ico", 'style="width:10px;height:10px"')}</span>` : ""}</div><div class="q7" style="height:0;overflow:hidden;transition:height .25s"><div style="height:12px;border-radius:6px;background:#2c2c2c;padding:0 5px;line-height:12px;color:#aaa"></div></div>${list.map((t, i) => cmt7(i + 1, t)).join("")}`));
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
-  if (!on) { toast7(dev, "No search in comments", "60%"); return "No way to search the loaded comments (stock)"; }
+  if (!on) return "No way to search the loaded comments (stock)"; // no pill: the comments fill the phone, and it sat on them
   at(200, () => fingerTo(f, W * .88, H * .055)); at(550, () => tapF(f));
   at(750, () => { f.classList.remove("show"); dev.querySelector(".q7").style.height = "14px"; });
   const q = dev.querySelector(".q7 div"); "stove".split("").forEach((ch, i) => at(950 + i * 110, () => { q.textContent += ch; }));
@@ -575,9 +585,23 @@ SCENES.behaviour = () => {
   </div>`;
 };
 def("playback", "style", "playback_speed_default video_quality_default_wifi video_quality_default_mobile disable_hdr_video force_hdr_video video_codec playback_audio_pitch_default custom_playback_speeds custom_speed_menu");
+// A tap on one of the preview's chips: it takes the picked look (and text, when given) for the length of
+// the demo, then the preview is as it was. msg is the toast that answers the pick, if any.
+function pickDemo(want, msg, text) {
+  const st = $("stage"), chip = [...st.querySelectorAll(".chip")].find(c => c.offsetWidth && want(c)); if (!chip) { if (msg) showPill(msg, 1300); return; }
+  const s0 = st.getBoundingClientRect(), k = (s0.width / (st.offsetWidth || 1)) || 1, r = chip.getBoundingClientRect();
+  tapAt((r.left - s0.left + r.width / 2) / k, (r.top - s0.top + r.height / 2) / k);
+  const was = { bg: chip.style.background, col: chip.style.color, html: chip.innerHTML }, others = [...(chip.parentElement?.children || [])].filter(c => c !== chip && c.classList.contains("chip")).map(c => [c, c.style.background, c.style.color]);
+  const undo = () => { chip.style.background = was.bg; chip.style.color = was.col; if (text) chip.innerHTML = was.html; others.forEach(([c, b, col]) => { c.style.background = b; c.style.color = col; }); };
+  dT(() => { if (!document.body.contains(chip)) return; if (text) { const tn = [...chip.childNodes].reverse().find(n => n.nodeType === 3); if (tn) tn.nodeValue = text; else chip.append(text); } else others.forEach(([c]) => { c.style.background = ""; c.style.color = ""; }); chip.style.background = "#f1f1f1"; chip.style.color = "#0f0f0f"; }, 260);
+  if (msg) dT(() => showPill(msg, 1000), 420);
+  onDemoStop(undo);
+}
 Object.assign(DEMOS, {
-  morphe_remember_playback_speed_last_selected_toast(on) { if (on) showPill("Changed default speed to: 1.5x", 1300); label(on ? "A toast confirms the new default speed" : "No toast when the default speed changes", !on, 1300); },
-  morphe_remember_video_quality_last_selected_toast(on) { if (on) showPill("Changed default Wi-Fi quality to: 1080p", 1300); label(on ? "A toast confirms the new default quality" : "No toast when the default quality changes", !on, 1300); },
+  // The toasts answer a change, so the change is shown: a tap on a speed (or on the quality readout),
+  // the new value taking over, then the toast. With the setting off the same happens without a word.
+  morphe_remember_playback_speed_last_selected_toast(on) { pickDemo(c => /^1\.5x$/.test(c.textContent.trim()), on && "Changed default speed to: 1.5x"); label(on ? "A toast confirms the new default speed" : "No toast when the default speed changes", !on, 1300); },
+  morphe_remember_video_quality_last_selected_toast(on) { pickDemo(c => !!c.closest('[data-k="morphe_video_quality_default_wifi"]'), on && "Changed default Wi-Fi quality to: 1080p", "1080p"); label(on ? "A toast confirms the new default quality" : "No toast when the default quality changes", !on, 1300); },
 });
 def("playback", "behaviour", "remember_playback_speed_last_selected_toast remember_video_quality_last_selected_toast"); // skip silence: a comparison (scenario-kit.js)
 // Stories that leave the screen the tab draws (shared: a video opening from the feed, the player leaving
@@ -686,10 +710,5 @@ scen("shorts", "shorts_player_type", (box, v) => {
 Object.assign(DEMOS, {
   morphe_swipe_zone_preview() { swipeZones(1400, true); label("Swipe zones: left, right and top, with their gesture", false, 1400); },
   morphe_swipe_speed_zone_height() { swipeZones(1400, true); label(`Top zone: ${V("morphe_swipe_speed_zone_height")}% of the player height`, false, 1400); },
-  morphe_narrow_navigation_buttons(on) {
-    const nb = document.querySelector("#stage .navbar"); if (!nb) return;
-    nb.classList.toggle("narrow", !on);
-    dT(() => { if (document.body.contains(nb)) nb.classList.toggle("narrow", on); }, 650);
-    label(on ? "Narrow buttons: grouped in the middle, easier to reach" : "Default: buttons spread over the whole width", !on, 1300);
-  },
+
 });

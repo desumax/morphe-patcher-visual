@@ -764,6 +764,42 @@ function keepPillIn(t) {
   const bottom = t.offsetTop + (mid ? h / 2 : h);
   if (bottom > H - 3) { t.style.top = Math.max(2, t.offsetTop - (bottom - (H - 3))) + "px"; t.style.bottom = "auto"; }
 }
+// A message never sits on the words it is about. A scenario gives its pill a place ("top:40%",
+// "bottom:8px") that was right for the screen its author had in mind; with a longer row, a smaller
+// phone or one more line of content the same place lands on a title, a comment or a menu row, and the
+// two texts read as one (the audit of Nov 24 found this in a dozen stories). One rule for every
+// story, run from the observer below before the pill is first drawn: when the pill covers text or a
+// marked part of its phone, it moves up or down to the nearest place where it covers none. In a phone
+// with no clear place it stays where the story put it.
+// data-stay on a pill keeps it where it was put.
+function pillOffText(t) {
+  const dev = t.closest(".dev"); if (!dev || !t.isConnected || t._offText || t.dataset.stay !== undefined || getComputedStyle(t).position !== "absolute") return;
+  t._offText = true;
+  const k = devScale(dev), D = dev.getBoundingClientRect(), r = t.getBoundingClientRect(), w = t.offsetWidth * k, h = t.offsetHeight * k; if (!w || !h) return;
+  // where it is drawn at rest (its pop-in animation scales it around its middle)
+  const a = { l: (r.left + r.right) / 2 - w / 2, r: (r.left + r.right) / 2 + w / 2, t: (r.top + r.bottom) / 2 - h / 2, b: (r.top + r.bottom) / 2 + h / 2 };
+  const shown = e => { for (let x = e; x && x !== dev; x = x.parentElement) { const cs = getComputedStyle(x); if (cs.visibility === "hidden" || parseFloat(cs.opacity) < .05) return false; } return true; };
+  const boxes = [], add = (q, wt) => { const l = Math.max(q.left, D.left), rr = Math.min(q.right, D.right), tp = Math.max(q.top, D.top), bt = Math.min(q.bottom, D.bottom); if (rr - l > 1 && bt - tp > 1) boxes.push([l, rr, tp, bt, wt]); };
+  const walk = document.createTreeWalker(dev, NodeFilter.SHOW_TEXT), range = document.createRange();
+  for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+    const e = n.parentElement; if (!n.nodeValue.trim() || !e || e.closest(".toastin, .badge7, .check7") || !shown(e)) continue;
+    range.selectNodeContents(n); add(range.getBoundingClientRect(), 1);
+  }
+  dev.querySelectorAll(".new7, .chg7").forEach(e => { if (!e.contains(t) && !e.closest(".toastin, .badge7, .check7") && shown(e)) add(e.getBoundingClientRect(), 1); });
+  if (!boxes.length) return;
+  const pad = 1.5 * k, cost = dy => { let c = 0; for (const [l, rr, tp, bt, wt] of boxes) { const ox = Math.min(a.r + pad, rr) - Math.max(a.l - pad, l), oy = Math.min(a.b + dy + pad, bt) - Math.max(a.t + dy - pad, tp); if (ox > 0 && oy > 0) c += ox * oy * wt; } return c; };
+  const here = cost(0); if (here < 4 * k * k) return;
+  const edge = 3 * k + dev.clientTop * k, lo = D.top + edge - a.t, hi = D.bottom - edge - a.b;
+  let best = 0, least = here;
+  for (let step = 2 * k, d = step; d <= Math.max(-lo, hi); d += step) for (const dy of [-d, d]) {
+    if (dy < lo || dy > hi) continue;
+    const c = cost(dy); if (c < least - 1) { least = c; best = dy; }
+    if (!least) break;
+  }
+  if (!best || least > here * .1) return; // no clear place in this phone: it stays (moving it from one text onto another helps nobody)
+  t.style.top = (t.offsetTop + best / k) + "px"; t.style.bottom = "auto";
+  (window.__offText = window.__offText || []).push([t.textContent.trim().slice(0, 30), Math.round(best / k)]);
+}
 // Two pills in one phone never sit on each other. Pills keep one size on screen, so in a phone drawn
 // small they are bigger next to it, and two that fit side by side (or one under the other) in a large
 // phone would overlap: then the later one moves down just clear of the other, so a readout in the right
@@ -925,7 +961,7 @@ new MutationObserver(ms => {
     const pill = t && t.closest && t.closest(PILLS); if (pill && pill.closest(".dev")) devs.add(pill.closest(".dev")); // a pill's text changed: its size did too
     m.addedNodes.forEach(n => {
       if (n.nodeType !== 1) return;
-      [...(n.matches(".toastin") ? [n] : []), ...n.querySelectorAll(".toastin")].forEach(t => requestAnimationFrame(() => keepPillIn(t)));
+      [...(n.matches(".toastin, .check7") ? [n] : []), ...n.querySelectorAll(".toastin, .check7")].forEach(t => { pillOffText(t); if (t.matches(".toastin")) requestAnimationFrame(() => keepPillIn(t)); });
       if (n.matches(PILLS) || n.querySelector(PILLS)) [...(n.closest(".dev") ? [n.closest(".dev")] : n.querySelectorAll(".dev"))].forEach(d => devs.add(d));
       if (n.matches(CHG_SEL) && m.target.closest && m.target.closest(".dev")) hit.add(n); // a readout appearing later
       [...(n.matches(NEW_SEL) ? [n] : []), ...n.querySelectorAll(NEW_SEL)].forEach(e => setTimeout(() => flash7(e), NEW_FLASH_MS));

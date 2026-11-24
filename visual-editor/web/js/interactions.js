@@ -272,7 +272,9 @@ function syncRings() {
   st.querySelectorAll(".selx:not(.sel)").forEach(e => e.classList.remove("selx"));
   // nothing selected in the preview, or the preview hidden: no ring to place, and no layout to read
   // (asking whether the preview is shown is itself a layout, so it comes second; Max, Nov 22: performance)
-  const sel = [...st.querySelectorAll(".c.sel")], live = sel.length && st.offsetParent ? sel : [];
+  // (nor while a comparison covers the preview: a setting that has both a part in the preview and a
+  // comparison, such as Bypass Ambient mode restrictions, drew its part's ring across the two phones)
+  const sel = [...st.querySelectorAll(".c.sel")], live = sel.length && st.offsetParent && !$("canvas").classList.contains("show") ? sel : [];
   if (!live.length) { if (layer.firstChild) layer.replaceChildren(); ringQuick = ""; const k = ""; const ch = k !== ringKey; ringKey = k; return ch; }
   const L = layer.getBoundingClientRect(), F = st.getBoundingClientRect();
   // nothing moved since the last frame (the same parts, at the same places, the frame and the layer

@@ -6,9 +6,11 @@
 // element" pages (hidePage), the rest are short stories with a finger, toasts and sheets.
 const ico7 = (n, s = 8, c = "") => I(n, "ico", `style="width:${s}px;height:${s}px;flex:none;${c ? "fill:" + c : ""}"`);
 const top7 = (title = "YouTube", icons = ["cast", "bell", "search"]) => `<div style="display:flex;align-items:center;gap:5px;height:12px"><b style="font-size:7.5px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${title}</b>${icons.map(n => ico7(n)).join("")}</div>`;
-const row7 = (i, t, extra = "", sub = "") => `<div style="display:flex;gap:4px;align-items:center"><div style="width:30px;height:17px;border-radius:2px;background:${ART[i % ART.length]};flex:none;position:relative">${extra}</div><div style="min-width:0;flex:1"><div style="font-size:6.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t}</div>${sub ? `<div style="font-size:5.5px;color:#aaa;white-space:nowrap;overflow:hidden">${sub}</div>` : bar7(60, "#2a2a2a", 3)}</div></div>`;
+const row7 = (i, t, extra = "", sub = "") => `<div style="display:flex;gap:4px;align-items:center"><div style="width:30px;height:17px;border-radius:2px;background:${ART[i % ART.length]};flex:none;position:relative">${extra}</div><div style="min-width:0;flex:1"><div style="font-size:6.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t}</div>${sub ? `<div style="font-size:5.5px;color:#aaa;line-height:1.15">${sub}</div>` : bar7(60, "#2a2a2a", 3)}</div></div>`;
 const big7 = (i, t, extra = "") => `<div><div style="height:38px;border-radius:3px;background:${ART[i % ART.length]};position:relative">${extra}</div><div style="display:flex;gap:3px;margin-top:3px;align-items:center"><span style="width:9px;height:9px;border-radius:50%;background:${AV[i % AV.length]};flex:none"></span><span style="font-size:6.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t}</span></div></div>`;
-const item7 = (icon, t, cls = "") => `<div class="${cls}" style="display:flex;gap:5px;align-items:center;padding:2px 0;white-space:nowrap">${ico7(icon)}<span>${t}</span></div>`;
+// A menu row's words wrap onto a second line when the phone is too narrow for them, as Android menus do:
+// on one line they ran out past the phone's edge and were cut mid-word ("Allow ads on this cha").
+const item7 = (icon, t, cls = "") => `<div class="${cls}" style="display:flex;gap:5px;align-items:center;padding:2px 0;line-height:1.15">${ico7(icon)}<span style="min-width:0;overflow-wrap:break-word">${t}</span></div>`;
 const chip7 = (t, hi) => `<span style="flex:none;padding:1px 5px;border-radius:5px;background:${hi ? "#f1f1f1" : "#272727"};color:${hi ? "#0f0f0f" : "#ddd"};font-size:6px">${t}</span>`;
 const chips7 = (list) => `<div style="display:flex;gap:3px;overflow:hidden">${list.map((t, i) => chip7(t, i === 0)).join("")}</div>`;
 const tgt7 = (html, w) => `<div class="tgt7${w ? " w7" : ""}">${html}</div>`;
@@ -33,7 +35,7 @@ function swipeShort7(dev, art, ms = 400, inner = "") {
 const short7 = (art, inner = "") => `<div class="pg7" style="position:absolute;inset:0"><div style="position:absolute;inset:0;background:${ART[art]};transition:background .3s"></div>
   <div style="position:absolute;right:4px;bottom:16px;display:grid;gap:5px;justify-items:center">${["like", "comment", "share"].map(n => ico7(n, 8)).join("")}</div>
   <b style="position:absolute;left:5px;right:20px;bottom:6px;font-size:6.5px">@fjordtimber · Tiny cabin tour</b>${inner}</div>`;
-const nav7 = (tabs = ["home", "shorts", "plus", "subs", "you"]) => `<div style="position:absolute;left:0;right:0;bottom:0;height:16px;background:#0f0f0f;border-top:1px solid #222;display:flex;justify-content:space-around;align-items:center">${tabs.map(n => typeof n === "string" ? ico7(n, 8) : n).join("")}</div>`;
+const nav7 = (tabs = ["home", "shorts", "plus", "subs", "you"]) => `<div style="position:absolute;left:0;right:0;bottom:0;height:16px;background:#0f0f0f;border-top:1px solid #222;display:flex;justify-content:space-around;align-items:center">${tabs.map(n => /^</.test(n) ? n : ico7(n, 8)).join("")}</div>`; // an icon name, or a button's own markup
 const sheetRows = (rows) => rows.map(r => typeof r === "string" ? `<div>${r}</div>` : item7(r[0], r[1])).join("");
 function x7(dev, el) {
   const k = devScale(dev), d = dev.getBoundingClientRect(), r0 = el.getBoundingClientRect();
@@ -45,6 +47,12 @@ function clock7(dev, label) {
   return dev.querySelector(".clock7");
 }
 function check7(dev, text, ok = true) { dev.insertAdjacentHTML("beforeend", `<div class="check7 ${ok ? "ok" : "no"}">${ico7(ok ? "toggle" : "close", 9, ok ? "#4caf50" : "#ff0033")}<span>${text}</span></div>`); }
+// The finger goes to a part of the phone (its middle, or a point inside it given as fractions).
+function fingerOn(dev, f, el, fx = .5, fy = .5, ms = 0) {
+  if (!el || !f) return;
+  const k = devScale(dev), d = dev.getBoundingClientRect(), r = el.getBoundingClientRect();
+  fingerTo(f, (r.left - d.left + r.width * fx) / k - dev.clientLeft, (r.top - d.top + r.height * fy) / k - dev.clientTop, ms);
+}
 // A page where one element (class tgt7) is removed when the setting is on (or added, with invert).
 function hidePage(sec, key, sit, page, o = {}) {
   scen(sec, key, (box, on) => {
@@ -104,11 +112,23 @@ scen("feed", "feed_long_press_menu", (box, on) => {
   at(1100, () => { f.classList.remove("hold", "show"); if (on) sheet7(dev, sheetRows([["clock", "Save to Watch later"], ["plist", "Save to playlist"], ["dl", "Download"], ["share", "Share"], ["close", "Not interested"]])); else { dev.querySelector(".pg7").style.filter = "brightness(.6)"; toast7(dev, "Inline preview plays", "40%"); } });
   return on ? "Hold a video: its menu opens" : "Hold a video: it starts an inline preview (stock)";
 });
-hidePage("feed", "feed_view_count", "Video rows in the feed", feed7(`<div><div style="height:38px;border-radius:3px;background:${ART[4]}"></div><div style="display:flex;gap:3px;margin-top:3px"><span style="width:9px;height:9px;border-radius:50%;background:${AV[1]};flex:none"></span><div style="min-width:0;flex:1"><div style="font-size:6.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Night train to Bodø</div><div style="display:flex;gap:2px;padding:2px 0;font-size:5.5px;color:#aaa;white-space:nowrap">Fjord ${tgt7("· 1.2M views", 1)} · 3d</div></div></div></div><div><div style="height:38px;border-radius:3px;background:${ART[2]}"></div><div style="display:flex;gap:3px;margin-top:3px"><span style="width:9px;height:9px;border-radius:50%;background:${AV[2]};flex:none"></span><div style="min-width:0;flex:1"><div style="font-size:6.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Cabin build, part 2</div><div style="display:flex;gap:2px;padding:2px 0;font-size:5.5px;color:#aaa;white-space:nowrap">Fjord ${tgt7("· 84K views", 1)} · 1w</div></div></div></div><div><div style="height:38px;border-radius:3px;background:${ART[5]}"></div><div style="display:flex;gap:3px;margin-top:3px"><span style="width:9px;height:9px;border-radius:50%;background:${AV[3]};flex:none"></span><div style="min-width:0;flex:1"><div style="font-size:6.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Why ice is slippery</div><div style="display:flex;gap:2px;padding:2px 0;font-size:5.5px;color:#aaa;white-space:nowrap">Pocket ${tgt7("· 410K views", 1)} · 2d</div></div></div></div>`), { invert: true, shown: "View counts are shown where YouTube left them out", hidden: "Some rows have no view count (stock)" });
+// Show view count on thumbnails: Morphe moves the count from the line under the title to the bottom left
+// of the thumbnail (it does not add or remove it). Both phones start as stock; the On phone's count moves.
+scen("feed", "feed_view_count", (box, on) => {
+  situation("Video rows in the feed");
+  const card = (art, av, title, ch, views, age) => `<div><div style="height:38px;border-radius:3px;background:${ART[art]};position:relative"><span class="vc7" style="position:absolute;left:2px;bottom:2px;padding:0 3px;border-radius:2px;background:rgba(0,0,0,.78);font-size:5.5px;line-height:1.5;opacity:0;transition:opacity .3s">${views} views</span></div><div style="display:flex;gap:3px;margin-top:3px"><span style="width:9px;height:9px;border-radius:50%;background:${AV[av]};flex:none"></span><div style="min-width:0;flex:1"><div style="font-size:6.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${title}</div><div style="display:flex;gap:2px;padding:2px 0;font-size:5.5px;color:#aaa;white-space:nowrap">${ch} ${tgt7(`· ${views} views`, 1)} · ${age}</div></div></div></div>`;
+  box.innerHTML = device("port", pageRows(feed7(card(4, 1, "Night train to Bodø", "Fjord", "1.2M", "3d") + card(2, 2, "Cabin build, part 2", "Fjord", "84K", "1w") + card(5, 3, "Why ice is slippery", "Pocket", "410K", "2d"))));
+  const dev = box.querySelector(".dev");
+  if (!on) return "";
+  at(350, () => dev.querySelectorAll(".tgt7").forEach(e => e.classList.add("mark7")));
+  at(1050, () => { dev.querySelectorAll(".tgt7").forEach(e => e.classList.add("gone7")); dev.querySelectorAll(".vc7").forEach(e => { e.style.opacity = 1; }); });
+  at(1700, () => dev.querySelectorAll(".tgt7").forEach(e => e.classList.remove("mark7")));
+  return "";
+});
 hidePage("feed", "hide_account_menu", "The account menu", you7(`<div style="display:grid;gap:1px">${item7("clock", "History")}${item7("plist", "Playlists")}${tgt7(item7("spark", "Get YouTube Premium"))}${item7("dl", "Downloads")}${tgt7(item7("dollar", "Purchases and memberships"))}</div>`), { hidden: "Menu items you filtered are removed" });
 hidePage("feed", "hide_album_cards", "Searching for an artist", search7("midnight tapes", tgt7(`<div style="display:flex;gap:4px;align-items:center;padding:3px;border-radius:3px;background:#1b1b1b"><div style="width:22px;height:22px;background:${ART[6]};border-radius:2px"></div><div style="font-size:6.5px">Neon Fjord<div style="font-size:5.5px;color:#aaa">Album · 2025</div></div></div>`) + row7(2, "Midnight Tapes live") + row7(3, "Lo-fi to study to")));
 hidePage("feed", "hide_artist_cards", "Searching for an artist", search7("midnight tapes", tgt7(`<div style="display:flex;gap:5px;align-items:center;padding:3px;border-radius:3px;background:#1b1b1b"><span style="width:22px;height:22px;border-radius:50%;background:${AV[4]}"></span><div style="font-size:6.5px">Midnight Tapes<div style="font-size:5.5px;color:#aaa">Artist · 1.1M subscribers</div></div></div>`) + row7(2, "Midnight Tapes live") + row7(3, "Lo-fi to study to")));
-hidePage("feed", "hide_channel_buttons", "A channel row in search", search7("fjord timber", `<div style="display:flex;gap:5px;align-items:center"><span style="width:20px;height:20px;border-radius:50%;background:${AV[0]}"></span><div style="font-size:6.5px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Fjord & Timber<div style="font-size:5.5px;color:#aaa">412K subscribers</div></div>${tgt7(`<span style="display:inline-block;padding:2px 5px;border-radius:6px;background:#f1f1f1;color:#000;font-size:6px">Subscribe</span>`, 1)}</div>` + row7(3, "Building a tiny cabin")));
+hidePage("feed", "hide_channel_buttons", "A channel row in search", search7("fjord timber", `<div style="display:flex;gap:5px;align-items:center"><span style="width:14px;height:14px;border-radius:50%;background:${AV[0]};flex:none"></span><div style="font-size:6.5px;line-height:1.15;flex:1;min-width:0">Fjord<div style="font-size:5.5px;color:#aaa">412K</div></div>${tgt7(`<span style="display:inline-block;padding:2px 5px;border-radius:6px;background:#f1f1f1;color:#000;font-size:6px">Subscribe</span>`, 1)}</div>` + row7(3, "Building a tiny cabin")));
 hidePage("feed", "hide_compact_banner", "Home feed: a small banner and the empty dividers", feed7(tgt7(`<div style="display:flex;gap:4px;align-items:center;padding:3px 4px;border-radius:4px;background:#1f2a3a;font-size:6px">${ico7("info", 8)}<span style="flex:1">Your feed is paused. <span style="color:#3ea6ff">Turn on history</span></span>${ico7("close", 7)}</div>`) + big7(3, "Building a tiny cabin") + tgt7(`<div style="height:7px;border-top:1px solid #2a2a2a;border-bottom:1px solid #2a2a2a;background:repeating-linear-gradient(45deg,#161616 0 3px,#0f0f0f 3px 6px)"></div>`) + row7(4, "Night train to Bodø") + tgt7(`<div style="height:7px;border-top:1px solid #2a2a2a;border-bottom:1px solid #2a2a2a;background:repeating-linear-gradient(45deg,#161616 0 3px,#0f0f0f 3px 6px)"></div>`) + row7(5, "Why ice is slippery")), { hidden: "Compact banners (small notices like this) and the empty divider strips are removed" });
 hidePage("feed", "hide_feed_flyout_menu", "The ⋮ menu of a video", feed7(big7(3, "Building a tiny cabin")) + `<div style="background:#212121;border-radius:6px 6px 0 0;padding:4px;display:grid;gap:1px;margin:0 -6px -6px">${item7("clock", "Save to Watch later")}${tgt7(item7("spark", "Ask about this video"))}${item7("share", "Share")}${tgt7(item7("flag", "Report"))}</div>`, { hidden: "Menu items you filtered are removed" });
 hidePage("feed", "hide_floating_microphone_button", "The search screen", search7("", `<div style="display:grid;gap:3px">${item7("clock", "cabin build")}${item7("clock", "lo-fi beats")}${item7("clock", "night train")}</div><div style="height:30px"></div>` + tgt7(`<div style="display:flex;justify-content:center"><span style="width:20px;height:20px;border-radius:50%;background:#ff0033;display:grid;place-items:center">${ico7("mic", 10)}</span></div>`)));
@@ -117,8 +137,10 @@ hidePage("feed", "hide_handle", "The account menu", you7("").replace("@kari · V
 hidePage("feed", "hide_help_feedback_menu", "Settings in the account menu", you7(`<div style="display:grid;gap:1px">${item7("gear", "Settings")}${item7("eye", "Your data in YouTube")}${tgt7(item7("help", "Help & feedback"))}</div>`));
 hidePage("feed", "hide_history_shelf", "The You tab", you7(tgt7(`<div><b style="font-size:7px">History</b><div style="display:flex;gap:3px;margin-top:2px">${[2, 4, 6].map(i => `<div style="width:26px;height:15px;border-radius:2px;background:${ART[i]}"></div>`).join("")}</div></div>`) + `<div style="display:grid;gap:1px">${item7("plist", "Playlists")}${item7("dl", "Downloads")}</div>`));
 hidePage("feed", "hide_image_shelf", "Search results", search7("aurora", tgt7(`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px">${[0, 5, 7].map(i => `<div style="height:18px;border-radius:2px;background:${ART[i]}"></div>`).join("")}</div>`) + row7(2, "Aurora timelapse 4K")));
-hidePage("feed", "hide_invite_to_message_card", "Home feed", feed7(tgt7(`<div style="padding:4px;border-radius:4px;background:#1b1b1b;font-size:6px">${ico7("chat", 7)} Invite friends to message on YouTube</div>`) + big7(3, "Building a tiny cabin")));
-hidePage("feed", "hide_latest_videos_button", "Subscriptions", top7("Subscriptions", ["search"]) + `<div style="display:flex;gap:4px">${[0, 1, 2, 3].map(i => `<span style="width:13px;height:13px;border-radius:50%;background:${AV[i]}"></span>`).join("")}</div>` + tgt7(`<div style="padding:2px 6px;border-radius:6px;background:#272727;font-size:6px;display:inline-block">Latest videos ›</div>`) + row7(3, "Building a tiny cabin"));
+// Morphe: "the invite card shown in the Notifications tab Messages section" (it was drawn on the Home feed)
+hidePage("feed", "hide_invite_to_message_card", "Notifications, the Messages section", top7("Notifications", ["search", "gear"]) + chips7(["Messages", "Activity"]) + tgt7(`<div style="padding:4px;border-radius:4px;background:#1b1b1b;font-size:6px;line-height:1.3;display:flex;gap:4px;align-items:center">${ico7("chat", 9)}<span style="flex:1">Invite others to message on YouTube <span style="color:#3ea6ff">Invite</span></span></div>`) + row7(2, "Kari: saw the new cabin video?", "", "2 hours ago") + row7(4, "Lars sent a video", "", "1 day ago"));
+// Morphe: "the blue 'Latest videos' banner that appears at the top of the Home feed" (it was a grey pill on Subscriptions)
+hidePage("feed", "hide_latest_videos_button", "Home feed, new videos are waiting", feed7(`<div style="display:flex;justify-content:center">${tgt7(`<div style="padding:2px 7px;border-radius:7px;background:#3ea6ff;color:#000;font-size:6px;font-weight:500;display:inline-flex;gap:2px;align-items:center">${ico7("arrow", 6, "#000")}Latest videos</div>`)}</div>` + big7(3, "Building a tiny cabin") + row7(4, "Night train to Bodø")));
 hidePage("feed", "hide_movies_section", "Home feed", feed7(big7(3, "Building a tiny cabin") + tgt7(`<div><b style="font-size:7px">Movies for you</b><div style="display:flex;gap:3px;margin-top:2px">${[1, 6, 7].map(i => `<div style="width:20px;height:28px;border-radius:2px;background:${ART[i]}"></div>`).join("")}</div></div>`)));
 hidePage("feed", "hide_notifications_menu_header", "Tapping the bell: the Notifications screen", top7("Notifications", ["search", "gear"]) + tgt7(`<div style="display:flex;gap:4px;align-items:center;padding:4px;border-radius:4px;background:#1b1b1b;font-size:6px;line-height:1.3">${ico7("bell", 9)}<span style="flex:1">Get notified about the channels you like. <span style="color:#3ea6ff">Learn more</span></span></div>`) + row7(2, "Fjord & Timber uploaded", "", "2 hours ago") + row7(4, "Pocket Science is live", "", "5 hours ago") + row7(6, "Midnight Tapes premieres Friday", "", "1 day ago"), { hidden: "The header with the help link is gone; notifications start at the top" });
 hidePage("feed", "hide_notify_me_button", "An upcoming premiere in the feed", feed7(big7(6, "Premieres Friday 18:00", `<span style="position:absolute;left:3px;bottom:3px;padding:0 3px;border-radius:2px;background:rgba(0,0,0,.7);font-size:5px">UPCOMING</span>`) + `<div style="display:flex;justify-content:flex-end;margin-top:-2px">${tgt7(`<span style="padding:2px 6px;border-radius:7px;background:#f1f1f1;color:#000;font-size:6px;display:inline-flex;gap:2px;align-items:center">${ico7("bell", 7, "#000")}Notify me</span>`, 1)}</div>` + row7(3, "Building a tiny cabin")), { hidden: "No reminder button on upcoming streams and premieres" });
@@ -158,23 +180,30 @@ scen("feed", "playlist_wide_drag_handles", (box, on) => {
   at(1000, () => { f.classList.remove("hold", "show"); toast7(dev, on ? "Easy to grab" : "Small target, often missed", "80%"); });
   return on ? "A wide drag handle on each row" : "A thin drag handle (stock)";
 });
+// Morphe: "A download button is shown next to the Share button of posts with images or GIFs, and a
+// download item is added to their menu" (the story used to be a long press on the image).
 scen("feed", "post_image_download", (box, on) => {
-  situation("Holding an image in a community post");
-  box.innerHTML = device("port", pageRows(`<div style="display:flex;gap:4px;align-items:center"><span style="width:12px;height:12px;border-radius:50%;background:${AV[3]}"></span><b style="font-size:7px">Pocket Science</b></div><div style="font-size:6.5px">Frost patterns this morning ❄️</div><div style="height:60px;border-radius:4px;background:${ART[0]}"></div>`));
-  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
-  at(250, () => holdAt(f, W * .5, H * .45));
-  at(1000, () => { f.classList.remove("hold", "show"); if (on) sheet7(dev, sheetRows([["dl", "Download image"], ["link", "Copy image link"]])); else toast7(dev, "Nothing happens", "60%"); });
-  at(1700, () => { if (on) { dev.querySelectorAll(".sh7, .shs7").forEach(e => e.remove()); toast7(dev, "Saved to Pictures"); } });
-  return on ? "Hold an image: download it" : "Images in posts can't be saved (stock)";
+  situation("A community post with an image");
+  const act = (n, cls = "") => `<span class="${cls}" style="display:grid;place-items:center;width:13px;height:11px;border-radius:5px;background:#272727">${ico7(n, 7)}</span>`;
+  box.innerHTML = device("port", pageRows(`<div style="display:flex;gap:4px;align-items:center"><span style="width:12px;height:12px;border-radius:50%;background:${AV[3]}"></span><b style="font-size:7px;flex:1">Pocket Science</b>${ico7("more", 8)}</div><div style="font-size:6.5px">Frost patterns this morning ❄️</div><div style="height:56px;border-radius:4px;background:${ART[0]}"></div><div style="display:flex;gap:4px;align-items:center">${act("like")}${act("dislike")}${act("comment")}<span style="flex:1"></span>${act("share")}${on ? act("dl", "pd7 new7") : ""}</div>`));
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger");
+  if (!on) { toast7(dev, "No way to save the image", "82%"); return "Images in posts can't be saved (stock)"; }
+  at(700, () => fingerOn(dev, f, dev.querySelector(".pd7"))); at(1050, () => tapF(f));
+  at(1350, () => { f.classList.remove("show"); toast7(dev, "Saved to Pictures", "82%"); });
+  return "A download button next to Share saves the image";
 });
+// Morphe: "Adds a flyout menu item to translate content creator posts" (the story used to draw a link under the post).
 scen("feed", "post_translate", (box, on) => {
   situation("A community post in another language");
-  box.innerHTML = device("port", pageRows(`<div style="display:flex;gap:4px;align-items:center"><span style="width:12px;height:12px;border-radius:50%;background:${AV[0]}"></span><b style="font-size:7px">Fjord & Timber</b></div><div class="tx7" style="font-size:6.5px;line-height:1.35;transition:opacity .25s">Taket er ferdig! Neste uke: vedovnen.</div>${on ? `<div class="tb7 new7" style="width:max-content;font-size:6px;color:#3ea6ff;display:flex;gap:2px;align-items:center">${ico7("translate", 7, "#3ea6ff")}Translate</div>` : ""}<div style="height:34px;border-radius:4px;background:${ART[3]}"></div>`));
-  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"); const W = dev.clientWidth, H = dev.clientHeight;
-  if (!on) { toast7(dev, "No translate button", "80%"); return "Posts stay in their language (stock)"; }
-  at(300, () => fingerTo(f, W * .25, H * .2)); at(650, () => tapF(f));
-  at(900, () => { f.classList.remove("show"); const t = dev.querySelector(".tx7"); t.style.opacity = 0; later(() => { t.textContent = "The roof is done! Next week: the wood stove."; t.style.opacity = 1; }, 260); dev.querySelector(".tb7").innerHTML = "Show original"; });
-  return "A Translate button under posts in other languages";
+  box.innerHTML = device("port", pageRows(`<div style="display:flex;gap:4px;align-items:center"><span style="width:12px;height:12px;border-radius:50%;background:${AV[0]}"></span><b style="font-size:7px;flex:1">Fjord & Timber</b><span class="mo7" style="display:grid">${ico7("more", 8)}</span></div><div class="tx7" style="font-size:6.5px;line-height:1.35;transition:opacity .25s">Taket er ferdig! Neste uke: vedovnen.</div><div style="height:34px;border-radius:4px;background:${ART[3]}"></div>`));
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger");
+  at(300, () => fingerOn(dev, f, dev.querySelector(".mo7"))); at(650, () => tapF(f));
+  at(900, () => { f.classList.remove("show"); sheet7(dev, sheetRows([...(on ? [["translate", "Translate"]] : []), ["share", "Share"], ["flag", "Report"]])); if (on) dev.querySelector(".sh7 > div").classList.add("new7"); });
+  if (!on) return ""; // the menu without the item, and the post staying as it is, say it
+  at(1700, () => { fingerOn(dev, f, dev.querySelector(".sh7 > div"), .3); });
+  at(2050, () => tapF(f));
+  at(2300, () => { f.classList.remove("show"); dev.querySelectorAll(".sh7, .shs7").forEach(e => e.remove()); const t = dev.querySelector(".tx7"); t.style.opacity = 0; later(() => { t.textContent = "The roof is done! Next week: the wood stove."; t.style.opacity = 1; }, 260); });
+  return "";
 });
 scen("feed", "native_queue_fetch_on_scroll", (box, on) => {
   situation("Scrolling to the end of the queue");
@@ -203,7 +232,7 @@ hidePage("feed", "hide_keyword_content_comments", "Comments with filtered words"
 
 // ---------- other screens
 hidePage("ads", "hide_fullscreen_ads", "Opening a video", player7(3) + row7(2, "Up next") + row7(4, "Up next") + `<div class="tgt7" style="position:absolute;inset:0;max-height:200px;background:#fff;color:#000;display:grid;place-items:center;font-size:7px;z-index:4"><div style="text-align:center"><b>Ad · 0:05</b><div style="font-size:6px">Install Pocket Planner</div></div></div>`, { hidden: "No full-screen ad before the video" });
-hidePage("channel", "hide_channel_tab", "A channel page", top7("Fjord & Timber", ["search", "more"]) + `<div style="height:18px;border-radius:2px;background:${ART[3]}"></div><div style="display:flex;gap:6px;font-size:6px;border-bottom:1px solid #333;padding-bottom:2px"><span>Home</span><span>Videos</span>${tgt7("<span>Shorts</span>", 1)}${tgt7("<span>Store</span>", 1)}<span>Posts</span></div>` + row7(2, "Building a tiny cabin"), { hidden: "Channel tabs you filtered are removed" });
+hidePage("channel", "hide_channel_tab", "A channel page", top7("Fjord & Timber", ["search", "more"]) + `<div style="height:18px;border-radius:2px;background:${ART[3]}"></div><div style="display:flex;gap:5px;font-size:5.5px;white-space:nowrap;border-bottom:1px solid #333;padding-bottom:2px"><span style="flex:none">Home</span><span style="flex:none">Videos</span>${tgt7("<span>Shorts</span>", 1)}${tgt7("<span>Store</span>", 1)}</div>` + row7(2, "Building a tiny cabin"), { hidden: "Channel tabs you filtered are removed" });
 scen("look", "disable_layout_updates", (box, on) => {
   situation("YouTube tests a new layout on you"); // no blue line (Max, Nov 20)
   box.innerHTML = device("port", pageRows(feed7(`<div class="ly7" style="display:grid;gap:5px;transition:opacity .3s">${big7(3, "Building a tiny cabin")}${row7(4, "Night train to Bodø")}</div>`)));
@@ -219,14 +248,23 @@ scen("look", "fix_status_bar_layout", (box, on) => {
   toast7(dev, on ? "Video sits below the status bar" : "Status bar covers the video", "78%");
   return on ? "The status bar no longer overlaps the player" : "On some devices the status bar overlaps the top of the player (stock)";
 });
+// Morphe: "Morphe messages, such as the confirmation of a player button, are shown in the YouTube snackbar
+// instead of a popup". Off is the popup (an Android toast), On is YouTube's own snackbar. The two sides
+// used to be the other way round, and showed a YouTube message instead of a Morphe one (audit, Nov 24).
 scen("look", "native_snackbar", (box, on) => {
-  situation("Saving a video to a playlist");
-  box.innerHTML = device("port", pageRows(feed7(big7(3, "Building a tiny cabin") + row7(4, "Night train to Bodø"))) + nav7());
-  const dev = box.querySelector(".dev");
-  at(600, () => dev.insertAdjacentHTML("beforeend", on ? `<div class="toastin" style="bottom:24px;top:auto;border-radius:4px;background:#323232">Saved to Watch later</div>` : `<div style="position:absolute;left:4px;right:4px;bottom:20px;display:flex;justify-content:space-between;padding:4px 6px;border-radius:8px;background:#f1f1f1;color:#000;font-size:6.5px;animation:sheetup .25s">Saved to Watch later<b style="color:#065fd4">Change</b></div>`));
-  return on ? "Android's own snackbar style" : "YouTube's own snackbar (stock)";
+  situation("Tapping Morphe's Copy link button in the player");
+  box.innerHTML = device("port", watch7(`<span class="cl7" style="position:absolute;right:4px;top:4px;display:grid;place-items:center;width:11px;height:11px;border-radius:50%;background:rgba(0,0,0,.55)">${ico7("link", 7)}</span>`) + nav7());
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger");
+  at(250, () => fingerOn(dev, f, dev.querySelector(".cl7"))); at(600, () => tapF(f));
+  at(850, () => {
+    f.classList.remove("show");
+    dev.insertAdjacentHTML("beforeend", on
+      ? `<div class="chg7" data-stay style="position:absolute;left:4px;right:4px;bottom:20px;padding:4px 6px;border-radius:5px;background:#f1f1f1;color:#0f0f0f;font-size:6.5px;line-height:1.2;animation:sheetup .25s">Link copied to clipboard</div>`
+      : `<div class="chg7" data-stay style="position:absolute;left:50%;bottom:26px;translate:-50% 0;width:max-content;max-width:86%;padding:3px 8px;border-radius:9px;background:#3a3a3a;color:#fff;font-size:6px;line-height:1.2;display:flex;gap:3px;align-items:center;animation:ghostin .25s"><span style="width:7px;height:7px;border-radius:2px;background:#1E5AA8;flex:none"></span>Link copied to clipboard</div>`);
+  });
+  return on ? "The message uses YouTube's snackbar bar" : "The message is a popup over the app (stock)";
 });
-hidePage("look", "override_youtube_music_buttons", "Tapping a YouTube Music link", feed7(big7(6, "Midnight Tapes · Neon Fjord")) + tgt7(`<div style="padding:3px;border-radius:4px;background:#1b1b1b;font-size:6px;display:flex;gap:3px;align-items:center">${ico7("music", 7, "#ff0033")}Opens your patched YouTube Music</div>`), { invert: true, shown: "Music buttons open your chosen YouTube Music app", hidden: "Music buttons open the stock YouTube Music (stock)" });
+hidePage("look", "override_youtube_music_buttons", "Tapping a YouTube Music link", feed7(big7(6, "Midnight Tapes · Neon Fjord")) + tgt7(`<div style="padding:3px;border-radius:4px;background:#1b1b1b;font-size:6px;display:flex;gap:3px;align-items:center">${ico7("music", 7, "#ff0033")}Opens your preferred music app</div>`), { invert: true, shown: "Music buttons open your preferred music app", hidden: "Music buttons open the stock YouTube Music (stock)" });
 hidePage("look", "settings_search_history", "Searching in settings", search7("speed", `<div style="display:grid;gap:3px">${tgt7(item7("clock", "seekbar"))}${tgt7(item7("clock", "captions"))}${item7("gear", "Playback speed")}</div>`), { invert: true, shown: "Your recent settings searches are listed", hidden: "No search history (stock)" });
 // Show Morphe setting icons: the icons beside the sections of Morphe's own settings screen (not YouTube's
 // menus). Tap Morphe in YouTube's settings, the Morphe screen slides in with or without its icons.
@@ -244,10 +282,15 @@ scen("look", "show_menu_icons", (box, on) => {
 });
 scen("look", "spoof_app_version", (box, on) => {
   situation("Pretending to be an older YouTube"); // no blue line (Max, Nov 20)
-  box.innerHTML = device("port", pageRows(top7("Settings", ["search"]) + `<div style="display:grid;gap:3px;font-size:6.5px"><div>About</div><div style="color:#aaa">App version</div><b class="v7 chg7" style="font-size:8px;transition:opacity .25s">20.44.38</b></div>` + feed7(big7(3, ""))));
+  // the version YouTube really is (the preview's version), and the older one it is told; what comes back
+  // is said in Morphe's own words for that choice ("21.11.48 - Restore old captions behavior")
+  const ents = entriesFor("morphe_spoof_app_version_target"), cur = V("morphe_spoof_app_version_target");
+  const ent = ents.find(e => sameVal(e.value, cur)) || ents[0] || { value: "19.01.34", label: "" };
+  const what = String(ent.label).split(" - ")[1] || "Old layout comes back";
+  box.innerHTML = device("port", pageRows(top7("Settings", ["search"]) + `<div style="display:grid;gap:3px;font-size:6.5px"><div>About</div><div style="color:#aaa">App version YouTube sees</div><b class="v7 chg7" style="font-size:8px;transition:opacity .25s">${ytVersion}</b></div>` + feed7(big7(3, ""))));
   const dev = box.querySelector(".dev"), v = dev.querySelector(".v7");
-  if (on) toast7(dev, "Old layout comes back", "82%");
-  at(300, () => { if (!on) return; v.style.opacity = 0; later(() => { v.textContent = V("morphe_spoof_app_version_target") || "19.01.34"; v.style.opacity = 1; }, 260); });
+  at(300, () => { if (!on) return; v.style.opacity = 0; later(() => { v.textContent = ent.value; v.style.opacity = 1; }, 260); });
+  at(900, () => { if (on) toast7(dev, what, "82%"); });
   return on ? "YouTube serves the layout of the chosen version" : "YouTube sees the real version (stock)";
 });
 // Morphe: "Use the theme color for text and icons". Stock keeps text and icons white; on, they take the theme colour.
@@ -269,7 +312,17 @@ scen("look", "custom_filter", (box, on) => {
   return on ? "Components matching your filter strings are removed" : "No custom filter (stock)";
 });
 hidePage("look", "series_tracker", "Watching a series", player7(3, `<span style="position:absolute;left:3px;bottom:3px;font-size:5.5px;background:rgba(0,0,0,.7);padding:0 3px;border-radius:2px">Ep 4</span>`) + tgt7(`<div style="display:flex;gap:3px;align-items:center;font-size:6px;padding:3px;border-radius:3px;background:#1b1b1b">${ico7("list", 7)}Cabin build · 3 of 12 watched${bar7(20, "#3ea6ff", 3)}</div>`) + row7(2, "Episode 5"), { invert: true, shown: "Your progress through a series is tracked", hidden: "No series tracker (stock)" });
-hidePage("nav", "disable_toolbar_navigation_tabs", "The top bar on a tablet", `<div style="display:flex;gap:6px;align-items:center;font-size:6.5px"><b>YouTube</b>${tgt7(`<span style="display:inline-flex;gap:5px"><span>Home</span><span>Shorts</span><span>Subs</span></span>`, 1)}<span style="flex:1"></span>${ico7("search")}</div>` + big7(3, "Building a tiny cabin"), { dev: "land", hidden: "No navigation tabs in the top bar" });
+// Morphe: "Shows Subscriptions in the navigation bar, if YouTube moves it to a tab at the top of Home".
+// The phone with the tabs has Subscriptions at the top of Home and none in the bar; the other has it in the bar.
+scen("nav", "disable_toolbar_navigation_tabs", (box, on) => {
+  situation("Where Subscriptions lives");
+  const tabs = !on; // the setting disables the tabs: without it YouTube keeps Home / Subscriptions in the toolbar
+  const tab = (t, hi) => `<span style="padding:0 0 1px;border-bottom:1px solid ${hi ? "#fff" : "transparent"};color:${hi ? "#fff" : "#aaa"}">${t}</span>`;
+  const navBtn = (n, t, cls = "") => `<span class="${cls}" style="display:grid;justify-items:center;gap:1px;font-size:4.5px;color:#ddd">${ico7(n, 8)}${t}</span>`;
+  box.innerHTML = device("port", pageRows(top7() + (tabs ? `<div class="new7" style="display:flex;gap:7px;font-size:6.5px">${tab("Home", 1)}${tab("Subscriptions")}</div>` : "") + chips7(["All", "Music", "Live", "Gaming"]) + big7(3, "Building a tiny cabin") + row7(4, "Night train to Bodø"))
+    + nav7([navBtn("home", "Home"), navBtn("shorts", "Shorts"), ico7("plus", 9), ...(tabs ? [] : [navBtn("subs", "Subscriptions", "new7")]), navBtn("you", "You")]));
+  return "";
+});
 hidePage("nav", "hide_toolbar_microphone_button", "The search bar", search7("", "").replace(ico7("mic"), tgt7(ico7("mic"), 1)) + `<div style="display:grid;gap:3px">${item7("clock", "cabin build")}${item7("clock", "lo-fi beats")}</div>`);
 // A small watch page for the Ambient mode comparisons: the film's glow under the player (.amg7), or with
 // enhanced: the whole page lit (.aml7). Same film and colours as the live preview (AMB_ART, AMB_GLOW).
@@ -278,9 +331,9 @@ const ambPage = (enh) => `<div class="pg7" style="position:absolute;inset:0;back
 scen("ambient", "bypass_ambient_mode_restrictions", (box, on) => {
   situation("Battery saver turns on");
   box.innerHTML = device("port", ambPage(false));
-  const dev = box.querySelector(".dev");
+  const dev = box.querySelector(".dev"), glow = dev.querySelector(".amg7");
   at(500, () => { dev.insertAdjacentHTML("beforeend", `<span class="badge7" style="right:3px;top:3px;z-index:3">${ico7("power", 6, "#ffcc00")} Battery saver</span>`); });
-  at(900, () => { if (!on) dev.querySelector(".amg7").style.opacity = 0; toast7(dev, on ? "The glow stays on" : "The glow is switched off", "80%"); });
+  at(900, () => { if (!on) glow.style.opacity = 0; toast7(dev, on ? "The glow stays on" : "The glow is switched off", "80%"); });
   return "";
 });
 // Dim while scrolling (enhanced): the page scrolls; the light dims while it moves, then comes back.
@@ -334,10 +387,16 @@ for (const [k, sit, html] of [
   ["hide_comments_carousel", "Comments under a video", `<div style="display:flex;gap:3px;overflow:hidden">${[2, 4, 6].map(i => `<div style="width:30px;height:20px;border-radius:3px;background:#272727;flex:none;font-size:5px;padding:2px">Top comment</div>`).join("")}</div>`],
   ["hide_comments_live_chat_donators_bar", "Live chat", `<div style="display:flex;gap:3px">${[1, 3, 5].map(i => `<span style="padding:0 4px;border-radius:6px;background:${["#1e88e5", "#ffb300", "#e53935"][i % 3]};font-size:5.5px">€${i * 2}</span>`).join("")}</div>`],
   ["hide_comments_live_chat_scroll_to_bottom_button", "Scrolling up in live chat", `<div style="display:flex;justify-content:center"><span style="width:14px;height:14px;border-radius:50%;background:#3ea6ff;display:grid;place-items:center">${ico7("down", 9, "#000")}</span></div>`],
-  ["hide_comments_live_chat_tooltips", "Live chat", `<div style="padding:3px;border-radius:3px;background:#3ea6ff;color:#000;font-size:6px">Tip: tap a message to reply</div>`],
+  ["hide_comments_live_chat_tooltips", "Live chat", `<div style="padding:3px 4px;border-radius:3px;background:#3ea6ff;color:#000;font-size:6px;line-height:1.25;width:max-content;max-width:100%">Subscribers-only chat</div>`],
   ["hide_comments_zero_state", "A video with no comments yet", `<div style="text-align:center;font-size:6px;color:#aaa;padding:6px">${ico7("comment", 12, "#aaa")}<div>No comments yet. Start the conversation</div></div>`]]) {
   const isChat = /live chat/i.test(sit);
-  hidePage("comments", k, sit, player7(5) + (isChat ? chat7([[1, "ola", "so pretty"], [2, "mia", "green!!"]]) + tgt7(html) + chat7([[3, "ken", "😍"]]) : top7("Comments", ["sort", "close"]) + tgt7(html) + cmt7(2, "Lovely build!")));
+  // a live chat ends in its input bar: the donators bar sits over the messages, the tooltip and the
+  // scroll-to-bottom button over the input bar (Morphe: "tooltip popups shown near the chat input bar");
+  // the empty state is the whole list, with no comment beside it
+  const input = (t) => `<div style="display:flex;gap:3px;align-items:center"><div style="flex:1;min-width:0;height:10px;border-radius:5px;background:#272727;font-size:5.5px;line-height:10px;padding:0 4px;color:#aaa">${t}</div>${ico7("emoji", 7)}</div>`;
+  const msgs = chat7([[1, "ola", "so pretty"], [2, "mia", "green!!"], [3, "ken", "😍"]]);
+  hidePage("comments", k, sit, player7(5) + (isChat ? (/donators/.test(k) ? tgt7(html) + msgs : msgs + tgt7(html)) + input("Chat…")
+    : top7("Comments", ["sort", "close"]) + tgt7(html) + (/zero_state/.test(k) ? input("Add a comment…") : cmt7(2, "Lovely build!"))));
 }
 hidePage("comments", "hide_comments_section_in_home_feed", "Home feed with inline comments", feed7(big7(3, "Building a tiny cabin") + tgt7(`<div style="padding:3px;border-radius:3px;background:#1b1b1b">${cmt7(2, "Lovely build!")}</div>`) + row7(4, "Night train to Bodø")));
 scen("comments", "minimal_comments_button", (box, on) => {
@@ -426,7 +485,7 @@ scen("fullscreen", "swipe_save_and_restore_brightness", (box, on) => {
   situation("Leaving fullscreen after dimming the video"); // no blue line (Max, Nov 20)
   box.innerHTML = device("land", `<div class="br7" style="position:absolute;inset:0;background:${ART[3]};filter:brightness(.45)"></div>`);
   const dev = box.querySelector(".dev");
-  at(600, () => { rotate(dev, "port"); dev.innerHTML = pageRows(player7(3) + row7(2, "Up next") + row7(4, "Up next")); dev.querySelector(".pg7").style.filter = on ? "none" : "brightness(.45)"; toast7(dev, on ? "Your normal brightness is back" : "Still dimmed", "80%"); });
+  at(600, () => { rotate(dev, "port"); dev.innerHTML = pageRows(player7(3) + row7(2, "") + row7(4, "")); dev.querySelector(".pg7").style.filter = on ? "none" : "brightness(.45)"; toast7(dev, on ? "Bright again" : "Still dimmed", "72%"); }); // short words, no row titles: these turned phones are small and the pill covered them
   return on ? "Brightness goes back to your system level outside fullscreen" : "The swipe brightness stays everywhere (stock)";
 });
 // ---------- Playback
@@ -440,11 +499,11 @@ scen("playback", "autoplay_control", (box, on) => {
 });
 scen("playback", "disable_playlist_autoplay", (box, on) => {
   situation("End of a video in a playlist");
-  box.innerHTML = device("port", pageRows(player7(3, `<span class="cd7 toastin" style="top:50%;translate:0 -50%;white-space:nowrap">Next in 5</span>`) + `<b style="font-size:6.5px">Road trip mix · 2 / 12</b>` + row7(2, "Night train") + row7(4, "Lo-fi beats")));
+  box.innerHTML = device("port", pageRows(player7(3, `<span class="cd7 toastin" style="top:50%;translate:0 -50%;white-space:nowrap">Next in 5</span>`) + `<b class="pl8" style="font-size:6.5px">Road trip mix · 2 / 12</b>` + row7(2, "Night train") + row7(4, "Lo-fi beats")));
   const dev = box.querySelector(".dev"), cd = dev.querySelector(".cd7");
   // every second shows, down to 1, 10% quicker than one step per 300 ms (Max, Nov 23)
   [4, 3, 2, 1].forEach((n, i) => at(360 + i * 270, () => { cd.textContent = "Next in " + n; }));
-  at(1440, () => { cd.innerHTML = on ? `${ico7("pause", 7)} Stopped` : `${ico7("play", 7)} Playing 3 / 12`; });
+  at(1440, () => { cd.innerHTML = on ? `${ico7("pause", 7)} Stopped` : `${ico7("play", 7)} Playing 3 / 12`; if (!on) dev.querySelector(".pl8").textContent = "Road trip mix · 3 / 12"; });
   return on ? "Playlists stop after each video" : "Playlists play on (stock)";
 });
 // Two acts (playlist, then live stream), stock and patched side by side whatever the switch is set to.
@@ -643,7 +702,8 @@ scen("playback", "download_force_4k", (box, on) => {
 // only, or the translation first, per the style setting); the translation takes the custom colour
 // (#38BDF8 unless changed) and can be bold; an optional copy icon at the end copies the message.
 // One chat, drawn large, shared by the translation setting and its sub-settings.
-const LC_MSGS = [[1, "yuki", "めっちゃ綺麗", "So beautiful"], [2, "lars", "Så vakkert!", "So pretty!"], [3, "ana", "¡Qué bonito!", "How lovely!"]];
+// short lines: with its translation each message has to fit the phone (the last one ran out of it)
+const LC_MSGS = [[1, "yuki", "綺麗！", "Pretty!"], [2, "lars", "Så fint!", "So nice!"], [3, "ana", "¡Qué bonito!", "Lovely!"]];
 const cssColor = c => { c = String(c || ""); return /^#[0-9a-f]{8}$/i.test(c) ? "#" + c.slice(3) + c.slice(1, 3) : c; };
 function lcChat(o = {}) {
   const tr = !!o.tr, bold = o.bold ?? !!V("morphe_live_chat_translate_bold"), copy = o.copy ?? !!V("morphe_live_chat_translate_copy_button");
@@ -661,7 +721,7 @@ scen("comments", "live_chat_translate", (box, on) => {
   box.innerHTML = lcPage(lcChat());
   const dev = box.querySelector(".dev");
   at(800, () => { if (!on) return; const c = dev.querySelector(".lc7"); c.outerHTML = lcChat({ tr: true }); dev.querySelector(".lc7").animate([{ opacity: .3 }, { opacity: 1 }], { duration: 300 }); });
-  return on ? "Each message gets its translation" : "Chat stays in its languages (stock)";
+  return ""; // the chat with and without its translations says it
 });
 scen("comments", "live_chat_translate_bold", (box, on) => {
   // drawn with its weight from the first frame (it used to turn bold 0.7 s in, which read as lag)
@@ -686,12 +746,21 @@ scen("comments", "live_chat_translate_copy_button", (box, on) => {
   }
   return on ? "A copy icon after each message copies it" : "No copy icon (stock)";
 });
+// Loop count: Morphe adds "Loop count" beside "Loop video" in the player's More menu, to choose how
+// many times the video plays before the next one. The menu opens, the entry is tapped, the video plays
+// its three rounds and the next video starts. (It used to be a counter appearing out of nowhere.)
+SCN_HOLD.morphe_loop_count = 4600;
 scen("playback", "loop_count", (box, on) => {
-  situation("A looping video");
-  box.innerHTML = device("port", watch7(`<span class="lc8 badge7" style="right:3px;top:3px">${on ? "Loop 1" : ""}</span>`));
-  const dev = box.querySelector(".dev");
-  [2, 3, 4].forEach((n, i) => at(500 + i * 450, () => { if (on) dev.querySelector(".lc8").textContent = "Loop " + n; }));
-  return ""; // the counter on the player says it; no caption
+  situation("The player's More menu");
+  box.innerHTML = device("port", watch7(`<span class="lc8 badge7" style="right:3px;top:3px"></span>`));
+  const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"), row = () => dev.querySelectorAll(".sh7 > div")[1];
+  at(300, () => { sheet7(dev, sheetRows([["loop", "Loop video"], ...(on ? [["loop", "Loop count"]] : []), ["speed", "Playback speed"], ["cc", "Captions"]])); if (on) row().classList.add("new7"); });
+  if (!on) return "";
+  at(1300, () => fingerOn(dev, f, row(), .3)); at(1650, () => tapF(f));
+  at(1900, () => { f.classList.remove("show"); dev.querySelectorAll(".sh7, .shs7").forEach(e => e.remove()); dev.querySelector(".lc8").textContent = "Loop 1 of 3"; });
+  [2, 3].forEach((n, i) => at(2500 + i * 600, () => { dev.querySelector(".lc8").textContent = `Loop ${n} of 3`; }));
+  at(3700, () => { dev.querySelector(".lc8").textContent = ""; toast7(dev, "Next video", "30%"); });
+  return ""; // the menu entry and the counter say it; no caption
 });
 scen("playback", "advanced_video_quality_menu", (box, on) => {
   situation("Tapping Quality");
@@ -770,17 +839,15 @@ scen("playback", "disable_playback_speed_music", (box, on) => {
   return "";
 });
 // Prioritize video quality: the network gets slow.
+// Prioritize video quality: Morphe drops the efficient format (VP9) where the highest resolution only
+// exists in the older one (AVC), so the top quality is offered. Without it an older video can be stuck
+// low with no quality options (Morphe's own warning). It used to tell a slow-network story.
 scen("playback", "video_quality_prioritize", (box, on) => {
-  situation("The network gets slow");
-  box.innerHTML = device("port", watch7(`<span class="nt7 badge7" style="left:3px;top:3px">${ico7("wifi", 6)} Fast</span><span class="q7 badge7" style="right:3px;top:3px">1080p</span>` + prog7(40)));
-  const dev = box.querySelector(".dev"), pv = dev.querySelector(".pg7 > div");
-  toast7(dev, on ? "Keeps 1080p, waits to load" : "Drops quality, keeps playing", "78%");
-  at(600, () => {
-    dev.querySelector(".nt7").innerHTML = `${ico7("wifi", 6, "#ff6b6b")} Slow`;
-    if (on) { pv.style.filter = "brightness(.55)"; pv.insertAdjacentHTML("beforeend", ring7()); }
-    else { dev.querySelector(".q7").textContent = "360p"; pv.style.transition = "filter .4s"; pv.style.filter = "blur(1.2px)"; }
-  });
-  return "";
+  situation("An older video, opening Quality");
+  box.innerHTML = device("port", watch7(`<span class="q7 badge7 chg7" style="right:3px;top:3px">${on ? "1080p · AVC" : "360p · VP9"}</span>`));
+  const dev = box.querySelector(".dev");
+  at(700, () => { sheet7(dev, `<b style="font-size:6.5px;color:#aaa">Quality</b>` + (on ? ["1080p", "720p", "480p", "360p"] : ["360p"]).map((t, i) => `<div style="display:flex;gap:4px;align-items:center">${i ? `<span style="width:7px"></span>` : ico7("toggle", 7)}${t}</div>`).join("") + (on ? "" : `<div style="color:#888;font-size:6px">No other qualities</div>`)); dev.querySelector(".sh7").classList.add("chg7"); });
+  return on ? "The highest quality, in the older video format" : "Older videos can be stuck at a low quality";
 });
 // Skip silence and its Minimum pause length: a talk plays with seven pauses of different lengths under
 // the video. Speech plays at the same pace on both phones; every pause at least the minimum length is
@@ -882,6 +949,17 @@ function textScen(sec, key, sit, byVal) {
     return "";
   });
 }
+// Autoplay mode: the three modes differ in what may start after a video, which is a rule, not a picture
+// (Morphe: playlists and queues go on, a Mix stops after "Mix length" videos in Auto and after one in
+// Single, Off stops every list, a suggested video never starts). It used to play the end screen's
+// countdown, the same for Single and Off.
+scen("endscreen", "autoplay_mode", (box, v) => {
+  situation("A video ends: what starts next?");
+  const n = Number(VE("morphe_autoplay_mix_stop_after")), mix = v === "OFF" ? "A Mix: stops" : v === "SINGLE" ? "A Mix: stops after 1 video" : n > 0 ? `A Mix: stops after ${n} videos` : "A Mix: plays on, no limit";
+  const pts = [v === "OFF" ? "Playlists and queues: stop" : "Playlists and queues: play on", mix, "A suggested video: never starts"];
+  box.innerHTML = device("port", `<div class="tx7"><b>${esc(entryLabel("morphe_autoplay_mode", v) || String(v))}</b>${pts.map(p => `<div>${p}</div>`).join("")}</div>`).replace('class="dev port"', 'class="dev port card7"');
+  return "";
+});
 // DRC = dynamic range compression: YouTube can play a compressed audio track that evens out the volume
 textScen("playback", "disable_drc_audio", "What you hear", {
   false: ["Evened-out sound", ["Quiet parts louder, loud parts softer", "Steady volume in noisy places", "Music and films lose some punch"]],
@@ -925,6 +1003,15 @@ scen("playback", "vot_enabled", (box, on) => {
   return ""; // the subtitle line in the phones says it
 });
 hidePage("dearrow", "dearrow_connection_toast", "DeArrow can't reach its server", feed7(big7(3, "Building a tiny cabin")) + `<div style="height:20px"></div>` + tgt7(`<div style="padding:3px 5px;border-radius:8px;background:#323232;font-size:6px;text-align:center">DeArrow is temporarily unavailable</div>`), { invert: true, shown: "A toast tells you when DeArrow is down", hidden: "Fails silently" });
+
+// Narrow navigation buttons: the bar spread over the width beside the bar drawn together. (The single
+// preview flipped between both without saying which was which.)
+scen("nav", "narrow_navigation_buttons", (box, on) => {
+  situation("The bar at the bottom");
+  const tabs = [["home", "Home"], ["shorts", "Shorts"], ["plus", ""], ["subs", "Subs"], ["you", "You"]];
+  box.innerHTML = device("port", pageRows(feed7(big7(3, "Building a tiny cabin") + row7(2, "Night train"))) + `<div class="chg7" style="position:absolute;left:0;right:0;bottom:0;height:19px;background:#0f0f0f;border-top:1px solid #222;display:flex;justify-content:center;align-items:center">${tabs.map(([n, t]) => `<span style="display:grid;justify-items:center;gap:1px;font-size:4.5px;line-height:1;${on ? "width:16px" : "flex:1"}">${ico7(n, 8)}<span>${t}</span></span>`).join("")}</div>`);
+  return ""; // the two bars say it
+});
 
 function inScope(p, scopes) { return scopes.some(([s, sub]) => p.screen === s && (p.subScreen || null) === sub); }
 // Settings without a preview or animation that sit in the main list of a Morphe screen but belong with
