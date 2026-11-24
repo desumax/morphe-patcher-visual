@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 """Drafts the CHANGELOG.md entry Morphe Manager shows for a test release of the visual editor.
 
-Usage: changelog.py --version 0.1.0-test.N [--since REF] [--date YYYY-MM-DD]   draft the entry
-       changelog.py --version 0.1.0-test.N --publish                          after tidying it
+Usage: changelog.py --version 0.1.N [--since REF] [--date YYYY-MM-DD]   draft the entry (test N)
+       changelog.py --version 0.1.N --publish                          after tidying it
 
-Reads the commits since the last release tag (visual-editor-test-*, or --since) that touch the
+Versions have no "-" suffix: Manager reads any version with a "-" as a prerelease and leaves it out
+of a stable source's changelog, so a "0.1.0-test.N" release never got its own entry and Manager fell
+back to the feed's description. Test N is 0.1.N, tagged v0.1.N (the tag Manager links to).
+
+Reads the commits since the last release tag (v0.1.*, or the older visual-editor-test-*, or --since) that touch the
 editor, splits each subject into its changes ("a; b; c"), sorts them into Features, Bug Fixes and
 Performance Improvements by their wording, and puts the entry at the top of the repo-root
 CHANGELOG.md, in the conventional-changelog form Manager parses:
 
-    # [0.1.0-test.9](https://github.com/<repo>/compare/visual-editor-test-8...visual-editor-test-9) (2026-11-24)
+    # [0.1.13](https://github.com/<repo>/compare/v0.1.12...v0.1.13) (2026-11-24)
     ### Features
     * **YouTube - Visual settings editor:** Option pills glide between choices
 
@@ -26,7 +30,8 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 REPO = "desumax/morphe-patcher-visual"
-TAG_PREFIX = "visual-editor-"
+TAG_PREFIX = "visual-editor-"  # tags of the old 0.1.0-test.N releases
+VERSION = re.compile(r"^0\.1\.(\d+)$")
 SCOPE = "YouTube - Visual settings editor"
 PATHS = ["visual-editor", "patches-bundle.json"]
 
@@ -44,13 +49,19 @@ def git(*args):
 
 def last_tag():
     try:
-        return git("describe", "--tags", "--abbrev=0", "--match", TAG_PREFIX + "*", "HEAD")
+        return git("describe", "--tags", "--abbrev=0", "--match", "v0.1.*", "--match", TAG_PREFIX + "*", "HEAD")
     except subprocess.CalledProcessError:
         return None
 
 
 def tag_for(version):
-    return TAG_PREFIX + version.split("-", 1)[-1].replace(".", "-")
+    return "v" + version
+
+
+def check(version):
+    if not VERSION.match(version):
+        sys.exit(f"{version}: use 0.1.N for test N. Manager hides versions with a '-' from a stable "
+                 "source's changelog, so they never get an entry of their own")
 
 
 def changes(since):
@@ -101,15 +112,16 @@ def releases(text):
 
 
 def short(version):
-    return version.split("-", 1)[-1].replace(".", " ")  # "0.1.0-test.11" -> "test 11"
+    m = VERSION.match(version)
+    return f"Test {m.group(1)}" if m else version  # "0.1.13" -> "Test 13"
 
 
-def publish(version, history=3):
+def publish(version):
     """Points the Manager feed and the release notes at version, from its CHANGELOG.md entry.
 
-    Manager shows the feed's description when it can't use CHANGELOG.md, and GitHub shows the
-    release notes, so both carry this release's changes (and the feed the last few releases),
-    never a fixed sentence.
+    Manager shows each CHANGELOG.md release as its own collapsible entry, and falls back to the
+    feed's description as one entry when it can't read the file. So the description holds this
+    release only: history there would show as one entry with every release inside it.
     """
     import json
     rel = releases((ROOT / "CHANGELOG.md").read_text(encoding="utf-8"))
@@ -128,7 +140,7 @@ def publish(version, history=3):
         f"\n\nAdd https://github.com/{REPO} as a patch source in Morphe Manager (Expert mode, together "
         "with Morphe Patches). Full history: CHANGELOG.md.")
     (HERE / "release-notes.md").write_text(notes + "\n", encoding="utf-8")
-    desc = "\n\n".join(block(r, f"### {short(r[0])} ({r[1]})") for r in rel[:history])
+    desc = block(rel[0], f"### {short(version)} ({rel[0][1]})")
     feed = ROOT / "patches-bundle.json"
     data = json.loads(feed.read_text(encoding="utf-8")) if feed.exists() else {}
     data.pop("signature_download_url", None)
@@ -146,6 +158,7 @@ def main():
     ap.add_argument("--since", help="git ref of the previous release (default: the last visual-editor-test-* tag)")
     ap.add_argument("--date", default=time.strftime("%Y-%m-%d"))
     args = ap.parse_args()
+    check(args.version)
     if args.publish:
         return publish(args.version)
 

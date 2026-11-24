@@ -1,11 +1,12 @@
 # Visual settings editor changelog
 
 Changes of each test release of the visual settings editor bundle, newest first, as Morphe Manager shows them.
-Drafted with `visual-editor/bundle/changelog.py --version 0.1.0-test.N`, then tidied by hand before the release.
+Drafted with `visual-editor/bundle/changelog.py --version 0.1.N` (test N), then tidied by hand before the release.
+Versions carry no "-" suffix: Manager treats those as prereleases and leaves them out of the changelog.
 The patcher engine's own changelog is in docs/PATCHER-CHANGELOG.md.
 
 
-# [0.1.0-test.12](https://github.com/desumax/morphe-patcher-visual/compare/visual-editor-test-11...visual-editor-test-12) (2026-11-24)
+# [0.1.12](https://github.com/desumax/morphe-patcher-visual/compare/visual-editor-test-11...visual-editor-test-12) (2026-11-24)
 
 
 ### Features
@@ -26,7 +27,7 @@ The patcher engine's own changelog is in docs/PATCHER-CHANGELOG.md.
 * **YouTube - Visual settings editor:** Morphe Manager shows each release's changes (it showed the same one-line text every time)
 
 
-# [0.1.0-test.11](https://github.com/desumax/morphe-patcher-visual/compare/visual-editor-test-10...visual-editor-test-11) (2026-11-24)
+# [0.1.11](https://github.com/desumax/morphe-patcher-visual/compare/visual-editor-test-10...visual-editor-test-11) (2026-11-24)
 
 
 ### Features
@@ -52,7 +53,7 @@ The patcher engine's own changelog is in docs/PATCHER-CHANGELOG.md.
 * **YouTube - Visual settings editor:** Popups open and close 1.5x as fast
 
 
-# [0.1.0-test.10](https://github.com/desumax/morphe-patcher-visual/compare/visual-editor-test-9...visual-editor-test-10) (2026-11-24)
+# [0.1.10](https://github.com/desumax/morphe-patcher-visual/compare/visual-editor-test-9...visual-editor-test-10) (2026-11-24)
 
 
 ### Features
@@ -83,7 +84,7 @@ The patcher engine's own changelog is in docs/PATCHER-CHANGELOG.md.
 * **YouTube - Visual settings editor:** Popups grow from the tapped button on the compositor; quicker comparisons and stories
 
 
-# [0.1.0-test.9](https://github.com/desumax/morphe-patcher-visual/compare/visual-editor-test-1...visual-editor-test-9) (2026-11-24)
+# [0.1.9](https://github.com/desumax/morphe-patcher-visual/compare/visual-editor-test-1...visual-editor-test-9) (2026-11-24)
 
 
 ### Features
