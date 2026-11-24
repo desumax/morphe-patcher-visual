@@ -1502,6 +1502,16 @@ function setSearch(on) {
   if (on) { stopDemo(); stopScenario(); setPicker(false); $("q").value = query; setTimeout(() => { $("q").focus(); $("q").select(); }, 60) /* a remembered search is selected, so one key replaces or clears it */; $("scroller").scrollTop = 0; renderList(); }
   else { $("q").blur(); renderStage(); renderList(); }
 }
+const SEARCH_LITTLE = new Set(["a", "an", "the", "to", "in", "on", "of", "for", "and", "or", "into", "at", "by", "with"]);
+const SEARCH_SAME = [["swipe", "pull", "slide", "drag", "flick"], ["zoom", "pinch"], ["hide", "remove"], ["button", "btn"], ["fullscreen", "full"]];
+const searchStem = w => { w = w.replace(/(?:ing|ed|es|s)$/, ""); if (w.length > 3) w = w.replace(/e$/, ""); return w.replace(/([b-df-hj-np-tv-z])\1$/, "$1"); };
+const searchStems = t => String(t).toLowerCase().replace(/[-_/·›.,:;()"“”']+/g, " ").split(/\s+/).filter(Boolean).map(searchStem);
+// the typed words, each as the stems that may stand for it
+function searchTerms(q) {
+  const raw = String(q).toLowerCase().replace(/[-_/·›.,:;()"“”']+/g, " ").split(/\s+/).filter(Boolean);
+  const kept = raw.filter(w => !SEARCH_LITTLE.has(w));
+  return (kept.length ? kept : raw).map(w => { const st = searchStem(w), grp = SEARCH_SAME.find(g => g.some(x => searchStem(x) === st)); return grp ? grp.map(searchStem) : [st]; });
+}
 function renderSearch() {
   $("list").dataset.view = "search";
   const q = query.trim().toLowerCase();
@@ -1509,11 +1519,18 @@ function renderSearch() {
   const all = CAT.preferences.filter(p => inYtVersion(p.key) && !(p.type === "screen" && offDevice(p.key)));
   if (!q) { paint($("list"), `<div class="shint">Type to search all ${all.length} settings.</div>`); return; }
   const words = q.split(/\s+/).filter(Boolean);
+  // a search reads words the way a person types them (Max, Nov 24: "Pull up to fullscreen" found nothing):
+  // hyphens and underscores are spaces ("swipe-up", the key's "pulled_up"), word endings don't matter
+  // (pulled, pulling, pull), the gesture verbs stand for each other (swipe, pull, slide, drag, flick),
+  // and little words (to, the, in...) only count when nothing else is typed. Every setting's own title,
+  // the title the list shows (the clean design drops Hide / Disable), its descriptions, sub-screen, tab,
+  // group heading and key are searched.
+  const terms = searchTerms(q);
   const hits = [];
   for (const p of all) {
     const sec = SECTIONS.find(s => s.id === resSection(p.key));
-    const hay = `${title(p.key)} ${p.summary || ""} ${p.summaryOn || ""} ${p.summaryOff || ""} ${p.subScreenTitle || ""} ${placeLabel(resSection(p.key))} ${p.key}`.toLowerCase();
-    if (!words.every(w => hay.includes(w))) continue;
+    const hay = searchStems(`${title(p.key)} ${shownTitle(p.key)} ${p.summary || ""} ${p.summaryOn || ""} ${p.summaryOff || ""} ${p.subScreenTitle || ""} ${placeLabel(resSection(p.key))} ${p.key}`);
+    if (!terms.every(alts => alts.some(w => hay.some(h => h.startsWith(w))))) continue;
     const t = title(p.key).toLowerCase();
     hits.push({ p, sec, score: (t.startsWith(q) ? 0 : t.includes(q) ? 1 : 2) });
   }

@@ -236,6 +236,10 @@ function fitDev(orient) {
     const S = { side, row, column: col, top }, WH = { side: sideWH, row: rowWH, column: colWH, top: topWH };
     let pick = side >= Math.max(row, col) * 1.04 ? "side" : row >= col || scTurns ? "row" : "column";
     if (top >= S[pick] * 1.06) pick = "top";
+    // a new round of the same comparison starts in the layout the last round ended in (Max, Nov 24: Show
+    // only in fullscreen flashed its labels beside the phones at each restart, before the turn put them
+    // back on top): every round looks the same, and only a real change (another preview size) re-picks
+    if (first && !resized && pairMemo && pairMemo.k === scPlaying && pairMemo.size === canvas.clientWidth + "x" + canvas.clientHeight && S[pairMemo.lay]) pick = pairMemo.lay;
     // a caption changing mid-story must not flip the layout back and forth or nudge the size:
     // keep the current layout (and scale) unless the new one is clearly better
     // (not when the preview itself changed size: then the pair takes the layout a new pair would get there,
@@ -255,7 +259,7 @@ function fitDev(orient) {
     const snap = c => inPair(gen, c);
     // where each caption was last drawn (a phone may already have turned before this call)
     const before = moved ? caps.map(c => c._pos || snap(c)) : null;
-    gen.dataset.lay = pick;
+    gen.dataset.lay = pick; pairMemo = { k: scPlaying, lay: pick, size: canvas.clientWidth + "x" + canvas.clientHeight };
     // The final layout lands at once, captions in their final places (hidden while their gliding copies
     // move); the phones and labels glide there (pairGlide). Taking the captions out of the flow until
     // the end of the move made everything jump into place when they came back.
@@ -310,6 +314,7 @@ let scTold = false;
 // A story that turns a phone keeps its two phones side by side: stacked phones would have to swap to side
 // by side as one turns (or back), and on the way the moving phone crosses the other. Read from the code.
 let scTurns = false;
+let scPlaying = null, pairMemo = null; // the comparison on screen, and the layout its pair has now (fitDev)
 const turnsPhone = fn => /\b(turn|turnTo|rotate)\(/.test(String(fn));
 const SCN_TURNS = new Set(); // stories whose turn is in a helper they are given (gestureScen's result)
 const toldInside = fn => /toast7\(|check7\(|toastin/.test(String(fn));
@@ -1149,23 +1154,12 @@ gestureScen("disable_fullscreen_pulled_up_gesture", "port", [.5, .3], [.5, .08],
 // down slides it into fullscreen (not down to the miniplayer)
 const r3 = dev => { const v = dev.querySelector(".dv-video"); if (v) { v.style.transition = "transform .3s var(--ease)"; v.style.transformOrigin = "50% 0"; v.style.transform = "scaleY(1.25)"; } later(() => turnTo(dev, "land", miniVideo(6)), 260); }; r3.text = "slides into fullscreen";
 gestureScen("disable_fullscreen_sliding_down_gesture", "port", [.5, .1], [.5, .45], "Swipe down on the player", r3);
-scen("fullscreen", "disable_fullscreen_zoom_gesture", (box, disabled) => {
-  situation("Fullscreen, two fingers spread");
-  box.innerHTML = device("land", `<div class="zv" style="position:absolute;left:10%;right:10%;top:0;bottom:0;background:${ART[6]};transition:all .5s var(--ease)"></div>`);
-  const dev = box.querySelector(".dev"), f1 = box.querySelector("#scFinger"), zv = box.querySelector(".zv"); const W = dev.clientWidth, H = dev.clientHeight;
-  const f2 = f1.cloneNode(true); f2.id = ""; dev.appendChild(f2);
-  at(150, () => { fingerTo(f1, W * .44, H * .55); fingerTo(f2, W * .56, H * .45); });
-  at(420, () => { fingerTo(f1, W * .2, H * .85, 600); fingerTo(f2, W * .8, H * .15, 600); });
-  at(800, () => { if (!disabled) { zv.style.left = "0"; zv.style.right = "0"; zv.style.transform = "scale(1.1)"; } });
-  at(1150, () => { f1.classList.remove("show"); f2.classList.remove("show"); if (disabled) dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:40%">Nothing happens</div>`); });
-  return disabled ? "Pinch does nothing: the video stays fitted" : "Pinch: the video zooms to fill the screen";
-});
-
-scen("fullscreen", "restore_pinch_to_zoom", (box, on) => {
-  situation("Fullscreen, two fingers spread, then pinch back a little");
-  // Morphe's restore scales the video with the fingers, smoothly, anywhere from 1x up to 8x; without it
-  // (YouTube 21.36+) a pinch only snaps between fitted and filled
-  box.innerHTML = device("land", `<div class="zv" style="position:absolute;left:10%;right:10%;top:0;bottom:0;background:${ART[0]};transform-origin:50% 50%"></div><div class="zr7 toastin" style="top:8px;opacity:0;transition:opacity .2s">1.0x</div>`);
+// Two fingers on the fullscreen video, one shared story for both pinch settings (Max, Nov 24: Disable
+// pinch-to-zoom showed the snap, not the zoom Restore pinch to zoom already drew). mode: "zoom" (the
+// video scales with the fingers, in and out, with its zoom readout), "snap" (a pinch only jumps from
+// fitted to filled) or "none" (nothing happens).
+function pinchStory(box, mode, art) {
+  box.innerHTML = device("land", `<div class="zv" style="position:absolute;left:10%;right:10%;top:0;bottom:0;background:${ART[art]};transform-origin:50% 50%"></div><div class="zr7 toastin" style="top:8px;opacity:0;transition:opacity .2s">1.0x</div>`);
   const dev = box.querySelector(".dev"), f1 = box.querySelector("#scFinger"), zv = box.querySelector(".zv"), zr = box.querySelector(".zr7"); const W = dev.clientWidth, H = dev.clientHeight;
   const f2 = f1.cloneNode(true); f2.id = ""; dev.appendChild(f2);
   const spread = (d, ms) => { fingerTo(f1, W * (.5 - d), H * (.5 + d * .55), ms); fingerTo(f2, W * (.5 + d), H * (.5 - d * .55), ms); };
@@ -1173,11 +1167,24 @@ scen("fullscreen", "restore_pinch_to_zoom", (box, on) => {
   at(150, () => spread(.06, 0));
   at(380, () => {
     spread(.3, 900 * scStretch);
-    if (on) { zr.style.opacity = "1"; zoomTo(2.4, 900 * scStretch); }
+    if (mode === "zoom") { zr.style.opacity = "1"; zoomTo(2.4, 900 * scStretch); }
   });
-  if (!on) at(700, () => { zv.style.transition = "left .22s var(--ease), right .22s var(--ease)"; zv.style.left = zv.style.right = "0"; });
-  at(1450, () => { spread(.2, 500 * scStretch); if (on) zoomTo(1.7, 500 * scStretch); });
+  if (mode === "snap") at(700, () => { zv.style.transition = "left .22s var(--ease), right .22s var(--ease)"; zv.style.left = zv.style.right = "0"; });
+  if (mode === "none") { at(1150, () => { f1.classList.remove("show"); f2.classList.remove("show"); toast7(dev, "Nothing happens", "40%"); }); return; }
+  at(1450, () => { spread(.2, 500 * scStretch); if (mode === "zoom") zoomTo(1.7, 500 * scStretch); });
   at(2200, () => { f1.classList.remove("show"); f2.classList.remove("show"); });
+}
+scen("fullscreen", "disable_fullscreen_zoom_gesture", (box, disabled) => {
+  situation("Fullscreen, two fingers spread, then pinch back a little");
+  pinchStory(box, disabled ? "none" : "zoom", 6);
+  return disabled ? "Pinch does nothing: the video stays fitted" : "Pinch: the video zooms with your fingers";
+});
+
+scen("fullscreen", "restore_pinch_to_zoom", (box, on) => {
+  situation("Fullscreen, two fingers spread, then pinch back a little");
+  // Morphe's restore scales the video with the fingers, smoothly, anywhere from 1x up to 8x; without it
+  // (YouTube 21.36+) a pinch only snaps between fitted and filled
+  pinchStory(box, on ? "zoom" : "snap", 0);
   return on ? "Pinch: the zoom follows your fingers, in and out (up to 8x)" : "Pinch: the video only snaps from fitted to filled";
 });
 
@@ -1469,7 +1476,7 @@ const FOOT_OFF = new Set([
   "morphe_download_force_4k", "morphe_sb_auto_hide_skip_button", "morphe_disable_fullscreen_ambient_mode", // the phones say it (Max, Nov 23 PM)
 ]);
 let askOnly = false; // drawing only the default side while the other waits for a choice
-const SCN_NO_FLASH = new Set(["morphe_disable_drc_audio"]); // its differences are the whole text card: no blue flash (Max, Nov 23)
+const SCN_NO_FLASH = new Set(["morphe_disable_drc_audio", "morphe_post_buttons_layout"]); // its differences are the whole text card: no blue flash (Max, Nov 23)
 const SCN_SELF_DUO = new Set(["morphe_disable_player_popup_panels", "morphe_playback_buffer_size", "morphe_skip_silence_minimum_pause", "morphe_hide_account_menu_filter_strings"]); // one phone that tells all values itself (a text: what it holds now)
 const DUO_OTHER = { morphe_speed_tap_and_hold: 4 };
 // Short words beside the phones where Morphe's option names don't read as a contrast on their own
@@ -1525,7 +1532,7 @@ function playScenario(k, prevValue) {
   const d = defaults[k], choices = entriesFor(k).filter(e => !sameVal(e.value, d));
   const ask = !self && PREF[k].type !== "boolean" && choices.length > 1 && sameVal(V(k), d) && (prevValue === undefined || sameVal(prevValue, d));
   const draw = () => {
-    clock.start("steps"); scKey = k; scStretch = stretch; scTold = toldInside(fn) || FOOT_OFF.has(k); scTurns = turnsPhone(fn) || SCN_TURNS.has(k); scCollect = [];
+    clock.start("steps"); scKey = k; scPlaying = k; scStretch = stretch; scTold = toldInside(fn) || FOOT_OFF.has(k); scTurns = turnsPhone(fn) || SCN_TURNS.has(k); scCollect = [];
     scDrawing = true;
     let failed = null;
     try { drawSides(); } catch (err) { failed = err; } finally { scDrawing = false; scKey = null; const list = scCollect; scCollect = null; if (!failed) startCollected(list); }
