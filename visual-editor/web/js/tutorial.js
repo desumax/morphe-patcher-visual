@@ -68,7 +68,7 @@ function runTutorial(startAt) {
   let tk = 1;
   const at2 = (ms, fn) => clock.after("tutPage", ms * tk, fn);
   const centerOf = el => { const r = el.getBoundingClientRect(), b = box(); return [r.left - b.left + r.width / 2, r.top - b.top + r.height / 2]; };
-  const move = (el, ms, dx = 0, dy = 0) => { ms *= tk; const [x, y] = centerOf(el); f.style.transition = ms ? `left ${ms}ms var(--ease), top ${ms}ms var(--ease), opacity 160ms` : "opacity 160ms"; f.style.left = (x + dx) + "px"; f.style.top = (y + dy) + "px"; f.classList.add("show"); };
+  const move = (el, ms, dx = 0, dy = 0) => { ms *= tk; const [x, y] = centerOf(el); fingerShow(f, x + dx, y + dy, ms); };
   const tap = () => { f.classList.remove("tap"); void f.offsetWidth; f.classList.add("tap"); };
   // a hold charges for as long as the app's (480 ms): the ring fills on the button, the bar on the card
   const hold = (onCast, fn) => {

@@ -60,7 +60,7 @@ function label(text, bad, ms, force) {
 }
 const ENDSCREEN_SEL = new Set(["morphe_hide_autoplay_preview", "morphe_hide_end_screen_suggested_video"]);
 function finger() { return document.querySelector("#stage .finger"); }
-function place(f, x, y, ms) { f.style.transition = ms ? `left ${ms}ms var(--ease), top ${ms}ms var(--ease), opacity 120ms` : "opacity 120ms"; f.style.left = x + "px"; f.style.top = y + "px"; f.classList.add("show"); }
+function place(f, x, y, ms) { fingerShow(f, x, y, ms); }
 function hideF(f, after) { dT(() => { f.classList.remove("show", "hold"); }, after); }
 function tapAt(x, y, f = finger()) { if (!f) return; place(f, x, y); f.classList.remove("tap"); void f.offsetWidth; f.classList.add("tap"); hideF(f, 520); }
 function fmt(total, pct) { const s = Math.round(total * pct / 100); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }

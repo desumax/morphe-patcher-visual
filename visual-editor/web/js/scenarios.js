@@ -17,12 +17,19 @@ const DEV_SIZE = { port: [92, 172], land: [190, 108], duo: [206, 186] };
 // sides: [[value, label], [value, label]] from duoValues, so the words and sides match the card's toggle
 // a hand-built pair: the same markup as a generated one, so it is laid out the same way (labels beside it)
 const duo7 = (left, right, sides = [[false, "Off"], [true, "On"]]) => `<div class="duo7 gen">${[left, right].map((html, i) => `<div class="dl7"><span class="${NEG_WORD.has(sides[i][1]) ? "neg" : i ? "on" : ""}">${esc(sides[i][1])}</span><div class="side">${device("port", html)}</div><div class="sf7"></div></div>`).join("")}</div>`;
-function device(orient, inner, extra = "") {
-  const [w, h] = DEV_SIZE[orient];
-  return `<div class="dev ${orient}" style="width:${w}px;height:${h}px;${extra}"><div class="waves l"></div><div class="waves r"></div>${inner}<div class="finger" id="scFinger">${I("gesture")}</div></div>`;
+// A story about the player alone can show only the top of the upright phone (`top: true`): the
+// player and a little of the page under it, open at the bottom. Two whole upright phones side by
+// side are narrow and tall, so the preview's height limited them and most of its width stayed black
+// (Max, round 140: "too many black bars, optimize the space usage"); the top part is drawn about
+// 1.4 times larger in the same room. Turned on its side the phone is whole, as before.
+const DEV_TOP = [92, 120];
+const devSize = (dev, orient) => orient === "port" && dev && dev.classList.contains("top7") ? DEV_TOP : DEV_SIZE[orient];
+function device(orient, inner, extra = "", top = false) {
+  const [w, h] = top && orient === "port" ? DEV_TOP : DEV_SIZE[orient];
+  return `<div class="dev ${orient}${top ? " top7" : ""}" style="width:${w}px;height:${h}px;${extra}"><div class="waves l"></div><div class="waves r"></div>${inner}<div class="finger" id="scFinger">${I("gesture")}</div></div>`;
 }
 const playerArea = (i, overlay = "") => `<div class="dv-video" style="background:${ART[i]}">${overlay}</div><div class="dv-below"><i></i><i></i><i></i></div>`;
-function setOrient(dev, orient) { const [w, h] = DEV_SIZE[orient]; dev.classList.remove("port", "land"); dev.classList.add(orient); dev.style.width = w + "px"; dev.style.height = h + "px"; }
+function setOrient(dev, orient) { const [w, h] = devSize(dev, orient); dev.classList.remove("port", "land"); dev.classList.add(orient); dev.style.width = w + "px"; dev.style.height = h + "px"; }
 // in a pair, a phone changing shape re-lays out the pair, and everything glides there (see fitDev)
 function rotate(dev, orient) { const g = dev.closest(".duo7.gen"); if (g) { g._turn = true; g._was = g._was || pairSnap(g); } setOrient(dev, orient); fitDevSoon(orient); }
 // Performance (Max, Nov 22): a phone turning and its caption changing in the same step, or both phones
@@ -225,7 +232,7 @@ function fitDev(orient) {
     return;
   }
   const duo = box && box.querySelector(".duo7"), dev = duo || (box && box.querySelector(".dev")); if (!dev) return;
-  const o = duo ? "duo" : orient || (dev.classList.contains("land") ? "land" : "port"), [w, h] = DEV_SIZE[o];
+  const o = duo ? "duo" : orient || (dev.classList.contains("land") ? "land" : "port"), [w, h] = duo ? DEV_SIZE.duo : devSize(dev, o);
   const sc = fitScale(w, h), first = !dev.style.getPropertyValue("--dsc");
   // a phone or a hand-built pair appears at its size; only later changes animate (the popup panels pair
   // used to zoom in from its unscaled size because .duo7 transitions its scale)
@@ -333,7 +340,17 @@ function startCollected(list) {
     try { f(); } catch (e) { setTimeout(() => { throw e; }); } finally { scSide = p; }
   })));
 }
-function fingerTo(f, x, y, ms = 0) { f.style.transition = ms ? `left ${ms}ms var(--ease), top ${ms}ms var(--ease), opacity 120ms` : "opacity 120ms"; f.style.left = x + "px"; f.style.top = y + "px"; f.classList.add("show"); }
+// One way for every finger to arrive (stage demos, phone stories, the tutorial): it fades in where
+// it lands (Max, round 140: "a fade in, rather than a pop in", for every animation). A hidden finger
+// is first put in its place with transitions off: a finger just made or just reset had no drawn
+// start to fade from, so it popped in, and one hidden elsewhere slid in from its last spot.
+const FINGER_FADE = 200;
+function fingerShow(f, x, y, ms = 0) {
+  if (!f.classList.contains("show")) { f.style.transition = "none"; f.style.left = x + "px"; f.style.top = y + "px"; void f.offsetWidth; ms = 0; }
+  f.style.transition = (ms ? `left ${ms}ms var(--ease), top ${ms}ms var(--ease), ` : "") + `opacity ${FINGER_FADE}ms var(--ease)`;
+  f.style.left = x + "px"; f.style.top = y + "px"; f.classList.add("show");
+}
+function fingerTo(f, x, y, ms = 0) { fingerShow(f, x, y, ms); }
 function tapF(f) { f.classList.remove("tap"); void f.offsetWidth; f.classList.add("tap"); }
 const miniSeek = (pct = 30, marks = []) => `<div class="msk" style="position:absolute;left:8%;right:8%;bottom:16%;height:3px;background:rgba(255,255,255,.3)"><div class="mp" style="position:absolute;left:0;top:0;bottom:0;width:${pct}%;background:#ff0033;transition:width .9s linear"></div>${marks.map(m => `<i style="position:absolute;left:${m}%;top:-1px;width:2px;height:5px;background:#000"></i>`).join("")}</div>`;
 const miniVideo = (i = 0, h = "100%") => `<div style="position:absolute;left:0;right:0;top:0;height:${h};background:${ART[i]}"></div>`;
@@ -429,7 +446,7 @@ const at_ = (fx, fy, size) => `position:absolute;left:calc(${(fx * 100).toFixed(
 scen("player", "fullscreen_video_scale_button_fullscreen_only", (box, on) => {
   const [fx, fy] = anchor("morphe_fullscreen_video_scale_button", .78, .86);
   const btn = `<div class="scb" style="${at_(fx, fy, 18)};border-radius:5px;background:rgba(0,0,0,.45);display:grid;place-items:center;transition:opacity .4s var(--ease)">${I("crop", "ico", 'style="width:13px;height:13px"')}</div>`;
-  box.innerHTML = device("port", playerArea(0, btn));
+  box.innerHTML = device("port", playerArea(0, btn), "", true);
   const dev = box.querySelector(".dev"), b = box.querySelector(".scb");
   // Start in the new state: with the option on, the portrait player never shows the button.
   // No sentences under the phones (FOOT_OFF): the phones get that room and the button says it.
@@ -1037,7 +1054,7 @@ function turn(dev, orient, then) {
   if (cur === orient) { if (then) then(); return; }
   const gen = dev.closest(".duo7.gen"); if (gen) return turnInPair(gen, dev, cur, orient, then);
   // while it turns, the phone is scaled so its rotated outline still fits the preview
-  const [w, h] = DEV_SIZE[cur];
+  const [w, h] = devSize(dev, cur);
   dev.querySelectorAll(".finger").forEach(f => f.classList.remove("show"));
   dev.style.transition = "transform .5s var(--ease), scale .5s var(--ease)"; dev.style.transform = `rotate(${orient === "land" ? -90 : 90}deg)`;
   const inPair = !!dev.closest(".duo7.gen"); // in a pair the turning phone shrinks to stay inside its own slot
@@ -1060,7 +1077,7 @@ function turn(dev, orient, then) {
 // the other phone, the labels and the captions glide to their new places (fitDev) as it turns. It ends
 // exactly in the box of the new orientation, where it is re-laid out for it and nothing jumps.
 function turnInPair(gen, dev, cur, orient, then) {
-  const slot = dev.parentElement, [w0, h0] = DEV_SIZE[cur], [w1, h1] = DEV_SIZE[orient];
+  const slot = dev.parentElement, [w0, h0] = devSize(dev, cur), [w1, h1] = devSize(dev, orient);
   dev.querySelectorAll(".finger").forEach(f => f.classList.remove("show"));
   gen.querySelectorAll(":scope > .dl7 > .sf7").forEach(c => { if (!c._gliding) c._pos = inPair(gen, c); });
   gen._was = pairSnap(gen); gen._turn = true;
