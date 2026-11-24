@@ -705,13 +705,41 @@ final class WebEditorDialog extends Dialog {
         }
     }
 
+    /**
+     * The lowest Chromium the page is written for (Max, Nov 24: 138, the last version Android 8 and
+     * 9 get, so only a WebView that never updates is older). The page checks it too (index.html),
+     * for a WebView that does not say its version.
+     */
+    static final int MIN_CHROMIUM = 138;
+
     static boolean available() {
         try {
             // Throws if no WebView provider is installed or it is being updated.
             android.webkit.CookieManager.getInstance();
-            return true;
         } catch (Throwable ex) {
             return false;
+        }
+        int major = webViewMajor();
+        if (major > 0 && major < MIN_CHROMIUM) {
+            // the regular list for this visit, with the "unsupported" toast; the setting stays on, so
+            // the redesign comes back once WebView updates
+            VisualEditorEntry.webViewTooOld = true;
+            return false;
+        }
+        return true;
+    }
+
+    /** The installed WebView's Chromium version (138 from "138.0.7204.63"), or 0 if it can't be read. */
+    static int webViewMajor() {
+        try {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return 0;
+            PackageInfo p = WebView.getCurrentWebViewPackage();
+            String v = p == null ? null : p.versionName;
+            if (v == null) return 0;
+            int dot = v.indexOf('.');
+            return Integer.parseInt((dot > 0 ? v.substring(0, dot) : v).trim());
+        } catch (Throwable ex) {
+            return 0;
         }
     }
 }

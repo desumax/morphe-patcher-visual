@@ -60,18 +60,20 @@
 /* Text centred top to bottom in every black pill (corner readouts, messages) and the Off / On labels: the
    line box is trimmed to the capital letters and the baseline (text-box), so equal padding above and below
    centres the letters themselves. A plain line box keeps the font's taller ascent above the letters, which
-   pushed the text up. Older engines keep the previous look. */
-@supports (text-box: trim-both cap alphabetic) {
-  .dev .badge7, .dev .toastin, .dl7 > span { text-box: trim-both cap alphabetic; }
-  .dev .badge7 { padding: .3em .45em; }
-  .dev .toastin { padding: .42em .8em; }
-  .dl7 > span { padding: .42em .75em; }
-  .dev .toastin svg, .dev .badge7 svg { vertical-align: -.12em; }
-}
-.tgt7 { transition: max-height .32s var(--ease), max-width .32s var(--ease), opacity .21s, margin .32s, padding .32s; max-height: 90px; overflow: hidden; }
-.tgt7.w7 { display: inline-flex; max-width: 90px; vertical-align: bottom; flex: none; white-space: nowrap; }
-.tgt7.gone7 { max-height: 0 !important; opacity: 0; margin-top: 0 !important; margin-bottom: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }
-.tgt7.w7.gone7 { max-width: 0 !important; max-height: none !important; }
+   pushed the text up. (text-box is in every supported WebView since the Chromium 138 minimum.) */
+.dev .badge7, .dev .toastin, .dl7 > span { text-box: trim-both cap alphabetic; }
+.dev .badge7 { padding: .3em .45em; }
+.dev .toastin { padding: .42em .8em; }
+.dl7 > span { padding: .42em .75em; }
+.dev .toastin svg, .dev .badge7 svg { vertical-align: -.12em; }
+/* A part that goes (or comes back) folds by its real size: height (or width) from auto to 0, which the
+   Chromium 138 minimum allows (interpolate-size, 129). The old max-height: 90px stand-in folded at an
+   uneven speed (a short part only moved in the last fifth of the time, a pause first) and clipped a part
+   taller than 90 px. */
+.tgt7 { interpolate-size: allow-keywords; transition: height .32s var(--ease), width .32s var(--ease), opacity .21s, margin .32s, padding .32s; overflow: hidden; }
+.tgt7.w7 { display: inline-flex; vertical-align: bottom; flex: none; white-space: nowrap; }
+.tgt7.gone7 { height: 0 !important; opacity: 0; margin-top: 0 !important; margin-bottom: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }
+.tgt7.w7.gone7 { width: 0 !important; height: auto !important; }
 .tgt7.instant7 { transition: none !important; }
 .pg7 > .tgt7.gone7 { margin-bottom: -5px !important; }
 .tgt7.mark7 { outline: 1.5px dashed #ff0033; outline-offset: 1px; border-radius: 3px; animation: mark7 .9s ease-in-out infinite alternate; }

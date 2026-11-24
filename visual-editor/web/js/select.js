@@ -171,6 +171,8 @@ function sizeSnap(el) {
   const a = el._sizeA; if (!a || a.playState !== "running" || el._sizeFrom) return;
   const r = el.getBoundingClientRect(); el._sizeFrom = { w: r.width, h: r.height, o: +getComputedStyle(el).opacity };
 }
+// (The open size stays measured, not auto: many stage parts have a set height of their own, and an
+// unfold to auto would end at their content's height and then jump to the set one.)
 function sizeAnim(el, show, ms = SIZE_MS) {
   sizeSnap(el); const from = el._sizeFrom; el._sizeFrom = null;
   if (el._sizeA) { const p = el._sizeA; el._sizeA = null; p.cancel(); }

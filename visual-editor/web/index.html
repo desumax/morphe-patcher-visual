@@ -1,16 +1,22 @@
 <title>Morphe Visual Settings</title>
 <script>
-/* Old WebView guard (plain ES5, runs before anything else). The editor needs Chromium 105 or newer
-   (individual transform properties for the comparison glides, :has() and container queries for the
-   layout). Phones with Google Play keep their WebView updated (Android 8 and 9 up to 138, newer
-   Android to the current one); a WebView frozen at its factory version (no Play updates) can be
-   older, and the editor would draw broken or not at all. Then the app shows the regular Morphe
+/* Old WebView guard (plain ES5, runs before anything else). The editor needs Chromium 138 or newer
+   (Max, Nov 24): size animations to and from auto (interpolate-size, 129), first-appearance fades
+   (@starting-style, 117), :has() and container queries (105), individual transform properties (104).
+   138 is the last version Android 8 and 9 get, so every phone whose WebView updates through Google
+   Play has it; only a WebView frozen at its factory version is older, and the editor would draw
+   broken there. The app checks the WebView's version itself before it loads this page
+   (WebEditorDialog.MIN_CHROMIUM); this guard covers a WebView that hides its version. Then the app shows the regular Morphe
    settings list for this visit instead of a broken page, with the toast "Redesign unsupported on
    this device" (the app shows the toast: this page is gone by then). In a plain browser the same
    words are shown as a banner. */
 (function () {
-  var ok = false;
-  try { ok = !!(window.CSS && CSS.supports && CSS.supports("translate", "1px") && CSS.supports("selector(:has(a))") && CSS.supports("container-type", "inline-size")); } catch (e) { ok = false; }
+  var MIN = 138, ok = false;
+  try {
+    var m = /\bChrome\/(\d+)/.exec(navigator.userAgent || "");
+    // a Chromium that names its version (every Android WebView): the version; any other browser: the features
+    ok = m ? +m[1] >= MIN : !!(window.CSS && CSS.supports && CSS.supports("interpolate-size", "allow-keywords") && CSS.supports("selector(:has(a))") && CSS.supports("container-type", "inline-size"));
+  } catch (e) { ok = false; }
   if (ok) return;
   window.MORPHE_OLD_WEBVIEW = true;
   // the app shows the regular list for this visit and keeps the setting on (it works again after a
@@ -19,7 +25,7 @@
   document.addEventListener("DOMContentLoaded", function () {
     var d = document.createElement("div");
     d.setAttribute("style", "position:fixed;left:0;right:0;top:0;z-index:99999;padding:12px 16px;background:#5c2b2b;color:#fff;font:14px/1.4 sans-serif");
-    d.textContent = "Redesign unsupported on this device. It needs Android System WebView (or a browser) on Chromium 105 or newer.";
+    d.textContent = "Redesign unsupported on this device. It needs Android System WebView (or a browser) on Chromium 138 or newer.";
     document.body.appendChild(d);
   });
 })();
