@@ -17,19 +17,58 @@ const DEV_SIZE = { port: [92, 172], land: [190, 108], duo: [206, 186] };
 // sides: [[value, label], [value, label]] from duoValues, so the words and sides match the card's toggle
 // a hand-built pair: the same markup as a generated one, so it is laid out the same way (labels beside it)
 const duo7 = (left, right, sides = [[false, "Off"], [true, "On"]]) => `<div class="duo7 gen">${[left, right].map((html, i) => `<div class="dl7"><span class="${NEG_WORD.has(sides[i][1]) ? "neg" : i ? "on" : ""}">${esc(sides[i][1])}</span><div class="side">${device("port", html)}</div><div class="sf7"></div></div>`).join("")}</div>`;
-// A story about the player alone can show only the top of the upright phone (`top: true`): the
-// player and a little of the page under it, open at the bottom. Two whole upright phones side by
-// side are narrow and tall, so the preview's height limited them and most of its width stayed black
-// (Max, round 140: "too many black bars, optimize the space usage"); the top part is drawn about
-// 1.4 times larger in the same room. Turned on its side the phone is whole, as before.
-const DEV_TOP = [92, 120];
-const devSize = (dev, orient) => orient === "port" && dev && dev.classList.contains("top7") ? DEV_TOP : DEV_SIZE[orient];
-function device(orient, inner, extra = "", top = false) {
-  const [w, h] = top && orient === "port" ? DEV_TOP : DEV_SIZE[orient];
-  return `<div class="dev ${orient}${top ? " top7" : ""}" style="width:${w}px;height:${h}px;${extra}"><div class="waves l"></div><div class="waves r"></div>${inner}<div class="finger" id="scFinger">${I("gesture")}</div></div>`;
+// The faded half phone (Max, rounds 140 to 142). Two whole upright phones side by side are narrow and
+// tall: the preview's height limits them and most of its width stays black. A story whose point sits
+// in the top part of the screen (or the bottom part) shows only that part: the rest of the phone fades
+// out and takes no room, so the pair is drawn about a third larger. The phone keeps its whole drawing
+// (92 x 172, every position in a story stays as it was); only CROP_CUT px of it, at the far end, is
+// cut away (preview.css .crop7). Turned on its side the phone is whole again, the cut sliding away
+// with the turn. Message pills stay in the part that is shown (devBand, keepPillIn, pillOffText).
+// The stories are listed here, by setting, not at each story: one list, one place to add or take out.
+// Not for stories that turn the phone with turn() / turnTo() (their slot is sized for the whole phone);
+// rotate() is fine.
+const CROP_CUT = 44, CROP_FADE = 26; // the same lengths as --cut7 and --fade7 in preview.css
+const CROP7 = {};
+("hide_album_cards hide_artist_cards hide_channel_buttons hide_get_premium_button hide_handle hide_help_feedback_menu "
+  + "hide_history_shelf hide_image_shelf hide_invite_to_message_card hide_notifications_menu_header hide_latest_videos_button "
+  + "hide_notify_me_button hide_search_term_thumbnails hide_show_more_button hide_subscribed_channels_bar "
+  + "hide_subscribed_channels_bar_names hide_unavailable_videos_hidden_banner hide_web_search_results hide_you_may_like_section "
+  + "hide_floating_microphone_button playlist_hide_removal_snackbar hide_aislist_blocklist_home hide_aislist_blocklist_search "
+  + "hide_aislist_warnlist_home hide_aislist_warnlist_search hide_filter_bar_in_comments hide_filter_bar_in_history "
+  + "hide_filter_bar_in_related_videos hide_filter_bar_in_search hide_keyword_content_comments hide_channel_tab "
+  + "override_youtube_music_buttons settings_search_history series_tracker hide_toolbar_microphone_button "
+  + "hide_subscribers_community_guidelines hide_comments_carousel hide_comments_zero_state disable_layout_updates "
+  + "fix_status_bar_layout spoof_app_version theme_color_change_foreground custom_filter bypass_ambient_mode_restrictions "
+  + "enhanced_ambient_mode_dim_while_scrolling fix_transcript minimal_comments_button sanitize_comments_highlighted_search_links "
+  + "hide_shorts_channel hide_shorts_history hide_shorts_notifications hide_shorts_search hide_shorts_subscriptions "
+  + "hide_shorts_live_preview shorts_autoplay_background shorts_disable_background_playback shorts_remember_playback_speed "
+  + "skip_live_shorts autoplay_control disable_playlist_autoplay do_not_remember_loop_video "
+  + "seek_notification_media_prev_next force_original_audio remember_live_stream_position video_delay_bluetooth_only "
+  + "disable_playback_speed_music shorts_quality_default_mobile shorts_quality_default_wifi remember_playback_speed_last_selected "
+  + "remember_video_quality_last_selected remember_shorts_quality_last_selected vot_enabled dearrow_connection_toast "
+  + "restore_original_titles playlist_wide_drag_handles post_image_download open_channel_of_live_avatar "
+  + "fullscreen_video_scale_button_fullscreen_only disable_rolling_number_animations "
+  + "search_comments copy_select_text copy_video_title remove_viewer_discretion_dialog").split(" ").forEach(k => CROP7["morphe_" + k] = "top");
+("queue_type hide_ask_gemini_button hide_sync_button download_force_4k auto_translate_additional_languages "
+  + "advanced_video_quality_menu hide_premium_video_quality shorts_download_flyout_button live_chat_translate "
+  + "live_chat_translate_bold live_chat_translate_use_color live_chat_translate_copy_button hide_comments_live_chat_donators_bar "
+  + "hide_comments_live_chat_scroll_to_bottom_button hide_comments_live_chat_tooltips hide_shorts_video_description "
+  + "hide_shorts_search_suggestions narrow_navigation_buttons navigation_bar_animations miniplayer_disable_horizontal_drag "
+  + "miniplayer_disable_horizontal_drag_playback").split(" ").forEach(k => CROP7["morphe_" + k] = "bot");
+let scKey = null; // the setting whose comparison is being drawn (playScenario), for its phones' crop
+const cropOf = dev => !dev || !dev.classList.contains("crop7") ? "" : dev.classList.contains("cbot7") ? "bot" : "top";
+// the part of a phone that is shown, top to bottom in its own px: all of it, or the part a crop keeps
+// (without the fade, so a message there reads in full)
+function devBand(dev) {
+  const H = dev.clientHeight, c = dev.classList.contains("port") ? cropOf(dev) : "";
+  return c === "top" ? [0, H - CROP_CUT - CROP_FADE] : c === "bot" ? [CROP_CUT + CROP_FADE, H] : [0, H];
+}
+function device(orient, inner, extra = "", crop = scKey && CROP7[scKey]) {
+  const [w, h] = DEV_SIZE[orient], c = crop === true ? "top" : crop || "";
+  return `<div class="dev ${orient}${c ? ` crop7 c${c}7` : ""}" style="width:${w}px;height:${h}px;${extra}"><div class="waves l"></div><div class="waves r"></div>${inner}<div class="finger" id="scFinger">${I("gesture")}</div></div>`;
 }
 const playerArea = (i, overlay = "") => `<div class="dv-video" style="background:${ART[i]}">${overlay}</div><div class="dv-below"><i></i><i></i><i></i></div>`;
-function setOrient(dev, orient) { const [w, h] = devSize(dev, orient); dev.classList.remove("port", "land"); dev.classList.add(orient); dev.style.width = w + "px"; dev.style.height = h + "px"; }
+function setOrient(dev, orient) { const [w, h] = DEV_SIZE[orient]; dev.classList.remove("port", "land"); dev.classList.add(orient); dev.style.width = w + "px"; dev.style.height = h + "px"; }
 // in a pair, a phone changing shape re-lays out the pair, and everything glides there (see fitDev)
 function rotate(dev, orient) { const g = dev.closest(".duo7.gen"); if (g) { g._turn = true; g._was = g._was || pairSnap(g); } setOrient(dev, orient); fitDevSoon(orient); }
 // Performance (Max, Nov 22): a phone turning and its caption changing in the same step, or both phones
@@ -232,7 +271,7 @@ function fitDev(orient) {
     return;
   }
   const duo = box && box.querySelector(".duo7"), dev = duo || (box && box.querySelector(".dev")); if (!dev) return;
-  const o = duo ? "duo" : orient || (dev.classList.contains("land") ? "land" : "port"), [w, h] = duo ? DEV_SIZE.duo : devSize(dev, o);
+  const o = duo ? "duo" : orient || (dev.classList.contains("land") ? "land" : "port"), [w, h0] = DEV_SIZE[o], h = h0 - (o === "port" && cropOf(dev) ? CROP_CUT : 0);
   const sc = fitScale(w, h), first = !dev.style.getPropertyValue("--dsc");
   // a phone or a hand-built pair appears at its size; only later changes animate (the popup panels pair
   // used to zoom in from its unscaled size because .duo7 transitions its scale)
@@ -446,7 +485,7 @@ const at_ = (fx, fy, size) => `position:absolute;left:calc(${(fx * 100).toFixed(
 scen("player", "fullscreen_video_scale_button_fullscreen_only", (box, on) => {
   const [fx, fy] = anchor("morphe_fullscreen_video_scale_button", .78, .86);
   const btn = `<div class="scb" style="${at_(fx, fy, 18)};border-radius:5px;background:rgba(0,0,0,.45);display:grid;place-items:center;transition:opacity .4s var(--ease)">${I("crop", "ico", 'style="width:13px;height:13px"')}</div>`;
-  box.innerHTML = device("port", playerArea(0, btn), "", true);
+  box.innerHTML = device("port", playerArea(0, btn));
   const dev = box.querySelector(".dev"), b = box.querySelector(".scb");
   // Start in the new state: with the option on, the portrait player never shows the button.
   // No sentences under the phones (FOOT_OFF): the phones get that room and the button says it.
@@ -818,9 +857,12 @@ const gestureScen = (key, orient, from, to, label, result) => (turnsPhone(result
 // every scenario's pills however they were added.
 function keepPillIn(t) {
   const dev = t.closest(".dev"); if (!dev || !t.isConnected || getComputedStyle(t).position !== "absolute") return;
-  const H = dev.clientHeight, h = t.offsetHeight, mid = /-50%/.test(t.style.translate || "");
-  const bottom = t.offsetTop + (mid ? h / 2 : h);
-  if (bottom > H - 3) { t.style.top = Math.max(2, t.offsetTop - (bottom - (H - 3))) + "px"; t.style.bottom = "auto"; }
+  // inside the part of the phone that is shown (a faded half phone keeps only part of it: devBand)
+  const [B0, B1] = devBand(dev), h = t.offsetHeight, mid = /-50%/.test(t.style.translate || "");
+  const top = t.offsetTop - (mid ? h / 2 : 0);
+  let dy = top + h > B1 - 3 ? B1 - 3 - (top + h) : 0;
+  if (top + dy < B0 + 2) dy = B0 + 2 - top;
+  if (dy) { t.style.top = (t.offsetTop + dy) + "px"; t.style.bottom = "auto"; }
 }
 // A message never sits on the words it is about. A scenario gives its pill a place ("top:40%",
 // "bottom:8px") that was right for the screen its author had in mind; with a longer row, a smaller
@@ -833,7 +875,10 @@ function keepPillIn(t) {
 function pillOffText(t) {
   const dev = t.closest(".dev"); if (!dev || !t.isConnected || t._offText || t.dataset.stay !== undefined || getComputedStyle(t).position !== "absolute") return;
   t._offText = true;
-  const k = devScale(dev), D = dev.getBoundingClientRect(), r = t.getBoundingClientRect(), w = t.offsetWidth * k, h = t.offsetHeight * k; if (!w || !h) return;
+  keepPillIn(t); // first into the part of the phone that is shown, then off the words there
+  const k = devScale(dev), D0 = dev.getBoundingClientRect(), [B0, B1] = devBand(dev), y0 = D0.top + dev.clientTop * k;
+  // the phone as far as it is shown (a faded half phone: only its kept part counts, and the pill stays in it)
+  const D = { left: D0.left, right: D0.right, top: B0 ? y0 + B0 * k : D0.top, bottom: B1 < dev.clientHeight ? y0 + B1 * k : D0.bottom }, r = t.getBoundingClientRect(), w = t.offsetWidth * k, h = t.offsetHeight * k; if (!w || !h) return;
   // where it is drawn at rest (its pop-in animation scales it around its middle)
   const a = { l: (r.left + r.right) / 2 - w / 2, r: (r.left + r.right) / 2 + w / 2, t: (r.top + r.bottom) / 2 - h / 2, b: (r.top + r.bottom) / 2 + h / 2 };
   const shown = e => { for (let x = e; x && x !== dev; x = x.parentElement) { const cs = getComputedStyle(x); if (cs.visibility === "hidden" || parseFloat(cs.opacity) < .05) return false; } return true; };
@@ -1054,7 +1099,7 @@ function turn(dev, orient, then) {
   if (cur === orient) { if (then) then(); return; }
   const gen = dev.closest(".duo7.gen"); if (gen) return turnInPair(gen, dev, cur, orient, then);
   // while it turns, the phone is scaled so its rotated outline still fits the preview
-  const [w, h] = devSize(dev, cur);
+  const [w, h] = DEV_SIZE[cur];
   dev.querySelectorAll(".finger").forEach(f => f.classList.remove("show"));
   dev.style.transition = "transform .5s var(--ease), scale .5s var(--ease)"; dev.style.transform = `rotate(${orient === "land" ? -90 : 90}deg)`;
   const inPair = !!dev.closest(".duo7.gen"); // in a pair the turning phone shrinks to stay inside its own slot
@@ -1077,7 +1122,7 @@ function turn(dev, orient, then) {
 // the other phone, the labels and the captions glide to their new places (fitDev) as it turns. It ends
 // exactly in the box of the new orientation, where it is re-laid out for it and nothing jumps.
 function turnInPair(gen, dev, cur, orient, then) {
-  const slot = dev.parentElement, [w0, h0] = devSize(dev, cur), [w1, h1] = devSize(dev, orient);
+  const slot = dev.parentElement, [w0, h0] = DEV_SIZE[cur], [w1, h1] = DEV_SIZE[orient];
   dev.querySelectorAll(".finger").forEach(f => f.classList.remove("show"));
   gen.querySelectorAll(":scope > .dl7 > .sf7").forEach(c => { if (!c._gliding) c._pos = inPair(gen, c); });
   gen._was = pairSnap(gen); gen._turn = true;
@@ -1480,10 +1525,10 @@ function playScenario(k, prevValue) {
   const d = defaults[k], choices = entriesFor(k).filter(e => !sameVal(e.value, d));
   const ask = !self && PREF[k].type !== "boolean" && choices.length > 1 && sameVal(V(k), d) && (prevValue === undefined || sameVal(prevValue, d));
   const draw = () => {
-    clock.start("steps"); scStretch = stretch; scTold = toldInside(fn) || FOOT_OFF.has(k); scTurns = turnsPhone(fn) || SCN_TURNS.has(k); scCollect = [];
+    clock.start("steps"); scKey = k; scStretch = stretch; scTold = toldInside(fn) || FOOT_OFF.has(k); scTurns = turnsPhone(fn) || SCN_TURNS.has(k); scCollect = [];
     scDrawing = true;
     let failed = null;
-    try { drawSides(); } catch (err) { failed = err; } finally { scDrawing = false; const list = scCollect; scCollect = null; if (!failed) startCollected(list); }
+    try { drawSides(); } catch (err) { failed = err; } finally { scDrawing = false; scKey = null; const list = scCollect; scCollect = null; if (!failed) startCollected(list); }
     if (failed) { hintFailed(k, failed); stopScenario(); return; } // the story broke on this build's data: the comparison closes, the editor goes on
     fitDev();
     if (!self && !SCN_NO_FLASH.has(k)) diffFlash(box);
@@ -1535,4 +1580,5 @@ let scClose = null;
 function stopScenario() {
   clock.stop("scenario"); clock.stop("steps"); $("canvas").classList.remove("show");
   if (scClose) { const c = scClose; scClose = null; c(); }
+  if (stageStale) renderStage(); // the redraw skipped while the comparison covered the preview
 }

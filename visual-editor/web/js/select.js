@@ -37,18 +37,25 @@ function select(k, from, arrive = false) {
   selected = k;
   clock.start("focus");
   const dropGhost = prevSel && prevSel !== k && ghosts.has(prevSel) ? prevSel : null, renders = renderCount;
-  if (section === "flyout" && (FLY_SUB[k] || null) !== flySub) renderStage();
+  // A comparison that opens at once covers the preview: the preview is not redrawn under it for the
+  // new selection (a sub-option of a player button drew that button in place, a sub-screen switched).
+  // That redraw showed through the comparison as it faded in, a jump just as the card was tapped (Max,
+  // round 142, "Show only in fullscreen": "an awkward hitch or pre-animation"), and cost a frame. The
+  // preview catches up when the comparison closes (stopScenario).
+  const covered = !!(SCN[k] && from);
+  const redraw = () => { if (covered) stageStale = true; else renderStage(); };
+  if (section === "flyout" && (FLY_SUB[k] || null) !== flySub) redraw();
   if (section === "player" && mode === "mod") {
     // the tray of 13 buttons only opens from its own pill; selecting a hidden one previews it in place
     if (trayOpen && from !== "stage") trayOpen = false;
     // a sub-option of an off button (Swap Save and Queue, Show resolution) previews that button too
     const cust = x => !!x && [x, PARENT_OF[x]].some(y => y && CUSTOM_KEYS.has(y));
-    if (cust(k) || cust(prevSel)) renderStage();
+    if (cust(k) || cust(prevSel)) redraw();
   }
-  if (section === "endscreen" && (ENDSCREEN_SEL.has(k) || ENDSCREEN_SEL.has(prevSel))) renderStage();
-  if (section === "shorts" && (SHORTS_SHEET.has(k) || SHORTS_SHEET.has(prevSel))) renderStage();
-  if (section === "feed" && (k === "morphe_feed_card_layout" || prevSel === "morphe_feed_card_layout")) renderStage();
-  if (section === "captions" && (k === "morphe_secondary_caption_language" || prevSel === "morphe_secondary_caption_language")) renderStage();
+  if (section === "endscreen" && (ENDSCREEN_SEL.has(k) || ENDSCREEN_SEL.has(prevSel))) redraw();
+  if (section === "shorts" && (SHORTS_SHEET.has(k) || SHORTS_SHEET.has(prevSel))) redraw();
+  if (section === "feed" && (k === "morphe_feed_card_layout" || prevSel === "morphe_feed_card_layout")) redraw();
+  if (section === "captions" && (k === "morphe_secondary_caption_language" || prevSel === "morphe_secondary_caption_language")) redraw();
   // a hidden setting stays revealed while it is selected; it collapses once you move to another one
   // (unless the new selection needs it, such as the hidden seekbar for Tap to seek)
   if (dropGhost && lentTo(k, dropGhost)) { ghosts.delete(dropGhost); stageEls(dropGhost).forEach(e => e.classList.remove("sel", "selx")); wakeRings(); }

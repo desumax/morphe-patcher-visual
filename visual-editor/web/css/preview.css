@@ -125,14 +125,16 @@
 .dev .dv-below i { display: block; height: 8px; border-radius: 3px; background: #2a2a2a; }
 .dev .dv-below i:nth-child(2) { width: 70%; }
 .dev.land .dv-below { opacity: 0; }
-/* the top of an upright phone (device(..., top)): the player keeps its 16:9 shape in the shorter
-   frame, and the frame is open at the bottom, fading out, so it reads as the upper part of a phone */
-.dev.top7.port .dv-video { height: 45%; }
-.dev.top7.port .dv-below { top: 45%; }
-.dev.top7.port { border-bottom-color: transparent; border-radius: 14px 14px 0 0; }
-/* the fade is a gradient drawn over the phone, not a mask: a mask made the browser redraw the whole
-   phone off screen for every frame of its resize (the hitch at the start of the story) */
-.dev.top7.port::after { content: ""; position: absolute; left: -3px; right: -3px; bottom: -3px; height: 34%; background: linear-gradient(transparent, #000); z-index: 40; pointer-events: none; }
+/* The faded half phone (device() with a crop, CROP7 in scenarios.js): the phone keeps its whole drawing,
+   and --cut7 of it at one end takes no room (a negative margin) and is faded out (a mask, which covers the
+   frame too). Turned on its side the phone is whole again: the cut slides to 0 with the turn.
+   --cut7 and --fade7 match CROP_CUT and CROP_FADE in scenarios.js. */
+@property --cut7 { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@property --fade7 { syntax: "<length>"; inherits: false; initial-value: 0px; }
+.dev.crop7 { transition: width .5s var(--ease), height .5s var(--ease), transform .5s var(--ease), scale .5s var(--ease), --cut7 .5s var(--ease), --fade7 .5s var(--ease); }
+.dev.crop7.port { --cut7: 44px; --fade7: 26px; }
+.dev.ctop7 { margin-bottom: calc(-1 * var(--cut7)); -webkit-mask-image: linear-gradient(#000 calc(100% - var(--cut7) - var(--fade7)), transparent calc(100% - var(--cut7))); mask-image: linear-gradient(#000 calc(100% - var(--cut7) - var(--fade7)), transparent calc(100% - var(--cut7))); }
+.dev.cbot7 { margin-top: calc(-1 * var(--cut7)); -webkit-mask-image: linear-gradient(transparent var(--cut7), #000 calc(var(--cut7) + var(--fade7))); mask-image: linear-gradient(transparent var(--cut7), #000 calc(var(--cut7) + var(--fade7))); }
 .canvas .prog { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--m-primary); width: 100%; transform: scaleX(0); transform-origin: 0 50%; }
 .dev { position: relative; background: #111; border: 3px solid #555; border-radius: 14px; overflow: hidden; transition: width .5s var(--ease), height .5s var(--ease), transform .5s var(--ease), scale .5s var(--ease); flex: none; contain: size layout paint; }
 /* every phone has its own width and height and clips its drawing, so what moves inside it (a finger, a

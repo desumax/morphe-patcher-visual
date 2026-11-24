@@ -328,8 +328,10 @@ function setPicker(open) {
 
 let stageHold = 0;
 let renderCount = 0;
+let stageStale = false; // the preview skipped a redraw while a comparison covered it (select.js)
 function renderStage() {
   if (stageHold) return;
+  stageStale = false;
   const st = $("stage");
   const scene = SCENES[section];
   $("stick").hidden = !scene && !grouped;

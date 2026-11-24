@@ -70,17 +70,24 @@ function toRest(el, prop) { if (el) el.style[prop] = el.dataset["rest_" + prop] 
 // is and fades in at its start, like the finger but faster (Max, round 141, for every such part).
 // `back` puts everything in its starting place; it runs while the parts are invisible.
 const FADE_BACK = 110;
+// The next round of a demo can begin before the fade has finished: fadeBackStop(els) at the start of a
+// round drops the steps still due, so they don't put a transition back onto a part that is now
+// following the finger (Max, round 142: the thumb lagged behind the finger in Seekbar thumbnails).
 function fadeBack(els, back) {
   els = els.filter(Boolean); if (!els.length) return back();
-  const show = () => els.forEach(e => { e.style.opacity = ""; toRest(e, "transition"); });
+  const tok = {}, mine = () => els.every(e => e._fadeBack === tok);
+  els.forEach(e => e._fadeBack = tok);
+  const show = () => els.forEach(e => { e._fadeBack = null; e.style.opacity = ""; toRest(e, "transition"); });
   onDemoStop(show);
   els.forEach(e => { keepRest(e, "transition"); e.style.transition = `opacity ${FADE_BACK}ms var(--ease)`; e.style.opacity = "0"; });
   dT(() => {
+    if (!mine()) return;
     back(); els.forEach(e => e.style.transition = "none"); void els[0].offsetWidth;
     els.forEach(e => { e.style.transition = `opacity ${FADE_BACK}ms var(--ease)`; e.style.opacity = ""; });
-    dT(() => els.forEach(e => toRest(e, "transition")), FADE_BACK + 20);
+    dT(() => { if (mine()) els.forEach(e => { e._fadeBack = null; toRest(e, "transition"); }); }, FADE_BACK + 20);
   }, FADE_BACK);
 }
+function fadeBackStop(els) { els.forEach(e => { if (e && e._fadeBack) { e._fadeBack = null; e.style.opacity = ""; } }); }
 function place(f, x, y, ms) { fingerShow(f, x, y, ms); }
 function hideF(f, after) { dT(() => { f.classList.remove("show", "hold"); }, after); }
 function tapAt(x, y, f = finger()) { if (!f) return; place(f, x, y); f.classList.remove("tap"); void f.offsetWidth; f.classList.add("tap"); hideF(f, 520); }
@@ -401,6 +408,7 @@ Object.assign(DEMOS, {
     const y = r.top - st.top + r.height / 2, p0 = 17, p1 = 70, total = 18 * 60 + 42;
     const xAt = pct => r.left + r.width * pct / 100;
     const played = $("played"), knob = $("knob"), ring = $("knobRing"), tl = bub && bub.querySelector(".time");
+    fadeBackStop([played, knob, ring]);
     [played, knob, ring].forEach(e => { if (e) { keepRest(e, "transition"); e.style.transition = "none"; } });
     if (bub) { bub.classList.add("dragging"); bub.style.opacity = on ? "1" : "0"; }
     const frame = pct => {
@@ -420,7 +428,8 @@ Object.assign(DEMOS, {
       const t = Math.min(1, Math.max(0, (now - t0) / dur)), e = t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
       frame(p0 + (p1 - p0) * e);
       if (t < 1) requestAnimationFrame(step);
-      else dT(() => { f.classList.remove("show", "hold"); fadeBack([played, knob, ring], reset); }, 300);
+      // (the fade out and back in end by about 1.4 s, inside the 1.5 s round, so the next drag starts clean)
+      else dT(() => { f.classList.remove("show", "hold"); fadeBack([played, knob, ring], reset); }, 120);
     };
     requestAnimationFrame(step);
     label(on ? "Drag the seekbar: a thumbnail follows your finger" : "Drag the seekbar: no thumbnail, only the time", !on);
