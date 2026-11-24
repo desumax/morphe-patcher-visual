@@ -18,7 +18,9 @@ import app.morphe.extension.shared.settings.BooleanSetting;
  */
 public final class VisualEditorSettings {
     /** Opening Morphe settings opens the editor first. The regular list is one tap back. */
-    public static final BooleanSetting ENABLED = new BooleanSetting("morphe_visual_editor_enabled", FALSE);
+    // Left out of import / export (the last argument): an import resets every exported setting its
+    // text does not name, which would switch the redesign off from inside the redesign.
+    public static final BooleanSetting ENABLED = new BooleanSetting("morphe_visual_editor_enabled", FALSE, false, false);
     // The editor's own choices (layout, list design, glass) are kept by the web page itself.
 
     private VisualEditorSettings() {
