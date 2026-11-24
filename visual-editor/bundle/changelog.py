@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Drafts the CHANGELOG.md entry Morphe Manager shows for a test release of the visual editor.
 
-Usage: changelog.py --version 0.1.0-test.N [--since REF] [--date YYYY-MM-DD]
+Usage: changelog.py --version 0.1.0-test.N [--since REF] [--date YYYY-MM-DD]   draft the entry
+       changelog.py --version 0.1.0-test.N --publish                          after tidying it
 
 Reads the commits since the last release tag (visual-editor-test-*, or --since) that touch the
 editor, splits each subject into its changes ("a; b; c"), sorts them into Features, Bug Fixes and
@@ -22,7 +23,8 @@ import sys
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+HERE = Path(__file__).resolve().parent
+ROOT = HERE.parents[1]
 REPO = "desumax/morphe-patcher-visual"
 TAG_PREFIX = "visual-editor-"
 SCOPE = "YouTube - Visual settings editor"
@@ -78,12 +80,74 @@ def changes(since):
     return out
 
 
+HEADING = re.compile(r"^# \[([^\]]+)\]\([^)]*\) \((\d{4}-\d{2}-\d{2})\)\s*$")
+
+
+def releases(text):
+    """CHANGELOG.md as [(version, date, {section: [bullet text]})], newest first."""
+    out, cur, sec = [], None, None
+    for line in text.splitlines():
+        m = HEADING.match(line)
+        if m:
+            cur = (m.group(1), m.group(2), {})
+            out.append(cur)
+            sec = None
+        elif cur and line.startswith("### "):
+            sec = line[4:].strip()
+            cur[2].setdefault(sec, [])
+        elif cur and sec and line.startswith("* "):
+            cur[2][sec].append(re.sub(r"^\* (\*\*[^*]+:\*\* )?", "", line).strip())
+    return out
+
+
+def short(version):
+    return version.split("-", 1)[-1].replace(".", " ")  # "0.1.0-test.11" -> "test 11"
+
+
+def publish(version, history=3):
+    """Points the Manager feed and the release notes at version, from its CHANGELOG.md entry.
+
+    Manager shows the feed's description when it can't use CHANGELOG.md, and GitHub shows the
+    release notes, so both carry this release's changes (and the feed the last few releases),
+    never a fixed sentence.
+    """
+    import json
+    rel = releases((ROOT / "CHANGELOG.md").read_text(encoding="utf-8"))
+    if not rel or rel[0][0] != version:
+        sys.exit(f"CHANGELOG.md must start with {version}: draft and tidy it first")
+
+    def block(r, heading):
+        lines = [heading] if heading else []
+        for sec, items in r[2].items():
+            if items:
+                lines += ["", f"**{sec}**"] + [f"- {x}" for x in items]
+        return "\n".join(lines)
+
+    tag = tag_for(version)
+    notes = block(rel[0], None) + (
+        f"\n\nAdd https://github.com/{REPO} as a patch source in Morphe Manager (Expert mode, together "
+        "with Morphe Patches). Full history: CHANGELOG.md.")
+    (HERE / "release-notes.md").write_text(notes + "\n", encoding="utf-8")
+    desc = "\n\n".join(block(r, f"### {short(r[0])} ({r[1]})") for r in rel[:history])
+    feed = ROOT / "patches-bundle.json"
+    data = json.loads(feed.read_text(encoding="utf-8")) if feed.exists() else {}
+    data.pop("signature_download_url", None)
+    data.update(version=version, created_at=time.strftime("%Y-%m-%dT%H:%M:%S"), description=desc,
+                download_url=f"https://github.com/{REPO}/releases/download/{tag}/morphe-visual-editor-{version}.mpp")
+    feed.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    print(f"Feed and visual-editor/bundle/release-notes.md now describe {version} (use --notes-file for gh release create)")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--version", required=True)
+    ap.add_argument("--publish", action="store_true",
+                    help="after tidying: point patches-bundle.json and release-notes.md at this version's entry")
     ap.add_argument("--since", help="git ref of the previous release (default: the last visual-editor-test-* tag)")
     ap.add_argument("--date", default=time.strftime("%Y-%m-%d"))
     args = ap.parse_args()
+    if args.publish:
+        return publish(args.version)
 
     since = args.since or last_tag()
     items = changes(since)
