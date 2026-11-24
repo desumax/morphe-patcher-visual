@@ -84,6 +84,8 @@ final class WebEditorDialog extends Dialog {
     /** The settings list behind the editor, hidden until the editor closes so it never flashes. */
     @Nullable private View hiddenList;
     private boolean revealed;
+    /** A Morphe row ran (Import / Export, say): its dialog may change values behind the editor. */
+    private boolean actionRan;
     /** The editor's whole screen (dark background and page): invisible until the page is ready. */
     private final FrameLayout root;
 
@@ -368,7 +370,8 @@ final class WebEditorDialog extends Dialog {
         @JavascriptInterface
         public void action(String key) {
             Utils.runOnMainThread(() -> {
-                if (!LiveSettings.runAction(key)) Utils.showToastShort("Not available right now");
+                if (LiveSettings.runAction(key)) actionRan = true;
+                else Utils.showToastShort("Not available right now");
             });
         }
 
@@ -548,6 +551,16 @@ final class WebEditorDialog extends Dialog {
 
     private void js(String code) {
         if (!destroyed) web.evaluateJavascript(code, null);
+    }
+
+    /** Back from a Morphe row's dialog: the page re-reads the values that row may have changed. */
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus && actionRan) {
+            actionRan = false;
+            js("window.morpheReloadValues && morpheReloadValues()");
+        }
     }
 
     @Override
