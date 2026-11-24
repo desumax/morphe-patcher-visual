@@ -103,6 +103,13 @@ if (INAPP) {
   window.__liveAvail = {};
   // Morphe's action rows (not settings): a tap runs the real row in the app, see app-post.js
   window.__liveActions = new Set(Object.keys(LIVE.meta || {}).filter(k => LIVE.meta[k] && LIVE.meta[k].type === "action"));
+  // A row Morphe draws with a class of its own (button order, a gesture's action, a file or folder
+  // picker) holds text in a format of its own, and a plain text field would break it. Morphe flags
+  // these rows ("custom"). Where the editor has a control made for the format (the chip list for
+  // words, speeds and channel whitelists, the colour field) that control stays; any other such row
+  // is tapped like an action row and opens Morphe's own editor for it. Numbers stay numbers.
+  const opensInMorphe = (k, m, def) => !!m.custom && m.type === "string" && !(Array.isArray(m.entries) && m.entries.length)
+    && !(String(m.default ?? def ?? "").includes("\n") || /strings|phrases|speeds|whitelist|filter|color/.test(k));
   function applyLive(cat) {
     const meta = LIVE.meta || {};
     const known = new Set(cat.preferences.map(p => p.key));
@@ -144,14 +151,16 @@ if (INAPP) {
         const live = `__liveAvail[${JSON.stringify(p.key)}] !== false`;
         p.availability = p.availability ? `!(false && (${p.availability})) && ${live}` : live;
       }
+      if (opensInMorphe(p.key, m, p.default)) { p.type = null; p.widget = "Preference"; delete p.entries; __liveActions.add(p.key); }
     }
     // Settings this build has that the catalogue doesn't know: plain rows under Misc, so nothing is hidden.
     for (const [k, m] of Object.entries(meta)) {
       if (known.has(k) || !TYPE_WIDGET[m.type] || /^morphe_visual_editor_/.test(k)) continue;
       const entries = Array.isArray(m.entries) && m.entries.length ? m.entries.map(([label, value]) => ({ label, value })) : undefined;
       cat.preferences.push({ key: k, title: m.title || "", summary: m.summary ?? null, summaryOn: m.summaryOn ?? null, summaryOff: m.summaryOff ?? null,
-        widget: entries ? "ListPreference" : TYPE_WIDGET[m.type], type: m.type === "action" ? null : m.type, default: m.default, rebootApp: !!m.rebootApp, parents: [], customAvailability: [],
+        widget: entries ? "ListPreference" : TYPE_WIDGET[opensInMorphe(k, m) ? "action" : m.type], type: m.type === "action" || opensInMorphe(k, m) ? null : m.type, default: m.default, rebootApp: !!m.rebootApp, parents: [], customAvailability: [],
         screen: null, screenTitle: m.screenTitle || null, subScreen: null, subScreenTitle: m.subScreenTitle || null, entries, live: true });
+      if (opensInMorphe(k, m)) __liveActions.add(k);
       // availability as Morphe has it, read through the same rule the known rows use
       if (typeof m.available === "boolean") {
         __liveAvail[k] = m.available;
