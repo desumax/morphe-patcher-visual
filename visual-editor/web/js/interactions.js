@@ -18,8 +18,13 @@ const PROXY_K = { morphe_seekbar_custom_color: "morphe_hide_seekbar" };
 function proxyEls(k) {
   const q = x => [...document.querySelectorAll(`#stage [data-k="${x}"], #stage [data-also~="${x}"]`)].filter(e => e.getClientRects().length && (!e.classList.contains("off") || e.classList.contains("ghost")));
   if (q(k).length) return [];
+  // data-proxy="<key>": a part that flashes for a setting without being its selectable part, so the
+  // setting and the ones under it all flash it the same way (the seekbar thumb's ring: Max, round 141,
+  // "Custom seekbar thumb" must flash as "Thumb image" does)
+  const qp = x => [...document.querySelectorAll(`#stage [data-proxy~="${x}"]`)].filter(e => e.getClientRects().length);
+  if (qp(k).length) return qp(k);
   const seen = new Set();
-  for (let p = PROXY_K[k] || PARENT_OF[k]; p && !seen.has(p); p = PROXY_K[p] || PARENT_OF[p]) { seen.add(p); const e = q(p); if (e.length) return e; }
+  for (let p = PROXY_K[k] || PARENT_OF[k]; p && !seen.has(p); p = PROXY_K[p] || PARENT_OF[p]) { seen.add(p); const e = q(p).length ? q(p) : qp(p); if (e.length) return e; }
   return [];
 }
 // Any interaction with a card (tap, hold, its toggle or options, or its element in the preview)

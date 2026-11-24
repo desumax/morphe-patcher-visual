@@ -66,6 +66,21 @@ function finger() { return document.querySelector("#stage .finger"); }
 // inline value before the demo first writes it; toRest puts it back. Every demo uses these.
 function keepRest(el, prop) { if (el && el.dataset["rest_" + prop] === undefined) el.dataset["rest_" + prop] = el.style[prop]; }
 function toRest(el, prop) { if (el) el.style[prop] = el.dataset["rest_" + prop] || ""; }
+// A part that a demo moved goes back to its start without travelling there: it fades out where it
+// is and fades in at its start, like the finger but faster (Max, round 141, for every such part).
+// `back` puts everything in its starting place; it runs while the parts are invisible.
+const FADE_BACK = 110;
+function fadeBack(els, back) {
+  els = els.filter(Boolean); if (!els.length) return back();
+  const show = () => els.forEach(e => { e.style.opacity = ""; toRest(e, "transition"); });
+  onDemoStop(show);
+  els.forEach(e => { keepRest(e, "transition"); e.style.transition = `opacity ${FADE_BACK}ms var(--ease)`; e.style.opacity = "0"; });
+  dT(() => {
+    back(); els.forEach(e => e.style.transition = "none"); void els[0].offsetWidth;
+    els.forEach(e => { e.style.transition = `opacity ${FADE_BACK}ms var(--ease)`; e.style.opacity = ""; });
+    dT(() => els.forEach(e => toRest(e, "transition")), FADE_BACK + 20);
+  }, FADE_BACK);
+}
 function place(f, x, y, ms) { fingerShow(f, x, y, ms); }
 function hideF(f, after) { dT(() => { f.classList.remove("show", "hold"); }, after); }
 function tapAt(x, y, f = finger()) { if (!f) return; place(f, x, y); f.classList.remove("tap"); void f.offsetWidth; f.classList.add("tap"); hideF(f, 520); }
@@ -405,7 +420,7 @@ Object.assign(DEMOS, {
       const t = Math.min(1, Math.max(0, (now - t0) / dur)), e = t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
       frame(p0 + (p1 - p0) * e);
       if (t < 1) requestAnimationFrame(step);
-      else dT(() => { f.classList.remove("show", "hold"); reset(); }, 300);
+      else dT(() => { f.classList.remove("show", "hold"); fadeBack([played, knob, ring], reset); }, 300);
     };
     requestAnimationFrame(step);
     label(on ? "Drag the seekbar: a thumbnail follows your finger" : "Drag the seekbar: no thumbnail, only the time", !on);

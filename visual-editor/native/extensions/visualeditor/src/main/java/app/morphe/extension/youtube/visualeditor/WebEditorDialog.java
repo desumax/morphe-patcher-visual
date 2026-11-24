@@ -91,6 +91,8 @@ final class WebEditorDialog extends Dialog {
      * import replaces everything) can be told apart from edits made in the editor.
      */
     @Nullable private java.util.Map<String, String> beforeAction;
+    /** The row that ran was Morphe's Import / Export. */
+    private boolean importRan;
     /** The editor's whole screen (dark background and page): invisible until the page is ready. */
     private final FrameLayout root;
 
@@ -380,6 +382,7 @@ final class WebEditorDialog extends Dialog {
                 if (LiveSettings.runAction(key)) {
                     actionRan = true;
                     if (beforeAction == null) beforeAction = before;
+                    if (key != null && key.contains("import_export")) importRan = true;
                 } else Utils.showToastShort("Not available right now");
             });
         }
@@ -602,7 +605,9 @@ final class WebEditorDialog extends Dialog {
             }
             for (Setting<?> s : Setting.allLoadedSettings()) {
                 String was = before.get(s.key);
-                if (was == null || !s.rebootApp || was.equals(String.valueOf(s.get()))) continue;
+                if (was == null || was.equals(String.valueOf(s.get()))) continue;
+                if (importRan && keepsInternalState(s, was)) continue;
+                if (!s.rebootApp) continue;
                 PendingChanges.beforeSave(s, was);
                 PendingChanges.afterSave(s);
             }
@@ -611,6 +616,28 @@ final class WebEditorDialog extends Dialog {
             Logger.printException(() -> "Visual editor: could not take over after a Morphe row", ex);
         }
         beforeAction = snapshot();
+    }
+
+    /**
+     * Morphe's import writes every key its text names, also the ones Morphe itself never exports:
+     * its internal state (the cached player script hash, sign-in tokens, client ids). A text from an
+     * older Morphe can carry such a line, and an out-of-date player script hash stops every video a
+     * few seconds in for up to three days (Max, Nov 24). An import made from the editor leaves that
+     * state as it was. Only state that existed before is put back: Morphe's old setting names are
+     * also "not exported", empty until an import fills them, and must stay filled so Morphe moves
+     * them to the new names at its next start.
+     *
+     * @return true if the setting was put back to its value from before the import.
+     */
+    private static boolean keepsInternalState(Setting<?> s, String was) {
+        try {
+            if (s.includeWithImportExport || was.equals(String.valueOf(s.defaultValue))) return false;
+            s.saveFromString(was);
+            Logger.printDebug(() -> "Visual editor: the import did not change internal state " + s.key);
+            return true;
+        } catch (RuntimeException | LinkageError ex) {
+            return false;
+        }
     }
 
     /** Morphe's "restart needed" flag is private: without it, its dialog does not show on leaving. */
