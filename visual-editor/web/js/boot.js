@@ -35,7 +35,14 @@ async function boot() {
   if (["classic", "toggles", "clean"].includes(saved.design)) design = saved.design;
   if (saved.borrowed && typeof saved.borrowed === "object") for (const [sec, ks] of Object.entries(saved.borrowed)) if (Array.isArray(ks)) borrowed[sec] = new Set(ks.filter(x => PREF[x]));
   applyOrder();
-  renderAll();
+  // In the app the editor opens on its screen menu, with the screen behind it hidden: only the menu is
+  // drawn before the app is told the page is ready (app-post.js), and the hidden screen's list and
+  // preview follow once the page is shown (window.__drawBehind), so the editor appears sooner.
+  let seenTut = false; try { seenTut = localStorage.getItem(LS + "-tutorial") === "1"; } catch { /* storage unavailable */ }
+  if (typeof INAPP !== "undefined" && INAPP && seenTut) {
+    renderBar(); renderInspector(); applyLayout(); store.save();
+    window.__drawBehind = () => { window.__drawBehind = null; renderStage(); renderList(); };
+  } else renderAll();
   if (window.innerWidth > 860) applyDevice(); else $("devBtns").innerHTML = "";
   tick(); setInterval(tick, 30000);
   let seen = false; try { seen = localStorage.getItem(LS + "-tutorial") === "1"; } catch { /* storage unavailable */ }

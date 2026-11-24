@@ -169,14 +169,15 @@ function fitDev(orient) {
   if (gen) { // the two phones sit side by side or stacked, whichever lets them be drawn larger
     // the pair's first moments (its own setup calls, the first caption) settle without animating
     if (!gen.dataset.fit) gen.dataset.fit = String(performance.now());
-    const first = performance.now() - Number(gen.dataset.fit) < 250;
+    const first = performance.now() - Number(gen.dataset.fit) < 250, resized = canvasResized && !first; canvasResized = false;
     // where everything was drawn before this change (a turning phone measures it before it reshapes)
     const turning = gen._turn, wasParts = first ? null : gen._was || pairSnap(gen); gen._turn = false; gen._was = null;
     if (first) gen.style.transition = "none"; // a new pair appears at its size; only later changes animate
     // the Off / On labels are sized for the screen (divided by --dsc), so a new pair is measured once,
     // given its scale, and measured again with its labels at their real size
     // (a few rounds: a label that wraps differently at its real size changes the pair's width, and so its scale)
-    if (first) {
+    // (again when the preview changed size: the labels keep their size on screen at the new scale)
+    if (first || resized) {
       const f = (wh) => wh ? fitScale(wh[0], wh[1]) : 0;
       for (let n = 0, m = measurePair(gen); n < 4; n++) {
         const best = scTurns ? Math.max(f(m.rowWH), f(m.sideWH), f(m.topWH)) : Math.max(f(m.rowWH), f(m.colWH), f(m.sideWH), f(m.topWH)), was = parseFloat(gen.style.getPropertyValue("--dsc")) || 0;
@@ -191,12 +192,14 @@ function fitDev(orient) {
     if (top >= S[pick] * 1.06) pick = "top";
     // a caption changing mid-story must not flip the layout back and forth or nudge the size:
     // keep the current layout (and scale) unless the new one is clearly better
+    // (not when the preview itself changed size: then the pair takes the layout a new pair would get there,
+    // or the next round of the story would pop to it; see the observer below fitDev)
     const cur = gen.dataset.lay, curSc = parseFloat(gen.style.scale) || 0;
-    if (!first && cur && S[cur] && S[pick] < S[cur] * 1.1) pick = cur;
+    if (!first && !resized && cur && S[cur] && S[pick] < S[cur] * 1.1) pick = cur;
     let sc = S[pick];
     // (never larger than what fits: with only a few px of black left around the phones, the old 3% of
     // slack cut a turning phone or a longer caption at the preview's edge)
-    if (!first && pick === cur && Math.abs(sc - curSc) / curSc < .06 && sc > curSc * .97) sc = Math.min(curSc, sc);
+    if (!first && !resized && pick === cur && Math.abs(sc - curSc) / curSc < .06 && sc > curSc * .97) sc = Math.min(curSc, sc);
     const [w0, h0] = WH[pick], w = w0, h = h0;
     // a layout change (a phone turning mid-story): each caption flows from its old place to the new one
     // while its box, font and line breaks morph into the new shape, in step with the phones resizing.
@@ -211,7 +214,7 @@ function fitDev(orient) {
     // move); the phones and labels glide there (pairGlide). Taking the captions out of the flow until
     // the end of the move made everything jump into place when they came back.
     gen.classList.remove("capgo"); gen.classList.toggle("capside", pick === "side"); gen.classList.toggle("labright", pick === "column"); gen.classList.toggle("labout", pick === "row" || pick === "side"); gen.style.flexDirection = pick === "column" ? "column" : "row";
-    gen.style.scale = sc.toFixed(3); if (first || !gen.style.getPropertyValue("--dsc")) gen.style.setProperty("--dsc", sc.toFixed(3));
+    gen.style.scale = sc.toFixed(3); if (first || resized || !gen.style.getPropertyValue("--dsc")) gen.style.setProperty("--dsc", sc.toFixed(3));
     pairGlide(gen, wasParts);
     if (before) { const ends = finalCapPlaces(gen); caps.forEach((c, i) => glideCap(gen, c, before[i], ends[i])); }
     // the other phone turning a moment later changes where the captions end: retarget them
@@ -231,6 +234,25 @@ function fitDev(orient) {
   box.style.width = Math.round((w + 6) * sc) + "px"; box.style.height = Math.round((h + 6) * sc) + "px";
   if (first) { void dev.offsetWidth; dev.style.transition = ""; box.style.transition = ""; }
 }
+// The preview can change size while a comparison shows (its scene redrawn under it, the tab's preview area
+// opening, the window turning). The pair is laid out again at once, gliding to the layout a new pair gets
+// at that size; before, it kept the old one until the story's next round drew the pair again, which then
+// popped to it (Max, Nov 24: Voice over translation started with its Off / On labels beside the phones and
+// jumped to the top a moment later). Fonts arriving late change the labels' size the same way.
+let canvasResized = false;
+(() => {
+  const canvas = document.getElementById("canvas"); if (!canvas) return; // ($ is defined by a later script)
+  let size = "";
+  const refit = force => {
+    const now = canvas.clientWidth + "x" + canvas.clientHeight, gen = canvas.querySelector(".scbox .duo7.gen");
+    if (!force && now === size) return; size = now;
+    if (!gen || !canvas.classList.contains("show") || !gen.dataset.lay) return;
+    if (force) gen._measured = null;
+    canvasResized = true; fitDevSoon();
+  };
+  if (window.ResizeObserver) new ResizeObserver(() => refit(false)).observe(canvas);
+  if (document.fonts) document.fonts.addEventListener("loadingdone", () => refit(true));
+})();
 const devScale = dev => (dev.getBoundingClientRect().width / (dev.offsetWidth || 1)) || 1;
 // Scenarios are drawn twice, Off and On side by side. scSide is the side being drawn (null for a
 // scenario that draws its own comparison); scStretch slows the whole story down to the 11 s budget.

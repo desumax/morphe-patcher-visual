@@ -71,6 +71,7 @@ if (INAPP) {
   $("secPill").before(menuTitle);
   $("secPill").onclick = null; $("secPill").removeAttribute("aria-haspopup"); $("secPill").tabIndex = -1;
   function setMenu(on) {
+    if (!on && window.__drawBehind) window.__drawBehind(); // the screen behind the menu, not drawn yet at start (boot.js)
     menuPage = on;
     document.documentElement.classList.toggle("menupage", on);
     if (on) { $("scroller").scrollTop = 0; $("app").classList.remove("barhidden"); }
@@ -142,5 +143,9 @@ if (INAPP) {
   };
   setMenu(true);
   // Tell the app the first screen is drawn, so it can fade the editor in (no loading frames).
-  requestAnimationFrame(() => requestAnimationFrame(() => { try { MorpheApp.ready(); } catch (e) { /* older app */ } }));
+  // The screen behind the menu is drawn after the app has faded the editor in (boot.js).
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    try { MorpheApp.ready(); } catch (e) { /* older app */ }
+    setTimeout(() => { if (window.__drawBehind) window.__drawBehind(); }, 400);
+  }));
 }

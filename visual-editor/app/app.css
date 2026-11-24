@@ -9,7 +9,7 @@ html.inapp .devdone { display: none !important; } /* development markers stay in
 /* In the app the screen menu is a page of its own: it fills the space under the top bar. On a
    screen the top bar shows only the screen's icon: no title, no arrow, and it can't be tapped
    (a screen is left with Back). */
-html.inapp .secpill { pointer-events: none; padding-right: 6px; }
+html.inapp .secpill { pointer-events: none; width: 40px; max-width: none; padding: 0; justify-content: center; } /* the icon alone: a round button like the back arrow, icon in its middle (it sat 2px off with the arrow's padding gone) */
 html.inapp .secpill .chev, html.inapp .secpill .lbl { display: none !important; }
 html.inapp .menutitle { display: none; flex: 1; min-width: 0; padding-left: 4px; font-size: 18px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 html.inapp.menupage .menutitle { display: block; }

@@ -35,8 +35,17 @@
   /* the slider knob: light bent by a clear pill (Max: "refract more light"): a hot spot under the top edge,
      the bright lens band at both ends, light gathered along the bottom edge, a blue glow from the fill,
      a crisp rim; painted, so it costs the same in every tier */
-  --g-knob-paint: radial-gradient(70% 38% at 50% 10%, rgba(255,255,255,.85), rgba(255,255,255,0) 72%), radial-gradient(80% 50% at 50% 104%, rgba(205,232,255,.6), rgba(205,232,255,0) 70%), linear-gradient(90deg, rgba(255,255,255,.4), rgba(255,255,255,0) 26%, rgba(255,255,255,0) 74%, rgba(255,255,255,.4)), rgba(190,220,255,.16);
-  --g-knob-edge: inset 0 0 0 1px rgba(255,255,255,.62), inset 0 1px 1px rgba(255,255,255,.95), inset 0 -2px 3px rgba(190,225,255,.45), inset 0 0 7px rgba(120,190,255,.4), 0 0 10px rgba(62,166,255,.35), 0 4px 12px rgba(0,0,0,.35);
+  --g-knob-paint-top: radial-gradient(70% 38% at 50% 10%, rgba(255,255,255,.85), rgba(255,255,255,0) 72%), radial-gradient(80% 50% at 50% 104%, rgba(205,232,255,.6), rgba(205,232,255,0) 70%), linear-gradient(90deg, rgba(255,255,255,.4), rgba(255,255,255,0) 26%, rgba(255,255,255,0) 74%, rgba(255,255,255,.4));
+  --g-knob-tint: rgba(190,220,255,.16);
+  /* What the clear knob shows of the track under it (Max, Nov 24: the blue looked flat behind the pill
+     instead of bending into it): the 8px track is magnified to a bulge in the middle of the lens, the
+     blue running into it with a curved front, and the rim on the blue side picks up the blue. The fill
+     always ends under the knob's middle (--pf), so the left half of the lens is blue at every value. */
+  --g-knob-lens: radial-gradient(ellipse 33% 32% at 26% 50%, rgba(130,205,255,1) 0, rgba(70,170,255,.95) 62%, rgba(62,166,255,.75) 88%, rgba(62,166,255,0) 100%),
+    linear-gradient(rgba(62,166,255,0) 34%, var(--g-fill) 34% 66%, rgba(62,166,255,0) 66%) left center / 40% 100% no-repeat,
+    radial-gradient(ellipse 44% 30% at 62% 50%, rgba(255,255,255,.13) 0 70%, rgba(255,255,255,0) 100%),
+    linear-gradient(rgba(255,255,255,0) 34%, rgba(255,255,255,.09) 34% 66%, rgba(255,255,255,0) 66%) right center / 50% 100% no-repeat;
+  --g-knob-edge: inset 5px 0 6px -3px rgba(62,166,255,.7), inset 0 0 0 1px rgba(255,255,255,.62), inset 0 1px 1px rgba(255,255,255,.95), inset 0 -2px 3px rgba(190,225,255,.45), inset 0 0 7px rgba(120,190,255,.4), 0 0 10px rgba(62,166,255,.35), 0 4px 12px rgba(0,0,0,.35);
   --g-dlg: rgba(22,22,30,.4);
   --g-dlg-edge: inset 0 0 0 1px rgba(255,255,255,.24), inset 0 1.5px 0 rgba(255,255,255,.55), 0 20px 50px rgba(0,0,0,.5);
   --g-press: rgba(255,255,255,.16); --g-line: rgba(255,255,255,.1);
@@ -128,14 +137,15 @@ html.inapp .phone.theme-glass #picker { border-radius: 0; -webkit-backdrop-filte
 
 /* role: fill and the slider (lab: an 8px clear track, a blue fill, a 34x24 glass pill that grows while held) */
 .theme-glass .ctl input[type=range] { -webkit-appearance: none; appearance: none; height: 28px; background: transparent; }
-.theme-glass .ctl input[type=range]::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--g-fill) var(--pct, 0%), var(--g-ctl) var(--pct, 0%)); box-shadow: var(--g-ctl-edge); }
+.theme-glass .ctl input[type=range]::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--g-fill) calc((100% - 34px) * var(--pf, 0) + 3px), transparent calc((100% - 34px) * var(--pf, 0) + 3px) calc((100% - 34px) * var(--pf, 0) + 31px), var(--g-ctl) calc((100% - 34px) * var(--pf, 0) + 31px)); box-shadow: var(--g-ctl-edge); }
+/* (the track is left out under the knob: the knob draws that part itself, bent by its lens) */
 .theme-glass .ctl input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 34px; height: 24px; margin-top: -8px; border-radius: 12px; border: 0;
-  background: var(--g-knob-paint); box-shadow: var(--g-knob-edge);
+  background: var(--g-knob-paint-top), var(--g-knob-lens), var(--g-knob-tint); box-shadow: var(--g-knob-edge);
   -webkit-backdrop-filter: var(--gx-knob-fx); backdrop-filter: var(--gx-knob-fx); transition: transform .18s var(--ease); }
 .theme-glass .ctl input[type=range]:active::-webkit-slider-thumb { transform: scale(1.22); }
 .theme-glass .ctl input[type=range]::-moz-range-track { height: 8px; border-radius: 4px; background: var(--g-ctl); box-shadow: var(--g-ctl-edge); }
 .theme-glass .ctl input[type=range]::-moz-range-progress { height: 8px; border-radius: 4px; background: var(--g-fill); }
-.theme-glass .ctl input[type=range]::-moz-range-thumb { width: 34px; height: 24px; border-radius: 12px; border: 0; background: var(--g-knob-paint); box-shadow: var(--g-knob-edge); transition: transform .18s var(--ease); }
+.theme-glass .ctl input[type=range]::-moz-range-thumb { width: 34px; height: 24px; border-radius: 12px; border: 0; background: var(--g-knob-paint-top), var(--g-knob-lens), var(--g-knob-tint); box-shadow: var(--g-knob-edge); transition: transform .18s var(--ease); }
 .theme-glass .ctl input[type=range]:active::-moz-range-thumb { transform: scale(1.22); }
 
 /* role: lock (plain paint: a cover never samples what is behind it) */

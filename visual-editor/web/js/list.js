@@ -206,9 +206,12 @@ function renderTabs() {
 function markTab(id) {
   const box = $("tabs"), old = box.querySelector('[aria-selected="true"]'), was = old && (glideNow(box) || gRect(old, box));
   glideStop(box);
-  box.querySelectorAll(".tab7").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === id))); box.dataset.sel = id;
+  const tabs = box.querySelectorAll(".tab7");
+  // the tabs change colour at once (the glide is the motion): read with a transition running, the new
+  // tab's fill was still the old dark one, so the glide was dark and the tab turned white only after it
+  settled(tabs, () => { tabs.forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === id))); box.dataset.sel = id; });
   const cur = box.querySelector('[aria-selected="true"]'); if (!cur) return;
-  if (was) { const cs = getComputedStyle(cur); glideRun(box, was, gRect(cur, box), { bg: cs.backgroundColor, radius: parseFloat(cs.borderTopLeftRadius) || 0, z: 0, done: () => { cur.style.transition = "none"; requestAnimationFrame(() => { cur.style.transition = ""; }); } }); }
+  if (was) { const cs = getComputedStyle(cur); glideRun(box, was, gRect(cur, box), { bg: settledBg(cur), radius: parseFloat(cs.borderTopLeftRadius) || 0, z: 0, done: () => { cur.style.transition = "none"; requestAnimationFrame(() => { cur.style.transition = ""; }); } }); }
   box.scrollTo({ left: cur.offsetLeft - (box.clientWidth - cur.offsetWidth) / 2, behavior: "smooth" });
 }
 // Screen menu order: Morphe's own order by default (its settings screens, then their sub-screens);
@@ -425,7 +428,7 @@ function controlFor(k) {
     const sr = /\(?(\d+)\s*[-–]\s*(\d+)\s*(ms|dp|sp|%)?\)/.exec(String(p.summary || ""));
     if (r || sr || /opacity|scale|strength|display_area/.test(k)) {
       const [min, max] = r ? r[1] : sr ? [Number(sr[1]), Number(sr[2])] : [0, 100];
-      return `<div class="ctl"><input type="range" min="${min}" max="${max}" step="1" value="${v}" data-set="${k}" style="--pct:${max > min ? Math.round((v - min) / (max - min) * 1000) / 10 : 0}%" ${dis} aria-label="${esc(shownTitle(k))}"><span class="val" data-val-of="${k}">${v}</span></div>`;
+      return `<div class="ctl"><input type="range" min="${min}" max="${max}" step="1" value="${v}" data-set="${k}" style="--pct:${max > min ? Math.round((v - min) / (max - min) * 1000) / 10 : 0}%;--pf:${max > min ? Math.round((v - min) / (max - min) * 1000) / 1000 : 0}" ${dis} aria-label="${esc(shownTitle(k))}"><span class="val" data-val-of="${k}">${v}</span></div>`;
     }
     return `<div class="ctl side"><input type="number" value="${v}" data-set="${k}" ${dis} aria-label="${esc(shownTitle(k))}" step="${p.type === "float" ? "0.05" : "1"}"></div>`;
   }
@@ -1023,6 +1026,18 @@ function glideNow(box) {
 function glideStop(box) { const g = box._glide; if (g) { box._glide = null; g.anims.forEach(a => a.cancel()); g.layer.remove(); box.classList.remove("gliding"); } }
 // o: bg (the new colour), fromBg (the old one, if it differs), radius (the thumb's corner), z (layer
 // stacking), done (called once the colour has landed or the glide was replaced)
+// Every glide takes the chosen element's final colour, never a value caught mid-transition (Max, Nov 24:
+// "there's a delay before it turns white"). settled(els, fn) runs a state change with the elements'
+// transitions off for that frame; settledBg(el) reads an element's settled background.
+function settled(els, fn) {
+  const list = [...els]; list.forEach(e => { e.style.transition = "none"; });
+  fn(); list.forEach(e => void e.offsetWidth);
+  requestAnimationFrame(() => list.forEach(e => { e.style.transition = ""; }));
+}
+function settledBg(el) {
+  const keep = el.style.transition; el.style.transition = "none";
+  const bg = getComputedStyle(el).backgroundColor; void el.offsetWidth; el.style.transition = keep; return bg;
+}
 function glideRun(box, f, t, o) {
   const prev = box._glide; glideStop(box); if (prev && prev.done) prev.done(true);
   if (GLIDE_REDUCED.matches || Math.hypot(t.x - f.x, t.y - f.y) < 1 && Math.abs(t.w - f.w) < 1) { if (o.done) o.done(false); return; }
@@ -1090,8 +1105,7 @@ function pickSnap(box, sel = ".on") {
 }
 function pickGlide(box, f, sel = ".on", z = -1) {
   const n = box && box.querySelector(`:scope > ${sel}`); if (!f || !n) return;
-  n.style.transition = "none"; const bg = getComputedStyle(n).backgroundColor; void n.offsetWidth; n.style.transition = "";
-  glideRun(box, f.r, gRect(n, box), { bg, fromBg: f.bg, radius: f.rad, z });
+  glideRun(box, f.r, gRect(n, box), { bg: settledBg(n), fromBg: f.bg, radius: f.rad, z });
 }
 // Option pills: optSnap runs before the state changes (the grid is redrawn), optGlide once the new grid
 // is laid out, in every option grid (list rows and the "needs" popup).
@@ -1113,7 +1127,7 @@ function optGlide() {
   const cs = getComputedStyle(on), t = gRect(on, box);
   // nothing was picked before: the colour grows out of the tapped pill
   const from = f.bg ? f : { x: t.x + t.w * .3, y: t.y + t.h * .25, w: t.w * .4, h: t.h * .5 };
-  glideRun(box, from, t, { bg: cs.backgroundColor, fromBg: f.bg, radius: parseFloat(cs.borderTopLeftRadius) || 0, z: 1, done: () => {
+  glideRun(box, from, t, { bg: settledBg(on), fromBg: f.bg, radius: parseFloat(cs.borderTopLeftRadius) || 0, z: 1, done: () => {
     // hand back to the pill without its background transition flashing it on the last frame
     on.style.transition = "none"; requestAnimationFrame(() => { on.style.transition = ""; }); } });
 }
@@ -1388,7 +1402,7 @@ function renderInspector() {
 function selectPre() { const pre = $("json"); if (!pre) return; const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(r); snack("Press Ctrl+C to copy"); }
 
 function renderAll() { renderBar(); renderStage(); renderList(); renderInspector(); applyLayout(); store.save(); }
-function commit() { applyAppColors(); renderBar(); renderStage(); renderList(); renderInspector(); store.save(); }
+function commit() { window.__drawBehind = null; applyAppColors(); renderBar(); renderStage(); renderList(); renderInspector(); store.save(); }
 
 // ------------------------------------------------------------------ restart handling
 const pendingRestart = () => Object.keys(PREF).filter(k => PREF[k].rebootApp && JSON.stringify(state[k]) !== JSON.stringify(baseline[k]));

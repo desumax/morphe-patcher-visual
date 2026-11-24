@@ -23,6 +23,9 @@
 .tab7 > .ol { position: relative; z-index: 1; }
 .tabs7.gliding > .tab7[aria-selected="true"] { background: transparent !important; box-shadow: none !important; }
 .tabs7.gliding > .tab7 > .ol { color: #fff; mix-blend-mode: difference; } /* a label stays readable wherever the light fill is under it */
+/* the glass lens on the parts of a gliding box (tabs, and chosen thumbs in Full) bent the moving fill into
+   streaks and cut the labels' blend off from it: the parts go without it while the fill moves (Max, Nov 24) */
+.gliding > :not(.glayer) { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
 /* paint() (list.js): while a redraw's mark passes run, nothing transitions */
 .painting, .painting * { transition: none !important; }
 /* round 9 scenario kit */
