@@ -2,6 +2,5 @@
   "created_at": "2026-11-18T23:15:00",
   "description": "Test build of the visual settings editor: one patch, Visual settings editor. Add it in Morphe Manager next to the Morphe Patches bundle (Expert mode, both selected).",
   "download_url": "https://github.com/desumax/morphe-patcher-visual/releases/download/visual-editor-test-3/morphe-visual-editor-0.1.0-test.3.mpp",
-  "signature_download_url": "",
   "version": "0.1.0-test.3"
 }

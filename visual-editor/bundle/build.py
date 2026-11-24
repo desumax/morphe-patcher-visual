@@ -120,6 +120,7 @@ def main():
         tag = "visual-editor-" + args.version.split("-", 1)[-1].replace(".", "-")
         feed = HERE.parent.parent / "patches-bundle.json"  # repo root: Manager reads it from the repo link
         data = json.loads(feed.read_text(encoding="utf-8"))
+        data.pop("signature_download_url", None)  # Manager reads version, download_url, created_at, description
         data.update(version=args.version, created_at=time.strftime("%Y-%m-%dT%H:%M:%S"),
                     download_url=f"https://github.com/desumax/morphe-patcher-visual/releases/download/{tag}/{target.name}")
         feed.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
