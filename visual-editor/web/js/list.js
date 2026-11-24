@@ -649,9 +649,12 @@ function actionFor(k) {
 }
 function runActionRow(k) {
   const a = ACTION_ROWS[k]; if (!a) return;
-  if (a.run && !(typeof INAPP !== "undefined" && INAPP)) return a.run();
-  // (in the app Morphe's own row runs instead, see app-post.js; this is only reached on an app build that can't)
-  if (typeof INAPP !== "undefined" && INAPP) { snack("Update the visual editor patch to use this"); return; }
+  // In the app Morphe's own row runs instead (app-post.js); this is only reached on an app build that can't.
+  // The App view's stand-in has no Morphe behind it (MorpheApp.preview): it gets the web's copy of Morphe's
+  // dialog, as the preview does (Max, Nov 24: Import / Export only said "Update the visual editor patch").
+  const realApp = typeof INAPP !== "undefined" && INAPP && !(window.MorpheApp && MorpheApp.preview);
+  if (a.run && !realApp) return a.run();
+  if (realApp) { snack("Update the visual editor patch to use this"); return; }
   openDialog(`<div class="di">${I(a.icon)}</div><h2 id="dlgTitle">${esc(a.ask)}</h2><p>${esc(a.msg)}</p>
     <div class="acts"><button class="dbtn primary neg" id="dAct">${esc(a.ok)}</button><button class="dbtn tonal" id="dBack">Cancel</button></div>`);
   $("dAct").onclick = () => { closeDialog(); snack(a.done); };
@@ -1197,7 +1200,8 @@ function glideNow(box) {
   let best = null; g.layer.querySelectorAll("i").forEach(e => { const r = gRect(e, box); if (r.w > 1 && r.h > 1 && (!best || r.w * r.h > best.w * best.h)) best = r; });
   return best;
 }
-function glideStop(box) { const g = box._glide; if (g) { box._glide = null; g.anims.forEach(a => a.cancel()); g.layer.remove(); box.classList.remove("gliding"); (g.path || []).forEach(c => c.classList.remove("gpath")); } }
+const GLIDE_HANDOFF = 140;
+function glideStop(box) { if (box._handoff) { box._handoff.remove(); box._handoff = null; } const g = box._glide; if (g) { box._glide = null; g.anims.forEach(a => a.cancel()); g.layer.remove(); box.classList.remove("gliding"); (g.path || []).forEach(c => c.classList.remove("gpath")); } }
 // o: bg (the new colour), fromBg (the old one, if it differs), radius (the thumb's corner), z (layer
 // stacking), done (called once the colour has landed or the glide was replaced)
 // Every glide takes the chosen element's final colour, never a value caught mid-transition (Max, Nov 24:
@@ -1265,7 +1269,15 @@ function glideRun(box, f, t, o) {
   box.prepend(layer); box.classList.add("gliding");
   const g = box._glide = { layer, anims, done: o.done, path };
   // the control's own fill comes back without its transitions (done turns them off for a frame)
-  anims[0].onfinish = () => { if (box._glide !== g) return; box._glide = null; if (o.done) o.done(false); box.classList.remove("gliding"); path.forEach(c => c.classList.remove("gpath")); void box.offsetWidth; layer.remove(); };
+  // Nov 24 (Max: the static part popped in at the end, and a glass thumb got its rim back at once): the
+  // control's own fill, rim and label colour come back under the landed colour, which then fades out over
+  // GLIDE_HANDOFF ms instead of vanishing in one frame
+  anims[0].onfinish = () => {
+    if (box._glide !== g) return; box._glide = null; if (o.done) o.done(false); box.classList.remove("gliding"); path.forEach(c => c.classList.remove("gpath"));
+    if (box._handoff) box._handoff.remove();
+    box._handoff = layer;
+    layer.animate([{ opacity: 1 }, { opacity: 0 }], { duration: GLIDE_HANDOFF, easing: "ease-out", fill: "forwards" }).onfinish = () => { layer.remove(); if (box._handoff === layer) box._handoff = null; };
+  };
 }
 // Every two-state toggle glides like the other choices (Max, Nov 23: "Group screens into tabs" and the
 // Original/Morphe toggle still slid on their own). One helper for all of them: a switch (.sw, its thumb is
@@ -1630,25 +1642,30 @@ const pendingRestart = () => Object.keys(PREF).filter(k => PREF[k].rebootApp && 
 let cardTap = null, cardOrigin = null, cardAnim = null;
 document.addEventListener("pointerdown", e => {
   const el = e.target.closest && e.target.closest("#app .row, #app button, #app .c, #app .pick");
-  cardTap = el && !el.closest("#dlg") ? { el: el.closest(".row") || el, key: el.closest("[data-row]")?.dataset.row, t: performance.now() } : null;
+  // the button or pill itself when one was tapped (Max, Nov 24: it grew from the whole row, not the button),
+  // the row when the row was; a part too small or too wide to read as a source falls back to its row
+  const row = el && el.closest(".row"), r = el && el.getBoundingClientRect();
+  const own = el && (el.matches("button, .c, .pick") && r.width >= 16 && r.height >= 12 && r.width < 300 || !row);
+  cardTap = el && !el.closest("#dlg") ? { el: own ? el : row, key: el.closest("[data-row]")?.dataset.row, cls: own && el !== row ? el.classList[0] : null, t: performance.now() } : null;
 }, true);
 const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 function cardRect(o) {
   if (!o) return null;
   let el = o.el;
-  if (!el.isConnected && o.key) el = document.querySelector(`#list [data-row="${CSS.escape(o.key)}"]`);
+  if (!el.isConnected && o.key) { const row = document.querySelector(`#list [data-row="${CSS.escape(o.key)}"]`); el = row && (o.cls && row.querySelector("." + CSS.escape(o.cls)) || row); }
   if (!el || !el.isConnected) return null;
   const r = el.getBoundingClientRect();
   return r.width > 4 && r.height > 4 ? r : null;
 }
-// [the part's frame, the popup's own frame] (page px are turned into the popup's px: the preview phone is scaled)
+// [the part's frame, the popup's own frame] (page px are turned into the popup's px: the preview phone is scaled).
+// Nov 24 round 2 (Max: "not very smooth or refined"): transform and opacity only, so the phone's compositor
+// draws every frame (a moving clip was repainted each frame); the popup is scaled evenly, never squashed,
+// from about the size of the part, centred on it.
 function cardFrames(box, r) {
-  const b = box.getBoundingClientRect(), k = b.width / box.offsetWidth || 1, w = box.offsetWidth, h = box.offsetHeight;
-  const ow = Math.min(w, r.width / k), oh = Math.min(h, r.height / k), x = (w - ow) / 2, y = (h - oh) / 2;
+  const b = box.getBoundingClientRect(), k = b.width / box.offsetWidth || 1, w = box.offsetWidth || 1, h = box.offsetHeight || 1;
+  const s0 = Math.max(.12, Math.min(.6, Math.max(r.width / k / w, r.height / k / h)));
   const dx = (r.left + r.width / 2 - b.left - b.width / 2) / k, dy = (r.top + r.height / 2 - b.top - b.height / 2) / k;
-  const R = parseFloat(getComputedStyle(box).borderTopLeftRadius) || 0;
-  return [{ transform: `translate(${dx}px, ${dy}px)`, clipPath: `inset(${y}px ${x}px round ${Math.min(R, 14)}px)` },
-    { transform: "translate(0px, 0px)", clipPath: `inset(0px 0px round ${R}px)` }];
+  return [{ transform: `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px) scale(${s0.toFixed(3)})` }, { transform: "translate(0px, 0px) scale(1)" }];
 }
 function cardStop() {
   const a = cardAnim; cardAnim = null; if (a) a.cancel();
@@ -1670,7 +1687,7 @@ function openDialog(html) {
     if (r) box.style.transition = "none"; // measured at its open size, not mid-transition
   }
   paint(box, html); dlg.classList.add("open"); glassSample();
-  if (r) { const [from, to] = cardFrames(box, r); cardPlay([{ ...from, opacity: .5 }, { offset: .3, opacity: 1 }, { ...to, opacity: 1 }], { duration: 560, easing: cssVar("--spring") || "ease-out" }); }
+  if (r) { const [from, to] = cardFrames(box, r); cardPlay([{ ...from, opacity: 0 }, { offset: .25, opacity: 1 }, { ...to, opacity: 1 }], { duration: 520, easing: cssVar("--spring") || "ease-out" }); }
   setTimeout(() => box.querySelector("button")?.focus(), 50);
 }
 function closeDialog() {
@@ -1682,7 +1699,7 @@ function closeDialog() {
   dlg.classList.remove("open");
   if (!f) return;
   dlg.classList.add("closing"); // stays visible while it shrinks back (taps already go through)
-  cardPlay([{ ...f[1], opacity: 1 }, { offset: .7, opacity: .9 }, { ...f[0], opacity: 0 }], { duration: 340, easing: "cubic-bezier(.32, .72, 0, 1)" }, () => dlg.classList.remove("closing"));
+  cardPlay([{ ...f[1], opacity: 1 }, { offset: .55, opacity: .85 }, { ...f[0], opacity: 0 }], { duration: 300, easing: "cubic-bezier(.4, 0, .2, 1)" }, () => dlg.classList.remove("closing"));
 }
 // Changes that only apply after YouTube restarts (Max, Nov 20). Values are saved as soon as they are
 // changed; leaving asks what to do with these: restart now, keep them for later, or reset them to the

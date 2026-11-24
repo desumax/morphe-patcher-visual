@@ -137,7 +137,7 @@ html .phone.theme-glass #picker { background: var(--gx-menu); border-radius: 30p
 html.inapp .phone.theme-glass #picker { border-radius: 0; -webkit-backdrop-filter: none; backdrop-filter: none; }
 .theme-glass .dlg ul { background: var(--g-card); box-shadow: var(--g-card-edge); }
 .theme-glass .scrimfull { background: rgba(0,0,0,.28); }
-.theme-glass .dlgscrim.open { background-color: rgba(0,0,0,.4); }
+.theme-glass .dlgscrim { --scrim: rgba(0,0,0,.4); }
 
 /* role: fill and the slider (lab: an 8px clear track, a blue fill, a 34x24 glass pill that grows while held) */
 .theme-glass .ctl input[type=range] { -webkit-appearance: none; appearance: none; height: 28px; background: transparent; }

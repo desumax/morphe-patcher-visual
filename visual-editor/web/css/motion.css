@@ -31,7 +31,15 @@
 .tabs7.gliding > .tab7[aria-selected="true"] { background: var(--m-c-high, #272727) !important; color: var(--m-on, #f1f1f1) !important; transition-property: transform !important; } /* it changes look at once (a fade from white showed as a grey pill) */
 .theme-yt .tabs7.gliding > .tab7[aria-selected="true"] { background: #272727 !important; color: #f1f1f1 !important; }
 .theme-glass .tabs7.gliding > .tab7[aria-selected="true"] { background: var(--g-ctl) !important; box-shadow: var(--g-ctl-edge) !important; }
-.tabs7.gliding > .tab7 > .ol > .tx { color: #fff; mix-blend-mode: difference; } /* a label stays readable wherever the light fill is under it */
+/* labels change colour smoothly (Max, Nov 24: the labels popped at the end, blended text looked bold and every
+   other label brightened when the blend went off): the old tab's label lightens as its fill drains, the new
+   tab's darkens as the fill lands on it, the rest never change */
+.tab7 { --tab-ink: var(--m-bg, #0f0f0f); }
+.theme-yt .tab7 { --tab-ink: #0f0f0f; }
+.theme-glass .tab7 { --tab-ink: #111; }
+.tab7 > .ol > .tx { transition: color .16s var(--ease); }
+.tabs7.gliding > .tab7[aria-selected="true"] > .ol > .tx { animation: tabInk .22s var(--ease) .12s both; }
+@keyframes tabInk { to { color: var(--tab-ink); } }
 /* the glass lens on the parts the fill passes over (tabs, and chosen thumbs in Full) bent the moving fill
    into streaks and cut the labels' blend off from it: those parts go without it while the fill moves; the
    rest keep it, so nothing else flickers when the fill lands (glideRun marks them .gpath) */

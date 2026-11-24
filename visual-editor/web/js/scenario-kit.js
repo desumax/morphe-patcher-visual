@@ -284,16 +284,16 @@ scen("feed", "playlist_wide_drag_handles", (box, on) => {
 // like and dislike, the same for every account. The Enforced phone starts like Server and pulls together.
 // Round 136 (Max: "shows nothing, maybe explanation is better"): the buttons are drawn large, each side says
 // in words what it shows, and the Enforced side moves at once.
-// Nov 24 (Max: "continues broken, remove the animation and replace with an explanation"): a still
-// comparison, each phone drawn in its layout and explained in words under it, nothing moves or flashes.
+// Nov 24 (Max: "keep the white text, remove the simulated phones"): words only. Each side is the
+// explanation of its layout in white, where a phone would be; nothing moves or flashes.
 scen("feed", "post_buttons_layout", (box, v) => {
   situation("The buttons below a community post");
   const enforced = v === "ENFORCED";
-  const b = (n, t = "") => `<span class="pb7" style="display:inline-flex;align-items:center;gap:2px;height:13px;padding:0 4px;border-radius:7px;background:#272727;flex:none;transition:background .3s">${ico7(n, 8)}${t ? `<span style="font-size:6px">${t}</span>` : ""}</span>`;
-  box.innerHTML = device("port", pageRows(`<div style="display:flex;gap:4px;align-items:center"><span style="width:12px;height:12px;border-radius:50%;background:${AV[0]}"></span><b style="font-size:7px;flex:1">Fjord & Timber</b>${ico7("more", 8)}</div><div style="font-size:6.5px">The roof is done! Next week: the wood stove.</div><div style="height:34px;border-radius:4px;background:${ART[0]}"></div>
-    <div class="pbr7" style="display:flex;align-items:center;gap:3px;padding:2px 0;border-radius:8px;outline:1.5px solid transparent;outline-offset:2px;transition:outline-color .3s">${b("like", "2.1K")}${b("dislike")}<span class="sp7" style="flex:${enforced ? 0 : 1} 1 0;min-width:0"></span>${b("comment", "84")}${b("share")}<span class="sp8" style="flex:${enforced ? 1 : 0} 1 0;min-width:0;transition:flex-grow .7s var(--ease)"></span></div>` + row7(2, "Building a tiny cabin")));
-  return enforced ? "Enforced: Comment and Share sit right next to Like, the same for every account"
-    : "Server: what YouTube sends your account, here Comment and Share far off at the end";
+  const say = enforced
+    ? ["Grouped", "Comment and Share sit right next to Like and Dislike", "The same for every account"]
+    : ["As YouTube sends it", "Like and Dislike at the start, Comment and Share far off at the end", "It can differ between accounts"];
+  box.innerHTML = device("port", `<div class="say7"><b>${say[0]}</b><span>${say[1]}</span><span>${say[2]}</span></div>`, "height:112px").replace('class="dev port', 'class="dev port txt7');
+  return "";
 });
 // Morphe: "A download button is shown next to the Share button of posts with images or GIFs, and a
 // download item is added to their menu" (the story used to be a long press on the image).
@@ -1174,14 +1174,17 @@ hidePage("dearrow", "dearrow_connection_toast", "DeArrow can't reach its server"
 
 // Narrow navigation buttons: the bar spread over the width beside the bar drawn together. (The single
 // preview flipped between both without saying which was which.)
+SCN_HOLD.morphe_narrow_navigation_buttons = 1800;
 scen("nav", "narrow_navigation_buttons", (box, on) => {
   situation("The bar at the bottom");
   const tabs = [["home", "Home"], ["shorts", "Shorts"], ["plus", ""], ["subs", "Subs"], ["you", "You"]];
-  box.innerHTML = device("port", pageRows(feed7(big7(3, "Building a tiny cabin") + row7(2, "Night train"))) + `<div class="chg7" style="position:absolute;left:0;right:0;bottom:0;height:19px;background:#0f0f0f;border-top:1px solid #222;display:flex;justify-content:center;align-items:center">${tabs.map(([n, t]) => `<span class="nb7" style="display:grid;justify-items:center;gap:1px;font-size:4.5px;line-height:1;flex:1 1 0;min-width:0;transition:flex .6s var(--ease)">${ico7(n, 8)}<span>${t}</span></span>`).join("")}</div>`);
+  box.innerHTML = device("port", pageRows(feed7(big7(3, "Building a tiny cabin") + row7(2, "Night train"))) + `<div class="chg7" style="position:absolute;left:0;right:0;bottom:0;height:19px;background:#0f0f0f;border-top:1px solid #222;display:flex;justify-content:center;align-items:center">${tabs.map(([n, t]) => `<span class="nb7" style="display:grid;justify-items:center;gap:1px;font-size:4.5px;line-height:1;flex:1 1 0;min-width:0;transition:flex .52s var(--ease)">${ico7(n, 8)}<span>${t}</span></span>`).join("")}</div>`);
   // Nov 24 (Max: broken): 16 px buttons filled nearly the whole 92 px bar, so both sides looked the same.
   // The narrow side starts spread like stock and its buttons pull together to the middle, leaving
   // clear space at both ends.
-  if (on) at(300, () => box.querySelectorAll(".nb7").forEach(e => { e.style.flex = "0 0 14px"; }));
+  // four plays per loop and 15% faster than v146 (Max, Nov 24): body 1800 ms (4 runs, stretch 1.3), the
+  // pull starts at 320 x 1.3 = 416 ms (was 480) and takes .52 s (was .6)
+  if (on) at(320, () => box.querySelectorAll(".nb7").forEach(e => { e.style.flex = "0 0 14px"; }));
   return on ? "The buttons sit close together in the middle" : "The buttons spread over the whole width (stock)";
 });
 
