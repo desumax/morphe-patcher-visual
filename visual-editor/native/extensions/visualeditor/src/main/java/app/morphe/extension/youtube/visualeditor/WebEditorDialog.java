@@ -84,6 +84,8 @@ final class WebEditorDialog extends Dialog {
     /** The settings list behind the editor, hidden until the editor closes so it never flashes. */
     @Nullable private View hiddenList;
     private boolean revealed;
+    /** The editor's whole screen (dark background and page): invisible until the page is ready. */
+    private final FrameLayout root;
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     WebEditorDialog(Activity activity) {
@@ -91,8 +93,11 @@ final class WebEditorDialog extends Dialog {
         this.activity = activity;
         requestWindowFeature(Window.FEATURE_NO_TITLE);
 
-        FrameLayout root = new FrameLayout(activity);
+        root = new FrameLayout(activity);
         root.setBackgroundColor(0xFF0F0F0F);
+        // Until the page has drawn, the editor shows nothing at all: YouTube's settings stay on
+        // screen (no black gap), then the editor comes in as one motion (reveal).
+        root.setAlpha(0f);
         // Keep the editor inside the status bar and navigation bar (edge-to-edge is enforced on
         // new Android versions, which drew test 1 under the status bar).
         root.setOnApplyWindowInsetsListener((v, insets) -> {
@@ -113,9 +118,8 @@ final class WebEditorDialog extends Dialog {
         if (isEmulator()) WebView.setWebContentsDebuggingEnabled(true);
         web = new WebView(activity);
         web.setBackgroundColor(0xFF0F0F0F);
-        // The page fades in once it has drawn its first screen (MorpheApp.ready), so the WebView's
-        // loading frames never show; the dark root stays behind it until then.
-        web.setAlpha(0f);
+        // The page comes in once it has drawn its first screen (MorpheApp.ready), so the WebView's
+        // loading frames never show (the whole root is invisible until then).
         web.setOverScrollMode(View.OVER_SCROLL_NEVER);
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
@@ -154,12 +158,15 @@ final class WebEditorDialog extends Dialog {
 
         Window w = getWindow();
         if (w != null) {
-            w.setBackgroundDrawable(new ColorDrawable(0xFF0F0F0F));
+            // Transparent and undimmed while loading, so the settings list shows through; dark
+            // once the editor is in (reveal), so nothing behind it can show through later.
+            w.setBackgroundDrawable(new ColorDrawable(0));
+            w.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            w.setStatusBarColor(0); // YouTube's bars show through too until the reveal
+            w.setNavigationBarColor(0);
             w.setWindowAnimations(0); // appears at once over the settings list, no pop-in
             w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
             w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING);
-            w.setStatusBarColor(0xFF0F0F0F);
-            w.setNavigationBarColor(0xFF0F0F0F);
             if (Build.VERSION.SDK_INT >= 30) {
                 w.setDecorFitsSystemWindows(false);
                 if (w.getInsetsController() != null) {
@@ -195,6 +202,10 @@ final class WebEditorDialog extends Dialog {
     public void show() {
         super.show();
         registerPredictiveBack();
+    }
+
+    /** Hides the settings list behind the editor once the editor covers it, so it never flashes. */
+    private void hideList() {
         try {
             View list = activity.findViewById(android.R.id.content);
             if (list != null && list.getVisibility() == View.VISIBLE) {
@@ -209,7 +220,23 @@ final class WebEditorDialog extends Dialog {
         if (revealed || destroyed) return;
         revealed = true;
         android.util.Log.i("MorpheVisualEditor", "ready after " + (SystemClock.uptimeMillis() - openedAt) + " ms");
-        web.animate().alpha(1f).setDuration(160).start();
+        // One motion: the editor rises 3% of the screen and fades in, on a hardware layer, with
+        // Material's emphasized-decelerate curve. Then the window turns dark and the list hides.
+        root.setTranslationY(root.getHeight() * 0.03f);
+        root.animate().alpha(1f).translationY(0f).setDuration(220)
+                .setInterpolator(new android.view.animation.PathInterpolator(0.2f, 0f, 0f, 1f))
+                .withLayer()
+                .withEndAction(() -> {
+                    if (destroyed) return;
+                    Window w = getWindow();
+                    if (w != null) {
+                        w.setBackgroundDrawable(new ColorDrawable(0xFF0F0F0F));
+                        w.setStatusBarColor(0xFF0F0F0F);
+                        w.setNavigationBarColor(0xFF0F0F0F);
+                    }
+                    hideList();
+                })
+                .start();
     }
 
     // ------------------------------------------------------------------ files
