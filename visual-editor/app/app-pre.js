@@ -7,10 +7,12 @@ const INAPP = typeof window.MorpheApp !== "undefined";
 let LIVE = { values: {}, version: "" };
 if (INAPP) {
   document.documentElement.classList.add("inapp");
-  // Morphe could not give its values: go back to its regular list rather than show an editor
-  // that would look right but save nothing (the empty state is only for the standalone preview).
+  // Morphe could not give its values or its rows: go back to its regular list rather than show an
+  // editor that would look right but save nothing, or one with no rows at all (the empty state is
+  // only for the standalone preview).
   let liveOk = false;
-  try { LIVE = JSON.parse(MorpheApp.state()); liveOk = !!(LIVE && LIVE.values && Object.keys(LIVE.values).length); } catch (e) { /* handled below */ }
+  const some = o => !!o && typeof o === "object" && Object.keys(o).length > 0;
+  try { LIVE = JSON.parse(MorpheApp.state()); liveOk = !!LIVE && some(LIVE.values) && some(LIVE.meta); } catch (e) { /* handled below */ }
   if (!liveOk && !MorpheApp.preview) {
     LIVE = { values: {}, version: "" };
     window.MORPHE_STOP = true; // boot.js draws nothing while the app swaps in its regular list
@@ -56,7 +58,7 @@ if (INAPP) {
   function applyLive(cat) {
     const meta = LIVE.meta || {};
     const known = new Set(cat.preferences.map(p => p.key));
-    const TYPE_WIDGET = { action: "Preference", boolean: "SwitchPreference", enum: "ListPreference", string: "EditTextPreference", integer: "EditTextPreference", long: "EditTextPreference", float: "EditTextPreference" };
+    const TYPE_WIDGET = { action: "Preference", boolean: "SwitchPreference", enum: "ListPreference", string: "TextPreference", integer: "TextPreference", long: "TextPreference", float: "TextPreference" };
     const liveType = m => m.type === "action" ? null : m.type;
     const FAMILY = { boolean: "switch", enum: "text", string: "text", integer: "number", long: "number", float: "number" };
     for (const p of cat.preferences) {

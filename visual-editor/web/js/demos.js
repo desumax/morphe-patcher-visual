@@ -305,9 +305,6 @@ function brightAt(fr) { const sens = Math.max(1, Number(V("morphe_swipe_brightne
 const swipeDead = () => Math.max(0, Math.min(.6, (Number(V("morphe_swipe_threshold")) || 0) / 300));
 // "Seek swipe sensitivity" (100 by default) scales how far a sideways swipe seeks
 const seekJump = () => { const s = Math.max(0, Math.round(90 * (Number(V("morphe_swipe_seek_sensitivity")) || 100) / 100)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
-const activeSide = () => ["left", "right", "top"].find(x => { const v = V("morphe_swipe_" + x + "_zone"); return v && v !== "OFF"; }) || "left";
-const zoneAction = side => { const v = V("morphe_swipe_" + side + "_zone"); return v && v !== "OFF" ? v : "BRIGHTNESS"; };
-const sideFor = (action, fallback) => ["left", "right", "top"].find(x => V("morphe_swipe_" + x + "_zone") === action) || fallback;
 const speedSide = () => ["left", "right", "top"].find(x => V("morphe_swipe_" + x + "_zone") === "SPEED") || "right";
 // the overlay's look, held still on the first zone that has a gesture; dragging its slider redraws it live
 function stillHud() {

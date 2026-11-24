@@ -28,8 +28,6 @@
 .row .kind svg { width: 20px; height: 20px; fill: var(--m-on-var); }
 .row.live .kind svg { fill: var(--m-primary); }
 .row.offstate .kind svg { fill: var(--m-outline); }
-.row .kind .lockb { position: absolute; right: -4px; bottom: -4px; width: 18px; height: 18px; border-radius: 50%; background: var(--m-warning-c); display: grid; place-items: center; }
-.row .kind .lockb svg { width: 11px; height: 11px; fill: var(--m-warning); }
 .row .txt { flex: 1; min-width: 0; }
 .row .ttl { font-size: 15px; line-height: 1.3; color: var(--m-on); }
 .row .sum { font-size: 12.5px; color: var(--m-on-var); line-height: 1.4; margin-top: 2px; white-space: pre-line; overflow: hidden; max-height: 2.8em; transition: max-height 280ms var(--ease); }

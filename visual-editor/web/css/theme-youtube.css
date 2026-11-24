@@ -8,7 +8,7 @@
   --m-bg: #0f0f0f; --m-surface: #0f0f0f; --m-c-lowest: #000; --m-c: #0f0f0f; --m-c-high: #272727; --m-c-highest: #3f3f3f;
   --m-on: #f1f1f1; --m-on-var: #aaaaaa; --m-outline: #717171; --m-outline-var: #303030;
   --m-primary: #3ea6ff; --m-on-primary: #0f0f0f; --m-primary-c: #263850; --m-on-primary-c: #d6eaff; --m-secondary-c: #272727;
-  --m-warning: #f0b44c; --m-warning-c: #3d2e10; --m-success: #8fd18a; --m-error: #ff8a80;
+  --m-warning: #f0b44c; --m-success: #8fd18a; --m-error: #ff8a80;
   --r-l: 12px; --r-li: 12px; --r-m: 8px;
 }
 .theme-yt .appbar { padding: 6px 8px 6px 4px; }
@@ -74,7 +74,6 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .c.flash.twice::after { animation-iteration-count: 2; animation-fill-mode: none; opacity: 0; }
 .c.off.flash::after, .c.ghost.flash::after { background: rgba(255,0,51,.5); }
 @keyframes cflash { from { opacity: 1; } to { opacity: 0; } }
-.kidhid { font-size: 11px; font-weight: 500; color: var(--m-on-var); margin-left: 8px; padding: 1px 7px; border-radius: 999px; background: var(--m-c-high); vertical-align: 2px; white-space: nowrap; }
 .row { touch-action: manipulation; }
 .plaincard { grid-column: 1 / -1; margin-top: 6px; border-radius: 10px; border: 1px dashed rgba(255,255,255,.18); padding: 6px; }
 .plaincard .ph { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--m-on-var); padding: 2px 6px 4px; }
@@ -97,7 +96,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .theme-yt .dbtn:hover { background: rgba(62,166,255,.12); }
 .theme-yt .dlglist { background: transparent; margin: 4px -22px 0; border-top: 1px solid rgba(255,255,255,.1); border-bottom: 1px solid rgba(255,255,255,.1); border-radius: 0; }
 .goto.more { opacity: .9; }
-.dlglist .kidbtn, .dlglist .kidhid { display: none; }
+.dlglist .kidbtn { display: none; }
 .stage.measure .c.off, .stage.measure .c.off:not(.ghost):not(.charging):not(.intray):not(.leaving) { display: revert !important; }
 .subhead { padding: 14px 16px 2px; font-size: 12px; font-weight: 500; color: #aaa; letter-spacing: .02em; }
 .sechead .nolive { font-weight: 400; color: var(--m-on-var); opacity: .75; font-size: 12px; }

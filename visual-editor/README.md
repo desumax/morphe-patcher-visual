@@ -8,7 +8,7 @@ This folder holds stage 1 and 2 of the plan:
 
 1. **`tools/extract_catalogue.py`** reads a checkout of
    [`MorpheApp/morphe-patches`](https://github.com/MorpheApp/morphe-patches) and writes
-   `data/catalogue.json`: every preference a YouTube patch puts on a settings screen,
+   `web/catalogue.json`: every preference a YouTube patch puts on a settings screen,
    with its type, default, restart flag, parent dependencies, screen and sub-screen,
    owning patch, source file, title, summaries and list entries.
 2. **`web/`** is a phone-sized interactive preview generated from that catalogue.
@@ -56,8 +56,7 @@ do-nothing DOM, so nothing is rendered.
 
 ```sh
 git clone --depth 1 https://github.com/MorpheApp/morphe-patches /tmp/morphe-patches
-python3 visual-editor/tools/extract_catalogue.py /tmp/morphe-patches visual-editor/data/catalogue.json
-cp visual-editor/data/catalogue.json visual-editor/web/catalogue.json
+python3 visual-editor/tools/extract_catalogue.py /tmp/morphe-patches visual-editor/web/catalogue.json
 ```
 
 The extractor is static (regex plus a bracket-aware call scanner over the Kotlin

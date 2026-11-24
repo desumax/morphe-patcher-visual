@@ -40,6 +40,6 @@ for f in (WEB / "js").glob("*.js"):
 shutil.copy2(HERE / "app-pre.js", out / "js" / "app-pre.js")
 shutil.copy2(HERE / "app-post.js", out / "js" / "app-post.js")
 shutil.copy2(HERE / "app.css", out / "app.css")
-cat = json.loads((HERE.parent / "data" / "catalogue.json").read_text(encoding="utf-8"))
+cat = json.loads((WEB / "catalogue.json").read_text(encoding="utf-8"))
 (out / "catalogue.json").write_text(json.dumps(cat, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
 print("in-app web built in", out)

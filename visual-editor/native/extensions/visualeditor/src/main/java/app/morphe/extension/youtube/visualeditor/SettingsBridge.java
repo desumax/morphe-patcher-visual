@@ -13,7 +13,6 @@ import android.content.Context;
 import androidx.annotation.Nullable;
 
 import app.morphe.extension.shared.Logger;
-import app.morphe.extension.shared.settings.BooleanSetting;
 import app.morphe.extension.shared.settings.Setting;
 import app.morphe.extension.shared.settings.preference.AbstractPreferenceFragment;
 
@@ -24,31 +23,9 @@ import app.morphe.extension.shared.settings.preference.AbstractPreferenceFragmen
  */
 final class SettingsBridge {
 
-    /** If a setting changed in the editor needs an app restart (asked once, when leaving). */
-    private boolean restartNeeded;
-
     @Nullable
     static Setting<?> setting(@Nullable String key) {
         return key == null ? null : Setting.getSettingFromPath(key);
-    }
-
-    static boolean isAvailable(String key) {
-        Setting<?> s = setting(key);
-        return s == null || s.isAvailable();
-    }
-
-    static boolean isBoolean(String key) {
-        return setting(key) instanceof BooleanSetting;
-    }
-
-    static boolean boolValue(String key) {
-        Setting<?> s = setting(key);
-        return s instanceof BooleanSetting b && b.get();
-    }
-
-    static String stringValue(String key) {
-        Setting<?> s = setting(key);
-        return s == null ? "" : String.valueOf(s.get());
     }
 
     /**
@@ -90,10 +67,6 @@ final class SettingsBridge {
         after.run();
     }
 
-    void toggle(Context context, String key, Runnable after) {
-        save(context, key, String.valueOf(!boolValue(key)), after);
-    }
-
     private void saveConfirmed(Setting<?> s, String newValue) {
         try {
             PendingChanges.beforeSave(s, String.valueOf(s.get()));
@@ -105,25 +78,8 @@ final class SettingsBridge {
         }
     }
 
-    void reset(Iterable<String> keys) {
-        for (String key : keys) {
-            Setting<?> s = setting(key);
-            if (s != null && !s.isSetToDefault()) {
-                PendingChanges.beforeSave(s, String.valueOf(s.get()));
-                s.resetToDefault();
-                PendingChanges.afterSave(s);
-                if (s.rebootApp) markRestart();
-            }
-        }
-    }
-
-    private void markRestart() {
-        restartNeeded = true;
+    private static void markRestart() {
         // The regular Morphe screens ask for the restart when settings are closed: same flag.
         AbstractPreferenceFragment.setRestartNeeded();
-    }
-
-    boolean restartNeeded() {
-        return restartNeeded;
     }
 }

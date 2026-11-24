@@ -81,9 +81,6 @@
 .spin7 i { width: 10px; height: 10px; border-radius: 50%; border: 2px solid #3ea6ff; border-top-color: transparent; animation: clock7 .7s linear infinite; }
 .spin7.dead { background: #777; }
 .spin7.dead i { animation: none; border-color: #444; border-top-color: transparent; }
-.ref7 { position: absolute; left: 50%; top: 36%; translate: -50% 0; z-index: 31; width: 22px; height: 22px; border-radius: 50%; background: #f1f1f1; display: grid; place-items: center; animation: pop .25s var(--ease); }
-.ref7 svg { fill: #0f0f0f !important; }
-.ref7.spin svg { animation: clock7 .6s linear 2; }
 .demo-label.dyn { transition: opacity .3s; }
 .knob[data-thumb] { background: transparent !important; box-shadow: none !important; }
 .knob[data-thumb]::after { content: "⭐"; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 15px; line-height: 1; }

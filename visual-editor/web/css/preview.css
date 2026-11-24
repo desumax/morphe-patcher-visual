@@ -38,7 +38,6 @@
 @keyframes chargein { from { opacity: 0; } to { opacity: .6; } }
 .c.reveal { animation: revealk .34s var(--ease); }
 @keyframes revealk { from { opacity: .6; } to { opacity: 1; } }
-@keyframes concealk { from { opacity: 1; visibility: visible; } to { opacity: 0; visibility: visible; } }
 .c.pressing::after { content: ""; position: absolute; inset: -4px; border-radius: 10px; border: 2px solid var(--yt-red); animation: press .48s linear forwards; pointer-events: none; }
 @keyframes press { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
 .c.flash { animation: flash .5s var(--ease); transform-origin: var(--pop, center); }

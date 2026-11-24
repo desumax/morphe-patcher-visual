@@ -15,61 +15,38 @@ import androidx.annotation.Nullable;
 
 import org.xmlpull.v1.XmlPullParser;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.LinkedHashMap;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 
 import app.morphe.extension.shared.Logger;
 import app.morphe.extension.shared.Utils;
 
 /**
- * The live list of Morphe settings, read at runtime from the same res/xml/morphe_prefs.xml that
- * the regular Morphe settings screen inflates.
- *
- * Nothing about the settings is copied into this patch: titles, summaries, list entries, order,
- * screens and dependencies all come from the installed Morphe build. A setting the developer
- * adds, renames, removes or moves shows up here exactly as it does on the regular screens,
- * with no change to the editor. (Upstream history, May to November 2026: the YouTube settings
- * went from 414 to 710 keys, with 142 removed, 47 renamed and 50 default changes.)
+ * The rows of res/xml/morphe_prefs.xml, the file the regular Morphe settings screen inflates.
+ * LiveSettings reads a row from it when the live list no longer holds that row: a key found here
+ * is a row of this build, with its translated title, summary and list entries. Nothing about the
+ * settings is copied into this patch, so a setting the developer adds, renames or removes shows
+ * up here as it does on the regular screens.
  */
 public final class PreferenceTree {
 
     private static final String ANDROID_NS = "http://schemas.android.com/apk/res/android";
 
     public static final class Node {
-        /** Element name: a preference class (SwitchPreference, ListPreference, a full class name...). */
-        public final String type;
-        @Nullable public final String key, title, summary, dependency;
+        @Nullable public final String title, summary;
         @Nullable public final CharSequence[] entries, entryValues;
-        /** The Morphe screen this node sits in (key of the nearest PreferenceScreen), or null at the root. */
-        @Nullable public final String screen;
-        public final List<Node> children = new ArrayList<>();
 
-        Node(String type, @Nullable String key, @Nullable String title, @Nullable String summary,
-             @Nullable String dependency, @Nullable CharSequence[] entries,
-             @Nullable CharSequence[] entryValues, @Nullable String screen) {
-            this.type = type;
-            this.key = key;
+        Node(@Nullable String title, @Nullable String summary,
+             @Nullable CharSequence[] entries, @Nullable CharSequence[] entryValues) {
             this.title = title;
             this.summary = summary;
-            this.dependency = dependency;
             this.entries = entries;
             this.entryValues = entryValues;
-            this.screen = screen;
-        }
-
-        public boolean isScreen() {
-            return type.endsWith("PreferenceScreen");
         }
     }
 
-    /** Every keyed node, in the order Morphe lists them. */
-    public final Map<String, Node> byKey = new LinkedHashMap<>();
-    /** The top-level Morphe screens (Ads, Feed, Player...). */
-    public final List<Node> screens = new ArrayList<>();
+    /** Every row that has a key. */
+    private final Map<String, Node> byKey = new HashMap<>();
 
     private static volatile PreferenceTree instance;
 
@@ -80,10 +57,6 @@ public final class PreferenceTree {
             }
         }
         return instance;
-    }
-
-    public boolean has(String key) {
-        return byKey.containsKey(key);
     }
 
     @Nullable
@@ -101,24 +74,13 @@ public final class PreferenceTree {
             Logger.printException(() -> "Visual editor: morphe_prefs not found");
             return tree;
         }
-        Deque<Node> stack = new ArrayDeque<>();
         try (XmlResourceParser p = res.getXml(id)) {
             for (int ev = p.getEventType(); ev != XmlPullParser.END_DOCUMENT; ev = p.next()) {
-                if (ev == XmlPullParser.START_TAG) {
-                    Node parent = stack.peek();
-                    String screen = null;
-                    for (Node n : stack) if (n.isScreen() && n.key != null) { screen = n.key; break; }
-                    Node node = new Node(p.getName(), p.getAttributeValue(ANDROID_NS, "key"),
-                            text(res, p, "title"), text(res, p, "summary"),
-                            p.getAttributeValue(ANDROID_NS, "dependency"),
-                            array(res, p, "entries"), array(res, p, "entryValues"), screen);
-                    if (parent != null) parent.children.add(node);
-                    if (node.key != null) tree.byKey.put(node.key, node);
-                    if (node.isScreen() && stack.size() == 1) tree.screens.add(node);
-                    stack.push(node);
-                } else if (ev == XmlPullParser.END_TAG) {
-                    stack.pop();
-                }
+                if (ev != XmlPullParser.START_TAG) continue;
+                String key = p.getAttributeValue(ANDROID_NS, "key");
+                if (key == null || tree.byKey.containsKey(key)) continue;
+                tree.byKey.put(key, new Node(text(res, p, "title"), text(res, p, "summary"),
+                        array(res, p, "entries"), array(res, p, "entryValues")));
             }
         } catch (Exception ex) {
             Logger.printException(() -> "Visual editor: could not read morphe_prefs", ex);

@@ -576,7 +576,6 @@ function rowHTML(k, live) {
 // "When Off:" lead-in (Max, Nov 23: dropped on every such card).
 // The last word of a title and the badges after it never wrap apart, so a sub-options pill can't end up alone on a line.
 function ttlHTML(t, after) { if (!after) return esc(t); const i = t.lastIndexOf(" "); return `${esc(t.slice(0, i + 1))}<span class="nw">${esc(t.slice(i + 1))}${after}</span>`; }
-const groupHTML = (name, icon, keys, live) => keys.length ? `<div class="gtitle">${I(icon)}${name} · ${keys.length}</div><div class="group">${keys.map(k => rowHTML(k, live)).join("")}</div>` : "";
 
 // Rows follow the order their components appear in the preview, top to bottom, left to right
 // (doodle and top bar first). Settings without a component (scenarios) keep their order after them.
@@ -842,7 +841,7 @@ function renderList() {
   // read from the settings, not the drawn rows: a sub-option folding away keeps its unlocked look
   // while it folds, and read from the DOM it never counted as locked, so it unlocked only once
   const dis = new Set([...list.querySelectorAll(".row[data-row]")].map(r => r.dataset.row).filter(k => PREF[k] && !parentsOk(k)));
-  if (lastDis.sec === section) { carryUnlocks(list); lastDis.keys.forEach(k => { if (!dis.has(k)) { const r = list.querySelector(`[data-row="${k}"]`); if (r && !r.dataset.ulk && !r.classList.contains("hide")) unlockFx(r); } }); }
+  if (lastDis.sec === section) unlockBatch(() => { carryUnlocks(list); lastDis.keys.forEach(k => { if (!dis.has(k)) { const r = list.querySelector(`[data-row="${k}"]`); if (r && !r.dataset.ulk && !r.classList.contains("hide")) unlockFx(r); } }); });
   else unlocking.clear();
   lastDis = { sec: section, keys: dis };
   lockedWas.forEach((w, k) => { const r = list.querySelector(`.row[data-row="${k}"]:not(.dis)`); if (r) unlockMorph(r, w); });
@@ -1178,37 +1177,67 @@ function mergeZonePreview(list) {
 // badge away with the old rows (it vanished, or a stale copy of the row brought it back from the start:
 // the flicker on a quick second tap). Now a redraw picks the animation up where it was instead.
 const ULK_MS = 560, unlocking = new Map(); // setting -> when its unlock animation started
+// Several unlocks in one redraw (a main switch turned on unlocks every row under it) are done in
+// passes over all the rows: read what is moving, write every row, then find the started animations
+// in one look and move them to their time. Row by row, each read after a write made the browser
+// work out the whole page's styles again (25 rows: 50 times), which was most of that redraw's cost.
+let ulkBatch = null; // row -> out, while unlockBatch collects
+function unlockBatch(fn) {
+  if (ulkBatch) return fn();
+  ulkBatch = new Map();
+  let rows;
+  try { fn(); } finally { rows = [...ulkBatch]; ulkBatch = null; }
+  const writes = rows.map(([row, out]) => unlockPlan(row, out));
+  const seeks = new Map(writes.map(w => w()).filter(Boolean).map(x => [x.row, x]));
+  if (!seeks.size) return;
+  // openings picked up after a redraw carry on from where they were: one look at the page's animations
+  const hits = [];
+  document.getAnimations().forEach(a => {
+    const n = a.animationName || ""; if (!/^(unlock|lk)/.test(n)) return;
+    const t = a.effect && a.effect.target, x = t && seeks.get(t.closest(".row")); if (!x) return;
+    if (/^unlock/.test(n) ? t === x.row && !a.effect.pseudoElement : !!x.host && x.host.contains(t)) hits.push([a, x.el]);
+  });
+  hits.forEach(([a, el]) => { a.currentTime = el; });
+}
 function unlockFx(row, out = false) {
+  if (!ulkBatch) return unlockBatch(() => unlockFx(row, out));
+  if (!ulkBatch.has(row)) ulkBatch.set(row, out);
+}
+// reads only; returns the row's writes. When the row resumes an opening they return { row, host, el }:
+// its animations are then moved to el, where the opening was
+function unlockPlan(row, out) {
   const k = row.dataset.row, t0 = unlocking.get(k), resume = t0 !== undefined && performance.now() - t0 < ULK_MS;
   if (!resume) unlocking.set(k, performance.now());
-  row.dataset.ulk = "1";
   // A row that just appeared (a sub-option unfolding) is still growing from zero height with its
   // overflow clipped: measuring it then put the badge in the wrong place, clipped, between two cards.
   // So a new badge waits until the row and its sub-option group have finished moving, and it is placed
   // inside the control's own box (centred by CSS), so it can't drift from it whatever the layout does.
   const moving = resume ? [] : [row, row.closest(".kids")].filter(Boolean).flatMap(e => e.getAnimations())
     .filter(a => { const t = a.effect && a.effect.getComputedTiming(); return t && isFinite(t.endTime); });
-  // the control stays locked (greyed, gold lock) until its opening starts, so it never shows unlocked first
-  if (!resume && !out) { const h = lockHost(row); if (h && !h.querySelector(".lk7")) h.insertAdjacentHTML("beforeend", LOCK_COVER); }
   const go = () => {
-    if (!row.isConnected) return;
+    if (!row.isConnected) return null;
     if (!resume && moving.length) unlocking.set(k, performance.now()); // the opening plays whole once the row stops moving
-    const el = performance.now() - unlocking.get(k); if (el >= ULK_MS) return;
+    const el = performance.now() - unlocking.get(k); if (el >= ULK_MS) return null;
     // locked again mid-opening: the row's own locked cover stays, the opening fades over it
     row.querySelectorAll(out ? ".ulk, .lk7.go" : ".ulk, .lk7").forEach(e => e.remove());
     row.classList.add("unlock");
-    row.getAnimations().filter(a => /^unlock/.test(a.animationName || "")).forEach(a => { a.currentTime = el; });
     // the locked cover comes back on the now unlocked control and plays its opening (lockOpening)
-    const host = lockHost(row); if (!host) { setTimeout(() => row.classList.remove("unlock"), ULK_MS - el); return; }
-    const u = lockOpening(host);
-    host.getAnimations({ subtree: true }).filter(a => /^lk/.test(a.animationName || "")).forEach(a => { a.currentTime = el; });
+    const host = lockHost(row), u = host && lockOpening(host);
+    if (!host) setTimeout(() => row.classList.remove("unlock"), ULK_MS - el);
     // locked again mid-animation (the parent tapped off): the badge fades from where it is, no jump
-    if (out) { unlocking.delete(k); u.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150, fill: "forwards" }).onfinish = () => { lockClosed(host, u); row.classList.remove("unlock"); }; return; }
-    setTimeout(() => { lockClosed(host, u); row.classList.remove("unlock"); }, ULK_MS - el);
+    else if (out) { unlocking.delete(k); u.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150, fill: "forwards" }).onfinish = () => { lockClosed(host, u); row.classList.remove("unlock"); }; }
+    else setTimeout(() => { lockClosed(host, u); row.classList.remove("unlock"); }, ULK_MS - el);
+    return resume ? { row, host, el } : null; // a new opening starts at zero by itself
   };
-  if (!moving.length) return go();
-  let done = false; const once = () => { if (!done) { done = true; go(); } };
-  Promise.all(moving.map(a => a.finished.catch(() => {}))).then(once); setTimeout(once, 700);
+  return () => {
+    row.dataset.ulk = "1";
+    // the control stays locked (greyed, gold lock) until its opening starts, so it never shows unlocked first
+    if (!resume && !out) { const h = lockHost(row); if (h && !h.querySelector(".lk7")) h.insertAdjacentHTML("beforeend", LOCK_COVER); }
+    if (!moving.length) return go();
+    let done = false; const once = () => { if (!done) { done = true; go(); } };
+    Promise.all(moving.map(a => a.finished.catch(() => {}))).then(once); setTimeout(once, 700);
+    return null;
+  };
 }
 // after a redraw: running unlocks carry on on the new rows (only while the setting is still unlocked)
 function carryUnlocks(list) {
