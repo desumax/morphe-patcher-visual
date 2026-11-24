@@ -11,7 +11,7 @@ Needs: git, JDK 17+, the Android SDK (ANDROID_HOME or local.properties), and a G
 read:packages for the Morphe Gradle plugin (GITHUB_ACTOR + GITHUB_TOKEN, or gpr.user / gpr.key
 in ~/.gradle/gradle.properties).
 
-Usage: build.py --version 0.1.0-test.N [--tag v2.3.0] [--work DIR] [--out DIR]
+Usage: build.py --version 0.1.N [--tag v2.3.0] [--work DIR] [--out DIR]
 """
 import argparse
 import json
@@ -50,7 +50,7 @@ def main():
     ap.add_argument("--tag", default="v2.3.0", help="morphe-patches release to build against")
     ap.add_argument("--work", default=str(HERE / "work"))
     ap.add_argument("--out", default=str(HERE / "out"))
-    ap.add_argument("--version", required=True, help="bundle version, e.g. 0.1.0-test.9 (also names the .mpp)")
+    ap.add_argument("--version", required=True, help="bundle version, e.g. 0.1.13 for test 13; no '-' suffix, which Manager reads as a prerelease (also names the .mpp)")
     ap.add_argument("--manifest", action="store_true",
                     help="also point the repo-root patches-bundle.json (Manager feed) at this version's release asset (publish that release before pushing the manifest)")
     ap.add_argument("--skip-build", action="store_true", help="only prepare the workspace")
@@ -117,7 +117,7 @@ def main():
 
     if args.manifest:
         # Manager's feed: the version, its .mpp and the release it is attached to must agree.
-        tag = "visual-editor-" + args.version.split("-", 1)[-1].replace(".", "-")
+        tag = "v" + args.version
         feed = HERE.parent.parent / "patches-bundle.json"  # repo root: Manager reads it from the repo link
         data = json.loads(feed.read_text(encoding="utf-8"))
         data.pop("signature_download_url", None)  # Manager reads version, download_url, created_at, description

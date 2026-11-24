@@ -75,7 +75,7 @@ maintenance, and the editor keeps working while it waits.
 | Path | What it does |
 | --- | --- |
 | `patches/.../misc/visualeditor/VisualSettingsEditorPatch.kt` | The patch. Depends on no other patch object; in finalize it adds one call at the end of Morphe's settings fragment `initialize()`. |
-| `extensions/visualeditor/.../VisualEditorEntry.java` | Adds the "Visual settings editor" switch and "Open visual editor" row above About, and opens the editor when settings open while the switch is on. |
+| `extensions/visualeditor/.../VisualEditorEntry.java` | Adds the "Visual settings editor" switch above About, and opens the editor when settings open while the switch is on. |
 | `extensions/visualeditor/.../WebEditorDialog.java` | Hosts the editor (the web page, packed into `WebAssets.java` at build time) in a WebView, and the `MorpheApp` bridge it talks to. |
 | `extensions/visualeditor/.../LiveSettings.java` | The rows of the installed settings list, one entry per row, with types, defaults, availability and translated text. The only place that decides which rows the editor has. |
 | `extensions/visualeditor/.../PendingChanges.java` | Changes that wait for an app restart, kept across visits. |

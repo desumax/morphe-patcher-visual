@@ -1,6 +1,6 @@
 {
-  "created_at": "2026-11-24T01:30:00",
-  "description": "Test build of the visual settings editor: one patch, Visual settings editor. Add it in Morphe Manager next to the Morphe Patches bundle (Expert mode, both selected).",
-  "download_url": "https://github.com/desumax/morphe-patcher-visual/releases/download/visual-editor-test-9/morphe-visual-editor-0.1.0-test.9.mpp",
-  "version": "0.1.0-test.9"
+  "created_at": "2026-11-24T19:25:25",
+  "description": "### Test 12 (2026-11-24)\n\n**Features**\n- The grouped card menu fits the screen without scrolling\n- Reset order sits in the top bar beside the title\n- Closing search opened from the menu goes back to the menu\n- No card is marked as selected on first open\n- Hidden parts fade out with their red outline, no leftover red line\n- Comparisons open in their final shape, with labels already in place\n- Scrolling is 20% less sensitive, with the phone's own fling feel\n- The glass is 30% softer everywhere\n- The screen menu is 15% darker\n\n**Bug Fixes**\n- Morphe Manager shows each release's changes (it showed the same one-line text every time)",
+  "download_url": "https://github.com/desumax/morphe-patcher-visual/releases/download/visual-editor-test-12/morphe-visual-editor-0.1.0-test.12.mpp",
+  "version": "0.1.0-test.12"
 }
