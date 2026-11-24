@@ -212,6 +212,12 @@ final class WebEditorDialog extends Dialog {
     @Override
     public void show() {
         super.show();
+        // the settings screen hidden before its first frame (VisualEditorEntry.preHide) is now the
+        // editor's to show again when it closes (taken only once the editor is up, so a failed start
+        // leaves it to VisualEditorEntry, which shows it again)
+        View pre = VisualEditorEntry.takePreHidden();
+        if (pre != null && hiddenList == null) hiddenList = pre;
+        else if (pre != null) pre.setVisibility(View.VISIBLE);
         registerPredictiveBack();
     }
 

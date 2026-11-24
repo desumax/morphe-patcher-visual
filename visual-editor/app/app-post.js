@@ -81,7 +81,7 @@ if (INAPP) {
   // Every caller that closed the dropdown (a card, search, the scrim) now leaves the menu page.
   setPicker = open => setMenu(open);
   const searchOpen = openResult;
-  openResult = k => { setMenu(false); searchOpen(k); };
+  openResult = k => { const s = menuPage && sectionOf(k); if (s && s !== section) quickSection(s); setMenu(false); searchOpen(k); };
   const leave = () => {
     if (pendingRestart().length) return restartDialog();
     try { MorpheApp.close(); } catch (e) { /* ignore */ }

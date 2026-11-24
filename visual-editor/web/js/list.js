@@ -1893,8 +1893,25 @@ window.addEventListener("resize", () => { if (barStays()) $("app").classList.rem
 { const bar = document.querySelector(".appbar"); if (bar && window.ResizeObserver) new ResizeObserver(() => $("app").style.setProperty("--abh", bar.offsetHeight + "px")).observe(bar); }
 {
   let lastY = 0, acc = 0, barMoveUntil = 0;
+  // Nov 24 (Max: after Show on Mute button the top bar stayed hidden at the top of the list; only a small
+  // scroll down and up again brought it back): a hidden bar at the top, or over a list too short to
+  // scroll past it, is never right. Scrolls that came during a jump, a hold or the bar's own move were
+  // ignored, and once the list sits at its top no scroll can come any more (pulling past the end only
+  // stretches it), so the bar stayed hidden. barCheck brings it back from any of those, on every screen:
+  // at every scroll (before anything is ignored), when a scroll or fling ends, when a finger lifts and
+  // when the list changes size.
+  const barCheck = () => {
+    const sc = $("scroller"), app = $("app"); if (!app.classList.contains("barhidden")) return;
+    const bar = document.querySelector(".appbar"), abh = bar ? bar.offsetHeight : 56;
+    if (sc.scrollTop < 8 || sc.scrollHeight - sc.clientHeight <= abh + 24) { app.classList.remove("barhidden"); acc = 0; barMoveUntil = performance.now() + 320; }
+  };
+  window.barCheck = barCheck;
+  $("scroller").addEventListener("scrollend", barCheck, { passive: true });
+  ["pointerup", "pointercancel", "touchend", "touchcancel"].forEach(t => document.addEventListener(t, () => { barCheck(); setTimeout(barCheck, 360); }, { passive: true, capture: true }));
+  if (window.ResizeObserver) new ResizeObserver(() => requestAnimationFrame(barCheck)).observe($("content"));
   $("scroller").addEventListener("scroll", () => {
     const sc = $("scroller"), y = sc.scrollTop, app = $("app"), d = y - lastY; lastY = y;
+    barCheck();
     if (app.classList.contains("searching") || pickerOpen || barStays()) { app.classList.remove("barhidden"); acc = 0; return; }
     // only your own scrolling moves the bar: jumps to a setting (and holds) leave it where it is
     if (performance.now() < progScrollUntil || press) { acc = 0; return; }

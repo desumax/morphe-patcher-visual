@@ -13,6 +13,7 @@ import android.preference.Preference;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceScreen;
 import android.preference.SwitchPreference;
+import android.view.View;
 
 import androidx.annotation.Nullable;
 
@@ -38,6 +39,12 @@ public final class VisualEditorEntry {
     private static WeakReference<Activity> autoOpenedIn = new WeakReference<>(null);
     /** Set when this device's WebView is too old for the editor: no more automatic opening until YouTube restarts. */
     static volatile boolean webViewTooOld;
+    /**
+     * The settings screen, hidden before its first frame when the editor is about to open by itself
+     * (Max, Nov 24: the regular menu showed for a moment before the redesign took over). The editor
+     * takes it over and shows it again when it closes; if no editor takes it, it is shown again.
+     */
+    private static WeakReference<View> preHidden = new WeakReference<>(null);
 
     private VisualEditorEntry() {
     }
@@ -54,13 +61,51 @@ public final class VisualEditorEntry {
      */
     public static void onSettingsInitializing(PreferenceFragment fragment) {
         try {
+            preHide(fragment.getActivity());
+        } catch (Throwable ex) {
+            Logger.printException(() -> "Visual editor: could not hide the list before opening", ex);
+        }
+        try {
             Utils.runOnMainThread(() -> onSettingsCreated(fragment));
         } catch (Throwable ex) {
             Logger.printException(() -> "Visual editor: could not schedule its entry", ex);
         }
     }
 
+    /** Hides the settings screen now, synchronously, when the editor will open by itself in this activity. */
+    private static void preHide(@Nullable Activity activity) {
+        if (activity == null || activity.isFinishing() || webViewTooOld || autoOpenedIn.get() == activity
+                || !VisualEditorSettings.ENABLED.get()) return;
+        View content = activity.findViewById(android.R.id.content);
+        if (content == null || content.getVisibility() != View.VISIBLE) return;
+        content.setVisibility(View.INVISIBLE);
+        preHidden = new WeakReference<>(content);
+        // never left hidden: shown again if no editor has taken it over by then
+        content.postDelayed(VisualEditorEntry::restorePreHidden, 4000);
+    }
+
+    /** The editor takes the hidden screen over (it shows it again when it closes). */
+    @Nullable
+    static View takePreHidden() {
+        View v = preHidden.get();
+        preHidden = new WeakReference<>(null);
+        return v;
+    }
+
+    static void restorePreHidden() {
+        View v = takePreHidden();
+        if (v != null) v.setVisibility(View.VISIBLE);
+    }
+
     static void onSettingsCreated(PreferenceFragment fragment) {
+        try {
+            onSettingsCreatedInner(fragment);
+        } finally {
+            restorePreHidden(); // the editor did not open (or failed): the regular list shows
+        }
+    }
+
+    private static void onSettingsCreatedInner(PreferenceFragment fragment) {
         try {
             PreferenceScreen root = fragment.getPreferenceScreen();
             if (root == null) return;

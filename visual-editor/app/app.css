@@ -26,6 +26,16 @@ html.inapp #pickGrid .pg.pvis .pick[aria-current="true"] { background: var(--m-c
 html.inapp #pickGrid .pg.pvis .pick .pi { width: 40px; height: 40px; background: var(--m-c-highest, #303030); border-radius: 12px; }
 html.inapp #pickGrid .pg.pvis .pick .pi svg { width: 22px; height: 22px; }
 html.inapp #pickGrid .pg.pvis .pick .pt { font-size: 15.5px; }
+/* one card per screen (Group screens into tabs off, Max Nov 24: two or more lines for no reason, lots of
+   empty space): the icon beside the name and the count, one compact row; still two columns in Morphe's
+   order, left to right, top to bottom */
+html.inapp #pickGrid .pg.pvis:not(.pgroups) { align-items: stretch; }
+html.inapp #pickGrid .pg.pvis:not(.pgroups) .pick { flex-direction: row; align-items: center; justify-content: flex-start; gap: 10px; padding: 10px 12px; min-height: 60px; border-radius: 14px; text-align: left; }
+html.inapp #pickGrid .pg.pvis:not(.pgroups) .pick .pi { flex: none; width: 36px; height: 36px; border-radius: 11px; }
+html.inapp #pickGrid .pg.pvis:not(.pgroups) .pick .pi svg { width: 20px; height: 20px; }
+html.inapp #pickGrid .pg.pvis:not(.pgroups) .pick > span:last-child { min-width: 0; }
+html.inapp #pickGrid .pg.pvis:not(.pgroups) .pick .pt { font-size: 14.5px; line-height: 1.2; overflow-wrap: anywhere; }
+html.inapp #pickGrid .pg.pvis:not(.pgroups) .pick .ps { margin-top: 2px; }
 html.inapp #pickGrid .themerow { margin-top: 0; }
 /* back swipe (app-post.js): the card menu sits behind the screen that follows the finger */
 html.inapp.peekback #picker { z-index: 20; transition: none; pointer-events: none; will-change: transform; }
