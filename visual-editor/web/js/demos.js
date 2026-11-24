@@ -60,6 +60,12 @@ function label(text, bad, ms, force) {
 }
 const ENDSCREEN_SEL = new Set(["morphe_hide_autoplay_preview", "morphe_hide_end_screen_suggested_video"]);
 function finger() { return document.querySelector("#stage .finger"); }
+// A part of the stage that a demo moves often has its resting value as an inline style of its own
+// (the seekbar's fill and knob, the thumbnail bubble). Clearing the property after the demo dropped that
+// value: the bubble sat clipped at the edge, the seekbar lost its glide. keepRest remembers the
+// inline value before the demo first writes it; toRest puts it back. Every demo uses these.
+function keepRest(el, prop) { if (el && el.dataset["rest_" + prop] === undefined) el.dataset["rest_" + prop] = el.style[prop]; }
+function toRest(el, prop) { if (el) el.style[prop] = el.dataset["rest_" + prop] || ""; }
 function place(f, x, y, ms) { fingerShow(f, x, y, ms); }
 function hideF(f, after) { dT(() => { f.classList.remove("show", "hold"); }, after); }
 function tapAt(x, y, f = finger()) { if (!f) return; place(f, x, y); f.classList.remove("tap"); void f.offsetWidth; f.classList.add("tap"); hideF(f, 520); }
@@ -129,10 +135,10 @@ const DEMOS = {
     if (on) {
       // every loop starts from the resting point, so the seekbar moves each time, in step with the finger
       const moving = [$("played"), $("knob"), $("knobRing")].filter(Boolean);
-      moving.forEach(e => e.style.transition = "none"); setSeek(17); void $("stage").offsetWidth;
+      moving.forEach(e => { keepRest(e, "transition"); e.style.transition = "none"; }); setSeek(17); void $("stage").offsetWidth;
       label("Press and hold the video, then slide: seeks");
       dT(() => { place(f, W * .7, 90, 700); moving.forEach(e => e.style.transition = "width .7s var(--ease), left .7s var(--ease)"); setSeek(60); }, 250);
-      dT(() => moving.forEach(e => e.style.transition = ""), 1000); onDemoStop(() => moving.forEach(e => e.style.transition = ""));
+      dT(() => moving.forEach(e => toRest(e, "transition")), 1000); onDemoStop(() => moving.forEach(e => toRest(e, "transition")));
     }
     else { label("Press and hold the video: plays at 2x speed (stock)", true); showPill("2x ▸▸"); }
     hideF(f, 1150);
@@ -380,7 +386,7 @@ Object.assign(DEMOS, {
     const y = r.top - st.top + r.height / 2, p0 = 17, p1 = 70, total = 18 * 60 + 42;
     const xAt = pct => r.left + r.width * pct / 100;
     const played = $("played"), knob = $("knob"), ring = $("knobRing"), tl = bub && bub.querySelector(".time");
-    [played, knob, ring].forEach(e => e && (e.style.transition = "none"));
+    [played, knob, ring].forEach(e => { if (e) { keepRest(e, "transition"); e.style.transition = "none"; } });
     if (bub) { bub.classList.add("dragging"); bub.style.opacity = on ? "1" : "0"; }
     const frame = pct => {
       setSeek(pct); place(f, xAt(pct) - st.left, y);
@@ -389,8 +395,8 @@ Object.assign(DEMOS, {
     };
     // the bubble's resting place is an inline left of its own: clearing it dropped the bubble to the left edge,
     // half outside the preview, between two rounds (Max, round 139: "starts with the thumbnail clipped")
-    if (bub && bub.dataset.left0 === undefined) bub.dataset.left0 = bub.style.left;
-    const reset = () => { if (bub) { bub.classList.remove("dragging"); bub.style.left = bub.dataset.left0 || ""; bub.style.opacity = ""; } if (tl) tl.textContent = "7:51"; [played, knob, ring].forEach(e => e && (e.style.transition = "")); setSeek(p0); };
+    keepRest(bub, "left");
+    const reset = () => { if (bub) { bub.classList.remove("dragging"); toRest(bub, "left"); bub.style.opacity = ""; } if (tl) tl.textContent = "7:51"; [played, knob, ring].forEach(e => toRest(e, "transition")); setSeek(p0); };
     onDemoStop(reset);
     frame(p0); f.classList.add("hold");
     const t0 = performance.now() + 40, dur = 1000, tok = clock.run("demo");
