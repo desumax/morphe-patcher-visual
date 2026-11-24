@@ -104,9 +104,12 @@ def main():
 
     log = ROOT / "CHANGELOG.md"
     old = log.read_text(encoding="utf-8") if log.exists() else ""
-    if old.startswith(f"# [{args.version}]"):
-        sys.exit(f"CHANGELOG.md already starts with {args.version}: edit it there")
-    log.write_text(entry + old, encoding="utf-8")
+    if f"# [{args.version}]" in old:
+        sys.exit(f"CHANGELOG.md already has {args.version}: edit it there")
+    # newest first, below the file's intro (everything before the first release heading)
+    at = old.find("\n# [")
+    head, rest = (old[:at + 1], old[at + 1:]) if at >= 0 else (old.rstrip() + "\n\n\n" if old.strip() else "", "")
+    log.write_text(head + entry + rest, encoding="utf-8")
     print(f"Drafted {sum(map(len, groups.values()))} changes since {since or 'the start'} at the top of CHANGELOG.md. "
           "Read and tidy it before the release.")
 
