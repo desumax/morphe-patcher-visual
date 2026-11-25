@@ -6,6 +6,27 @@ Versions carry no "-" suffix: Manager treats those as prereleases and leaves the
 The patcher engine's own changelog is in docs/PATCHER-CHANGELOG.md.
 
 
+# [0.1.13](https://github.com/desumax/morphe-patcher-visual/compare/visual-editor-test-12...v0.1.13) (2026-11-25)
+
+
+### Features
+
+* **YouTube - Visual settings editor:** The web view's screen menu matches the app: Reset order in the top bar, grouped cards fill the menu without scrolling, no card marked before one is opened, closing a search started on the menu goes back to it
+* **YouTube - Visual settings editor:** Disable choices sit last in every SponsorBlock section and turn grey when picked
+* **YouTube - Visual settings editor:** New previews for Quick actions top margin, Select text of descriptions and posts, Search comments and Comments carousel filter
+* **YouTube - Visual settings editor:** Ten Flying comments settings get their own preview; the rest no longer flash the whole preview
+* **YouTube - Visual settings editor:** Display area, Comment font size and Travel duration in portrait appear below Separate settings for portrait, which now has a lock
+* **YouTube - Visual settings editor:** Morphe settings show only the Visual settings editor switch above About (the Open visual editor row did nothing)
+
+
+### Bug Fixes
+
+* **YouTube - Visual settings editor:** Return YouTube Dislike off shows the dislike count as a hidden part with its red outline (it left a small green square)
+* **YouTube - Visual settings editor:** Video action bar layout and Like and Subscribe glow scroll the preview to the action bar when you're scrolled down
+* **YouTube - Visual settings editor:** A hidden part pulses on its own instead of its whole row ('Create a Short' button)
+* **YouTube - Visual settings editor:** Minimal comments button, Sanitize highlighted search links and Search comments drop their extra white sentences
+
+
 # [0.1.12](https://github.com/desumax/morphe-patcher-visual/compare/visual-editor-test-11...visual-editor-test-12) (2026-11-24)
 
 
