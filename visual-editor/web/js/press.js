@@ -208,6 +208,7 @@ $("list").addEventListener("input", e => {
     if (SCN[k] && t.type === "range") liveScenario(k, JSON.parse(t.dataset.before)); // its comparison follows the slider
   }
 });
+$("list").addEventListener("click", e => { const b = e.target.closest("[data-selbtn]"); if (b && !b.disabled) { select(b.dataset.selbtn, "list"); choiceDialog(b.dataset.selbtn); } });
 $("list").addEventListener("change", e => {
   const t = e.target; const k = t.dataset && t.dataset.set; if (!k) return;
   ensureMod();
@@ -302,3 +303,170 @@ function setMode(m) {
 }
 // a two-way toggle: a tap anywhere on it switches between Original and Morphe
 document.querySelector(".appbar .seg").onclick = () => setMode(mode === "orig" ? "mod" : "orig");
+
+// ------------------------------------------------------------------ value wheels and the edit pill
+// Settings that hold a number (Max, Nov 25: "a list wheel / 3D rotating picker first", after detent.hayder.sh):
+// the values sit on a drum turning about its upright axis, the one in the middle is the setting's value.
+// Swipe sideways to turn it (it coasts and clicks into place, a light tick per value); swiping up or down
+// scrolls the list as usual. Tap a side value to turn to it. Tap the middle value, or double tap, to type one:
+// a pill with the field rides on top of the keyboard and the top bar hides so the preview stays in view.
+// The wheel drives a hidden range / number input (.wsrc) with the same input and change events as before,
+// so the preview, the stories and saving work unchanged.
+const WHEEL_W = 46, WHEEL_DEG = 19, WHEEL_SIDE = 5, WHEEL_R = WHEEL_W / 2 / Math.tan(WHEEL_DEG / 2 * Math.PI / 180);
+const wheelFmt = (v, step) => step < 1 ? String(Math.round(v * 100) / 100) : String(Math.round(v));
+function wheelHTML(k, min, max, step, v, dis) {
+  return `<div class="wheel${dis ? " off" : ""}" data-wheel="${k}" data-min="${min}" data-max="${max}" data-step="${step}" data-pos="${(Number(v) - min) / step}" tabindex="${dis ? -1 : 0}" role="slider" aria-label="${esc(shownTitle(k))}" aria-valuenow="${esc(String(v))}"${isFinite(max) ? ` aria-valuemin="${min}" aria-valuemax="${max}"` : ""}><i class="wlens"></i><div class="wtrack">${wheelItems(min, max, step, (Number(v) - min) / step)}</div></div>`;
+}
+// the values around pos (a fractional index): each placed on the drum (x = R sin a), squeezed and faded
+// toward the sides; the glass design blurs them too
+function wheelItem(i, pos, min, step) {
+  const a = (i - pos) * WHEEL_DEG, rad = a * Math.PI / 180, c = Math.cos(rad), x = WHEEL_R * Math.sin(rad);
+  const near = Math.max(0, 1 - Math.abs(i - pos));
+  return { txt: wheelFmt(min + i * step, step), css: `transform:translateX(${x.toFixed(1)}px) scaleX(${Math.max(.05, c).toFixed(3)});opacity:${Math.abs(a) >= 90 ? 0 : (.25 + .75 * c * c).toFixed(3)};--wb:${(Math.min(1, Math.abs(a) / 70) * 2.2).toFixed(2)}px;--wn:${near.toFixed(2)}` };
+}
+function wheelItems(min, max, step, pos) {
+  const n = isFinite(max) ? Math.round((max - min) / step) : Infinity, out = [];
+  for (let i = Math.round(pos) - WHEEL_SIDE; i <= Math.round(pos) + WHEEL_SIDE; i++) {
+    if (i < 0 || i > n) { out.push(`<span class="wi gone"></span>`); continue; }
+    const it = wheelItem(i, pos, min, step); out.push(`<span class="wi" style="${it.css}">${it.txt}</span>`);
+  }
+  return out.join("");
+}
+const wheelOf = el => { const d = el.dataset; return { k: d.wheel, min: Number(d.min), max: Number(d.max), step: Number(d.step), n: isFinite(Number(d.max)) ? Math.round((Number(d.max) - Number(d.min)) / Number(d.step)) : Infinity }; };
+function wheelPaint(el, pos) {
+  const w = wheelOf(el), tr = el.querySelector(".wtrack"); el.dataset.pos = pos;
+  const spans = tr.children, base = Math.round(pos) - WHEEL_SIDE;
+  for (let j = 0; j < spans.length; j++) {
+    const i = base + j, s = spans[j];
+    if (i < 0 || i > w.n) { if (!s.classList.contains("gone")) { s.className = "wi gone"; s.removeAttribute("style"); s.textContent = ""; } continue; }
+    const it = wheelItem(i, pos, w.min, w.step);
+    if (s.classList.contains("gone")) s.className = "wi";
+    if (s.textContent !== it.txt) s.textContent = it.txt;
+    s.style.cssText = it.css;
+  }
+}
+// the hidden input takes the value: input while it turns, change once it rests
+function wheelSet(el, idx, final) {
+  const w = wheelOf(el), src = el.parentElement.querySelector(".wsrc"); if (!src) return;
+  const v = wheelFmt(w.min + idx * w.step, w.step);
+  if (src.value !== v) { src.value = v; el.setAttribute("aria-valuenow", v); tapFeel("tick"); src.dispatchEvent(new Event("input", { bubbles: true })); }
+  if (final && "before" in src.dataset) src.dispatchEvent(new Event("change", { bubbles: true }));
+}
+// a value set from elsewhere (a check, Reset, the edit pill) turns the wheel to it
+$("list").addEventListener("input", e => {
+  const t = e.target; if (!t.classList || !t.classList.contains("wsrc")) return;
+  const el = t.parentElement.querySelector(".wheel"); if (!el || el._turning) return;
+  const w = wheelOf(el), i = (Number(t.value) - w.min) / w.step; if (isFinite(i)) wheelPaint(el, i);
+}, true);
+const wheelClamp = (w, p) => Math.max(0, Math.min(w.n, p));
+function wheelGlide(el, to, done) {
+  cancelAnimationFrame(el._raf); el._turning = true;
+  const w = wheelOf(el), from = Number(el.dataset.pos), dist = to - from, dur = Math.min(900, 260 + Math.abs(dist) * 45), t0 = performance.now();
+  const step = now => {
+    const x = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - x, 3), pos = from + dist * e;
+    wheelPaint(el, pos); wheelSet(el, wheelClamp(w, Math.round(pos)), false);
+    if (x < 1) el._raf = requestAnimationFrame(step); else { el._turning = false; wheelSet(el, to, true); if (done) done(); }
+  };
+  el._raf = requestAnimationFrame(step);
+}
+(() => {
+  let g = null, lastTap = { el: null, t: 0 }, editOnClick = null;
+  const list = $("list");
+  list.addEventListener("pointerdown", e => {
+    const el = e.target.closest(".wheel"); if (!el || el.classList.contains("off") || e.button > 0) return;
+    cancelAnimationFrame(el._raf); el._turning = false;
+    g = { el, id: e.pointerId, x: e.clientX, y: e.clientY, p0: Number(el.dataset.pos), on: false, pts: [[performance.now(), e.clientX]], t: performance.now() };
+    select(el.dataset.wheel, "list");
+  });
+  list.addEventListener("pointermove", e => {
+    if (!g || e.pointerId !== g.id) return;
+    const dx = e.clientX - g.x, dy = e.clientY - g.y;
+    if (!g.on) {
+      if (Math.abs(dy) > 8 && Math.abs(dy) > Math.abs(dx)) { g = null; return; } // the list scrolls
+      if (Math.abs(dx) < 6) return;
+      g.on = true; g.x = e.clientX; try { g.el.setPointerCapture(g.id); } catch { /* gone */ }
+      g.el.classList.add("turning"); g.el._turning = true;
+    }
+    const w = wheelOf(g.el); let pos = g.p0 - (e.clientX - g.x) / WHEEL_W;
+    // past either end it gives a little and pulls back
+    const give = d => (1 - 1 / (d * .55 / 120 + 1)) * 60; // px past the end, slowing
+    if (pos < 0) pos = -give(-pos * WHEEL_W) / WHEEL_W; else if (pos > w.n) pos = w.n + give((pos - w.n) * WHEEL_W) / WHEEL_W;
+    wheelPaint(g.el, pos); wheelSet(g.el, wheelClamp(w, Math.round(pos)), false);
+    const now = performance.now(); g.pts.push([now, e.clientX]); while (g.pts.length > 2 && now - g.pts[0][0] > 100) g.pts.shift();
+  });
+  const end = e => {
+    if (!g || e.pointerId !== g.id) return;
+    const { el, on } = g, w = wheelOf(el), pts = g.pts; g = null;
+    el.classList.remove("turning");
+    if (on) {
+      // it coasts on with the finger's speed, then rests on the nearest value
+      const dt = (pts[pts.length - 1][0] - pts[0][0]) / 1000, v = dt > 0 && performance.now() - pts[pts.length - 1][0] < 60 ? -(pts[pts.length - 1][1] - pts[0][1]) / dt / WHEEL_W : 0;
+      wheelGlide(el, wheelClamp(w, Math.round(Number(el.dataset.pos) + v * .28)));
+      return;
+    }
+    if (e.type !== "pointerup") return;
+    // a tap: a side value turns to it; the middle one (or a second tap) opens the field to type a value
+    const r = el.getBoundingClientRect(), off = (e.clientX - r.left - r.width / 2) / WHEEL_R, d = Math.abs(off) >= 1 ? Math.sign(off) * WHEEL_SIDE : Math.round(Math.asin(off) * 180 / Math.PI / WHEEL_DEG);
+    const now = performance.now(), dbl = lastTap.el === el && now - lastTap.t < 320; lastTap = { el, t: now };
+    // (opened on the click that follows, not here: the press would give the focus back to the wheel, and the
+    // phone shows its keyboard only for a field focused in the tap itself)
+    if (d === 0 || dbl) { lastTap = { el: null, t: 0 }; editOnClick = el; setTimeout(() => { editOnClick = null; }, 600); return; }
+    wheelGlide(el, wheelClamp(w, Math.round(Number(el.dataset.pos)) + d));
+  };
+  list.addEventListener("pointerup", end); list.addEventListener("pointercancel", end);
+  list.addEventListener("click", e => { const el = e.target.closest && e.target.closest(".wheel"); if (el && el === editOnClick) { editOnClick = null; valueEdit(el); } });
+  list.addEventListener("keydown", e => {
+    const el = e.target.closest && e.target.closest(".wheel"); if (!el || el.classList.contains("off")) return;
+    const w = wheelOf(el), p = Math.round(Number(el.dataset.pos));
+    if (e.key === "ArrowLeft" || e.key === "ArrowDown") { wheelGlide(el, wheelClamp(w, p - 1)); e.preventDefault(); }
+    else if (e.key === "ArrowRight" || e.key === "ArrowUp") { wheelGlide(el, wheelClamp(w, p + 1)); e.preventDefault(); }
+    else if (e.key === "Enter") { valueEdit(el); e.preventDefault(); }
+  });
+})();
+// The edit pill: the setting's name, a field and Done, on top of the keyboard (visualViewport). Typing
+// changes the preview at once; Done, Enter or a tap elsewhere keeps the value (held within the range).
+let vEdit = null;
+function valueEdit(el) {
+  if (vEdit) vEditClose(true);
+  const w = wheelOf(el), src = el.parentElement.querySelector(".wsrc"); if (!src) return;
+  const app = $("app"), hadBar = app.classList.contains("barhidden");
+  const pill = document.createElement("div"); pill.className = "vpill"; pill.setAttribute("role", "dialog"); pill.setAttribute("aria-label", shownTitle(w.k));
+  const range = isFinite(w.max) ? `${wheelFmt(w.min, w.step)} to ${wheelFmt(w.max, w.step)}` : `${wheelFmt(w.min, w.step)} or more`;
+  pill.innerHTML = `<div class="vpt"><b>${esc(shownTitle(w.k))}</b><span>${esc(range)}</span></div><input class="vpin" type="text" inputmode="${w.step < 1 ? "decimal" : "numeric"}" enterkeyhint="done" value="${esc(src.value)}" aria-label="${esc(shownTitle(w.k))}"><button class="vpok" aria-label="Done">${I("check")}</button>`;
+  app.appendChild(pill);
+  vEdit = { el, src, pill, k: w.k, hadBar, before: src.value };
+  window.vEditing = true; app.classList.add("barhidden", "vediting"); // the preview stays in view above the keyboard
+  const inp = pill.querySelector(".vpin");
+  const place = () => { const vv = window.visualViewport; const kb = vv ? Math.max(0, innerHeight - vv.height - vv.offsetTop) : 0; pill.style.bottom = kb + 10 + "px"; };
+  place(); vEdit.place = place;
+  if (window.visualViewport) { visualViewport.addEventListener("resize", place); visualViewport.addEventListener("scroll", place); }
+  popFrom(pill, el, true);
+  inp.focus({ preventScroll: true }); inp.select();
+  inp.addEventListener("input", () => {
+    const v = Number(inp.value.replace(",", ".")), ok = inp.value.trim() !== "" && isFinite(v) && v >= w.min && v <= w.max;
+    pill.classList.toggle("bad", inp.value.trim() !== "" && !ok);
+    if (ok) { src.value = String(v); src.dispatchEvent(new Event("input", { bubbles: true })); }
+  });
+  inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); vEditClose(true); } else if (e.key === "Escape") { e.preventDefault(); vEditClose(false); } });
+  pill.querySelector(".vpok").addEventListener("click", () => vEditClose(true));
+  vEdit.outside = e => { if (vEdit && !pill.contains(e.target)) vEditClose(true); };
+  setTimeout(() => document.addEventListener("pointerdown", vEdit && vEdit.outside, true), 0);
+}
+function vEditClose(keep) {
+  const v = vEdit; if (!v) return; vEdit = null; window.vEditing = false;
+  document.removeEventListener("pointerdown", v.outside, true);
+  if (window.visualViewport) { visualViewport.removeEventListener("resize", v.place); visualViewport.removeEventListener("scroll", v.place); }
+  const w = wheelOf(v.el), inp = v.pill.querySelector(".vpin");
+  let val = Number(String(inp.value).replace(",", "."));
+  if (!keep || inp.value.trim() === "" || !isFinite(val)) val = Number(v.before);
+  val = Math.max(w.min, Math.min(w.max, Math.round((val - w.min) / w.step) * w.step + w.min));
+  inp.blur();
+  const app = $("app"); app.classList.remove("vediting"); if (!v.hadBar) app.classList.remove("barhidden");
+  const src = v.el.isConnected ? v.src : document.querySelector(`#list .wsrc[data-set="${CSS.escape(v.k)}"]`);
+  if (src) {
+    if (src.value !== wheelFmt(val, w.step)) { src.value = wheelFmt(val, w.step); src.dispatchEvent(new Event("input", { bubbles: true })); }
+    if ("before" in src.dataset) src.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+  const back = v.el.isConnected ? v.el : document.querySelector(`#list .wheel[data-wheel="${CSS.escape(v.k)}"]`);
+  if (!popFrom(v.pill, back, false, () => v.pill.remove())) v.pill.remove();
+}

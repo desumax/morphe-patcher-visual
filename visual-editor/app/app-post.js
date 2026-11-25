@@ -101,6 +101,11 @@ if (INAPP) {
   // Action rows (import / export, export logs, links...): a tap runs Morphe's own row, so its
   // dialog or screen opens exactly as in the regular settings. Search results lead to them too.
   const runAction = k => { try { MorpheApp.action(k); actionRan = true; } catch (e) { snack("Update the visual editor patch to use this"); } };
+  window.__morpheAction = runAction;
+  // Import / Export opens as one of the editor's dialogs, in the editor's design and motion (Max, Nov 25:
+  // Morphe's own dialog was plain white). Its text is Morphe's export of the current values and Save
+  // applies through the same Setting API as every change here; the file buttons open Morphe's own row.
+  const OWN_DIALOG = new Set(["morphe_pref_import_export"]);
   // Morphe's own rows can change settings behind the editor: Import / Export applies the pasted or
   // imported text on Save (AbstractPreferenceFragment.importSettingsText, Setting.importFromJSON),
   // and Morphe may add more such rows. When the editor gets the screen back after one (its dialog or a
@@ -127,7 +132,7 @@ if (INAPP) {
   document.addEventListener("visibilitychange", backFromAction);
   document.addEventListener("click", e => {
     const row = e.target.closest("#list [data-row]");
-    if (!row || !__liveActions.has(row.dataset.row)) return;
+    if (!row || !__liveActions.has(row.dataset.row) || OWN_DIALOG.has(row.dataset.row)) return;
     e.stopPropagation(); select(row.dataset.row, "list"); runAction(row.dataset.row);
   }, true);
   // Back swipe, iOS-like (Max, Nov 24, every design): while the Back gesture is held on a screen, the

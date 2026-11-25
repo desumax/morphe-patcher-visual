@@ -10,6 +10,12 @@
 .ringlayer { position: absolute; inset: 0; pointer-events: none; z-index: 60; }
 .ringlayer > i { position: absolute; box-sizing: border-box; border: 2px solid var(--ring-on); }
 .ringlayer > i.ghost { border-style: dashed; border-color: var(--yt-red); }
+/* the glow of a flashing part that touches what clips it is drawn here, uncut (its own ::after is hidden) */
+.ringlayer > i.bare { border-color: transparent; }
+.ringlayer > i.flash::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: rgba(76,199,100,.5); animation: cflash 480ms var(--ease) forwards; }
+.ringlayer > i.flash.red::after { background: rgba(255,0,51,.5); }
+.ringlayer > i.flash.twice::after { animation-iteration-count: 2; animation-fill-mode: none; opacity: 0; }
+.stage .c.selx.flash::after { display: none !important; }
 .c.shade.sel { outline-offset: -3px; border-radius: 0; z-index: 0; }
 .c.off { opacity: 0; }
 .stage .c.dzt { transition: opacity .22s var(--ease) !important; }
@@ -261,3 +267,7 @@
 .pbtn.liked7 { background: #f1f1f1 !important; animation: liked7 .36s var(--ease); }
 .pbtn.liked7 svg, .pbtn.liked7 svg path { fill: #0f0f0f !important; stroke: none !important; }
 @keyframes liked7 { 0% { scale: 1; } 45% { scale: 1.25; } 100% { scale: 1; } }
+/* The gesture hint pill ("Pull up for precise seeking") is a passing hint, not part of the resting player:
+   it shows only while its own setting is selected (its demo, or its ghost), never over the other seekbar
+   settings' demos, where it stood still (Max, Nov 25: stuck in Slide to seek, Precise seeking gesture). */
+#stage .c[data-k="morphe_hide_player_gesture_hints"]:not(.sel, .selx, .ghost, .dzt) { visibility: hidden; }

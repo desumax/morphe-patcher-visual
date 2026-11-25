@@ -53,7 +53,7 @@ const CROP7 = {};
   + "fullscreen_video_scale_button_fullscreen_only disable_rolling_number_animations "
   + "search_comments copy_select_text copy_video_title remove_viewer_discretion_dialog").split(" ").forEach(k => CROP7["morphe_" + k] = "top");
 ("queue_type hide_ask_gemini_button hide_sync_button download_force_4k auto_translate_additional_languages "
-  + "advanced_video_quality_menu hide_premium_video_quality shorts_download_flyout_button live_chat_translate "
+  + "advanced_video_quality_menu hide_premium_video_quality live_chat_translate "
   + "live_chat_translate_bold live_chat_translate_use_color live_chat_translate_copy_button hide_comments_live_chat_donators_bar "
   + "hide_comments_live_chat_scroll_to_bottom_button hide_comments_live_chat_tooltips hide_shorts_video_description "
   + "hide_shorts_search_suggestions narrow_navigation_buttons navigation_bar_animations miniplayer_disable_horizontal_drag "
@@ -518,18 +518,17 @@ scen("player", "copy_video_link_with_timestamp_button", (box, on) => {
   box.innerHTML = device("land", `${miniVideo(0)}<div class="cpb" style="${at_(fx, fy, 22)};display:grid;place-items:center;border-radius:50%;background:rgba(0,0,0,.45);transition:transform .2s,background .2s">${I("link", "ico", 'style="width:14px;height:14px"')}</div>${miniSeek(17)}<div style="position:absolute;left:6px;bottom:12px;font-size:8px;color:#ddd">3:12 / 18:42</div>`);
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"), btn = dev.querySelector(".cpb"); const W = dev.clientWidth, H = dev.clientHeight;
   const plain = "youtu.be/cAb1n", timed = "youtu.be/cAb1n?t=192";
-  const toast = link => { dev.querySelectorAll(".toastin").forEach(e => e.remove()); dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:42%">Link copied<br><b style="font-weight:500;color:#9cd1ff">${link}</b><br><span style="color:#bbb">${link === timed ? "opens at 3:12" : "opens at the start"}</span></div>`); };
+  // two lines (Max, Nov 25: three reached down over the time and the seekbar), placed above them
+  const toast = link => { dev.querySelectorAll(".toastin").forEach(e => e.remove()); dev.insertAdjacentHTML("beforeend", `<div class="toastin" style="top:34%">Link copied<br><b style="font-weight:500;color:#9cd1ff">${link}</b></div>`); keepPillIn(dev.lastElementChild); };
   const press = on => { btn.style.transform = on ? "scale(.88)" : ""; btn.style.background = on ? "rgba(62,166,255,.55)" : "rgba(0,0,0,.45)"; };
   const fade = () => dev.querySelectorAll(".toastin").forEach(e => { e.style.transition = "opacity .3s"; e.style.opacity = 0; });
-  situation("Tap the Copy link button"); // no blue line (Max, Nov 20)
   at(150, () => fingerTo(f, W * fx, H * fy, 350));
   at(800, () => { tapF(f); press(true); }); at(1000, () => { press(false); toast(on ? timed : plain); });
   at(2900, fade);
-  at(3300, () => situation("Tap and hold it"));
   at(3500, () => { f.classList.add("hold"); press(true); });
   at(4500, () => { f.classList.remove("hold"); press(false); toast(on ? plain : timed); });
   at(6600, fade);
-  return on ? "Tap copies the link at 3:12; hold copies it from the start" : "Tap copies the link from the start; hold copies it at 3:12";
+  return "";
 });
 SCN_HOLD.morphe_copy_video_link_with_timestamp_button = 7000;
 scen("player", "loop_video", (box, on) => {
@@ -1252,21 +1251,33 @@ SCENES.shorts = (base => () => {
   html = html.replace(/(<div style="display:flex;flex-wrap:wrap;gap:6px">)/, `$1${sugg}`);
   return html.replace('<div id="heart"', paused + top + hint + '<div id="heart"');
 })(SCENES.shorts);
-// Shorts "more" menu: picking one of its settings opens the sheet, as on the phone
-const SHORTS_SHEET = new Set(["morphe_hide_shorts_flyout_audio_track", "morphe_hide_shorts_flyout_captions", "morphe_shorts_playback_speed_flyout_button"]);
+// Shorts "more" menu: picking one of its settings opens the sheet, as on the phone. Drawn from FlyoutUtils
+// (addShortsPlayerFlyoutButtons): Morphe adds its items at the top of the menu, Playback speed then Download,
+// then a divider, above the app's own items. Download used to be a separate comparison with another menu
+// drawing (Max, Nov 25: "animated differently"); it is the same menu, so it opens the same sheet.
+// The sheet slides up only when it opens: moving between its settings, or any redraw while it is open,
+// keeps it in place (it restarted the opening animation on every pick).
+const SHORTS_SHEET = new Set(["morphe_hide_shorts_flyout_audio_track", "morphe_hide_shorts_flyout_captions", "morphe_shorts_playback_speed_flyout_button", "morphe_shorts_download_flyout_button"]);
 SCENES.shorts = (base => () => {
-  let html = base().replace('id="shortsStage"', `id="shortsStage" data-icons="${esc(V("morphe_shorts_icon_style") || "AUTO")}"`);
+  // "Shorts icon style" (Max, Nov 25: it did nothing): the buttons on the right draw the real icons of the
+  // chosen set, from the patch's own drawables (shortsicons, iconstyles.js SHORTS_ICON_STYLES)
+  const sty = V("morphe_shorts_icon_style") || "AUTO", set = typeof SHORTS_ICON_STYLES !== "undefined" && SHORTS_ICON_STYLES[sty];
+  let html = base().replace('id="shortsStage"', `id="shortsStage" data-icons="${esc(sty)}"`);
+  if (set) for (const [n, [vb, svg]] of Object.entries(set)) if (P[n]) html = html.split(`<svg class="ico" viewBox="0 0 24 24" ><path d="${P[n]}"/></svg>`).join(`<svg class="ico sty" viewBox="${vb}">${svg}</svg>`);
   if (!SHORTS_SHEET.has(selected)) return html;
+  const open = !!document.querySelector("#stage #shortsStage .shsheet");
   const row = (k, icon, t) => { const r = `<div style="display:flex;align-items:center;gap:16px;padding:11px 18px">${I(icon)}<span style="font-size:14px">${t}</span></div>`; return k ? C(k, r, { blk: 1 }) : r; };
-  const sheet = `<div style="position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:25"></div>
-    <div style="position:absolute;left:0;right:0;bottom:0;z-index:26;background:#212121;border-radius:14px 14px 0 0;padding:6px 0 10px;animation:sheetup .28s var(--ease)">
+  const sheet = `<div class="shscrim" style="position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:25${open ? "" : ";animation:ghostin .25s var(--ease)"}"></div>
+    <div class="shsheet" style="position:absolute;left:0;right:0;bottom:0;z-index:26;background:#212121;border-radius:14px 14px 0 0;padding:6px 0 10px${open ? "" : ";animation:sheetup .28s var(--ease)"}">
       <div style="width:36px;height:4px;border-radius:2px;background:#555;margin:2px auto 6px"></div>
-      ${row(null, "tune", "Quality")}${row("hide_shorts_flyout_captions", "cc", "Captions")}${row("shorts_playback_speed_flyout_button", "speed", "Playback speed")}
-      ${row("hide_shorts_flyout_audio_track", "music", "Audio track")}${row(null, "info", "Description")}${row(null, "flag", "Report")}${row(null, "help", "Send feedback")}
+      ${row("shorts_playback_speed_flyout_button", "speed", "Playback speed")}${row("shorts_download_flyout_button", "dl", "Download")}
+      <div style="height:1px;background:#3a3a3a;margin:4px 0"></div>
+      ${row(null, "tune", "Quality")}${row("hide_shorts_flyout_captions", "cc", "Captions")}${row("hide_shorts_flyout_audio_track", "music", "Audio track")}
+      ${row(null, "info", "Description")}${row(null, "flag", "Report")}${row(null, "help", "Send feedback")}
     </div>`;
   return html.replace('<div class="finger" id="finger"></div>', sheet + '<div class="finger" id="finger"></div>');
 })(SCENES.shorts);
-def("shorts", "vis", "hide_shorts_flyout_audio_track hide_shorts_flyout_captions shorts_playback_speed_flyout_button");
+def("shorts", "vis", "hide_shorts_flyout_audio_track hide_shorts_flyout_captions shorts_playback_speed_flyout_button shorts_download_flyout_button");
 def("shorts", "style", "shorts_icon_style");
 def("shorts", "vis", "hide_shorts_paused_overlay_buttons hide_shorts_save_sound_button hide_shorts_new_posts_button hide_shorts_upcoming_button hide_shorts_auto_dubbed_label hide_shorts_gesture_hints");
 
@@ -1281,17 +1292,37 @@ def("shorts", "vis", "hide_shorts_paused_overlay_buttons hide_shorts_save_sound_
 // (The match used to look for an older opening tag of the bar, so glass changed nothing in the preview.)
 {
   const base = navBar;
+  let measure = null;
+  const textW = t => { measure = measure || document.createElement("canvas").getContext("2d"); measure.font = "10px Roboto, sans-serif"; return measure.measureText(t).width; };
   navBar = function (plain) {
     const html = base(plain);
     if (!V("morphe_navigation_bar_glass") || V("morphe_hide_navigation_bar")) return html;
     const num = (k, d) => { const v = V("morphe_navigation_bar_glass_" + k), n = Number(v); return v === "" || v == null || !isFinite(n) ? d : n; };
+    const tpl = document.createElement("template"); tpl.innerHTML = html.trim();
+    const bar = tpl.content.firstElementChild; if (!bar) return html;
+    // the buttons drawn (a hidden one is drawn collapsed: "off") and the content of the widest: icon and label
+    // (GlassNavigationBarLayout.measureButtons)
+    const tabs = [...bar.children].filter(e => e.classList.contains("ntab") && !e.classList.contains("off"));
+    const labelOf = e => { const l = e.querySelector('[data-k="morphe_hide_navigation_button_labels"]'); return l && !l.classList.contains("off") ? l.textContent.trim() : ""; };
+    const labels = tabs.map(labelOf), anyLabel = labels.some(Boolean);
+    const content = Math.ceil(Math.max(24, ...labels.map(t => t ? textW(t) : 0))), contentH = anyLabel ? 38 : 24;
+    // getButtonsLayout: the most width is the screen less 12 dp each side, times Maximum width; a button is its
+    // content plus Button spacing (at least 48 dp, content + 8 dp to fit); buttons that don't fit are hidden from the end
+    const W = ($("stage") && $("stage").clientWidth) || 360, maxW = Math.max(0, (W - 24) * num("width", 100) / 100);
+    const minBtn = Math.max(48, content + 8), shown = Math.max(1, Math.min(tabs.length || 1, Math.floor(maxW / minBtn)));
+    const bw = Math.floor(Math.min(Math.max(48, content + num("button_spacing", 48)), maxW / shown));
+    tabs.slice(shown).forEach(e => e.classList.add("gcut"));
+    if (tabs[0]) tabs[0].classList.add("gsel"); // the selected button (Home) has the indicator
+    // getCapsuleHeight: Glass navigation bar size % of the bar's 52 dp, never less than the content + 4 dp each side
+    const minH = contentH + 8, h = Math.max(minH, Math.round(Math.max(52, minH) * num("height", 100) / 100));
+    const r = (V("morphe_navigation_bar_glass_round") ? .5 : .3) * h;
+    // GlassCapsuleDrawable, dark style: fill = the app background lifted 14% toward white at 0.5 x opacity/50, a soft
+    // white sheen at the top, a rim lit from outside (top 30%, ends 50%, bottom 6%) with a dark line inside it,
+    // a faint shadow; the app's own blurred background shows through (translucent bar, Android 14+)
     const alpha = Math.min(1, .5 * num("opacity", 20) / 50);
-    const h = Math.max(44, Math.round(52 * num("height", 100) / 100)), r = (V("morphe_navigation_bar_glass_round") ? .5 : .3) * h;
-    // buttons shown (a hidden one is drawn collapsed: "off"), each its content (about 36 px) plus the spacing
-    const shown = (html.match(/class="[^"]*\bntab\b[^"]*"/g) || []).filter(c => !/\boff\b/.test(c)).length || 5;
-    const bw = Math.max(48, 36 + num("button_spacing", 48));
-    const style = `--gw:${num("width", 100)};--gr:${r}px;width:min(calc((100% - 24px) * var(--gw) / 100), ${shown * bw}px);height:${h}px;border-radius:${r}px;background:rgba(49,49,49,${alpha.toFixed(3)});backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);border:1px solid rgba(255,255,255,.06);border-top-color:rgba(255,255,255,.3);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 4px 14px rgba(0,0,0,.25)`;
-    return html.replace(/^(\s*)<div class="navbar([^"]*)" style="[^"]*">/, (m, sp, c) => `${sp}<div class="navbar glassnav${c}" style="${style}">`);
+    bar.classList.add("glassnav");
+    bar.setAttribute("style", `--gr:${r}px;--gbw:${bw}px;width:${shown * bw}px;height:${h}px;border-radius:${r}px;background:linear-gradient(rgba(255,255,255,.10), rgba(255,255,255,0) 55%) rgba(49,49,49,${alpha.toFixed(3)});backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);border:1.5px solid rgba(255,255,255,.12);border-top-color:rgba(255,255,255,.3);border-bottom-color:rgba(255,255,255,.06);box-shadow:inset 0 0 0 .5px rgba(0,0,0,.35),inset 1px 0 0 rgba(255,255,255,.2),inset -1px 0 0 rgba(255,255,255,.2),0 2px 10px rgba(0,0,0,.1)`);
+    return bar.outerHTML;
   };
 }
 def("nav", "style", "navigation_bar_glass navigation_bar_glass_opacity navigation_bar_glass_height navigation_bar_glass_round navigation_bar_glass_width navigation_bar_glass_button_spacing");

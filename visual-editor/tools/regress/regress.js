@@ -607,9 +607,11 @@ const CHECKS = [
       const gap = () => p.evaluate(() => document.querySelectorAll("#canvas .gap7")[1]?.getBoundingClientRect().height ?? -1);
       const g0 = await gap();
       await p.evaluate(k => { const t = document.querySelector(`#list input[type=range][data-set="${k}"]`); t.value = 4; t.dispatchEvent(new Event("input", { bubbles: true })); }, k);
-      await p.waitForTimeout(60); const mid = await gap(); await p.waitForTimeout(500); const end = await gap();
+      // sampled through the glide (a busy machine may show its first frame late): some frame lies between
+      const seen = []; for (let i = 0; i < 12; i++) { await p.waitForTimeout(25); seen.push(await gap()); }
+      await p.waitForTimeout(300); const end = await gap(), mid = seen.find(v => v > end + 1 && v < g0 - 1);
       ok(g0 > end + 3, `the example side doesn't start wider than 4 dp (${g0} vs ${end})`);
-      ok(mid > end + 1 && mid < g0, `the first slider step cuts instead of gliding: ${g0} → ${mid} → ${end}`);
+      ok(mid !== undefined, `the first slider step cuts instead of gliding: ${g0} → ${seen.map(v => v.toFixed(1)).join(" ")} → ${end}`);
       await ctx.close();
     },
   },
@@ -687,7 +689,8 @@ const CHECKS = [
       ok(JSON.stringify(r.out.player) === '["Top area","Middle area","Bottom area"]', `Player boxes: ${r.out.player}`);
       ok(r.cast === "Cast", `Cast button reads "${r.cast}" in the Top area box`);
       const at = x => r.seq.indexOf(x);
-      ok(at("Middle area") < at("morphe_hide_player_control_buttons_background") && at("morphe_hide_player_control_buttons_background") < at("Bottom area") && at("Bottom area") < at("morphe_copy_video_link_button"), `order: ${r.seq.join(", ")}`);
+      // (Nov 25, 12:49: Player controls background comes after the three area boxes)
+      ok(at("Middle area") < at("Bottom area") && at("Bottom area") < at("morphe_copy_video_link_button") && at("Bottom area") < at("morphe_hide_player_control_buttons_background"), `order: ${r.seq.join(", ")}`);
       ok(r.out.shorts.includes("Right side") && r.out.comments.includes("Comment box") && r.out.seekbar.includes("Haptics"), JSON.stringify(r.out));
       ok(!errors.length, errors.join("; "));
       await ctx.close();
@@ -810,6 +813,266 @@ const CHECKS = [
       const r = await p.evaluate(sel => { const t = document.querySelector(sel); t.style.transform = "scale(.96)"; t.style.filter = "brightness(1.18)"; const cs = getComputedStyle(t); return { gliding: t.parentElement.classList.contains("gliding"), transform: cs.transform, filter: cs.filter }; }, tab);
       ok(r.gliding, `no glide ran: ${JSON.stringify(r)}`);
       ok(r.transform === "none" && (r.filter === "none" || !r.filter), `the tapped tab paints over the fill: ${JSON.stringify(r)}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "flash-glow-never-clipped",
+    report: "Nov 25: hiding and showing a Navigation bar button began with a green glow cut off at its top and bottom",
+    async run() {
+      const { p, ctx } = await open();
+      await p.evaluate(async () => { setPicker(false); quickSection("nav"); await new Promise(r => setTimeout(r, 700)); });
+      for (const k of ["morphe_hide_home_button", "morphe_hide_subscriptions_button"]) {
+        await p.locator(`#list [data-row="${k}"]`).first().scrollIntoViewIfNeeded(); await p.waitForTimeout(300);
+        // switch the setting and read the first frames of the flash: every flashing part's glow (2 px around it)
+        // must fit in the boxes that clip it, or be drawn on the ring layer instead
+        await p.evaluate(() => {
+          window.__glow = [];
+          const tick = n => {
+            const layer = $("ringLayer");
+            for (const e of document.querySelectorAll("#stage .c.flash:not(.flat)")) {
+              const q = e.getBoundingClientRect(); if (q.width < 2 || q.height < 2) continue;
+              let t = -1e9, b = 1e9, l = -1e9, rr = 1e9;
+              for (let a = e; a && a !== $("stage").parentElement; a = a.parentElement) { const cs = getComputedStyle(a); if (cs.overflowX !== "visible" || cs.overflowY !== "visible") { const c = a.getBoundingClientRect(); t = Math.max(t, c.top); b = Math.min(b, c.bottom); l = Math.max(l, c.left); rr = Math.min(rr, c.right); } }
+              const cut = q.top - 2 < t - .5 || q.bottom + 2 > b + .5 || q.left - 2 < l - .5 || q.right + 2 > rr + .5;
+              const own = getComputedStyle(e, "::after").display !== "none";
+              __glow.push({ n, k: e.dataset.k, cut, own, layer: !!layer.querySelector("i.flash") });
+            }
+            if (n < 30) requestAnimationFrame(() => tick(n + 1));
+          };
+          requestAnimationFrame(() => tick(0));
+        });
+        await p.locator(`#list [data-row="${k}"] .lt7, #list [data-row="${k}"] .sw`).first().click();
+        await p.waitForTimeout(700);
+        const seen = await p.evaluate(() => __glow);
+        const r = seen.filter(g => g.cut && (g.own || !g.layer)).map(g => `frame ${g.n} ${g.k}: ${g.own ? "own glow cut off" : "no glow on the ring layer"}`);
+        ok(seen.length, `${k}: no flash seen`);
+        ok(!r.length, `${k}: ${r.join("; ")}`);
+        await p.waitForTimeout(700);
+      }
+      await ctx.close();
+    },
+  },
+  {
+    name: "caret-hidden-under-preview",
+    report: "Nov 25: with the cursor in a text field, scrolling it up under the preview drew the blinking cursor over the preview",
+    async run() {
+      const { p, ctx } = await open();
+      await p.evaluate(async () => { setPicker(false); quickSection("nav"); await new Promise(r => setTimeout(r, 700)); });
+      // a text field in the list: focus it in view, then scroll it up under the pinned preview
+      const r = await p.evaluate(async () => {
+        const f = [...document.querySelectorAll("#list input[type=text], #list input:not([type]), #list input[type=number], #list textarea")].find(x => x.offsetParent);
+        if (!f) return { none: true };
+        const sc = $("scroller"); f.scrollIntoView({ block: "end" }); await new Promise(r => setTimeout(r, 200)); f.focus({ preventScroll: true });
+        await new Promise(r => setTimeout(r, 100));
+        const shown = getComputedStyle(f).caretColor;
+        const st = $("stick").getBoundingClientRect(), fr = f.getBoundingClientRect();
+        sc.scrollTop += fr.top - st.bottom + 30; // the field's top now under the preview
+        sc.dispatchEvent(new Event("scroll")); await new Promise(r => setTimeout(r, 100));
+        const under = f.getBoundingClientRect().top < $("stick").getBoundingClientRect().bottom;
+        return { shown, under, hidden: getComputedStyle(f).caretColor };
+      });
+      ok(!r.none, "no text field on the Navigation screen");
+      ok(r.under, `the field didn't reach the preview: ${JSON.stringify(r)}`);
+      ok(r.shown !== "rgba(0, 0, 0, 0)" && r.hidden === "rgba(0, 0, 0, 0)", `the caret stays drawn under the preview: ${JSON.stringify(r)}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "buttons-without-labels-in-preview",
+    report: "Nov 25: Navigation buttons without labels did nothing in the preview, with or without the Glass navigation bar",
+    async run() {
+      const { p, ctx } = await open();
+      await p.evaluate(async () => { setPicker(false); quickSection("nav"); await new Promise(r => setTimeout(r, 700)); });
+      const tap = async k => { const t = p.locator(`#list [data-row="${k}"] .lt7, #list [data-row="${k}"] .sw`).first(); await t.scrollIntoViewIfNeeded(); await t.click(); await p.waitForTimeout(700); };
+      const labels = () => p.evaluate(() => [...document.querySelectorAll('#stage .navbar [data-k="morphe_hide_navigation_button_labels"]')].filter(e => e.offsetHeight).length);
+      const K = "morphe_disable_icon_only_navigation_buttons", G = "morphe_navigation_bar_glass";
+      const steps = [];
+      steps.push(["start", await labels()]);
+      await tap(K); steps.push(["icon only", await labels()]);
+      await tap(G); steps.push(["icon only, glass", await labels()]);
+      await tap(K); steps.push(["labels, glass", await labels()]);
+      await tap(K); steps.push(["icon only, glass again", await labels()]);
+      await tap(G); steps.push(["icon only, glass off", await labels()]);
+      await tap(K); steps.push(["labels, glass off", await labels()]);
+      const want = [true, false, false, true, false, false, true];
+      ok(steps.every(([, n], i) => (n > 0) === want[i]), `labels drawn: ${JSON.stringify(steps)}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "tour-steps-one-by-one",
+    report: "Nov 25: the animation tour reset to random numbers and didn't cycle through the animations in order",
+    async run() {
+      const { p, ctx } = await open();
+      await p.evaluate(() => { setPicker(false); document.getElementById("devTourBtn").click(); });
+      const seen = [];
+      for (let n = 0; n < 24; n++) {
+        await p.click("#devTour .dt-go[data-d=\"1\"]"); await p.waitForTimeout(n % 3 ? 150 : 900); // quick taps and settled ones
+        seen.push(await p.evaluate(() => document.querySelector("#devTour .dt-n").textContent.split(" / ")[0] | 0));
+      }
+      ok(seen.every((x, i) => x === i + 1), `tour numbers: ${seen.join(",")}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "value-wheel-turns-and-types",
+    report: "Nov 25: number settings (Glass navigation bar size) get a turning wheel; a tap on its middle opens a field on top of the keyboard and the top bar hides so the preview stays in view",
+    async run() {
+      const { p, ctx } = await open();
+      const K = "morphe_navigation_bar_glass_height";
+      await p.evaluate(async () => { setPicker(false); quickSection("nav"); setPref("morphe_navigation_bar_glass", true); renderAll(); await new Promise(r => setTimeout(r, 700)); });
+      const w = p.locator(`#list .wheel[data-wheel="${K}"]`); ok(await w.count(), "no wheel for Glass navigation bar size");
+      // in the free part of the screen, below the pinned preview
+      await p.evaluate(k => { const el = document.querySelector(`#list .wheel[data-wheel="${k}"]`), sc = $("scroller"); sc.scrollTop += el.getBoundingClientRect().bottom - innerHeight + 120; }, K); await p.waitForTimeout(400);
+      const bb = await w.boundingBox(), y = bb.y + bb.height / 2, v0 = await p.evaluate(k => state[k], K);
+      // a sideways drag (the mouse here; a finger on the phone, checked by hand) turns it
+      let x = bb.x + bb.width * .7; await p.mouse.move(x, y); await p.mouse.down();
+      for (let i = 0; i < 10; i++) { x -= 12; await p.mouse.move(x, y); await p.waitForTimeout(16); }
+      await p.mouse.up(); await p.waitForTimeout(1200);
+      const v1 = await p.evaluate(k => state[k], K);
+      ok(v1 > v0, `swiping the wheel left didn't raise the value: ${v0} -> ${v1}`);
+      await p.mouse.click(bb.x + bb.width / 2, y); await p.waitForTimeout(600);
+      const r = await p.evaluate(() => ({ pill: !!document.querySelector(".vpill"), focus: document.activeElement.className, bar: $("app").classList.contains("barhidden") }));
+      ok(r.pill && r.focus === "vpin" && r.bar, `tapping the middle value: ${JSON.stringify(r)}`);
+      await p.keyboard.press("Control+A"); await p.keyboard.type("120"); await p.waitForTimeout(150);
+      const live = await p.evaluate(k => state[k], K);
+      await p.keyboard.press("Enter"); await p.waitForTimeout(500);
+      const end = await p.evaluate(k => ({ v: state[k], pill: !!document.querySelector(".vpill"), pos: document.querySelector(`.wheel[data-wheel="${k}"]`).dataset.pos }), K);
+      ok(live === 120 && end.v === 120 && !end.pill, `typing 120: live ${live}, after Enter ${JSON.stringify(end)}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "landscape-popups-and-menu-fit",
+    report: "Nov 25 (landscape): the card menu was poorly laid out, popups were cut off at the top and bottom, and card lists cut off their longest line",
+    async run() {
+      const { p, ctx } = await open("app/index.html", { viewport: { width: 915, height: 412 } });
+      const menu = await p.evaluate(() => { const pg = document.querySelector("#pickGrid .pg.pgroups"); return { cols: getComputedStyle(pg).gridTemplateColumns.split(" ").length, cut: [...document.querySelectorAll(".gc-tabs span, .gc-t")].filter(s => s.scrollWidth > s.clientWidth + 1).map(s => s.textContent) }; });
+      ok(menu.cols === 3 && !menu.cut.length, `landscape menu: ${JSON.stringify(menu)}`);
+      // a tall popup: the box that previews a setting from another screen, and a list dialog
+      const r = await p.evaluate(async () => {
+        const out = [];
+        for (const open of [() => borrowPopup("morphe_hide_shorts_button", "morphe_hide_navigation_bar"), () => restartDialog && openDialog(`<h2 id="dlgTitle">T</h2>${"<p>line</p>".repeat(30)}<div class="acts"><button class="dbtn" data-x>OK</button></div>`)]) {
+          open(); await new Promise(r => setTimeout(r, 700));
+          const b = $("dlgBox").getBoundingClientRect(), app = $("app").getBoundingClientRect();
+          out.push({ top: Math.round(b.top - app.top), bottom: Math.round(app.bottom - b.bottom) });
+          closeDialog(); await new Promise(r => setTimeout(r, 400));
+        }
+        return out;
+      });
+      ok(r.every(x => x.top >= 0 && x.bottom >= 0), `popups run past the screen: ${JSON.stringify(r)}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "menu-card-lists-never-cut",
+    report: "Nov 25: the Player card cut off \"Seekbar & ge…\" and Watch page \"Flying comm…\" in the main menu",
+    async run() {
+      for (const vp of [{ width: 360, height: 740 }, { width: 384, height: 832 }, { width: 412, height: 915 }]) {
+        const { p, ctx } = await open("app/index.html", { viewport: vp });
+        await p.waitForTimeout(800);
+        const cut = await p.evaluate(() => [...document.querySelectorAll(".gc-tabs span, .gc-t")].filter(s => s.scrollWidth > s.clientWidth + 1).map(s => s.textContent));
+        ok(!cut.length, `${vp.width}x${vp.height}: cut off ${cut.join(", ")}`);
+        await ctx.close();
+      }
+    },
+  },
+  {
+    name: "area-order-as-asked-nov25",
+    report: "Nov 25 (12:49): Player controls background after the three area boxes; 'New posts' with the suggested actions (bottom), copied without \"button\"; Player menu without top/bottom boxes",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        const out = {};
+        setPicker(false); quickSection("player"); await new Promise(r => setTimeout(r, 600));
+        const bgRow = document.querySelector('#list [data-row="morphe_hide_player_control_buttons_background"]'), box = document.querySelector('#list [data-area="Bottom area"]');
+        out.bg = bgRow ? 1 : -1; out.bottom = box ? 0 : -1; if (bgRow && box) out.bg = box.compareDocumentPosition(bgRow) & Node.DOCUMENT_POSITION_FOLLOWING ? 1 : -2;
+        quickSection("shorts"); await new Promise(r => setTimeout(r, 600));
+        const np = document.querySelector('#list [data-row="morphe_hide_shorts_new_posts_button"]');
+        out.npBox = np && np.closest("[data-area]")?.dataset.area; out.npTitle = np && np.querySelector(".ttl").textContent;
+        quickSection("flyout"); await new Promise(r => setTimeout(r, 600));
+        out.flyout = [...document.querySelectorAll("#list [data-area]")].map(e => e.dataset.area);
+        return out;
+      });
+      ok(r.bottom >= 0 && r.bg > r.bottom, `Player controls background not after the Bottom area box: ${JSON.stringify(r)}`);
+      ok(r.npBox === "Bottom area" && !/button/i.test(r.npTitle || "x button"), `'New posts': ${JSON.stringify(r)}`);
+      ok(!r.flyout.some(a => /Top of|Bottom of/.test(a)), `Player menu boxes: ${JSON.stringify(r.flyout)}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "shorts-icon-style-draws-its-icons",
+    report: "Nov 25 (12:49): 'Shorts icon style' did nothing in the preview",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        const out = {};
+        setPicker(false); quickSection("shorts"); await new Promise(r => setTimeout(r, 500));
+        for (const st of ["AUTO", "FLUENT", "PHOSPHOR"]) {
+          setPref("morphe_shorts_icon_style", st); commit(); renderStage(); await new Promise(r => setTimeout(r, 100));
+          const like = document.querySelector('#stage [data-k="morphe_hide_shorts_like_button"] svg');
+          out[st] = like ? like.outerHTML : "";
+        }
+        return out;
+      });
+      ok(r.AUTO && r.FLUENT && r.PHOSPHOR, `no like button: ${JSON.stringify(r).slice(0, 200)}`);
+      ok(r.FLUENT !== r.AUTO && r.PHOSPHOR !== r.AUTO && r.FLUENT !== r.PHOSPHOR, "the like icon is the same in every Shorts icon style");
+      await ctx.close();
+    },
+  },
+  {
+    name: "shorts-menu-opens-once",
+    report: "Nov 25 (12:49): Audio track, Captions and Playback speed in the Shorts menu restarted the menu's opening animation; Download in Shorts menu was a different drawing",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        const out = { slides: [], download: null };
+        setPref("morphe_download_mode", "EXTERNAL"); commit();
+        setPicker(false); quickSection("shorts"); await new Promise(r => setTimeout(r, 500));
+        for (const k of ["morphe_hide_shorts_flyout_captions", "morphe_shorts_playback_speed_flyout_button", "morphe_hide_shorts_flyout_audio_track", "morphe_shorts_download_flyout_button"]) {
+          select(k, "list"); await new Promise(r => setTimeout(r, 40));
+          out.slides.push(document.getAnimations().filter(a => a.animationName === "sheetup" && a.effect?.target?.closest?.("#stage")).length);
+          await new Promise(r => setTimeout(r, 400));
+        }
+        out.download = !!document.querySelector('#stage [data-k="morphe_shorts_download_flyout_button"]');
+        return out;
+      });
+      ok(r.slides[0] === 1, `the Shorts menu did not slide up when it opened: ${JSON.stringify(r)}`);
+      ok(r.slides.slice(1).every(n => n === 0), `the Shorts menu slid up again while open: ${JSON.stringify(r)}`);
+      ok(r.download, "Download in Shorts menu is not in the Shorts menu");
+      await ctx.close();
+    },
+  },
+  {
+    name: "about-is-not-a-shorts-setting",
+    report: "Nov 25 (12:49): 'About' was listed in Shorts and did nothing (Morphe's About row sits above every screen)",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        setPicker(false); quickSection("shorts"); await new Promise(r => setTimeout(r, 500));
+        return { row: !!document.querySelector('#list [data-row="morphe_settings_screen_00_about"]'), anywhere: Object.keys(MEMBERS).filter(s => [...MEMBERS[s].live, ...MEMBERS[s].misc].includes("morphe_settings_screen_00_about")) };
+      });
+      ok(!r.row && !r.anywhere.length, `About is listed: ${JSON.stringify(r)}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "gesture-hint-not-stuck",
+    report: "Nov 25 (12:49): the 'Pull up for precise seeking' pill stayed on screen in Slide to seek, Precise seeking gesture and others",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        const vis = () => { const h = document.querySelector('#stage [data-k="morphe_hide_player_gesture_hints"]'); return !!h && getComputedStyle(h).visibility !== "hidden" && h.getBoundingClientRect().height > 0; };
+        setPicker(false); quickSection("seekbar"); await new Promise(r => setTimeout(r, 500));
+        const out = { rest: vis() };
+        for (const k of ["morphe_slide_to_seek", "morphe_disable_precise_seeking_gesture", "morphe_tap_to_seek"]) { select(k, "list"); await new Promise(r => setTimeout(r, 600)); out[k] = vis(); }
+        select("morphe_hide_player_gesture_hints", "list"); await new Promise(r => setTimeout(r, 600)); out.own = vis();
+        return out;
+      });
+      const stuck = Object.entries(r).filter(([k, v]) => k !== "own" && v).map(([k]) => k);
+      ok(!stuck.length, `the gesture hint pill shows in: ${stuck.join(", ")}`);
+      ok(r.own, "the gesture hint pill does not show for its own setting");
       await ctx.close();
     },
   },

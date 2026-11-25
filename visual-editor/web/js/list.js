@@ -219,7 +219,9 @@ document.addEventListener("click", e => {
   if (!DEV_WEB || e.pointerType !== "mouse" || !(e.target instanceof Element) || e.target.closest("#devTour")) return;
   const row = e.target.closest(".row .ttl") && e.target.closest("[data-row]"), res = e.target.closest(".sres .ttl") && e.target.closest("[data-res]");
   const plain = e.target.closest(".gc-t, .tab7, .pick .pt, .sit, .gtitle, #canvas .cap");
-  const t = row ? shownTitle(row.dataset.row) : res ? title(res.dataset.res) : plain ? plain.textContent : "";
+  // (a row in an area box shows its title shortened: "'New posts'" is copied as shown, not with "button")
+  const inBox = row && row.closest(".shared[data-area]"), shownTtl = inBox && row.querySelector(".ttl");
+  const t = row ? (shownTtl ? shownTtl.textContent : shownTitle(row.dataset.row)) : res ? title(res.dataset.res) : plain ? plain.textContent : "";
   if (t) devCopy(t, e.clientX, e.clientY);
 }, true);
 // Animation tour: step through every setting that has an animation (a two-phone comparison or a live
@@ -230,9 +232,14 @@ function tourKeys() {
   for (const id of ids) { const m = MEMBERS[id]; if (m) for (const k of [...m.live, ...m.misc]) if ((SCN[k] || DEMOS[k]) && inVersion(k) && !out.includes(k)) out.push(k); }
   return out;
 }
+// The tour keeps its own place (Max, Nov 25: it jumped to random numbers): it used to start each step from
+// the selected setting, which a story, a parent or a screen still opening had often changed meanwhile.
+let tourAt = -1;
 function tourGo(d) {
   const ks = tourKeys(); if (!ks.length) return;
-  let i = ks.indexOf(selected); i = i < 0 ? (d > 0 ? 0 : ks.length - 1) : (i + d + ks.length) % ks.length;
+  let i = tourAt;
+  if (i < 0 || i >= ks.length) { const s = ks.indexOf(selected); i = s < 0 ? (d > 0 ? -1 : ks.length) : s; }
+  i = (i + d + ks.length) % ks.length; tourAt = i;
   goToSetting(ks[i]); tourLabel(ks[i], i, ks.length);
 }
 function tourLabel(k, i, n) {
@@ -255,7 +262,7 @@ function tourOpen(open) {
     b.addEventListener("wheel", e => { e.preventDefault(); const now = performance.now(); if (now - wheelAt < 350 || !e.deltaY) return; wheelAt = now; tourGo(e.deltaY > 0 ? 1 : -1); }, { passive: false });
   }
   b.hidden = !open; document.getElementById("devTourBtn").hidden = open;
-  if (open && selected) { const ks = tourKeys(), i = ks.indexOf(selected); if (i >= 0) tourLabel(selected, i, ks.length); }
+  if (open) { const ks = tourKeys(), i = selected ? ks.indexOf(selected) : -1; tourAt = i; if (i >= 0) tourLabel(selected, i, ks.length); }
 }
 document.addEventListener("keydown", e => {
   const b = document.getElementById("devTour"); if (!b || b.hidden || e.target.closest?.("input, textarea, [contenteditable]")) return;
@@ -381,16 +388,29 @@ function fitMenu() {
   if (!pg || !pk.clientHeight) { if (!pg) grid.classList.remove("gfit"); return; }
   grid.classList.remove("gfit");
   const cards = [...pg.children]; if (!cards.length) return;
-  const nat = Math.max(...cards.map(c => c.offsetHeight)), rows = Math.ceil(cards.length / 2);
+  // columns as laid out (two; three on a phone turned sideways, app.css)
+  const cols = Math.max(1, getComputedStyle(pg).gridTemplateColumns.split(" ").filter(Boolean).length);
+  const nat = Math.max(...cards.map(c => c.offsetHeight)), rows = Math.ceil(cards.length / cols);
   const gs = getComputedStyle(grid), ps = getComputedStyle(pk), gap = parseFloat(gs.rowGap) || 0, rgap = parseFloat(getComputedStyle(pg).rowGap) || 0;
-  const kids = [...grid.children], rest = kids.filter(k => k !== pg).reduce((a, k) => a + k.offsetHeight + (parseFloat(getComputedStyle(k).marginTop) || 0) + (parseFloat(getComputedStyle(k).marginBottom) || 0), 0);
-  const avail = pk.clientHeight - parseFloat(ps.paddingTop) - parseFloat(ps.paddingBottom) - rest - gap * (kids.length - 1);
+  // the rows under the cards, however they are laid out (one under the other, or two side by side): their extent
+  // (layout boxes, not screen rects: the menu grows from its button with a scale, and rects measured
+  // mid-growth were smaller, so the cards were fitted too tall and the menu scrolled)
+  const others = [...grid.children].filter(k => k !== pg && k.offsetHeight);
+  const mg = (k, side) => parseFloat(getComputedStyle(k)["margin" + side]) || 0;
+  const rest = others.length ? Math.max(...others.map(k => k.offsetTop + k.offsetHeight + mg(k, "Bottom"))) - Math.min(...others.map(k => k.offsetTop - mg(k, "Top"))) : 0;
+  const avail = pk.clientHeight - parseFloat(ps.paddingTop) - parseFloat(ps.paddingBottom) - rest - (rest ? gap : 0);
   // larger only while every line still fits its card's width: a zoomed card is narrower in its own px
   // (W / z), and the rail and paddings beside the words keep their size in them
   let wide = MENU_ZOOM[1];
+  grid.style.removeProperty("--gz");
   cards.forEach(c => c.querySelectorAll(".gc-t, .gc-tabs span").forEach(el => { const r = document.createRange(); r.selectNodeContents(el); const w = r.getBoundingClientRect().width; if (w > 0) wide = Math.min(wide, c.offsetWidth / (w + c.offsetWidth - el.clientWidth)); }));
-  const fit = (avail - rgap * (rows - 1)) / rows;
-  const want = fit / nat, z = want < 1 ? Math.max(MENU_ZOOM[0], want) : Math.min(want, Math.max(1, wide * .99));
+  // sideways the screen is too short for the whole menu: the cards keep their size (and the menu scrolls)
+  // instead of shrinking to small print
+  const sideways = pk.clientWidth > pk.clientHeight * 1.5;
+  const fit = Math.max((avail - rgap * (rows - 1)) / rows, sideways ? nat : 0);
+  // every card's longest line fits its width (Max, Nov 25: "Seekbar & ge…", "Flying comm…" were cut): the
+  // one zoom for all cards is never more than the narrowest fit allows, even below the usual smallest
+  const want = fit / nat, z = Math.max(.5, Math.min(want < 1 ? Math.max(MENU_ZOOM[0], want) : want, wide * .99));
   const rowH = Math.max(nat * MENU_ZOOM[0], fit);
   // height the zoom leaves over goes between the lines (up to 4.5 px each), the rest stays below them
   const spare = Math.max(0, rowH / z - nat), most = Math.max(...cards.map(c => c.querySelectorAll(".gc-tabs span").length), 1);
@@ -408,6 +428,11 @@ if (document.fonts) { document.fonts.addEventListener("loadingdone", () => fitMe
 let stageHold = 0;
 let renderCount = 0;
 let stageStale = false; // the preview skipped a redraw while a comparison covered it (select.js)
+// One preview height (Max, Nov 25: the previews' heights differed from tab to tab). The player-type previews
+// (a 16:9 video: Player, SponsorBlock, Flying comments, Seekbar, Fullscreen, Captions, End screen) and Shorts
+// (a full phone screen) keep their own; every other preview is SCENE_H tall, the tallest of them before.
+const SCENE_H = 350;
+const ownHeight = root => root.matches(".video") || root.id === "shortsStage";
 function renderStage() {
   if (stageHold) return;
   stageStale = false;
@@ -428,6 +453,7 @@ function renderStage() {
   // greying is a mark pass (see paint): set after a style read, .fixed7 played its opacity transition and
   // every redraw faded the greyed parts (times, seekbar, Cast): Player icon style, Max, Nov 23
   paint(st, scene().replace(/background:#0f0f0f/g, "background:var(--app-bg,#0f0f0f)"), markFixed, fillFingers);
+  const root = st.firstElementChild; if (root && !ownHeight(root)) root.style.height = SCENE_H + "px";
   if (section === "flyout") { st.dataset.flysub = flySub || ""; if (flyFrom && flyFrom.html && flyFrom.sub !== (flySub || "")) flyTransition(st, flyFrom, flySub || ""); }
   st.querySelectorAll(".inner-scroll").forEach((e, i) => { if (scrollers[i]) e.scrollTop = scrollers[i]; });
   st.querySelectorAll('[style*="overflow-x:auto"]').forEach((e, i) => { e.dataset.hs = ""; if (hscroll[i]) e.scrollLeft = hscroll[i]; });
@@ -556,7 +582,9 @@ function controlFor(k) {
   // up to 8 choices: a row of pills; 9 to 16 (icon styles, theme colours, qualities): a 3-column grid
   // of pills built from the same entries, so it follows whatever list Morphe ships; more: a dropdown
   if (ents.length && ents.length <= 16) return `<div class="ctl optgrid">${ents.map(e => `<button class="opt${NEG_WORD.has(String(e.label)) ? " neg" : ""}${sameVal(e.value, defaults[k]) ? " def" : ""}${OFF_CHOICE.test(String(e.label)) ? " offw" : ""}" data-set="${k}" data-val="${esc(e.value)}" aria-pressed="${sameVal(e.value, v)}" ${dis}><span class="ol">${esc(e.label)}</span></button>`).join("")}</div>`; // .ol: the label sits over the gliding colour, the colour over the pill borders
-  if (ents.length) return `<div class="ctl"><select data-set="${k}" ${dis} aria-label="${esc(shownTitle(k))}">${ents.map(e => `<option value="${esc(e.value)}" ${sameVal(e.value, v) ? "selected" : ""}>${esc(e.label)}</option>`).join("")}</select></div>`;
+  // more than 16: a button that opens the choices as one of the editor's own dialogs (Max, Nov 25: the system's
+  // dropdown was plain white in every design and had no pop-in), growing out of the button (openDialog)
+  if (ents.length) { SEL_ENTS[k] = ents; const cur = ents.find(e => sameVal(e.value, v)); return `<div class="ctl"><button class="selbtn" data-selbtn="${k}" ${dis} aria-haspopup="listbox" aria-label="${esc(shownTitle(k))}"><span>${esc(cur ? cur.label : String(v ?? ""))}</span>${I("expand")}</button></div>`; }
   if (p.type === "integer" || p.type === "float" || p.type === "long") {
     const r = Object.entries(RANGES).find(([n]) => k.includes(n));
     // a range Morphe states in the description ("0-5000 ms", "(5-75)") makes a slider too, so a new
@@ -564,9 +592,11 @@ function controlFor(k) {
     const sr = /\(?(\d+)\s*[-–]\s*(\d+)\s*(ms|dp|sp|%)?\)/.exec(String(p.summary || ""));
     if (r || sr || /opacity|scale|strength|display_area/.test(k)) {
       const [min, max] = r ? r[1] : sr ? [Number(sr[1]), Number(sr[2])] : [0, 100];
-      return `<div class="ctl"><input type="range" min="${min}" max="${max}" step="1" value="${v}" data-set="${k}" style="--pct:${max > min ? Math.round((v - min) / (max - min) * 1000) / 10 : 0}%;--pf:${max > min ? Math.round((v - min) / (max - min) * 1000) / 1000 : 0}" ${dis} aria-label="${esc(shownTitle(k))}"><span class="val" data-val-of="${k}">${v}</span></div>`;
+      return `<div class="ctl whl">${wheelHTML(k, min, max, 1, v, dis)}<input class="wsrc" type="range" min="${min}" max="${max}" step="1" value="${v}" data-set="${k}" style="--pct:${max > min ? Math.round((v - min) / (max - min) * 1000) / 10 : 0}%;--pf:${max > min ? Math.round((v - min) / (max - min) * 1000) / 1000 : 0}" ${dis} tabindex="-1" aria-hidden="true"><span class="val" data-val-of="${k}">${v}</span></div>`;
     }
-    return `<div class="ctl side"><input type="number" value="${v}" data-set="${k}" ${dis} aria-label="${esc(shownTitle(k))}" step="${p.type === "float" ? "0.05" : "1"}"></div>`;
+    // a number without a stated range: the same wheel, open-ended upward (and below 0 only if it already is)
+    const st = p.type === "float" ? .05 : 1, n = Number(v) || 0;
+    return `<div class="ctl whl">${wheelHTML(k, Math.min(0, n), Infinity, st, n, dis)}<input class="wsrc" type="number" value="${v}" data-set="${k}" ${dis} tabindex="-1" aria-hidden="true" step="${st}"></div>`;
   }
   if (p.type === "string") {
     // Morphe opens the system file picker for these; the preview does the same and draws the image
@@ -652,17 +682,48 @@ function shortNeed(k) {
 }
 function needText(k) {
   if (!classicParentsOk(k)) return "Needs " + PREF[k].parents.map(x => `“${esc(shownTitle(x.key))}” set to ${stateWord(x.key, x.mode !== "not")}${whereOf(x.key)}`).join(", ");
-  const av = String(PREF[k].availability || ""), sk = [...new Set([...av.matchAll(/S\("([^"]+)"\)/g)].map(m => m[1]))].filter(x => PREF[x] && inVersion(x));
-  if (sk.length > 1 && av.includes("||")) return `Available once one of these is set: ${sk.map(x => `“${esc(shownTitle(x))}”${PREF[x].type === "boolean" ? " " + stateWord(x, true) : ""}${whereOf(x)}`).join(", ")}`;
   if (needsTablet(k)) return deviceWhy(k); // one wording for every device lock
+  const un = unmetClauses(k).map(clauseText).filter(Boolean);
+  if (un.length) return "Needs " + un.join(" and ");
   const ap = (PREF[k].availabilityParents || []).filter(x => PREF[x]);
   return ap.length ? `Not available with the current ${ap.map(x => `“${esc(shownTitle(x))}”`).join(", ")}` : "Not available here";
+}
+// A Morphe availability rule split at its top-level "and"s, keeping the parts that are not met now (Max,
+// Nov 25: Glass miniplayer needs a bar miniplayer AND the glass navigation bar; it said "one of these", led
+// to the first only, and setting it left the card locked with nothing more to do). Each part names its
+// settings and the values that unlock it, and the lock leads to the first part still unmet.
+function splitAnd(rule) {
+  let r = String(rule).trim();
+  const wraps = t => { if (t[0] !== "(") return false; let d = 0, q = null; for (let i = 0; i < t.length; i++) { const c = t[i]; if (q) { if (c === q && t[i - 1] !== "\\") q = null; continue; } if (c === '"' || c === "'") q = c; else if (c === "(") d++; else if (c === ")" && --d === 0 && i < t.length - 1) return false; } return true; };
+  while (wraps(r)) r = r.slice(1, -1).trim();
+  const out = []; let d = 0, q = null, from = 0;
+  for (let i = 0; i < r.length; i++) { const c = r[i]; if (q) { if (c === q && r[i - 1] !== "\\") q = null; continue; } if (c === '"' || c === "'") q = c; else if (c === "(") d++; else if (c === ")") d--; else if (!d && c === "&" && r[i + 1] === "&") { out.push(r.slice(from, i).trim()); from = i + 2; i++; } }
+  out.push(r.slice(from).trim());
+  return out.filter(Boolean);
+}
+function unmetClauses(k) {
+  const av = PREF[k] && PREF[k].availability; if (!av) return [];
+  const get = x => (x in PREF ? V(x) : null);
+  return splitAnd(av).filter(c => { try { return !evalRule(c, get); } catch { return true; } });
+}
+function clauseText(c) {
+  const keys = [...new Set([...c.matchAll(/S\("([^"]+)"\)/g)].map(m => m[1]))].filter(x => PREF[x] && inVersion(x));
+  if (!keys.length) return "";
+  const label = (x, v) => (PREF[x].entries || []).find(e => String(e.value) === v)?.label;
+  const one = x => {
+    const vals = [...new Set([...c.matchAll(new RegExp(`S\\("${x}"\\)\\)?\\s*===?\\s*"([^"]*)"`, "g"))].map(m => m[1]))];
+    if (vals.length) { const ls = vals.map(v => label(x, v)).filter(Boolean); return `“${esc(shownTitle(x))}” set to ${ls.length ? ls.join(" or ") : vals.join(" or ")}${whereOf(x)}`; }
+    if (PREF[x].type === "boolean") return `“${esc(shownTitle(x))}” ${stateWord(x, !new RegExp(`!\\s*\\(?S\\("${x}"`).test(c))}${whereOf(x)}`;
+    return `a different “${esc(shownTitle(x))}”${whereOf(x)}`;
+  };
+  return keys.length === 1 ? one(keys[0]) : (c.includes("||") ? "one of " : "") + keys.map(one).join(c.includes("||") ? " or " : " and ");
 }
 // The setting to visit so that k becomes available.
 function blockerOf(k) {
   const p = PREF[k];
   if (!classicParentsOk(k)) return (p.parents.find(x => x.mode === "not" ? !!state[x.key] : !state[x.key]) || p.parents[0]).key;
-  const cands = availKeys(k).filter(x => PREF[x] && inVersion(x));
+  const un = unmetClauses(k), first = un.length ? [...un[0].matchAll(/[SD]\("([^"]+)"\)/g)].map(m => m[1]) : [];
+  const cands = [...new Set([...first, ...availKeys(k)])].filter(x => PREF[x] && inVersion(x));
   // prefer a setting on this screen (e.g. a DeArrow title place) over one on another screen
   return cands.find(x => sectionOf(x) === section) || cands[0] || null;
 }
@@ -703,6 +764,20 @@ function importText(text) {
   commit();
   snack(Object.keys(json).length ? `Imported ${n} settings` : "Morphe settings reset to default");
 }
+const SEL_ENTS = {}; // a long list's choices, as its button was drawn with them
+function choiceDialog(k) {
+  const ents = SEL_ENTS[k] || PREF[k].entries || [], v = V(k);
+  openDialog(`<h2 id="dlgTitle">${esc(shownTitle(k))}</h2><div class="chlist" role="listbox" aria-labelledby="dlgTitle">${ents.map(e => `<button class="chopt" role="option" data-chv="${esc(e.value)}" aria-selected="${sameVal(e.value, v)}"><i class="rad"></i><span>${esc(e.label)}</span></button>`).join("")}</div>
+    <div class="acts"><button class="dbtn tonal" id="dBack">Cancel</button></div>`);
+  const box = $("dlgBox"), on = box.querySelector('.chopt[aria-selected="true"]'), list = box.querySelector(".chlist");
+  if (on && list) list.scrollTop = on.offsetTop - list.clientHeight / 2 + on.offsetHeight / 2;
+  $("dBack").onclick = closeDialog;
+  list.onclick = e => {
+    const b = e.target.closest(".chopt"); if (!b) return;
+    list.querySelectorAll(".chopt").forEach(x => x.setAttribute("aria-selected", String(x === b))); tapFeel("tick");
+    setTimeout(() => { closeDialog(); ensureMod(); const before = state[k]; setPref(k, coerce(k, b.dataset.chv)); afterChange(k, before); }, 140);
+  };
+}
 function importExportDialog() {
   openDialog(`<h2 id="dlgTitle">Import / Export</h2><textarea class="iex" id="iexText" spellcheck="false" autocomplete="off"></textarea>
     <div class="iexrow"><button class="dbtn tonal" id="iexOut">Export to file</button><button class="dbtn tonal" id="iexIn">Import from file</button></div>
@@ -710,8 +785,10 @@ function importExportDialog() {
   const ta = $("iexText"); ta.value = exportText();
   if (!ta.value) setTimeout(() => ta.focus(), 60); // nothing set yet: ready for pasting, as Morphe does
   $("iexSave").onclick = () => { const v = ta.value; closeDialog(); importText(v); };
-  $("iexCopy").onclick = () => { try { navigator.clipboard.writeText(ta.value); } catch { /* no clipboard */ } closeDialog(); };
+  $("iexCopy").onclick = () => { try { navigator.clipboard.writeText(ta.value).catch(() => { ta.select(); document.execCommand("copy"); }); } catch { try { ta.select(); document.execCommand("copy"); } catch { /* no clipboard */ } } snack("Copied to clipboard"); closeDialog(); };
   $("dBack").onclick = closeDialog;
+  // in the app the files go through Morphe's own Import / Export (it holds the system's file pickers)
+  if (window.__morpheAction) { $("iexOut").onclick = $("iexIn").onclick = () => { closeDialog(); window.__morpheAction("morphe_pref_import_export"); }; return; }
   $("iexOut").onclick = () => {
     try {
       const a = document.createElement("a"), d = new Date(), pad = x => String(x).padStart(2, "0");
@@ -786,17 +863,20 @@ const withWord = (t, w) => new RegExp(`\\b${w}s?$`, "i").test(t) ? t : `${t} ${w
 const AREAS = {
   player: [
     ["Top area", ["hide_collapse_button", "hide_autoplay_button", "hide_captions_button", "hide_cast_button", "hide_settings_button"]],
-    ["Middle area", ["hide_player_previous_next_buttons", "hide_player_control_buttons_background"]],
+    ["Middle area", ["hide_player_previous_next_buttons"]],
     // Morphe's own buttons sit in the bottom row, left of the Fullscreen button (scenes.js)
     ["Bottom area", ["hide_fullscreen_button", "loop_video_button", "mute_video_button", "pip_button_overlay", "reload_video_button", "playlist_panel_button", "video_delay_button_overlay", "external_downloader_overlay_button",
       "copy_video_link_button", "playback_speed_dialog_button", "video_quality_dialog_button", "save_to_watch_later_button", "play_all_button", "fullscreen_video_scale_button"]],
+    // the shading behind all three areas comes after their boxes (Max, Nov 25); a card of its own (it has sub-settings)
+    ["Behind the controls", ["hide_player_control_buttons_background"]],
   ],
   shorts: [
-    ["Top area", ["hide_shorts_auto_dubbed_label", "hide_shorts_new_posts_button"]],
+    ["Top area", ["hide_shorts_auto_dubbed_label"]],
     ["Middle area", ["hide_shorts_gesture_hints", "hide_shorts_paused_overlay_buttons"]],
     ["Right side", ["hide_shorts_like_button", "hide_shorts_comments_button", "hide_shorts_share_button", "hide_shorts_save_button", "hide_shorts_remix_button", "hide_shorts_sound_button"]],
     // the pills above the channel name, the channel bar, the title and what is under it, the navigation bar
-    ["Bottom area", ["hide_shorts_upcoming_button", "hide_shorts_save_sound_button", "hide_shorts_use_sound_button", "hide_shorts_use_template_button", "hide_shorts_effect_button", "hide_shorts_green_screen_button",
+    // 'New posts' is one of the suggested actions (ShortsFilter suggestedAction: box pencil icon), the pills above the channel
+    ["Bottom area", ["hide_shorts_upcoming_button", "hide_shorts_save_sound_button", "hide_shorts_new_posts_button", "hide_shorts_use_sound_button", "hide_shorts_use_template_button", "hide_shorts_effect_button", "hide_shorts_green_screen_button",
       "hide_shorts_tagged_products", "hide_shorts_shop_button", "hide_shorts_super_thanks_button", "hide_shorts_location_label", "hide_shorts_hashtag_button", "hide_shorts_info_panel",
       "hide_shorts_channel_bar", "hide_shorts_subscribe_button", "hide_shorts_join_button", "hide_shorts_video_title", "hide_shorts_preview_comment",
       "hide_shorts_sound_metadata_label", "hide_shorts_ai_button", "hide_shorts_full_video_link_label", "hide_shorts_navigation_bar"]],
@@ -812,12 +892,10 @@ const AREAS = {
     ["On each comment", ["hide_comments_contexts", "hide_comments_menu_button", "hide_comments_translate_button", "hide_comments_dislike_button", "hide_comments_gift_button", "hide_comments_gifs_and_images", "hide_comments_gift_animation_and_cards"]],
     ["Live chat", ["hide_comments_live_chat_donators_bar", "hide_comments_live_chat_scroll_to_bottom_button", "hide_comments_live_chat_tooltips"]],
   ],
-  // the player menu is one list: YouTube's entries, the ones Morphe adds, then the last entries
+  // the player menu is one list: the top and bottom of it mean nothing there (Max, Nov 25), so YouTube's own
+  // entries keep their rows; only the entries Morphe adds share a box
   flyout: [
-    ["Top of the menu", ["hide_player_flyout_quality", "hide_player_flyout_captions", "hide_player_flyout_speed", "hide_player_flyout_sleep_timer", "hide_player_flyout_loop_video",
-      "hide_player_flyout_ambient_mode", "hide_player_flyout_lock_screen", "hide_player_flyout_stable_volume", "hide_player_flyout_audio_track"]],
     ["Added by Morphe", ["pip_button_flyout", "save_to_watch_later_flyout_button", "video_delay_button_flyout"]],
-    ["Bottom of the menu", ["hide_player_flyout_listen_with_youtube_music", "hide_player_flyout_watch_in_vr", "hide_player_flyout_on_the_go", "hide_player_flyout_additional_settings", "hide_player_flyout_help"]],
   ],
   description: [
     ["Top area", ["hide_video_details_section", "hide_ai_generated_video_summary_section", "hide_ask_section", "hide_hype_points", "hide_key_concepts_section"]],
@@ -1786,7 +1864,7 @@ function renderSearch() {
   $("list").dataset.view = "search";
   const q = query.trim().toLowerCase();
   // settings this device leaves out of the lists (offDevice) are still found, locked, with the reason
-  const all = CAT.preferences.filter(p => inYtVersion(p.key) && !(p.type === "screen" && offDevice(p.key)));
+  const all = CAT.preferences.filter(p => inYtVersion(p.key) && p.locationConfidence !== "root" && !(p.type === "screen" && offDevice(p.key)));
   if (!q) { paint($("list"), `<div class="shint">Type to search all ${all.length} settings.</div>`); return; }
   const words = q.split(/\s+/).filter(Boolean);
   // a search reads words the way a person types them (Max, Nov 24: "Pull up to fullscreen" found nothing):
@@ -2144,7 +2222,7 @@ window.addEventListener("resize", () => { if (barStays()) $("app").classList.rem
   // at every scroll (before anything is ignored), when a scroll or fling ends, when a finger lifts and
   // when the list changes size.
   const barCheck = () => {
-    const sc = $("scroller"), app = $("app"); if (!app.classList.contains("barhidden")) return;
+    const sc = $("scroller"), app = $("app"); if (!app.classList.contains("barhidden") || window.vEditing) return; // typing a value keeps it hidden
     const bar = document.querySelector(".appbar"), abh = bar ? bar.offsetHeight : 56;
     if (sc.scrollTop < 8 || sc.scrollHeight - sc.clientHeight <= abh + 24) { app.classList.remove("barhidden"); acc = 0; barMoveUntil = performance.now() + 320; }
   };
@@ -2152,8 +2230,24 @@ window.addEventListener("resize", () => { if (barStays()) $("app").classList.rem
   $("scroller").addEventListener("scrollend", barCheck, { passive: true });
   ["pointerup", "pointercancel", "touchend", "touchcancel"].forEach(t => document.addEventListener(t, () => { barCheck(); setTimeout(barCheck, 360); }, { passive: true, capture: true }));
   if (window.ResizeObserver) new ResizeObserver(() => requestAnimationFrame(barCheck)).observe($("content"));
+  // A text field's caret is drawn by the phone above everything: a focused field scrolled up under the
+  // pinned preview showed its blinking caret over the preview (Max, Nov 25). Its caret is hidden while
+  // the field is under the preview (or the top bar), and comes back when it scrolls out again.
+  const caretCheck = () => {
+    const f = document.activeElement;
+    if (!f || !f.matches || !f.matches("#list input, #list textarea")) return;
+    const r = f.getBoundingClientRect(), sr = $("stick")?.getBoundingClientRect();
+    // the preview covers the field only where they share columns (beside the list in landscape, it doesn't)
+    const over = sr && sr.left < r.right && sr.right > r.left ? sr.bottom : 0, cover = Math.max(over, $("scroller").getBoundingClientRect().top);
+    f.classList.toggle("caretoff", r.top < cover - 2 || r.bottom > innerHeight);
+  };
+  window.caretCheck = caretCheck;
+  document.addEventListener("focusin", caretCheck);
+  document.addEventListener("focusout", e => e.target.classList && e.target.classList.remove("caretoff"));
   $("scroller").addEventListener("scroll", () => {
+    caretCheck();
     const sc = $("scroller"), y = sc.scrollTop, app = $("app"), d = y - lastY; lastY = y;
+    if (window.vEditing) return;
     barCheck();
     if (app.classList.contains("searching") || pickerOpen || barStays()) { app.classList.remove("barhidden"); acc = 0; return; }
     // only your own scrolling moves the bar: jumps to a setting (and holds) leave it where it is

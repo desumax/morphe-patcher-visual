@@ -435,19 +435,27 @@ scen("look", "fix_status_bar_layout", (box, on) => {
 // Morphe: "Morphe messages, such as the confirmation of a player button, are shown in the YouTube snackbar
 // instead of a popup". Off is the popup (an Android toast), On is YouTube's own snackbar. The two sides
 // used to be the other way round, and showed a YouTube message instead of a Morphe one (audit, Nov 24).
+// Drawn from NativeSnackbarPatch: On runs the command a server response uses (AddToToastAction), so the
+// message is YouTube's own snackbar: a bar the width of the screen less its margins, sliding up from the
+// bottom and resting right on the navigation bar (Morphe removes the extra room YouTube left under it),
+// shown for YouTube's fixed time, one message at a time. Off is Android's toast: a small pill with the app
+// icon, floating well above the bottom, fading in and out. No lines (Max, Nov 25): the phones tell it.
 scen("look", "native_snackbar", (box, on) => {
-  situation("Tapping Morphe's Copy link button in the player");
   box.innerHTML = device("port", watch7(`<span class="cl7" style="position:absolute;right:4px;top:4px;display:grid;place-items:center;width:11px;height:11px;border-radius:50%;background:rgba(0,0,0,.55)">${ico7("link", 7)}</span>`) + nav7());
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger");
   at(250, () => fingerOn(dev, f, dev.querySelector(".cl7"))); at(600, () => tapF(f));
   at(850, () => {
     f.classList.remove("show");
     dev.insertAdjacentHTML("beforeend", on
-      ? `<div class="chg7" data-stay style="position:absolute;left:4px;right:4px;bottom:20px;padding:4px 6px;border-radius:5px;background:#f1f1f1;color:#0f0f0f;font-size:6.5px;line-height:1.2;animation:sheetup .25s">Link copied to clipboard</div>`
-      : `<div class="chg7" data-stay style="position:absolute;left:50%;bottom:26px;translate:-50% 0;width:max-content;max-width:86%;padding:3px 8px;border-radius:9px;background:#3a3a3a;color:#fff;font-size:6px;line-height:1.2;display:flex;gap:3px;align-items:center;animation:ghostin .25s"><span style="width:7px;height:7px;border-radius:2px;background:#1E5AA8;flex:none"></span>Link copied to clipboard</div>`);
+      ? `<div class="msg7" style="position:absolute;left:4px;right:4px;bottom:17px;padding:5px 6px;border-radius:4px;background:#f1f1f1;color:#0f0f0f;font-size:6.5px;line-height:1.2;box-shadow:0 2px 6px rgba(0,0,0,.4);transform:translateY(130%);opacity:0;transition:transform .3s var(--ease),opacity .2s">Link copied to clipboard</div>`
+      : `<div class="msg7" style="position:absolute;left:50%;bottom:34px;translate:-50% 0;width:max-content;max-width:86%;padding:3px 8px 3px 4px;border-radius:9px;background:#3a3a3a;color:#fff;font-size:6px;line-height:1.2;display:flex;gap:4px;align-items:center;box-shadow:0 2px 6px rgba(0,0,0,.4);opacity:0;transition:opacity .25s"><span style="width:8px;height:8px;border-radius:50%;background:#ff0033;flex:none;display:grid;place-items:center">${ico7("play", 5)}</span>Link copied to clipboard</div>`);
+    const m = dev.querySelector(".msg7"); void m.offsetWidth; m.style.opacity = 1; if (on) m.style.transform = "none";
   });
-  return on ? "The message uses YouTube's snackbar bar" : "The message is a popup over the app (stock)";
+  // YouTube's snackbar and the toast both go after a short while: the bar slides back down, the toast fades
+  at(3200, () => { const m = dev.querySelector(".msg7"); if (!m) return; m.style.opacity = 0; if (on) m.style.transform = "translateY(130%)"; });
+  return "";
 });
+SCN_HOLD.morphe_native_snackbar = 3900; // the message's whole stay and its going
 hidePage("look", "override_youtube_music_buttons", "Tapping a YouTube Music link", feed7(big7(6, "Midnight Tapes · Neon Fjord")) + tgt7(`<div style="padding:3px;border-radius:4px;background:#1b1b1b;font-size:6px;display:flex;gap:3px;align-items:center">${ico7("music", 7, "#ff0033")}Opens your preferred music app</div>`), { invert: true, shown: "Music buttons open your preferred music app", hidden: "Music buttons open the stock YouTube Music (stock)" });
 hidePage("look", "settings_search_history", "Searching in settings", search7("speed", `<div style="display:grid;gap:3px">${tgt7(item7("clock", "seekbar"))}${tgt7(item7("clock", "captions"))}${item7("gear", "Playback speed")}</div>`), { invert: true, shown: "Your recent settings searches are listed", hidden: "No search history (stock)" });
 // Show Morphe setting icons: the icons beside the sections of Morphe's own settings screen (not YouTube's
@@ -465,17 +473,15 @@ scen("look", "show_menu_icons", (box, on) => {
   return on ? "Each Morphe settings section has its icon" : "Morphe settings sections are text only";
 });
 scen("look", "spoof_app_version", (box, on) => {
-  situation("Pretending to be an older YouTube"); // no blue line (Max, Nov 20)
   // the version YouTube really is (the preview's version), and the older one it is told; what comes back
   // is said in Morphe's own words for that choice ("21.11.48 - Restore old captions behavior")
   const ents = entriesFor("morphe_spoof_app_version_target"), cur = V("morphe_spoof_app_version_target");
   const ent = ents.find(e => sameVal(e.value, cur)) || ents[0] || { value: "19.01.34", label: "" };
-  const what = String(ent.label).split(" - ")[1] || "Old layout comes back";
   box.innerHTML = device("port", pageRows(top7("Settings", ["search"]) + `<div style="display:grid;gap:3px;font-size:6.5px"><div>About</div><div style="color:#aaa">App version YouTube sees</div><b class="v7 chg7" style="font-size:8px;transition:opacity .25s">${ytVersion}</b></div>` + feed7(big7(3, ""))));
   const dev = box.querySelector(".dev"), v = dev.querySelector(".v7");
   at(300, () => { if (!on) return; v.style.opacity = 0; later(() => { v.textContent = ent.value; v.style.opacity = 1; }, 260); });
-  at(900, () => { if (on) toast7(dev, what, "82%"); });
-  return on ? "YouTube serves the layout of the chosen version" : "YouTube sees the real version (stock)";
+  // (no message pill naming what the version brings back, Max, Nov 25: the version shown is the story)
+  return "";
 });
 // Morphe: "Use the theme color for text and icons". Stock keeps text and icons white; on, they take the theme colour.
 scen("look", "theme_color_change_foreground", (box, on) => {
@@ -614,11 +620,10 @@ scen("comments", "sanitize_comments_highlighted_search_links", (box, on) => {
   return on ? "Words in comments are plain text, not search links" : "YouTube turns some words into search links (stock)";
 });
 scen("shorts", "disable_shorts_resuming_on_startup", (box, on) => {
-  situation("Opening the app after watching Shorts", true);
   box.innerHTML = device("port", `<div style="position:absolute;inset:0;display:grid;place-items:center;background:#000"><div style="width:24px;height:17px;border-radius:5px;background:#ff0033;display:grid;place-items:center">${ico7("play", 10)}</div></div>`);
   const dev = box.querySelector(".dev");
   at(700, () => { dev.innerHTML = on ? pageRows(feed7(big7(3, "Building a tiny cabin") + row7(4, "Night train to Bodø"))) + nav7() : `<div style="position:absolute;inset:0;background:${ART[5]}"></div><div style="position:absolute;right:4px;bottom:20px;display:grid;gap:4px">${ico7("like", 10)}${ico7("comment", 10)}${ico7("share", 10)}</div>` + nav7(); });
-  return on ? "The app opens on Home" : "The app reopens straight into Shorts (stock)";
+  return ""; // no lines (Max, Nov 25): the phones show where the app opens
 });
 for (const [k, where, page] of [
   ["hide_shorts_channel", "A channel page", top7("Fjord & Timber", ["search", "more"]) + `<div style="display:flex;gap:6px;font-size:6px"><span>Videos</span><span>Live</span></div>`],
@@ -923,10 +928,10 @@ scen("playback", "on_the_go", (box, on) => {
   return "Morphe's panel";
 });
 // Sanitize video subtitle: no animation (Max, 2026-11-19)
-// Morphe's download items in the ⋮ menu of a video in the feed, and in the Shorts menu (on a Short)
+// Morphe's download item in the ⋮ menu of a video in the feed
 const dlMenu7 = (icon, text) => `<div style="background:#212121;border-radius:6px 6px 0 0;padding:4px;display:grid;gap:1px">${item7("plist", "Save to playlist")}${tgt7(item7(icon, text))}${item7("share", "Share")}</div>`;
 hidePage("feed", "feed_download_flyout_button", "", feed7(big7(3, "Building a tiny cabin")) + `<div style="margin:0 -6px -6px">${dlMenu7("dl", "Download with your app")}</div>`, { invert: true });
-hidePage("shorts", "shorts_download_flyout_button", "", short7(5) + `<div style="position:absolute;left:0;right:0;bottom:0;z-index:2;font-size:7px">${dlMenu7("dl", "Download this Short")}</div>`, { invert: true, raw: true });
+// Download in Shorts menu: the live Shorts menu sheet shows it (scenarios.js SHORTS_SHEET), as on the phone
 scen("miniplayer", "seek_notification_media_prev_next", (box, on) => {
   box.innerHTML = device("port", `<div style="position:absolute;inset:0;background:#1b1b1b"></div><div style="position:absolute;left:4px;right:4px;top:10px;padding:4px;border-radius:6px;background:#2a2a2a;font-size:6px;display:grid;gap:3px"><b>Building a tiny cabin</b><div style="display:flex;justify-content:space-around" class="nb7"></div></div>`);
   const dev = box.querySelector(".dev");
@@ -1281,6 +1286,9 @@ function buildMembers() {
   for (const k in A) if (PREF[k] && MEMBERS[A[k].section] && inVersion(k)) { MEMBERS[A[k].section].live.push(k); assigned.add(k); }
   for (const p of CAT.preferences) {
     if (assigned.has(p.key) || !inVersion(p.key) || p.type === "screen") continue; // sub-screen links are navigation, not settings
+    // the settings' own top row (Morphe's "About": version and links, above every screen) is no setting of
+    // any tab; the catalogue had filed it under Shorts, where it did nothing (Max, Nov 25)
+    if (p.locationConfidence === "root") continue;
     const s = SECTIONS.find(s => s.id === MISC_HOME[p.key]) || SECTIONS.find(s => s.scopes && inScope(p, s.scopes));
     (s ? MEMBERS[s.id].misc : MEMBERS.misc.misc).push(p.key);
   }
