@@ -7,6 +7,9 @@
 // a progress line, then fade back (220 ms). Body length is SC_HOLD.
 const SC_FADE = 220, SC_HOLD = 3000;
 const SCN_HOLD = {}; // per-scenario body length when a story needs longer than SC_HOLD
+// Settings whose story acts away from their parent's part in the preview (a feed thumbnail, an alert), so
+// selecting them doesn't flash that part (Max, Nov 25: Feed thumbnail like count flashed the dislike count)
+const AWAY = new Set();
 const SCN = {};
 const scen = (section, keys, fn) => keys.split(/\s+/).forEach(k => { A["morphe_" + k] = { section, kind: "scenario" }; SCN["morphe_" + k] = fn; });
 // Device illustration. Content that depends on orientation goes in .dv-video (the player area)
@@ -1519,6 +1522,11 @@ function duoValues(k, prev) {
 // didn't follow the slider; neither did any other slider with a comparison, not even on release). One redraw a
 // frame; scLive tells a story it is being redrawn for a slider step, so it can skip its opening motion.
 let scLive = false, liveRaf = 0;
+// What a story last drew on this side for a slider, so a redraw while the slider moves can glide from it
+// instead of cutting (Max, Nov 25: dragging Quick actions top margin from 0 cut from the 24 dp example to
+// the new value). Returns the previous value only during a slider redraw.
+const liveLast = {};
+function liveFrom(k, v) { const id = k + "|" + (scSide ? scSide.i : 0), was = liveLast[id]; liveLast[id] = v; return scLive ? was : undefined; }
 function liveScenario(k, before) {
   cancelAnimationFrame(liveRaf);
   liveRaf = requestAnimationFrame(() => { liveRaf = 0; if (selected !== k || !SCN[k]) return; scLive = true; try { playScenario(k, before === undefined || sameVal(before, V(k)) ? undefined : before); } finally { scLive = false; } });

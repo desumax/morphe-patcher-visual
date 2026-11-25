@@ -508,7 +508,10 @@ function stateChip(k) {
   }
   return "";
 }
-function summaryFor(k) { const p = PREF[k]; const v = V(k); if (p.type === "boolean") return cleanSum(k, fmtSum(k, (v ? p.summaryOn : p.summaryOff) || p.summary || "")); return fmtSum(k, p.summary || ""); }
+function summaryFor(k) { const p = PREF[k]; const v = V(k);
+  // a list drawn as toggles (listChoices): Morphe's "Enter ... separated by new lines" would ask for typing
+  if (p.type === "string" && isListBox(k) && !listJSON(k) && !listNumeric(k) && listNames(k)) return "Hide takes out everything whose title contains the name";
+  if (p.type === "boolean") return cleanSum(k, fmtSum(k, (v ? p.summaryOn : p.summaryOff) || p.summary || "")); return fmtSum(k, p.summary || ""); }
 // "Disable X" reads "X" in the clean design, with On on the left and Off on the right, but Morphe's
 // description still tells what turning it on does ("Disables playlist and live chat panels from opening
 // automatically" under "Player popup panels: On | Off" said the opposite of the toggle; Max, Nov 23, again).
@@ -586,7 +589,34 @@ function listItems(k, from = V(k)) {
   const parts = v.includes("\n") || !listNumeric(k) ? v.split("\n") : v.split(/[\s,]+/);
   return parts.map(x => x.trim()).filter(Boolean);
 }
+// A list whose Morphe description names its entries ("Enter a keyword or full name (e.g., Ask, Community,
+// Hype, Listen)", Comments carousel filter) gets one toggle per name instead of typing (Max, Nov 25), two to
+// a line like a family of switches. Hide adds the name as its own line, Show takes that line out, so the value
+// stays Morphe's newline list and Morphe matches it as before (title.contains, case as written). A line that
+// was typed before (or in Morphe) and isn't one of the names gets a toggle of its own, so nothing is lost;
+// one switched to Show keeps its toggle until the editor reloads. The names are read from the description, of
+// the setting or of its parent, so a name Morphe adds there shows up on its own.
+const lchOff = {}; // names switched to Show in this visit that aren't Morphe's: their toggles stay
+function listNames(k) {
+  const src = [PREF[k].summary, ...(PREF[k].parents || []).map(x => PREF[x.key]?.summary)].map(t => /\(e\.g\.,?\s*([^)]+)\)/i.exec(String(t || ""))).find(Boolean);
+  return src ? src[1].split(",").map(x => x.trim().replace(/\.$/, "")).filter(Boolean) : null;
+}
+function listChoices(k, dis) {
+  const names = listNames(k), items = listItems(k);
+  const all = [...names, ...items.filter(t => !names.includes(t)), ...(lchOff[k] || []).filter(t => !names.includes(t) && !items.includes(t))];
+  const tog = (t, on) => design === "clean"
+    ? `<button class="lt7" role="switch" data-lch="${esc(t)}" aria-checked="${on}" data-at="${on ? "l" : "r"}" data-tone="${on ? "neg" : "pos"}" ${dis} aria-label="${esc(t)}: ${on ? "Hide" : "Show"}"><i></i><span>Hide</span><span>Show</span></button>`
+    : `<button class="sw" role="switch" data-lch="${esc(t)}" aria-checked="${on}" ${dis} aria-label="Hide ${esc(t)}"></button>`;
+  return `<div class="ctl lch2" data-lst="${k}">${all.map(t => `<span class="lchc"><span class="lchn">${esc(t)}</span>${tog(t, items.includes(t))}</span>`).join("")}</div>`;
+}
+function listChoose(k, t) {
+  const items = listItems(k), i = items.indexOf(t);
+  if (i >= 0) { items.splice(i, 1); if (!listNames(k).includes(t)) (lchOff[k] ||= []).includes(t) || lchOff[k].push(t); }
+  else { const names = listNames(k); items.push(t); items.sort((a, b) => (names.indexOf(a) + 1 || 1e3) - (names.indexOf(b) + 1 || 1e3)); }
+  ensureMod(); touchSel(k); const before = state[k]; setPref(k, items.join("\n")); afterChange(k, before);
+}
 function listBox(k, dis) {
+  if (!listJSON(k) && !listNumeric(k) && listNames(k)) return listChoices(k, dis);
   const items = listItems(k), num = listNumeric(k);
   const chips = items.map((t, i) => `<span class="lchip">${esc(t)}${num ? "×" : ""}<button class="lx" data-lx="${i}" ${dis} aria-label="Remove ${esc(t)}">${I("close")}</button></span>`).join("");
   if (listJSON(k)) return `<div class="ctl lst" data-lst="${k}">${chips}<span class="lhint">${items.length ? "Add more" : "No channels yet. Add one"} from a video's ⋮ menu: Whitelist channel</span></div>`;
@@ -726,6 +756,25 @@ function deepKidPill(k) {
 // the lock pill of a parent whose sub-settings are hidden: a button that shows them, locked
 const peeking = x => x === peekKid || (!!peekPar && (PARENT_OF[x] === peekPar || DIRECT_PARENT[x] === peekPar));
 const kidLock = (k, n) => `<button class="kidbtn kidoff" data-kidpeek="${k}" aria-expanded="${peekPar === k}" title="Show the ${n} locked sub-settings" aria-label="${n} sub-settings, locked: show them">${n}${I("lock")}</button>`;
+// Two columns for a family of plain switches (Max, Nov 25: Fullscreen's Action bar). A parent whose
+// sub-settings are all on/off, at least four of them, each Morphe title ending in the same word ("Hide Like
+// button", "Hide Dislike button"), lists them two to a line, title then toggle. The shared word is dropped
+// from each title ("Like") and said once on the parent ("Action bar buttons"). It is read from Morphe's
+// titles, so a button Morphe adds joins the grid, and a family that stops matching gets the usual list.
+const COMPACT_MIN = 4;
+const lastWord = x => ((/([A-Za-z]+)\W*$/.exec(String(PREF[x]?.title || "")) || [])[1] || "").toLowerCase();
+function compactWord(k) {
+  const ks = KIDS[k]; if (!ks || ks.length < COMPACT_MIN) return "";
+  if (!ks.every(x => PREF[x].type === "boolean" && !OFF_LIST.has(x) && !KIDS[x] && DIRECT_PARENT[x] === k)) return "";
+  const w = lastWord(ks[0]); return w.length > 2 && ks.every(x => lastWord(x) === w) ? w : "";
+}
+const dropWord = (t, w) => t.replace(new RegExp(`\\s+${w}$`, "i"), "").replace(/'([^']+)'$/, "$1"); // 'Live chat' button: Live chat
+const withWord = (t, w) => new RegExp(`\\b${w}s?$`, "i").test(t) ? t : `${t} ${w}s`;
+// the title a row shows in the list: shortened in a two-column family, the family's word added to its parent
+function rowTitle(k) {
+  const pw = DIRECT_PARENT[k] && compactWord(DIRECT_PARENT[k]); if (pw) return dropWord(shownTitle(k), pw);
+  const w = compactWord(k); return w ? withWord(shownTitle(k), w) : shownTitle(k);
+}
 function rowHTML(k, live) {
   const p = PREF[k]; const a = A[k];
   const dis = !parentsOk(k);
@@ -773,7 +822,7 @@ function rowHTML(k, live) {
   const over = overOf(k) ? `<div class="over">${esc(overOf(k))}</div>` : "";
   const segCol = sbColor(k); if (segCol) cls.push("segcol");
   return `<div class="${cls.join(" ")}" data-row="${k}" data-k="${k}" tabindex="0"${segCol ? ` style="--seg-col:${segCol};--seg-ink:${inkOn(segCol)}"` : ""}>
-    <div class="txt">${over}${lreset ? '<div class="ttlrow">' : ""}<div class="ttl">${ttlHTML(shownTitle(k), (dis ? I("lock", "lk") : "") + tags + kidbtn)}</div>${lreset ? lreset + "</div>" : ""}
+    <div class="txt">${over}${lreset ? '<div class="ttlrow">' : ""}<div class="ttl">${ttlHTML(rowTitle(k), (dis ? I("lock", "lk") : "") + tags + kidbtn)}</div>${lreset ? lreset + "</div>" : ""}
       ${sum ? `<div class="sum">${esc(sum)}</div>` : ""}${ctl}</div>${right || goto || need ? `<div class="side">${right}${need}${goto}</div>` : ""}</div>`;
 }
 // "Hide in comments" alone does not say what is hidden: the row carries its Morphe sub-screen's title
@@ -910,6 +959,8 @@ function placeDependents(lists, movable) {
   }
   return rest;
 }
+// a switch's identity across a redraw: its setting, or its list and name for a list's own toggles (listChoices)
+const swKey = x => x.dataset.sw ?? `${x.closest("[data-lst]")?.dataset.lst}|${x.dataset.lch}`;
 let lastVis = { sec: null, keys: new Set() };
 const pickedFiles = {}; // images chosen with a file picker, kept for this visit only
 const foldingKids = new Map(); // sub-option groups still folding away: their old rows, and until when
@@ -936,7 +987,7 @@ function renderList() {
       const flat = byPosition(ks).filter(x => !deep(x)), order = [];
       const put = x => { order.push(x); byPosition(ks.filter(y => deep(y) && DIRECT_PARENT[y] === x)).forEach(put); };
       flat.forEach(put); ks.forEach(x => { if (!order.includes(x)) order.push(x); });
-      out = `<div class="unit">${out}<div class="kids ${lastOpen.has(k) ? "open" : ""}" data-kids-of="${k}"><div class="kin">${order.map(x => { const h = rowHTML(x, isLive(x)); return deep(x) ? h.replace('class="row ', 'class="row deep ') : h; }).join("")}</div></div></div>`;
+      out = `<div class="unit">${out}<div class="kids ${lastOpen.has(k) ? "open" : ""}" data-kids-of="${k}"><div class="kin${compactWord(k) ? " duo2" : ""}">${order.map(x => { const h = rowHTML(x, isLive(x)); return deep(x) ? h.replace('class="row ', 'class="row deep ') : h; }).join("")}</div></div></div>`;
     }
     return out;
   };
@@ -983,7 +1034,7 @@ function renderList() {
   foldingKids.forEach((v, grp) => { if (v.until > now0 && !wantOpen.has(grp)) closingOld.set(grp, v.old); else foldingKids.delete(grp); });
   if (lastVis.sec === section) list.querySelectorAll(".kids.open").forEach(b => { if (!wantOpen.has(b.dataset.kidsOf)) { const old = b.querySelector(".kin").innerHTML, btn = list.querySelector(`[data-row="${b.dataset.kidsOf}"] .kidbtn`)?.outerHTML; closingOld.set(b.dataset.kidsOf, old); foldingKids.set(b.dataset.kidsOf, { old, btn, until: now0 + 320 }); } });
   // switches keep their old position for a frame so the change slides instead of snapping
-  const swWas = new Map(); list.querySelectorAll("[data-sw]").forEach(x => swWas.set(x.dataset.sw, [x.getAttribute("aria-checked"), x.dataset.at, x.dataset.tone]));
+  const swWas = new Map(); list.querySelectorAll("[data-sw], [data-lch]").forEach(x => swWas.set(swKey(x), [x.getAttribute("aria-checked"), x.dataset.at, x.dataset.tone]));
   // groups caught mid-fold by this render: their new box carries on from the height it had
   const midFold = new Map(); list.querySelectorAll(".kids:not(.open)").forEach(b => { const h = b.getBoundingClientRect().height; if (h > .5 && foldingKids.has(b.dataset.kidsOf)) midFold.set(b.dataset.kidsOf, h); });
   // descriptions that were unfolded stay unfolded through the redraw, without playing the unfold again
@@ -1005,8 +1056,8 @@ function renderList() {
     box.classList.remove("open");
     box.animate([{ height: h + "px", gridTemplateRows: "1fr" }, { height: "0px", gridTemplateRows: "1fr" }], { duration: left, easing: "cubic-bezier(.2,0,0,1)" });
   });
-  list.querySelectorAll("[data-sw]").forEach(x => {
-    const was = swWas.get(x.dataset.sw), now = [x.getAttribute("aria-checked"), x.dataset.at, x.dataset.tone];
+  list.querySelectorAll("[data-sw], [data-lch]").forEach(x => {
+    const was = swWas.get(swKey(x)), now = [x.getAttribute("aria-checked"), x.dataset.at, x.dataset.tone];
     if (!was || was[0] === now[0]) return;
     const put = v => { x.setAttribute("aria-checked", v[0]); if (v[1]) x.dataset.at = v[1]; else delete x.dataset.at; if (v[2]) x.dataset.tone = v[2]; else delete x.dataset.tone; };
     toggleGlide(x, was, now, put); // a switch or the two-way toggle: the thumb glides like every other choice

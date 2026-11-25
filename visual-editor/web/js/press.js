@@ -113,6 +113,7 @@ $("list").addEventListener("keydown", e => {
 const listMsg = (k, msg) => { const box = document.querySelector(`[data-lst="${k}"]`); if (!box) return; box.querySelector(".lerr")?.remove(); if (msg) box.insertAdjacentHTML("beforeend", `<span class="lerr">${esc(msg)}</span>`); };
 $("list").addEventListener("click", e => {
   const x = e.target.closest(".lx"); if (x) { listRemove(x.closest("[data-lst]").dataset.lst, Number(x.dataset.lx)); return; }
+  const ch = e.target.closest("[data-lch]"); if (ch) { tapFeel("tick"); listChoose(ch.closest("[data-lst]").dataset.lst, ch.dataset.lch); return; }
   // restoring the default list asks first, so a stray tap can't wipe a list someone built up
   const rs = e.target.closest("[data-lreset]"); if (rs) {
     const k = rs.dataset.lreset, def = listItems(k, defaults[k]), num = listNumeric(k);

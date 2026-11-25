@@ -253,7 +253,7 @@ function carouselScen(key, plan) {
       at(t0 + 560, () => f.classList.remove("show"));
     };
     for (let n = 1; n < Math.min(left, 3); n++) swipe(n, 900 + (n - 1) * 750);
-    return cap;
+    return ""; // no sentences under a redrawn animation (Max, Nov 25, permanent)
   });
 }
 const carouselNames = v => youFilter(v);
@@ -683,7 +683,14 @@ scen("watch", "quick_actions_top_margin", (box, v) => {
   // the margin opens on its side as you watch; the default side has none
   // while the slider moves (scLive) the space is drawn at once at its new size, so it follows the finger
   const open = () => { up.style.translate = `0 -${px(m)}px`; gap.style.height = px(m) + "px"; dev.insertAdjacentHTML("beforeend", `<b class="new7" style="position:absolute;right:9px;bottom:${19 + px(m) / 2}px;translate:0 50%;font-size:5.5px;color:#ffd21f">${m} dp</b>`); };
-  if (m) { if (live) { up.style.transition = gap.style.transition = "none"; open(); } else at(350, open); }
+  // while the slider moves (scLive) the space follows the finger; from the value this side showed before (the
+  // 24 dp example when the drag starts at the default) it glides there in 150 ms instead of cutting
+  const was = liveFrom("morphe_quick_actions_top_margin", m);
+  if (live) {
+    up.style.transition = gap.style.transition = "none";
+    if (was !== undefined && was !== m) { up.style.translate = `0 -${px(was)}px`; gap.style.height = px(was) + "px"; gap.style.opacity = 1; void up.offsetWidth; up.style.transition = "translate .15s ease-out"; gap.style.transition = "height .15s ease-out, opacity .15s"; gap.style.opacity = m ? 1 : 0; }
+    if (m) open(); else { up.style.translate = "0 0"; gap.style.height = "0"; }
+  } else if (m) at(350, open);
   return "";
 });
 scen("fullscreen", "swipe_ignore_when_locked", (box, on) => {
@@ -1504,13 +1511,12 @@ scen("danmaku", "niconico_comments_timed_comments_with_replay", (box, on) => {
 // ReturnYouTubeDislike.createDislikeSpan: on a video whose creator hid the likes, the like button says "Hidden by
 // owner" unless estimated likes are on, which show the like count Return YouTube Dislike estimates
 scen("watch", "ryd_estimated_like", (box, on) => {
-  situation("A video whose creator hid its likes", true);
   const pill = `<div style="display:flex;width:max-content;max-width:100%;border-radius:8px;background:#272727;font-size:5.5px;align-items:center;white-space:nowrap"><span style="display:flex;gap:2px;align-items:center;padding:2px 4px;border-right:1px solid #444">${ico7("like", 6)}<span class="lkc7">Like</span></span><span style="display:flex;gap:2px;align-items:center;padding:2px 4px">${ico7("dislike", 6)}2.1K</span></div>`;
   box.innerHTML = device("port", pageRows(player7(3) + `<b style="font-size:7px">Building a tiny cabin</b>` + pill + row7(2, "Night train to Bodø")));
   const dev = box.querySelector(".dev");
   // the count arrives from Return YouTube Dislike a moment after the page, as it does in the app
   at(450, () => { const l = dev.querySelector(".lkc7"), was = l.textContent; l.textContent = on ? "~41K" : "Hidden by owner"; l.classList.add("chg7"); textSwap(l, was); });
-  return on ? "An estimated like count" : "“Hidden by owner”";
+  return ""; // no lines (Max, Nov 25: a permanent rule for every new animation)
 });
 // FeedEngagementCountsPatch: a badge on feed thumbnails with the like icon and count and/or the like ratio
 // (with a like bar under it). Its place: in one row continuing the view count badge at the bottom
@@ -1527,9 +1533,9 @@ function feedLikeBadge({ count, ratio, pos }) {
   return `<div class="fb7" style="position:absolute;${at7};${box7};display:grid;justify-items:center;gap:1px">${c}${r}${bar}</div>`;
 }
 function feedLikeScen(key, plan) {
+  AWAY.add("morphe_" + key);
   scen("watch", key, (box, v) => {
     const o = plan(v), d = o.pos === "MIDDLE_RIGHT" ? `<span style="position:absolute;right:3px;top:3px;width:9px;height:9px;border-radius:50%;background:rgba(0,0,0,.6);display:grid;place-items:center">${ico7("clock", 6, "#fff")}</span>` : "";
-    situation(o.sit, true);
     // the stock badges: views at the bottom left (or none where the like row takes its place), the duration at the bottom right
     const base = `${o.pos === "NEXT_TO_VIEW_COUNT" && (o.count || o.ratio) ? "" : `<span style="position:absolute;left:3px;bottom:3px;background:rgba(0,0,0,.75);border-radius:2px;padding:1px 2.5px;font-size:5px;font-weight:600">1.2M views</span>`}<span style="position:absolute;right:3px;bottom:3px;background:rgba(0,0,0,.75);border-radius:2px;padding:1px 2.5px;font-size:5px;font-weight:600">12:04</span>${d}`;
     box.innerHTML = device("port", pageRows(feed7(big7(3, "Building a tiny cabin", base) + row7(2, "Night train to Bodø") + row7(4, "Lo-fi beats"))));
@@ -1541,10 +1547,11 @@ function feedLikeScen(key, plan) {
   });
 }
 const feedNow = () => ({ count: !!V("morphe_ryd_feed_like_count"), ratio: !!V("morphe_ryd_feed_like_ratio"), pos: String(V("morphe_ryd_feed_counts_position") || "NEXT_TO_VIEW_COUNT") });
-feedLikeScen("ryd_feed_like_count", on => ({ ...feedNow(), count: !!on, sit: "Feed thumbnails" }));
-feedLikeScen("ryd_feed_like_ratio", on => ({ ...feedNow(), ratio: !!on, sit: "Feed thumbnails" }));
+feedLikeScen("ryd_feed_like_count", on => ({ ...feedNow(), count: !!on }));
+feedLikeScen("ryd_feed_like_ratio", on => ({ ...feedNow(), ratio: !!on }));
 // the place only shows with something in it: with neither switched on, the picture shows both
-feedLikeScen("ryd_feed_counts_position", v => { const n = feedNow(), any = n.count || n.ratio; return { count: any ? n.count : true, ratio: any ? n.ratio : true, pos: String(v), sit: any ? "Feed thumbnails" : "Feed thumbnails, with the like count and percentage on" }; });
+feedLikeScen("ryd_feed_counts_position", v => { const n = feedNow(), any = n.count || n.ratio; return { count: any ? n.count : true, ratio: any ? n.ratio : true, pos: String(v) }; });
 // The connection error alerts of Return YouTube Dislike and SponsorBlock, drawn as DeArrow's is
+AWAY.add("morphe_ryd_toast_on_connection_error"); AWAY.add("morphe_sb_toast_on_connection_error");
 hidePage("watch", "ryd_toast_on_connection_error", "Return YouTube Dislike can't reach its server", player7(3) + `<b style="font-size:7px">Building a tiny cabin</b><div style="display:flex;width:max-content;border-radius:8px;background:#272727;font-size:6px;align-items:center"><span style="display:flex;gap:2px;align-items:center;padding:2px 5px;border-right:1px solid #444">${ico7("like", 7)}48K</span><span style="display:flex;gap:2px;align-items:center;padding:2px 5px">${ico7("dislike", 7)}</span></div>` + row7(2, "Night train to Bodø") + tgt7(`<div style="padding:3px 5px;border-radius:8px;background:#323232;font-size:6px;text-align:center">Dislikes are temporarily not available (API timed out)</div>`), { invert: true });
 hidePage("sponsorblock", "sb_toast_on_connection_error", "SponsorBlock can't reach its server", player7(3, `<div style="position:absolute;left:4px;right:4px;bottom:3px;height:1.5px;background:rgba(255,255,255,.35)"><div style="width:30%;height:100%;background:#f00"></div></div>`) + `<b style="font-size:7px">Building a tiny cabin</b>` + row7(2, "Night train to Bodø") + row7(4, "Lo-fi beats") + tgt7(`<div style="padding:3px 5px;border-radius:8px;background:#323232;font-size:6px;text-align:center">SponsorBlock is temporarily not available (API timed out)</div>`), { invert: true });

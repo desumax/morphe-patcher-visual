@@ -575,6 +575,81 @@ const CHECKS = [
       await ctx.close();
     },
   },
+  {
+    name: "ryd-stories-no-lines-no-stray-flash",
+    report: "Nov 25: Estimated likes and the feed like stories had white and blue sentences; selecting Feed thumbnail like count / percentage / position flashed the dislike count in the preview",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        setPicker(false); setPref("morphe_ryd_enabled", true); commit();
+        const lines = [], flash = [];
+        for (const k of ["morphe_ryd_estimated_like", "morphe_ryd_feed_like_count", "morphe_ryd_feed_like_ratio", "morphe_ryd_feed_counts_position"]) {
+          quickSection(sectionOf(k)); await new Promise(r => setTimeout(r, 400)); select(k, "list"); await new Promise(r => setTimeout(r, 250));
+          if (k !== "morphe_ryd_estimated_like" && document.querySelector('#stage .flash[data-k="morphe_ryd_enabled"], #stage [data-k="morphe_ryd_enabled"] .flash')) flash.push(k);
+          await new Promise(r => setTimeout(r, 1600));
+          const t = [...document.querySelectorAll("#canvas .sit, #canvas .sf7")].filter(e => e.offsetHeight && e.textContent.trim()).map(e => e.textContent.trim());
+          if (t.length) lines.push(`${k}: ${t.join(" / ")}`);
+        }
+        return { lines, flash };
+      });
+      ok(!r.lines.length, `stories still have sentences: ${r.lines.join("; ")}`);
+      ok(!r.flash.length, `selecting these flashes the dislike count: ${r.flash.join(", ")}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "margin-slider-glides-from-example",
+    report: "Nov 25: dragging Quick actions top margin from 0 cut from the 24 dp example to the new value (the animation clipped at the start)",
+    async run() {
+      const { p, ctx } = await open();
+      const k = "morphe_quick_actions_top_margin";
+      await p.evaluate(async k => { setPicker(false); quickSection(sectionOf(k)); await new Promise(r => setTimeout(r, 500)); select(k, "list"); await new Promise(r => setTimeout(r, 2000)); }, k);
+      const gap = () => p.evaluate(() => document.querySelectorAll("#canvas .gap7")[1]?.getBoundingClientRect().height ?? -1);
+      const g0 = await gap();
+      await p.evaluate(k => { const t = document.querySelector(`#list input[type=range][data-set="${k}"]`); t.value = 4; t.dispatchEvent(new Event("input", { bubbles: true })); }, k);
+      await p.waitForTimeout(60); const mid = await gap(); await p.waitForTimeout(500); const end = await gap();
+      ok(g0 > end + 4, `the example side doesn't start wider than 4 dp (${g0} vs ${end})`);
+      ok(mid > end + 2 && mid < g0, `the first slider step cuts instead of gliding: ${g0} → ${mid} → ${end}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "button-families-in-two-columns",
+    report: "Nov 25: Fullscreen's Action bar sub-settings: titled Action bar buttons, the word button dropped from each, title and toggle two to a line",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        setPicker(false); quickSection("fullscreen"); await new Promise(r => setTimeout(r, 900));
+        const par = document.querySelector('#list [data-row="morphe_hide_quick_actions"] .ttl')?.textContent.trim();
+        const kin = document.querySelector('#list [data-kids-of="morphe_hide_quick_actions"] .kin');
+        const rows = kin ? [...kin.querySelectorAll(":scope > .row:not(.hide)")] : [];
+        const titles = rows.map(x => x.querySelector(".ttl").textContent.trim());
+        const tops = rows.slice(0, 2).map(x => Math.round(x.getBoundingClientRect().top)), lefts = rows.slice(0, 2).map(x => Math.round(x.getBoundingClientRect().left));
+        return { par, duo: !!kin?.classList.contains("duo2"), titles, tops, lefts };
+      });
+      ok(/^Action bar buttons/.test(r.par || ""), `the parent reads "${r.par}"`);
+      ok(r.duo && r.tops[0] === r.tops[1] && r.lefts[1] > r.lefts[0], `sub-settings aren't two to a line: ${JSON.stringify(r)}`);
+      ok(r.titles.length > 4 && r.titles.every(t => !/button/i.test(t)) && r.titles.includes("Live chat"), `titles: ${r.titles.join(", ")}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "carousel-filter-names-as-toggles",
+    report: "Nov 25: Comments carousel filter asked to type names; every name Morphe lists is a toggle now, the value stays Morphe's newline list",
+    async run() {
+      const { p, ctx } = await open();
+      const k = "morphe_hide_comments_carousel_filter_strings";
+      await p.evaluate(async k => { setPicker(false); setPref("morphe_hide_comments_carousel", true); setPref(k, "my own"); commit(); quickSection(sectionOf(k)); await new Promise(r => setTimeout(r, 900)); }, k);
+      const names = await p.evaluate(k => [...document.querySelectorAll(`#list [data-lst="${k}"] [data-lch]`)].map(x => x.dataset.lch), k);
+      const typing = await p.evaluate(k => !!document.querySelector(`#list [data-lin="${k}"]`), k);
+      ok(!typing, "the card still has a field to type into");
+      ok(["Ask", "Community", "Hype", "Listen", "my own"].every(n => names.includes(n)), `toggles: ${names.join(", ")}`);
+      if (names.includes("Hype")) { await p.locator(`#list [data-lst="${k}"] [data-lch="Hype"]`).click(); await p.waitForTimeout(400); }
+      const v = await p.evaluate(k => V(k), k);
+      ok(v === "Hype\nmy own", `after Hide on Hype the value is ${JSON.stringify(v)}`);
+      await ctx.close();
+    },
+  },
 ];
 
 (async () => {

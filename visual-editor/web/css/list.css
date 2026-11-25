@@ -108,6 +108,11 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 .ctl textarea { min-height: 54px; resize: vertical; font-family: var(--mono); font-size: 12px; }
 .fallback .ctl { flex-wrap: nowrap; }
 /* the shared list editor (speeds, filter words, whitelists): chips plus an add field */
+/* a list's names as toggles (listChoices in list.js), two to a line like a family of switches */
+.ctl.lch2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; margin-top: 8px; }
+.lchc { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; min-height: 34px; }
+.lchn { min-width: 0; overflow-wrap: anywhere; font-size: 14px; color: var(--m-on); }
+.lch2 .lt7 { height: 30px; font-size: 11px; } .lch2 .lt7 > span { min-width: 30px; padding: 0 5px; }
 .ctl.lst, .fallback .ctl.lst { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 6px; align-items: center; }
 /* every chip is as wide as the widest one (fitPills sets the columns); text centred, remove button at the end */
 .lchip { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px; min-width: 0; height: 30px; padding: 0 2px 0 8px; border-radius: 15px; background: var(--m-c-highest); color: var(--m-on); font-size: 13px; font-variant-numeric: tabular-nums; text-align: center; white-space: nowrap; overflow: hidden; }

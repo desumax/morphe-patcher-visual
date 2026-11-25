@@ -34,7 +34,7 @@ function focusEls(k) {
 const coversStage = e => { const s = $("stage").getBoundingClientRect(), r = e.getBoundingClientRect(); return r.width * r.height > s.width * Math.min(s.height, 420) * .8; };
 function proxyEls(k) {
   const q = x => [...document.querySelectorAll(`#stage [data-k="${x}"], #stage [data-also~="${x}"]`)].filter(e => e.getClientRects().length && (!e.classList.contains("off") || e.classList.contains("ghost")));
-  if (q(k).length) return [];
+  if (q(k).length || AWAY.has(k)) return [];
   // data-proxy="<key>": a part that flashes for a setting without being its selectable part, so the
   // setting and the ones under it all flash it the same way (the seekbar thumb's ring: Max, round 141,
   // "Custom seekbar thumb" must flash as "Thumb image" does)
