@@ -1076,6 +1076,31 @@ const CHECKS = [
       await ctx.close();
     },
   },
+  {
+    name: "demo-finger-follows-scrolled-page",
+    report: "Nov 25 (14:58): Video action bar layout, started from another setting, spawned the finger at the very top of the screen, almost clipped, and it did not come back after the first round",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        const wait = ms => new Promise(r => setTimeout(r, ms));
+        setPicker(false); quickSection("watch"); await wait(500);
+        select("morphe_hide_player_related_videos", "list"); await wait(1500); // scrolls the watch page down
+        select("morphe_video_action_bar_layout", "list");
+        const bad = [], seen = []; let shown = 0;
+        for (let i = 0; i < 70; i++) {
+          await wait(50);
+          const f = document.querySelector("#stage .finger.show svg"), row = document.querySelector("#stage .abrow"); if (!f || !row) continue;
+          const fr = f.getBoundingClientRect(), rr = row.getBoundingClientRect(), tip = fr.top + fr.height * .3125; shown++;
+          seen.push(Math.round(tip - rr.top));
+          if (tip < rr.top - 12 || tip > rr.bottom + 12) bad.push(Math.round(tip - rr.top));
+        }
+        return { bad, shown, seen: seen.slice(0, 12) };
+      });
+      ok(r.shown > 5, `the finger hardly shows (${r.shown} samples)`);
+      ok(!r.bad.length, `the finger is off the action bar row by ${r.bad.slice(0, 5).join(", ")} px`);
+      await ctx.close();
+    },
+  },
 ];
 
 (async () => {

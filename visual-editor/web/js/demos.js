@@ -88,7 +88,16 @@ function fadeBack(els, back) {
   }, FADE_BACK);
 }
 function fadeBackStop(els) { els.forEach(e => { if (e && e._fadeBack) { e._fadeBack = null; e.style.opacity = ""; } }); }
-function place(f, x, y, ms) { fingerShow(f, x, y, ms); }
+// Demos give the finger's spot in the preview's coordinates (from #stage's box). The finger is drawn
+// inside a part of the scene, often one that scrolls (the watch page), so the spot is turned into that
+// part's own coordinates, scroll included: measured while the page still scrolled back to its top, the
+// finger otherwise appeared at the very top of the screen and stayed off its target (Max, Nov 25,
+// Video action bar layout). Every stage demo places its finger through here.
+function place(f, x, y, ms) {
+  const p = f.offsetParent, st = $("stage");
+  if (p && p !== st && st.contains(p)) { const a = st.getBoundingClientRect(), b = p.getBoundingClientRect(); x += a.left - b.left + p.scrollLeft - p.clientLeft; y += a.top - b.top + p.scrollTop - p.clientTop; }
+  fingerShow(f, x, y, ms);
+}
 function hideF(f, after) { dT(() => { f.classList.remove("show", "hold"); }, after); }
 function tapAt(x, y, f = finger()) { if (!f) return; place(f, x, y); f.classList.remove("tap"); void f.offsetWidth; f.classList.add("tap"); hideF(f, 520); }
 function fmt(total, pct) { const s = Math.round(total * pct / 100); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }
