@@ -66,12 +66,16 @@ function devBand(dev) {
   const H = dev.clientHeight, c = dev.classList.contains("port") ? cropOf(dev) : "";
   return c === "top" ? [0, H - CROP_CUT - CROP_FADE] : c === "bot" ? [CROP_CUT + CROP_FADE, H] : [0, H];
 }
+// A story phone's hand is sized from the phone (30% of its short side, at most the live preview's 40px):
+// a fixed 40px hand covered almost half of a portrait phone (Max, Nov 25: Rolling number animations,
+// Open system share sheet, Select text, Drag and drop and others too big).
+const FINGER_K = .3, fingerSize = (w, h) => Math.min(40, Math.min(w, h) * FINGER_K).toFixed(1) + "px";
 function device(orient, inner, extra = "", crop = scKey && CROP7[scKey]) {
   const [w, h] = DEV_SIZE[orient], c = crop === true ? "top" : crop || "";
-  return `<div class="dev ${orient}${c ? ` crop7 c${c}7` : ""}" style="width:${w}px;height:${h}px;${extra}"><div class="waves l"></div><div class="waves r"></div>${inner}<div class="finger" id="scFinger">${I("gesture")}</div></div>`;
+  return `<div class="dev ${orient}${c ? ` crop7 c${c}7` : ""}" style="width:${w}px;height:${h}px;--fz7:${fingerSize(w, h)};${extra}"><div class="waves l"></div><div class="waves r"></div>${inner}<div class="finger" id="scFinger">${I("gesture")}</div></div>`;
 }
 const playerArea = (i, overlay = "") => `<div class="dv-video" style="background:${ART[i]}">${overlay}</div><div class="dv-below"><i></i><i></i><i></i></div>`;
-function setOrient(dev, orient) { const [w, h] = DEV_SIZE[orient]; dev.classList.remove("port", "land"); dev.classList.add(orient); dev.style.width = w + "px"; dev.style.height = h + "px"; }
+function setOrient(dev, orient) { const [w, h] = DEV_SIZE[orient]; dev.classList.remove("port", "land"); dev.classList.add(orient); dev.style.width = w + "px"; dev.style.height = h + "px"; dev.style.setProperty("--fz7", fingerSize(w, h)); }
 // in a pair, a phone changing shape re-lays out the pair, and everything glides there (see fitDev)
 function rotate(dev, orient) { const g = dev.closest(".duo7.gen"); if (g) { g._turn = true; g._was = g._was || pairSnap(g); } setOrient(dev, orient); fitDevSoon(orient); }
 // Performance (Max, Nov 22): a phone turning and its caption changing in the same step, or both phones
