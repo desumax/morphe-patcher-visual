@@ -168,9 +168,13 @@ html:not(.touchwait) .lt7[data-at="r"]:active > i { transform: translateX(calc(1
 .designrow .dcol { display: grid; gap: 8px; justify-items: start; flex: 1; min-width: 0; }
 /* "Disable new design" sits beside the three-way toggle, centred on it (Max, Nov 22) */
 .designrow .drow { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; }
-.offnew { flex: none; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,.18); background: transparent; color: var(--m-on-var, #aaa); font: inherit; font-size: 12.5px; font-weight: 600; padding: 6px 12px 6px 10px; border-radius: 16px; cursor: pointer; text-align: left; line-height: 1.2; max-width: 128px; }
-.offnew svg { width: 16px; height: 16px; fill: currentColor; }
+/* "Disable new design" (Max, Nov 25 14:35): as wide as its longer line, no empty space at its right (a
+   wrapped line left the box at its full max width), and a faded red, as an exit should look */
+.offnew { flex: none; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(255,140,128,.32); background: rgba(255,90,78,.09); color: #f0a49b; font: inherit; font-size: 12.5px; font-weight: 600; padding: 6px 11px 6px 9px; border-radius: 16px; cursor: pointer; text-align: left; line-height: 1.2; }
+.offnew .ofl > span { display: block; white-space: nowrap; }
+.offnew svg { flex: none; width: 16px; height: 16px; fill: currentColor; }
 .offnew:hover, .offnew:focus-visible { color: #ffb4ab; border-color: rgba(255,180,171,.5); }
+.phone.theme-glass .offnew { background-color: color-mix(in srgb, var(--g-ctl) 70%, rgba(255,90,78,.22)); color: #f0a49b; }
 .seg3 { display: inline-flex; flex: none; padding: 3px; border-radius: 999px; background: var(--m-c-highest, #303134); position: relative; isolation: isolate; }
 .seg3 button { border: 0; background: transparent; color: var(--m-on-var, #aaa); font: inherit; font-size: 12.5px; font-weight: 600; padding: 6px 12px; border-radius: 999px; cursor: pointer; transition: color 300ms var(--ease); }
 .seg3 button[aria-checked="true"] { color: var(--m-on-primary, #062e6f); }

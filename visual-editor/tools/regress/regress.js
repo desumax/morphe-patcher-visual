@@ -926,13 +926,14 @@ const CHECKS = [
       // in the free part of the screen, below the pinned preview
       await p.evaluate(k => { const el = document.querySelector(`#list .wheel[data-wheel="${k}"]`), sc = $("scroller"); sc.scrollTop += el.getBoundingClientRect().bottom - innerHeight + 120; }, K); await p.waitForTimeout(400);
       const bb = await w.boundingBox(), y = bb.y + bb.height / 2, v0 = await p.evaluate(k => state[k], K);
-      // a sideways drag (the mouse here; a finger on the phone, checked by hand) turns it
-      let x = bb.x + bb.width * .7; await p.mouse.move(x, y); await p.mouse.down();
-      for (let i = 0; i < 10; i++) { x -= 12; await p.mouse.move(x, y); await p.waitForTimeout(16); }
+      // an upward drag (the mouse here; a finger on the phone) turns it to larger values (Nov 25 14:35: upright)
+      const x = bb.x + bb.width / 2; let yy = bb.y + bb.height * .8; await p.mouse.move(x, yy); await p.mouse.down();
+      for (let i = 0; i < 6; i++) { yy -= 6; await p.mouse.move(x, yy); await p.waitForTimeout(16); }
       await p.mouse.up(); await p.waitForTimeout(1200);
       const v1 = await p.evaluate(k => state[k], K);
-      ok(v1 > v0, `swiping the wheel left didn't raise the value: ${v0} -> ${v1}`);
-      await p.mouse.click(bb.x + bb.width / 2, y); await p.waitForTimeout(600);
+      ok(v1 > v0, `dragging the wheel up didn't raise the value: ${v0} -> ${v1}`);
+      const bb2 = await w.boundingBox(); // (the top bar may have moved the list meanwhile)
+      await p.mouse.click(bb2.x + bb2.width / 2, bb2.y + bb2.height / 2); await p.waitForTimeout(600);
       const r = await p.evaluate(() => ({ pill: !!document.querySelector(".vpill"), focus: document.activeElement.className, bar: $("app").classList.contains("barhidden") }));
       ok(r.pill && r.focus === "vpin" && r.bar, `tapping the middle value: ${JSON.stringify(r)}`);
       await p.keyboard.press("Control+A"); await p.keyboard.type("120"); await p.waitForTimeout(150);
@@ -941,6 +942,47 @@ const CHECKS = [
       const end = await p.evaluate(k => ({ v: state[k], pill: !!document.querySelector(".vpill"), pos: document.querySelector(`.wheel[data-wheel="${k}"]`).dataset.pos }), K);
       ok(live === 120 && end.v === 120 && !end.pill, `typing 120: live ${live}, after Enter ${JSON.stringify(end)}`);
       await ctx.close();
+    },
+  },
+  {
+    name: "value-wheel-upright-beside-the-title",
+    report: "Nov 25 (14:35): the value wheel made every number setting's card taller; it should stand upright at the right side, almost the card's height, and turn slower for a smaller range (0-50 half as fast as 0-100)",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        setPicker(false); quickSection("nav"); setPref("morphe_navigation_bar_glass", true); renderAll(); await new Promise(r => setTimeout(r, 700));
+        const out = [];
+        for (const w of document.querySelectorAll("#list .wheel")) {
+          const row = w.closest(".row"), ttl = row.querySelector(".ttl"), ctl = w.closest(".ctl");
+          const h = row.offsetHeight; ctl.style.display = "none"; const bare = row.offsetHeight; ctl.style.display = "";
+          const wb = w.getBoundingClientRect(), tb = ttl.getBoundingClientRect();
+          out.push({ k: w.dataset.wheel, beside: wb.left >= tb.right - 1 && wb.top < tb.bottom, taller: h - bare, fill: +(wb.height / h).toFixed(2), upright: wb.height > wb.width });
+        }
+        return { out, ratio: wheelPx({ n: 50 }) / wheelPx({ n: 100 }) };
+      });
+      ok(r.out.length >= 2, `no wheels in Navigation: ${JSON.stringify(r)}`);
+      for (const w of r.out) ok(w.beside && w.upright && w.taller <= 1 && w.fill >= .7, `${w.k}: ${JSON.stringify(w)}`);
+      ok(Math.abs(r.ratio - 2) < .01, `a 0-50 wheel isn't half as fast as a 0-100 one (${r.ratio})`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "disable-new-design-pill-fits",
+    report: "Nov 25 (14:35): the 'Disable new design' pill in the main menu had empty space at its right side; it should be a slightly faded red",
+    async run() {
+      for (const th of ["yt", "glass"]) {
+        const { p, ctx } = await open("app/index.html");
+        const r = await p.evaluate(async th => {
+          theme = th; applyTheme(); setPicker(true); await new Promise(r => setTimeout(r, 500));
+          const b = document.querySelector("[data-editor-off]"), bb = b.getBoundingClientRect(), cs = getComputedStyle(b);
+          const words = [...b.querySelectorAll(".ofl > span")].map(s => { const rg = document.createRange(); rg.selectNodeContents(s); return rg.getBoundingClientRect().right; });
+          const m = /rgba?\(([\d.]+), ([\d.]+), ([\d.]+)/.exec(cs.color);
+          return { gap: Math.round(bb.right - Math.max(...words) - parseFloat(cs.paddingRight) - parseFloat(cs.borderRightWidth)), rgb: m ? m.slice(1).map(Number) : null };
+        }, th);
+        ok(r.gap <= 2, `${th}: ${r.gap}px of empty space at the pill's right`);
+        ok(r.rgb && r.rgb[0] > r.rgb[1] + 40 && r.rgb[0] > r.rgb[2] + 40, `${th}: the pill isn't red: ${r.rgb}`);
+        await ctx.close();
+      }
     },
   },
   {
@@ -974,6 +1016,16 @@ const CHECKS = [
         await p.waitForTimeout(800);
         const cut = await p.evaluate(() => [...document.querySelectorAll(".gc-tabs span, .gc-t")].filter(s => s.scrollWidth > s.clientWidth + 1).map(s => s.textContent));
         ok(!cut.length, `${vp.width}x${vp.height}: cut off ${cut.join(", ")}`);
+        await ctx.close();
+      }
+      // the web view (Max, 14:35: "doesn't happen in web view"): the menu opened from its button grows with
+      // a scale, and the fit measured the words mid-growth
+      for (const vp of [{ width: 1280, height: 900 }, { width: 412, height: 860 }]) {
+        const { p, ctx } = await open("index.html", { viewport: vp });
+        await p.evaluate(() => { grouped = true; renderBar(); setPicker(false); }); await p.waitForTimeout(400);
+        await p.evaluate(() => { $("pickGrid").style.removeProperty("--gz"); $("secPill").click(); }); await p.waitForTimeout(900);
+        const cut = await p.evaluate(() => [...document.querySelectorAll("#pickGrid .gc-tabs span, #pickGrid .gc-t")].filter(s => s.scrollWidth > s.clientWidth + 1).map(s => s.textContent));
+        ok(!cut.length, `web ${vp.width}x${vp.height}: cut off ${cut.join(", ")}`);
         await ctx.close();
       }
     },
@@ -1054,6 +1106,249 @@ const CHECKS = [
         return { row: !!document.querySelector('#list [data-row="morphe_settings_screen_00_about"]'), anywhere: Object.keys(MEMBERS).filter(s => [...MEMBERS[s].live, ...MEMBERS[s].misc].includes("morphe_settings_screen_00_about")) };
       });
       ok(!r.row && !r.anywhere.length, `About is listed: ${JSON.stringify(r)}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "back-swipe-shows-menu-once",
+    report: "Nov 25 (14:35, severe, recurring): a Back swipe from the right in Navigation showed the menu, then the menu popped in again; sometimes a ghost popup, sometimes the menu's text resized",
+    async run() {
+      const { p, ctx, errors } = await open("app/index.html", { touch: true });
+      for (const sec of ["nav", "player", "misc"]) {
+        const r = await p.evaluate(async sec => {
+          const wait = ms => new Promise(r => setTimeout(r, ms));
+          setPicker(false); quickSection(sec); await wait(700);
+          // the system's Back swipe starts as a press on whatever is under the finger at the right edge, then takes it over
+          const btn = [...document.querySelectorAll("#list button")].filter(b => b.getBoundingClientRect().right > innerWidth - 80 && b.getBoundingClientRect().top > 300)[0] || $("btnSearch");
+          const bb = btn.getBoundingClientRect(), at = { bubbles: true, clientX: bb.right - 4, clientY: bb.top + 4, pointerId: 7, pointerType: "touch" };
+          btn.dispatchEvent(new PointerEvent("pointerdown", at)); btn.dispatchEvent(new PointerEvent("pointercancel", at));
+          const zoom = () => $("pickGrid").style.getPropertyValue("--gz") + "/" + $("pickGrid").style.getPropertyValue("--gch");
+          morpheBackStart(1, innerWidth - 4); await wait(30);
+          for (let x = innerWidth - 20; x > 120; x -= 30) { morpheBackProgress(0, x); await wait(16); }
+          const during = zoom();
+          const seen = new Set(document.getAnimations());
+          morpheBack(); await wait(900);
+          const pops = document.getAnimations().filter(a => !seen.has(a) && a.effect?.target?.closest?.("#picker") && JSON.stringify(a.effect.getKeyframes()).includes("scale")).length;
+          // animations that started and ended in the 900 ms: count by watching instead
+          return { menupage: document.documentElement.classList.contains("menupage"), during, after: zoom(), pops, popKind: $("picker")._pop ? "running" : "none" };
+        }, sec);
+        // pops that ran and finished: popFrom leaves _pop set while running; sample it right after the swipe ends too
+        ok(r.menupage, `${sec}: the Back swipe did not end on the menu`);
+        ok(r.during === r.after, `${sec}: the menu's text resized after the swipe (${r.during} → ${r.after})`);
+        ok(!r.pops && r.popKind === "none", `${sec}: the menu popped in again after the swipe`);
+      }
+      // and the same with the pop caught while it runs
+      const again = await p.evaluate(async () => {
+        const wait = ms => new Promise(r => setTimeout(r, ms));
+        setPicker(false); quickSection("nav"); await wait(700);
+        const btn = [...document.querySelectorAll("#list button")].filter(b => b.getBoundingClientRect().right > innerWidth - 80)[0];
+        const bb = btn.getBoundingClientRect(), at = { bubbles: true, clientX: bb.right - 4, clientY: bb.top + 4, pointerId: 8, pointerType: "touch" };
+        btn.dispatchEvent(new PointerEvent("pointerdown", at)); btn.dispatchEvent(new PointerEvent("pointercancel", at));
+        let popped = false; const orig = Element.prototype.animate;
+        Element.prototype.animate = function (k, o) { if (this.id === "picker") popped = true; return orig.call(this, k, o); };
+        morpheBackStart(1, innerWidth - 4); for (let x = innerWidth - 20; x > 120; x -= 30) { morpheBackProgress(0, x); await wait(16); }
+        morpheBack(); await wait(800); Element.prototype.animate = orig;
+        return popped;
+      });
+      ok(!again, "the menu grew from a button after the Back swipe (a second pop-in)");
+      ok(!errors.length, errors.join("; "));
+      await ctx.close();
+    },
+  },
+  {
+    name: "leaving-fades-out-first",
+    report: "Nov 25 (14:35): leaving the redesign for YouTube's settings was abrupt; the window turned white the moment Back was triggered, then animated",
+    async run() {
+      const { p, ctx } = await open("app/index.html", { touch: true });
+      const r = await p.evaluate(async () => {
+        const wait = ms => new Promise(r => setTimeout(r, ms));
+        const out = {}; let closedAt = null, t0 = 0;
+        window.MorpheApp = Object.assign(window.MorpheApp || {}, { close() { closedAt = { t: performance.now() - t0, o: +getComputedStyle($("app")).opacity }; } });
+        // a Back swipe on the menu page: the editor follows the finger, smaller with round corners
+        morpheBackStart(1, innerWidth - 4); for (let x = innerWidth - 20; x > 200; x -= 30) { morpheBackProgress(0, x); await wait(16); }
+        const m = getComputedStyle($("app")); out.peek = { t: m.transform, r: m.borderRadius };
+        t0 = performance.now(); morpheBack(); await wait(500);
+        out.closed = closedAt;
+        return out;
+      });
+      ok(/matrix/.test(r.peek.t) && parseFloat(r.peek.r) > 4, `the editor did not follow a Back swipe on the menu page: ${JSON.stringify(r.peek)}`);
+      ok(r.closed && r.closed.t > 120 && r.closed.o < .2, `the editor closed before it faded out: ${JSON.stringify(r.closed)}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "menu-card-grows-into-screen",
+    report: "Nov 25 (14:35): a menu card opens its screen with a pop-in from the card (morph); the menu from the Back arrow is 50% less bouncy",
+    async run() {
+      const { p, ctx } = await open("app/index.html", { touch: true });
+      await p.waitForTimeout(500);
+      const gid = await p.evaluate(() => groupOf("nav").id);
+      const card = await p.$(`#pickGrid [data-group="${gid}"]`); await card.tap(); await p.waitForTimeout(40);
+      const r = await p.evaluate(() => { const e = document.querySelector(".editor"), a = e.getAnimations().find(x => !x.animationName && !x.transitionProperty); return a ? { kf: JSON.stringify(a.effect.getKeyframes()[0]), dur: a.effect.getTiming().duration } : null; });
+      ok(r && /scale/.test(r.kf) && /border-?[Rr]adius/.test(r.kf), `the screen did not grow from its card: ${JSON.stringify(r)}`);
+      await p.waitForTimeout(800);
+      const easing = await p.evaluate(async () => { let e = null; const orig = Element.prototype.animate; Element.prototype.animate = function (k, o) { if (this.id === "picker") e = o && o.easing; return orig.call(this, k, o); }; $("btnBack").click(); await new Promise(r => setTimeout(r, 50)); Element.prototype.animate = orig; return e; });
+      const peak = easing && Math.max(...(easing.match(/[\d.]+/g) || []).map(Number));
+      ok(easing && peak > 1.01 && peak < 1.03, `the menu from the Back arrow overshoots ${peak} (the spring peaks at 1.054; half is about 1.027): ${String(easing).slice(0, 60)}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "code-values-never-chips",
+    report: "Nov 25 (14:35, regression in 0.1.14): 'Edit video effects' in Miscellaneous showed hundreds of removable pills with garbled code text",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(() => {
+        const out = {};
+        const code = '[\n  {"effect": "blur", "radius": 4},\n  {"effect": "tint", "color": "#ff0000"}\n]';
+        const js = Array.from({ length: 200 }, (_, i) => `const fx${i} = applyEffect(frame, ${i});`).join("\n");
+        for (const [k, v] of [["morphe_video_effects_filter", code], ["morphe_video_effects_script", js]]) {
+          PREF[k] = { key: k, title: "Edit video effects", type: "string", widget: "TextPreference", default: v, parents: [] }; setPref(k, v);
+          const html = controlFor(k, "");
+          out[k] = { chips: (html.match(/class="lchip"/g) || []).length, field: /type="text"/.test(html) };
+          delete PREF[k];
+        }
+        // a real word list keeps its chips
+        out.words = (controlFor("morphe_custom_playback_speeds", "").match(/class="lchip"/g) || []).length;
+        return out;
+      });
+      for (const k of ["morphe_video_effects_filter", "morphe_video_effects_script"]) ok(!r[k].chips && r[k].field, `${k}: ${JSON.stringify(r[k])}`);
+      ok(r.words > 2, `Custom playback speeds lost its chips (${r.words})`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "top-bar-follows-only-the-finger",
+    report: "Nov 25 (14:35): in Miscellaneous on the phone, a swipe made the top bar appear and then disappear, again on each swipe and sometimes at the top",
+    async run() {
+      const { p, ctx } = await open("app/index.html", { touch: true });
+      await p.evaluate(async () => { setPicker(false); quickSection("misc"); await new Promise(r => setTimeout(r, 900)); });
+      const cdp = await ctx.newCDPSession(p);
+      const tp = (type, y) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x: 200, y }] });
+      let y = 700; await tp("touchStart", y); for (let i = 0; i < 14; i++) { y -= 20; await tp("touchMove", y); await sleep(16); } await tp("touchEnd", y); await sleep(700);
+      const r = await p.evaluate(async () => {
+        const app = $("app"), sc = $("scroller"), out = { hidden: app.classList.contains("barhidden") };
+        // the page moving the list by itself (a card above changing height): no finger, no bar change
+        const flips = []; const mo = new MutationObserver(() => flips.push(app.classList.contains("barhidden"))); mo.observe(app, { attributes: true, attributeFilter: ["class"] });
+        for (const d of [-60, -40, 50, -70]) { sc.scrollTop += d; await new Promise(r => setTimeout(r, 120)); }
+        mo.disconnect(); out.flips = flips.filter((v, i, a) => i === 0 || v !== a[i - 1]).length; out.after = app.classList.contains("barhidden");
+        return out;
+      });
+      ok(r.hidden, "a swipe down the list did not hide the top bar");
+      ok(r.after && !r.flips, `the top bar flipped when the list moved by itself: ${JSON.stringify(r)}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "areas-as-asked-nov25-pm",
+    report: "Nov 25 (14:35): Player controls background straight after the three area boxes (asked twice); Player menu's hide switches two to a line in a box; Shorts menu toggles in the order the preview's sheet shows them",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        const wait = () => new Promise(r => setTimeout(r, 600)), out = {};
+        const seq = () => [...document.querySelectorAll("#list .group > *, #list > :not(.group)")].map(e => e.dataset.area ? "@" + e.dataset.area : (e.querySelector("[data-row]") || e).dataset.row || "");
+        setPicker(false); quickSection("player"); await wait();
+        const s1 = seq(); out.afterBottom = s1[s1.indexOf("@Bottom area") + 1];
+        quickSection("flyout"); await wait();
+        out.flyBox = [...document.querySelectorAll('#list [data-area="YouTube\'s entries"] [data-row]')].map(x => x.dataset.row);
+        quickSection("shorts"); await wait();
+        out.shortsMenu = [...document.querySelectorAll('#list [data-area="Shorts menu"] [data-row]')].map(x => x.dataset.row.replace("morphe_", ""));
+        return out;
+      });
+      ok(r.afterBottom === "morphe_hide_player_control_buttons_background", `after the Bottom area box comes ${r.afterBottom}`);
+      ok(r.flyBox.length >= 8 && r.flyBox.includes("morphe_hide_player_flyout_speed"), `Player menu hide switches aren't boxed: ${r.flyBox.join(", ")}`);
+      ok(JSON.stringify(r.shortsMenu) === JSON.stringify(["shorts_playback_speed_flyout_button", "shorts_download_flyout_button", "hide_shorts_flyout_captions", "hide_shorts_flyout_audio_track"]), `Shorts menu order: ${r.shortsMenu.join(", ")}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "snackbar-story-three-times-unclipped",
+    report: "Nov 25 (14:35): Show messages in YouTube snackbar: loop it 3 times, 10% faster, and the right column's snackbar was clipped / broken (it hung half under the navigation bar)",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        const k = "morphe_native_snackbar";
+        setPicker(false); quickSection(sectionOf(k)); await new Promise(r => setTimeout(r, 600)); select(k, "list");
+        const devs = () => [...document.querySelectorAll("#canvas .dev")];
+        const seen = [0, 0], was = [false, false], bad = [];
+        for (let t = 0; t < 9200; t += 100) {
+          await new Promise(r => setTimeout(r, 100));
+          devs().forEach((d, i) => {
+            const m = d.querySelector(".msg7"), vis = !!m && +getComputedStyle(m).opacity > .9;
+            if (vis && !was[i]) seen[i]++;
+            was[i] = vis;
+            if (vis) {
+              const mb = m.getBoundingClientRect(), db = d.getBoundingClientRect(), nav = [...d.children].find(c => c !== m && c.getBoundingClientRect().bottom >= db.bottom - 8 && c.getBoundingClientRect().height < db.height / 4);
+              if (mb.bottom > db.bottom - 1 || (nav && mb.bottom > nav.getBoundingClientRect().top + 1) || m.scrollWidth > m.clientWidth + 1) bad.push(`${i ? "On" : "Off"} at ${t}ms`);
+            }
+          });
+        }
+        return { seen, bad: [...new Set(bad)].slice(0, 4), hold: SCN_HOLD[k] };
+      });
+      ok(r.seen[0] === 3 && r.seen[1] === 3, `messages shown ${r.seen.join(" / ")} times (3 each)`);
+      ok(!r.bad.length, `the message is clipped or under the navigation bar: ${r.bad.join(", ")}`);
+      ok(r.hold <= 9000, `three loops take ${r.hold} ms (10% faster than 3 x 3.2 s)`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "pills-keep-their-side",
+    report: "Nov 25 (14:35): Copy timestamp by default (severe): the black pill with the link and the time switched sides, left to right, as the story looped; fix it and make sure no story does this",
+    async run() {
+      const { p, ctx } = await open();
+      // every story, its steps run in order without waiting: a message pill that one side shows while the
+      // other shows a second pill, and later the other way round, has swapped sides
+      const r = await p.evaluate(() => {
+        let cur = null; const real = window.startCollected, bad = [];
+        window.startCollected = list => { cur = list; };
+        const texts = () => [...document.querySelectorAll("#canvas .dev")].slice(0, 2).map(d => [...d.querySelectorAll(".toastin")].filter(e => e.style.opacity !== "0").map(e => e.textContent.trim()).join("|"));
+        let n = 0;
+        try {
+          for (const k of Object.keys(SCN)) {
+            cur = null; try { setPicker(false); select(k, "list"); } catch (e) { continue; }
+            if (!cur) continue; n++;
+            const pairs = new Set();
+            for (const [, f, side] of cur.slice().sort((a, b) => a[0] - b[0])) {
+              const was = scSide; scSide = side; try { f(); } catch (e) {} finally { scSide = was; }
+              const [a, c] = texts();
+              if (a && c && a !== c) { if (pairs.has(c + "\n" + a)) bad.push(`${k.replace("morphe_", "")}: "${a}" / "${c}"`); pairs.add(a + "\n" + c); }
+            }
+          }
+        } finally { window.startCollected = real; }
+        return { n, bad: [...new Set(bad)].slice(0, 6) };
+      });
+      ok(r.n > 100, `stories run: ${r.n}`);
+      ok(!r.bad.length, `pills that change sides: ${r.bad.join("; ")}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "time-clear-of-the-seekbar",
+    report: "Nov 25 (14:35): Copy timestamp by default: the timestamp still overlapped the seekbar (it wasn't the black pill)",
+    async run() {
+      const { p, ctx } = await open();
+      // every story with a mini seekbar: a time like 3:12 / 18:42 never touches the bar, at any step
+      const r = await p.evaluate(() => {
+        let cur = null; const real = window.startCollected, bad = []; let n = 0;
+        window.startCollected = list => { cur = list; };
+        const look = k => document.querySelectorAll("#canvas .dev").forEach(d => {
+          const bar = d.querySelector(".msk"); if (!bar) return; const b = bar.getBoundingClientRect();
+          [...d.querySelectorAll("*")].filter(e => !e.children.length && /\d:\d\d\s*\/\s*\d/.test(e.textContent)).forEach(e => {
+            const t = e.getBoundingClientRect(); n++;
+            if (t.width && t.bottom > b.top - 1 && t.top < b.bottom + 1 && t.right > b.left && t.left < b.right) bad.push(`${k.replace("morphe_", "")} (${Math.round(t.bottom - b.top)}px into the bar)`);
+          });
+        });
+        try {
+          for (const k of Object.keys(SCN)) {
+            cur = null; try { setPicker(false); select(k, "list"); } catch (e) { continue; }
+            if (!cur) continue; look(k);
+            for (const [, f, side] of cur.slice().sort((a, b) => a[0] - b[0])) { const was = scSide; scSide = side; try { f(); } catch (e) {} finally { scSide = was; } look(k); }
+          }
+        } finally { window.startCollected = real; }
+        return { n, bad: [...new Set(bad)].slice(0, 6) };
+      });
+      ok(r.n > 0, `time labels found: ${r.n}`);
+      ok(!r.bad.length, `times on the seekbar: ${r.bad.join("; ")}`);
       await ctx.close();
     },
   },

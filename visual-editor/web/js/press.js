@@ -306,23 +306,29 @@ document.querySelector(".appbar .seg").onclick = () => setMode(mode === "orig" ?
 
 // ------------------------------------------------------------------ value wheels and the edit pill
 // Settings that hold a number (Max, Nov 25: "a list wheel / 3D rotating picker first", after detent.hayder.sh):
-// the values sit on a drum turning about its upright axis, the one in the middle is the setting's value.
-// Swipe sideways to turn it (it coasts and clicks into place, a light tick per value); swiping up or down
-// scrolls the list as usual. Tap a side value to turn to it. Tap the middle value, or double tap, to type one:
-// a pill with the field rides on top of the keyboard and the top bar hides so the preview stays in view.
+// the values sit on a drum turning about its level axis, standing at the right side of the setting's card and
+// almost as tall as the card (Max, 14:35: upright on the right, not a new line that made every card taller).
+// The value in the middle is the setting's value, smaller ones above, larger below. Drag up or down on it to
+// turn it (it coasts and clicks into place, a light tick per value); the list scrolls everywhere else. How far
+// a value is depends on the range: a 0 to 50 setting turns half as fast as a 0 to 100 one (wheelPx). Tap a
+// value above or below to turn to it. Tap the middle value, or double tap, to type one: a pill with the field
+// rides on top of the keyboard and the top bar hides so the preview stays in view.
 // The wheel drives a hidden range / number input (.wsrc) with the same input and change events as before,
 // so the preview, the stories and saving work unchanged.
-const WHEEL_W = 46, WHEEL_DEG = 19, WHEEL_SIDE = 5, WHEEL_R = WHEEL_W / 2 / Math.tan(WHEEL_DEG / 2 * Math.PI / 180);
+const WHEEL_H = 17, WHEEL_DEG = 24, WHEEL_SIDE = 4, WHEEL_R = WHEEL_H / 2 / Math.tan(WHEEL_DEG / 2 * Math.PI / 180);
 const wheelFmt = (v, step) => step < 1 ? String(Math.round(v * 100) / 100) : String(Math.round(v));
+// finger px per value: 9 px over a 0 to 100 range, scaled with the range (twice as far for 0 to 50), within
+// what a finger can still place (1.5 px) and what still turns at all (40 px); an open-ended number counts as 0 to 100
+const wheelPx = w => Math.max(1.5, Math.min(40, 9 * 100 / (isFinite(w.n) && w.n > 0 ? w.n : 100)));
 function wheelHTML(k, min, max, step, v, dis) {
-  return `<div class="wheel${dis ? " off" : ""}" data-wheel="${k}" data-min="${min}" data-max="${max}" data-step="${step}" data-pos="${(Number(v) - min) / step}" tabindex="${dis ? -1 : 0}" role="slider" aria-label="${esc(shownTitle(k))}" aria-valuenow="${esc(String(v))}"${isFinite(max) ? ` aria-valuemin="${min}" aria-valuemax="${max}"` : ""}><i class="wlens"></i><div class="wtrack">${wheelItems(min, max, step, (Number(v) - min) / step)}</div></div>`;
+  return `<div class="wheel${dis ? " off" : ""}" data-wheel="${k}" data-min="${min}" data-max="${max}" data-step="${step}" data-pos="${(Number(v) - min) / step}" tabindex="${dis ? -1 : 0}" role="slider" aria-orientation="vertical" aria-label="${esc(shownTitle(k))}" aria-valuenow="${esc(String(v))}"${isFinite(max) ? ` aria-valuemin="${min}" aria-valuemax="${max}"` : ""}><i class="wlens"></i><div class="wtrack">${wheelItems(min, max, step, (Number(v) - min) / step)}</div></div>`;
 }
-// the values around pos (a fractional index): each placed on the drum (x = R sin a), squeezed and faded
-// toward the sides; the glass design blurs them too
+// the values around pos (a fractional index): each placed on the drum (y = R sin a), squeezed and faded
+// toward the top and bottom; the glass design blurs them too
 function wheelItem(i, pos, min, step) {
-  const a = (i - pos) * WHEEL_DEG, rad = a * Math.PI / 180, c = Math.cos(rad), x = WHEEL_R * Math.sin(rad);
+  const a = (i - pos) * WHEEL_DEG, rad = a * Math.PI / 180, c = Math.cos(rad), y = WHEEL_R * Math.sin(rad);
   const near = Math.max(0, 1 - Math.abs(i - pos));
-  return { txt: wheelFmt(min + i * step, step), css: `transform:translateX(${x.toFixed(1)}px) scaleX(${Math.max(.05, c).toFixed(3)});opacity:${Math.abs(a) >= 90 ? 0 : (.25 + .75 * c * c).toFixed(3)};--wb:${(Math.min(1, Math.abs(a) / 70) * 2.2).toFixed(2)}px;--wn:${near.toFixed(2)}` };
+  return { txt: wheelFmt(min + i * step, step), css: `transform:translateY(${y.toFixed(1)}px) scaleY(${Math.max(.05, c).toFixed(3)});opacity:${Math.abs(a) >= 90 ? 0 : (.2 + .8 * c * c * c).toFixed(3)};--wb:${(Math.min(1, Math.abs(a) / 70) * 2.2).toFixed(2)}px;--wn:${near.toFixed(2)}` };
 }
 function wheelItems(min, max, step, pos) {
   const n = isFinite(max) ? Math.round((max - min) / step) : Infinity, out = [];
@@ -361,7 +367,7 @@ $("list").addEventListener("input", e => {
 const wheelClamp = (w, p) => Math.max(0, Math.min(w.n, p));
 function wheelGlide(el, to, done) {
   cancelAnimationFrame(el._raf); el._turning = true;
-  const w = wheelOf(el), from = Number(el.dataset.pos), dist = to - from, dur = Math.min(900, 260 + Math.abs(dist) * 45), t0 = performance.now();
+  const w = wheelOf(el), from = Number(el.dataset.pos), dist = to - from, dur = Math.min(900, 260 + Math.min(14, Math.abs(dist)) * 45), t0 = performance.now();
   const step = now => {
     const x = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - x, 3), pos = from + dist * e;
     wheelPaint(el, pos); wheelSet(el, wheelClamp(w, Math.round(pos)), false);
@@ -375,24 +381,24 @@ function wheelGlide(el, to, done) {
   list.addEventListener("pointerdown", e => {
     const el = e.target.closest(".wheel"); if (!el || el.classList.contains("off") || e.button > 0) return;
     cancelAnimationFrame(el._raf); el._turning = false;
-    g = { el, id: e.pointerId, x: e.clientX, y: e.clientY, p0: Number(el.dataset.pos), on: false, pts: [[performance.now(), e.clientX]], t: performance.now() };
+    g = { el, id: e.pointerId, x: e.clientX, y: e.clientY, p0: Number(el.dataset.pos), on: false, pts: [[performance.now(), e.clientY]], t: performance.now() };
     select(el.dataset.wheel, "list");
   });
   list.addEventListener("pointermove", e => {
     if (!g || e.pointerId !== g.id) return;
     const dx = e.clientX - g.x, dy = e.clientY - g.y;
     if (!g.on) {
-      if (Math.abs(dy) > 8 && Math.abs(dy) > Math.abs(dx)) { g = null; return; } // the list scrolls
-      if (Math.abs(dx) < 6) return;
-      g.on = true; g.x = e.clientX; try { g.el.setPointerCapture(g.id); } catch { /* gone */ }
+      if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.5) { g = null; return; } // a sideways swipe isn't for the wheel
+      if (Math.abs(dy) < 5) return;
+      g.on = true; g.y = e.clientY; try { g.el.setPointerCapture(g.id); } catch { /* gone */ }
       g.el.classList.add("turning"); g.el._turning = true;
     }
-    const w = wheelOf(g.el); let pos = g.p0 - (e.clientX - g.x) / WHEEL_W;
-    // past either end it gives a little and pulls back
-    const give = d => (1 - 1 / (d * .55 / 120 + 1)) * 60; // px past the end, slowing
-    if (pos < 0) pos = -give(-pos * WHEEL_W) / WHEEL_W; else if (pos > w.n) pos = w.n + give((pos - w.n) * WHEEL_W) / WHEEL_W;
+    const w = wheelOf(g.el), px = wheelPx(w); let pos = g.p0 - (e.clientY - g.y) / px;
+    // past either end it gives a little and pulls back (in drum px, whatever the speed)
+    const give = d => (1 - 1 / (d * .55 / 60 + 1)) * 30;
+    if (pos < 0) pos = -give(-pos * WHEEL_H) / WHEEL_H; else if (pos > w.n) pos = w.n + give((pos - w.n) * WHEEL_H) / WHEEL_H;
     wheelPaint(g.el, pos); wheelSet(g.el, wheelClamp(w, Math.round(pos)), false);
-    const now = performance.now(); g.pts.push([now, e.clientX]); while (g.pts.length > 2 && now - g.pts[0][0] > 100) g.pts.shift();
+    const now = performance.now(); g.pts.push([now, e.clientY]); while (g.pts.length > 2 && now - g.pts[0][0] > 100) g.pts.shift();
   });
   const end = e => {
     if (!g || e.pointerId !== g.id) return;
@@ -400,13 +406,13 @@ function wheelGlide(el, to, done) {
     el.classList.remove("turning");
     if (on) {
       // it coasts on with the finger's speed, then rests on the nearest value
-      const dt = (pts[pts.length - 1][0] - pts[0][0]) / 1000, v = dt > 0 && performance.now() - pts[pts.length - 1][0] < 60 ? -(pts[pts.length - 1][1] - pts[0][1]) / dt / WHEEL_W : 0;
+      const dt = (pts[pts.length - 1][0] - pts[0][0]) / 1000, v = dt > 0 && performance.now() - pts[pts.length - 1][0] < 60 ? -(pts[pts.length - 1][1] - pts[0][1]) / dt / wheelPx(w) : 0;
       wheelGlide(el, wheelClamp(w, Math.round(Number(el.dataset.pos) + v * .28)));
       return;
     }
     if (e.type !== "pointerup") return;
-    // a tap: a side value turns to it; the middle one (or a second tap) opens the field to type a value
-    const r = el.getBoundingClientRect(), off = (e.clientX - r.left - r.width / 2) / WHEEL_R, d = Math.abs(off) >= 1 ? Math.sign(off) * WHEEL_SIDE : Math.round(Math.asin(off) * 180 / Math.PI / WHEEL_DEG);
+    // a tap: a value above or below turns to it; the middle one (or a second tap) opens the field to type a value
+    const r = el.getBoundingClientRect(), off = (e.clientY - r.top - r.height / 2) / WHEEL_R, d = Math.abs(off) >= 1 ? Math.sign(off) * 3 : Math.round(Math.asin(off) * 180 / Math.PI / WHEEL_DEG);
     const now = performance.now(), dbl = lastTap.el === el && now - lastTap.t < 320; lastTap = { el, t: now };
     // (opened on the click that follows, not here: the press would give the focus back to the wheel, and the
     // phone shows its keyboard only for a field focused in the tap itself)

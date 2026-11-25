@@ -440,7 +440,8 @@ function rubberBand(sc, topEl, botEl) {
   const put = (el, y) => { el.style.translate = y ? `0 ${y}px` : ""; };
   const stopBounce = () => { if (bounce) { bounce.cancel(); bounce = null; } };
   const stopFling = () => { if (flingRaf) { cancelAnimationFrame(flingRaf); flingRaf = 0; } };
-  const scrollTo = y => { selfUntil = performance.now() + 120; sc.scrollTop = y; };
+  // (marked as the finger's own scroll: the top bar follows only these on a touch screen, list.js)
+  const scrollTo = y => { selfUntil = performance.now() + 120; sc.__userScroll = selfUntil; sc.scrollTop = y; };
   // back to rest on a critically damped spring from offset y (px) with velocity v (px/s)
   const settle = (el, y, v = 0) => {
     stopBounce(); put(el, 0);
@@ -470,9 +471,10 @@ function rubberBand(sc, topEl, botEl) {
   // a box inside the list that scrolls up and down itself keeps the finger
   const innerY = t => { for (let e = t; e && e !== sc && e.nodeType === 1; e = e.parentElement) if (e.scrollHeight > e.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(e).overflowY)) return true; return false; };
   sc.addEventListener("touchstart", e => {
+    sc.__touchOwn = true;
     const caught = !!flingRaf;
     eatEnd(); stopFling(); stopBounce(); put(topEl, 0); put(botEl, 0);
-    if (e.touches.length !== 1 || innerY(e.target)) { pull = null; return; }
+    if (e.touches.length !== 1 || innerY(e.target) || (e.target.closest && e.target.closest(".wheel:not(.off)"))) { pull = null; return; } // a value wheel turns under the finger instead
     const t = e.touches[0];
     pull = { x: t.clientX, y: t.clientY, s0: sc.scrollTop, on: false, pts: [], caught, over: 0 };
   }, { passive: true });
