@@ -135,6 +135,7 @@ function inPair(gen, el) {
 // The one motion curve of a comparison: phones turning, the pair resizing and captions moving all
 // use .5 s on --ease (cubic-bezier(.4, 0, .2, 1)), started on the same frame, so they move as one.
 const MOVE_MS = 500;
+let pairMs = MOVE_MS; // a quicker turn (turn(..., ms)) moves the rest of its pair on the same clock
 const moveEase = (() => { // cubic-bezier(.4, 0, .2, 1), the CSS --ease
   const x1 = .4, y1 = 0, x2 = .2, y2 = 1, B = (t, a, b) => 3 * a * t * (1 - t) ** 2 + 3 * b * t * t * (1 - t) + t ** 3;
   return x => { if (x <= 0) return 0; if (x >= 1) return 1; let lo = 0, hi = 1, t = x; for (let n = 0; n < 24; n++) { t = (lo + hi) / 2; if (B(t, x1, x2) < x) lo = t; else hi = t; } return B(t, y1, y2); };
@@ -164,7 +165,7 @@ function glideCap(gen, cap, from, to) {
     // clearing it here showed the real caption under the new copy (two lines drawn over each other)
     if (cap._gliding !== g) { g.remove(); return; }
     if (!g.isConnected || !cap.isConnected) { g.remove(); cap.style.opacity = ""; cap._gliding = null; return; }
-    const t = Math.min(1, (now - t0) / MOVE_MS), e = moveEase(t), to = g._to;
+    const t = Math.min(1, (now - t0) / pairMs), e = moveEase(t), to = g._to;
     g.textContent = cap.textContent;
     // measured from the pair's centre, which the pair's own resize keeps in place
     g.style.left = `calc(50% + ${lerp(from.x, to.x, e)}px)`; g.style.top = lerp(from.y, to.y, e) + "px";
@@ -207,7 +208,7 @@ function pairGlide(gen, was) {
     if (run.length && el._at && Math.abs(el._at[0] - n[0]) < .5 && Math.abs(el._at[1] - n[1]) < .5) return;
     run.forEach(a => a.cancel()); el._at = n;
     const dx = x - n[0], dy = y - n[1]; if (Math.abs(dx) < .5 && Math.abs(dy) < .5) return;
-    el.animate([{ translate: `${dx}px ${dy}px` }, { translate: "0px 0px" }], { id: "pairglide", duration: MOVE_MS, easing: "cubic-bezier(.4,0,.2,1)" });
+    el.animate([{ translate: `${dx}px ${dy}px` }, { translate: "0px 0px" }], { id: "pairglide", duration: pairMs, easing: "cubic-bezier(.4,0,.2,1)" });
   });
 }
 function fitDev(orient) {
@@ -1107,14 +1108,14 @@ function turnTo(dev, orient, html) {
   turn(dev, orient); later(() => devContent(dev, html), 180);
 }
 // the phone turns visibly (its screen rotates with it), then the app lays out for the new orientation
-function turn(dev, orient, then) {
+function turn(dev, orient, then, ms = MOVE_MS) {
   const cur = dev.classList.contains("land") ? "land" : "port";
   if (cur === orient) { if (then) then(); return; }
-  const gen = dev.closest(".duo7.gen"); if (gen) return turnInPair(gen, dev, cur, orient, then);
+  const gen = dev.closest(".duo7.gen"); if (gen) return turnInPair(gen, dev, cur, orient, then, ms);
   // while it turns, the phone is scaled so its rotated outline still fits the preview
   const [w, h] = DEV_SIZE[cur];
   dev.querySelectorAll(".finger").forEach(f => f.classList.remove("show"));
-  dev.style.transition = "transform .5s var(--ease), scale .5s var(--ease)"; dev.style.transform = `rotate(${orient === "land" ? -90 : 90}deg)`;
+  dev.style.transition = `transform ${ms}ms var(--ease), scale ${ms}ms var(--ease)`; dev.style.transform = `rotate(${orient === "land" ? -90 : 90}deg)`;
   const inPair = !!dev.closest(".duo7.gen"); // in a pair the turning phone shrinks to stay inside its own slot
   dev.style.scale = (inPair ? Math.min(w, h) / Math.max(w, h) : Math.min(parseFloat(dev.style.scale) || 1, fitScale(h, w))).toFixed(3);
   later(() => {
@@ -1128,31 +1129,31 @@ function turn(dev, orient, then) {
       void dev.offsetWidth; dev.style.transition = "transform .28s var(--ease)"; dev.style.transform = "";
     }
     if (then) then();
-  }, 520);
+  }, ms + 20);
 }
 // In a pair everything moves as one, on the same .5 s curve, started on the same frame: the phone turns
 // with its screen while its slot takes the new shape at once, so the pair re-lays out and rescales, and
 // the other phone, the labels and the captions glide to their new places (fitDev) as it turns. It ends
 // exactly in the box of the new orientation, where it is re-laid out for it and nothing jumps.
-function turnInPair(gen, dev, cur, orient, then) {
+function turnInPair(gen, dev, cur, orient, then, ms = MOVE_MS) {
   const slot = dev.parentElement, [w0, h0] = DEV_SIZE[cur], [w1, h1] = DEV_SIZE[orient];
   dev.querySelectorAll(".finger").forEach(f => f.classList.remove("show"));
   gen.querySelectorAll(":scope > .dl7 > .sf7").forEach(c => { if (!c._gliding) c._pos = inPair(gen, c); });
-  gen._was = pairSnap(gen); gen._turn = true;
+  gen._was = pairSnap(gen); gen._turn = true; pairMs = ms;
   dev.getAnimations().filter(a => a.id === "turn").forEach(a => a.cancel());
   slot.style.width = w1 + "px"; slot.style.height = h1 + "px";
   Object.assign(dev.style, { position: "absolute", left: "50%", top: "50%", translate: "-50% -50%", scale: "", transform: "" });
   fitDev(orient);
   // turned a quarter, the old phone's width becomes the new height and its height the new width
   const R = orient === "land" ? -90 : 90, a = h1 / w0, b = w1 / h0;
-  dev.animate([{ transform: "none" }, { transform: `rotate(${R}deg) scale(${a.toFixed(4)}, ${b.toFixed(4)})` }], { id: "turn", duration: MOVE_MS, easing: "cubic-bezier(.4,0,.2,1)", fill: "forwards" });
+  dev.animate([{ transform: "none" }, { transform: `rotate(${R}deg) scale(${a.toFixed(4)}, ${b.toFixed(4)})` }], { id: "turn", duration: ms, easing: "cubic-bezier(.4,0,.2,1)", fill: "forwards" });
   later(() => {
     dev.style.transition = "none";
     dev.getAnimations().filter(x => x.id === "turn").forEach(x => x.cancel());
     Object.assign(dev.style, { position: "", left: "", top: "", translate: "" }); slot.style.width = slot.style.height = "";
-    setOrient(dev, orient); void dev.offsetWidth; dev.style.transition = "";
+    setOrient(dev, orient); void dev.offsetWidth; dev.style.transition = ""; pairMs = MOVE_MS;
     if (then) then();
-  }, MOVE_MS);
+  }, ms);
 }
 const r1 = dev => turnTo(dev, "port", playerArea(6)); r1.text = "leaves fullscreen";
 gestureScen("disable_fullscreen_dragged_down_gesture", "land", [.5, .25], [.5, .85], "Swipe down in fullscreen", r1);

@@ -523,6 +523,58 @@ const CHECKS = [
       await ctx.close();
     },
   },
+  {
+    name: "comments-stories-as-asked",
+    report: "Nov 25: Search comments should find 2 comments and be 10% faster; Comments carousel filter: no blue line, and show it takes carousel pages out",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        setPicker(false); setPref("morphe_hide_comments_carousel", true); commit();
+        const go = async (k, ms) => { quickSection(sectionOf(k)); await new Promise(r => setTimeout(r, 500)); select(k, "list"); await new Promise(r => setTimeout(r, ms)); };
+        await go("morphe_search_comments", 3300);
+        const found = document.querySelectorAll("#canvas .dev")[1]?.querySelectorAll(".cl7 .cm7").length;
+        const hold = SCN_HOLD.morphe_search_comments;
+        await go("morphe_hide_comments_carousel", 400);
+        const sit = document.querySelector("#canvas .sit")?.textContent.trim() || "";
+        await new Promise(r => setTimeout(r, 1500));
+        const moved = [...document.querySelectorAll("#canvas .crt7")].map(t => t.style.transform);
+        return { found, hold, sit, moved };
+      });
+      ok(r.found === 2, `Search comments finds ${r.found} comments, not 2`);
+      ok(r.hold <= 3100, `Search comments still runs ${r.hold} ms (was 3400, 10% faster is 3060)`);
+      ok(!r.sit, `Comments carousel filter still has the blue line "${r.sit}"`);
+      ok(r.moved.length === 2 && r.moved.every(t => /translateX\(-\d/.test(t)), `the carousel never swipes to another page: ${JSON.stringify(r.moved)}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "flying-comment-stories-as-asked",
+    report: "Nov 25: flying comment stories keep their blue lines, ignore the Display area slider, the portrait sliders do nothing, Separate settings for portrait turns too slowly",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        setPicker(false); setPref("morphe_niconico_comments", true); setPref("morphe_niconico_comments_display_area", 40); commit(); quickSection("danmaku"); await new Promise(r => setTimeout(r, 600));
+        const blue = [], area = [], low = [];
+        for (const x of ["live_streams", "live_premieres", "ended_premieres", "hide_crowded", "max_length", "pip", "portrait", "separate_portrait", "timed_comments_with_replay"]) {
+          const k = "morphe_niconico_comments_" + x; select(k, "list"); await new Promise(r => setTimeout(r, 1200));
+          if (document.querySelector("#canvas .sit")?.textContent.trim()) blue.push(x);
+          const a = document.querySelector("#canvas .dev .na7"), h = a && a.parentElement.clientHeight ? a.clientHeight / a.parentElement.clientHeight : 1;
+          if (Math.abs(h - .4) > .05) area.push(`${x} ${Math.round(h * 100)}%`);
+          if (/live|premieres/.test(x)) { const d = document.querySelectorAll("#canvas .dev")[0], t = d.querySelector(".toastin, .toast7"); if (t) { const b = t.getBoundingClientRect(), q = d.getBoundingClientRect(); if ((b.top + b.height / 2 - q.top) / q.height < .65) low.push(x); } }
+        }
+        const portrait = ["portrait_font_size", "portrait_travel_duration", "portrait_display_area"].filter(x => !SCN["morphe_niconico_comments_" + x]);
+        select("morphe_niconico_comments_separate_portrait", "list"); let turnMs = 0;
+        for (let i = 0; i < 40 && !turnMs; i++) { await new Promise(r => setTimeout(r, 60)); for (const d of document.querySelectorAll("#canvas .dev")) for (const a of d.getAnimations()) if (a.id === "turn") turnMs = a.effect.getTiming().duration; }
+        return { blue, area, low, portrait, turnMs };
+      });
+      ok(!r.blue.length, `blue lines remain on: ${r.blue.join(", ")}`);
+      ok(!r.area.length, `comments ignore Display area 40%: ${r.area.join(", ")}`);
+      ok(!r.low.length, `the message sits too high on: ${r.low.join(", ")}`);
+      ok(!r.portrait.length, `no animation for: ${r.portrait.join(", ")}`);
+      ok(r.turnMs && r.turnMs <= 400, `Separate settings for portrait turns in ${r.turnMs} ms (500 before, 20% faster is 400)`);
+      await ctx.close();
+    },
+  },
 ];
 
 (async () => {
