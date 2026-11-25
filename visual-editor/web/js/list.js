@@ -148,7 +148,7 @@ function paintPicker() {
     // UI design sits right above the list design (Max, Nov 23)
     // one line: the title on the left, its toggle on the right (Max, Nov 23 PM)
     + `<div class="themerow uirow"><span class="pi">${I("palette")}</span><div class="tt">UI design${theme === "glass" && glassTier !== null ? `<small>${GLASS_TIER_NAMES[glassTier]}${typeof glassForced === "number" ? " (forced)" : ""}</small>` : ""}</div>${seg3("UI design", "ui", UI_DESIGNS, theme, uiOff())}</div>`
-    + `<div class="themerow designrow"><div class="dcol"><div class="dsg"><span class="pi">${I("list")}</span><div class="tt">Settings list design</div></div><div class="drow">${seg3("Settings list design", "design", LIST_DESIGNS, design)}<button class="offnew" data-editor-off>${I("power")}Disable new design</button></div></div></div>`);
+    + `<div class="themerow designrow"><div class="dcol"><div class="dsg"><span class="pi">${I("list")}</span><div class="tt">Settings list design</div></div><div class="drow">${seg3("Settings list design", "design", LIST_DESIGNS, design)}<button class="offnew" data-editor-off>${I("power")}<span class="ofl"><span>Disable</span> <span>new design</span></span></button></div></div></div>`);
   placeSeg3(); centreIcons($("pickGrid"));
   $("barOrd").disabled = !customOrder;
   fitMenuSoon();
@@ -367,12 +367,15 @@ $("pickGrid").addEventListener("pointerup", endPickDrag);
 $("pickGrid").addEventListener("pointercancel", endPickDrag);
 $("pickGrid").addEventListener("contextmenu", e => { if (e.target.closest(".pick")) e.preventDefault(); });
 let pickFrom = null; // the button the screen menu grew out of (the pill, or App view's back arrow); it closes into it
-function setPicker(open) {
+// src: the button the menu grows from (default: the button just tapped, else the screen pill); null: no
+// growth at all, the menu is already in place (the app's Back swipe drew it behind the screen, Max Nov 25:
+// it popped in a second time, from whatever button the swipe started on)
+function setPicker(open, src) {
   const was = pickerOpen; pickerOpen = open;
   if (open && pickDirty) paintPicker(); // a change made in a screen, not drawn yet
-  if (open && !was) { const t = cardTap && performance.now() - cardTap.t < 1500 && cardTap.el; pickFrom = t && t.matches("button") && !t.closest("#picker") ? t : $("secPill"); cardTap = null; }
+  if (open && !was) { const t = cardTap && performance.now() - cardTap.t < 1500 && cardTap.el; pickFrom = src !== undefined ? src : t && t.matches("button") && !t.closest("#picker") ? t : $("secPill"); cardTap = null; }
   $("picker").classList.toggle("open", open); $("pickScrim").classList.toggle("open", open);
-  if (open !== was) popFrom($("picker"), pickFrom || $("secPill"), open);
+  if (open !== was && src !== null && !(open && !pickFrom)) popFrom($("picker"), pickFrom || $("secPill"), open, null, "--spring-soft");
   if (open) { placeSeg3(); glassSample(); } // drawn while hidden: its thumb is placed once it can be measured
   $("secPill").setAttribute("aria-expanded", String(open));
   document.documentElement.classList.toggle("pickopen", open);
@@ -401,16 +404,22 @@ function fitMenu() {
   const avail = pk.clientHeight - parseFloat(ps.paddingTop) - parseFloat(ps.paddingBottom) - rest - (rest ? gap : 0);
   // larger only while every line still fits its card's width: a zoomed card is narrower in its own px
   // (W / z), and the rail and paddings beside the words keep their size in them
+  // Words are measured in layout px: the menu may be mid-growth from its button (popFrom scales it), and a
+  // scaled word read narrower, so the cards were zoomed past their width ("Seekbar & ge…" in the web view)
+  // and refitted bigger or smaller once the growth ended (the text resized after a Back to the menu).
   let wide = MENU_ZOOM[1];
+  const was = parseFloat(grid.style.getPropertyValue("--gz")) || 0;
   grid.style.removeProperty("--gz");
-  cards.forEach(c => c.querySelectorAll(".gc-t, .gc-tabs span").forEach(el => { const r = document.createRange(); r.selectNodeContents(el); const w = r.getBoundingClientRect().width; if (w > 0) wide = Math.min(wide, c.offsetWidth / (w + c.offsetWidth - el.clientWidth)); }));
+  cards.forEach(c => { const k = c.getBoundingClientRect().width / c.offsetWidth || 1; c.querySelectorAll(".gc-t, .gc-tabs span").forEach(el => { const r = document.createRange(); r.selectNodeContents(el); const w = r.getBoundingClientRect().width / k; if (w > 0) wide = Math.min(wide, c.offsetWidth / (w + c.offsetWidth - el.clientWidth)); }); });
   // sideways the screen is too short for the whole menu: the cards keep their size (and the menu scrolls)
   // instead of shrinking to small print
   const sideways = pk.clientWidth > pk.clientHeight * 1.5;
   const fit = Math.max((avail - rgap * (rows - 1)) / rows, sideways ? nat : 0);
   // every card's longest line fits its width (Max, Nov 25: "Seekbar & ge…", "Flying comm…" were cut): the
   // one zoom for all cards is never more than the narrowest fit allows, even below the usual smallest
-  const want = fit / nat, z = Math.max(.5, Math.min(want < 1 ? Math.max(MENU_ZOOM[0], want) : want, wide * .99));
+  const want = fit / nat, z0 = Math.max(.5, Math.min(want < 1 ? Math.max(MENU_ZOOM[0], want) : want, wide * .99));
+  // a refit that only differs by rounding keeps the zoom it has: no visible resize of the menu's text
+  const z = was && Math.abs(z0 - was) < .012 && z0 >= was - .012 && was <= wide * .99 ? was : z0;
   const rowH = Math.max(nat * MENU_ZOOM[0], fit);
   // height the zoom leaves over goes between the lines (up to 4.5 px each), the rest stays below them
   const spare = Math.max(0, rowH / z - nat), most = Math.max(...cards.map(c => c.querySelectorAll(".gc-tabs span").length), 1);
@@ -592,11 +601,11 @@ function controlFor(k) {
     const sr = /\(?(\d+)\s*[-–]\s*(\d+)\s*(ms|dp|sp|%)?\)/.exec(String(p.summary || ""));
     if (r || sr || /opacity|scale|strength|display_area/.test(k)) {
       const [min, max] = r ? r[1] : sr ? [Number(sr[1]), Number(sr[2])] : [0, 100];
-      return `<div class="ctl whl">${wheelHTML(k, min, max, 1, v, dis)}<input class="wsrc" type="range" min="${min}" max="${max}" step="1" value="${v}" data-set="${k}" style="--pct:${max > min ? Math.round((v - min) / (max - min) * 1000) / 10 : 0}%;--pf:${max > min ? Math.round((v - min) / (max - min) * 1000) / 1000 : 0}" ${dis} tabindex="-1" aria-hidden="true"><span class="val" data-val-of="${k}">${v}</span></div>`;
+      return `<div class="ctl side whl">${wheelHTML(k, min, max, 1, v, dis)}<input class="wsrc" type="range" min="${min}" max="${max}" step="1" value="${v}" data-set="${k}" style="--pct:${max > min ? Math.round((v - min) / (max - min) * 1000) / 10 : 0}%;--pf:${max > min ? Math.round((v - min) / (max - min) * 1000) / 1000 : 0}" ${dis} tabindex="-1" aria-hidden="true"><span class="val" data-val-of="${k}">${v}</span></div>`;
     }
     // a number without a stated range: the same wheel, open-ended upward (and below 0 only if it already is)
     const st = p.type === "float" ? .05 : 1, n = Number(v) || 0;
-    return `<div class="ctl whl">${wheelHTML(k, Math.min(0, n), Infinity, st, n, dis)}<input class="wsrc" type="number" value="${v}" data-set="${k}" ${dis} tabindex="-1" aria-hidden="true" step="${st}"></div>`;
+    return `<div class="ctl side whl">${wheelHTML(k, Math.min(0, n), Infinity, st, n, dis)}<input class="wsrc" type="number" value="${v}" data-set="${k}" ${dis} tabindex="-1" aria-hidden="true" step="${st}"></div>`;
   }
   if (p.type === "string") {
     // Morphe opens the system file picker for these; the preview does the same and draws the image
@@ -611,12 +620,24 @@ function controlFor(k) {
 // one shared editor for all of them. Each entry is a chip with a remove button, and a field at the end
 // adds one (Enter or +). It reads and writes exactly Morphe's format, the entries joined by new lines,
 // so Morphe parses what it always did.
-const isListBox = k => PREF[k].type === "string" && (String(PREF[k].default ?? "").includes("\n") || /strings|phrases|speeds|whitelist|filter/.test(k));
+// Only a list of words, names or numbers becomes chips (Max, Nov 25: "Edit video effects" in Miscellaneous,
+// a setting this editor doesn't know that holds code, showed hundreds of removable pills of garbled code).
+// Code, JSON objects, long lines or a very long list keep a plain text field (or Morphe's own editor, app-pre.js).
+const LIST_MAX = 60;
+const wordLine = t => t.length <= 80 && !/[{}<>;=\\`]|":|^\s*"|\b(function|return|var|const)\b/.test(t);
+const isListBox = k => {
+  if (PREF[k].type !== "string" || !(String(PREF[k].default ?? "").includes("\n") || /strings|phrases|speeds|whitelist|filter/.test(k))) return false;
+  if (/_channel_whitelist$/.test(k)) return true;
+  const v = String(V(k) ?? PREF[k].default ?? "");
+  if (/^\s*[[{]/.test(v)) return false; // JSON that isn't a channel whitelist
+  const items = listItems(k, v);
+  return items.length <= LIST_MAX && items.every(wordLine);
+};
 const listNumeric = k => /speeds/.test(k);
 // Channel whitelists are stored by Morphe as JSON ([{"id":"UC…","name":"Fjord & Timber"}]), not one per line.
 // Their chips show the names and can be removed; channels are added from a video's ⋮ menu (Morphe needs the
 // channel id), so they have no add field. Their format is kept exactly, so Morphe still parses it.
-const listJSON = k => /_channel_whitelist$/.test(k) || /^\s*\[/.test(String(V(k) ?? ""));
+const listJSON = k => /_channel_whitelist$/.test(k);
 function jsonEntries(v) { try { const a = JSON.parse(String(v || "[]")); return Array.isArray(a) ? a.filter(e => e && typeof e === "object") : []; } catch (e) { return []; } }
 function listItems(k, from = V(k)) {
   if (listJSON(k)) return jsonEntries(from).map(e => String(e.name || e.id || "")).filter(Boolean);
@@ -867,8 +888,9 @@ const AREAS = {
     // Morphe's own buttons sit in the bottom row, left of the Fullscreen button (scenes.js)
     ["Bottom area", ["hide_fullscreen_button", "loop_video_button", "mute_video_button", "pip_button_overlay", "reload_video_button", "playlist_panel_button", "video_delay_button_overlay", "external_downloader_overlay_button",
       "copy_video_link_button", "playback_speed_dialog_button", "video_quality_dialog_button", "save_to_watch_later_button", "play_all_button", "fullscreen_video_scale_button"]],
-    // the shading behind all three areas comes after their boxes (Max, Nov 25); a card of its own (it has sub-settings)
-    ["Behind the controls", ["hide_player_control_buttons_background"]],
+    // the shading behind all three areas comes right after their boxes, before the Bottom area's cards (Max,
+    // Nov 25, asked twice: at the end of the list it read as not done); a card of its own (it has sub-settings)
+    ["Behind the controls", ["hide_player_control_buttons_background"], { early: true }],
   ],
   shorts: [
     ["Top area", ["hide_shorts_auto_dubbed_label"]],
@@ -881,7 +903,9 @@ const AREAS = {
       "hide_shorts_channel_bar", "hide_shorts_subscribe_button", "hide_shorts_join_button", "hide_shorts_video_title", "hide_shorts_preview_comment",
       "hide_shorts_sound_metadata_label", "hide_shorts_ai_button", "hide_shorts_full_video_link_label", "hide_shorts_navigation_bar"]],
     // no part on the Shorts player: the entries of its menu, and the places Shorts can be taken out of
-    ["Shorts menu", ["hide_shorts_flyout_audio_track", "hide_shorts_flyout_captions", "shorts_playback_speed_flyout_button", "shorts_download_flyout_button"]],
+    // in the order the sheet in the preview lists them (Morphe's items first, then YouTube's), read left to
+    // right, top to bottom (Max, 14:35)
+    ["Shorts menu", ["shorts_playback_speed_flyout_button", "shorts_download_flyout_button", "hide_shorts_flyout_captions", "hide_shorts_flyout_audio_track"]],
     ["Shorts in other places", ["hide_shorts_search", "hide_shorts_search_suggestions", "hide_shorts_subscriptions", "hide_shorts_channel", "hide_shorts_history", "hide_shorts_notifications", "hide_shorts_video_description", "hide_shorts_live_preview"]],
   ],
   // the comments sheet scrolls, so its areas are its parts, top to bottom
@@ -892,10 +916,15 @@ const AREAS = {
     ["On each comment", ["hide_comments_contexts", "hide_comments_menu_button", "hide_comments_translate_button", "hide_comments_dislike_button", "hide_comments_gift_button", "hide_comments_gifs_and_images", "hide_comments_gift_animation_and_cards"]],
     ["Live chat", ["hide_comments_live_chat_donators_bar", "hide_comments_live_chat_scroll_to_bottom_button", "hide_comments_live_chat_tooltips"]],
   ],
-  // the player menu is one list: the top and bottom of it mean nothing there (Max, Nov 25), so YouTube's own
-  // entries keep their rows; only the entries Morphe adds share a box
+  // the player menu is one list: the top and bottom of it mean nothing there (Max, Nov 25), so it is split by
+  // who adds the entry, Morphe's first (they sit at the top of the menu), then YouTube's in the menu's order,
+  // two to a line like every other box (Max, 14:35); Quality, Captions and Audio track keep their cards
+  // (they have sub-settings) right after the box
   flyout: [
     ["Added by Morphe", ["pip_button_flyout", "save_to_watch_later_flyout_button", "video_delay_button_flyout"]],
+    ["YouTube's entries", ["hide_player_flyout_quality", "hide_player_flyout_captions", "hide_player_flyout_speed", "hide_player_flyout_sleep_timer", "hide_player_flyout_loop_video", "hide_player_flyout_ambient_mode",
+      "hide_player_flyout_lock_screen", "hide_player_flyout_stable_volume", "hide_player_flyout_audio_track", "hide_player_flyout_listen_with_youtube_music", "hide_player_flyout_watch_in_vr",
+      "hide_player_flyout_on_the_go", "hide_player_flyout_additional_settings", "hide_player_flyout_help"]],
   ],
   description: [
     ["Top area", ["hide_video_details_section", "hide_ai_generated_video_summary_section", "hide_ask_section", "hide_hype_points", "hide_key_concepts_section"]],
@@ -929,10 +958,12 @@ const boxable = k => PREF[k]?.type === "boolean" && !KIDS[k] && !OFF_LIST.has(k)
 function gatherAreas(list, rest) {
   FAMILY = {}; AREA_BOX = []; AREA_OVER = {}; const spec = AREAS[section]; if (!spec) return;
   const pool = new Set([...list, ...rest]), taken = new Set(), out = [];
-  for (const [name, ks0] of spec) {
+  for (const [name, ks0, opt] of spec) {
     const ks = ks0.map(x => "morphe_" + x).filter(k => pool.has(k) && !taken.has(k) && !PARENT_OF[k]);
     ks.forEach(k => taken.add(k));
     const box = ks.filter(boxable), after = ks.filter(k => !boxable(k));
+    // early: cards that go straight after the boxes above, ahead of the last box's own cards
+    if (!box.length && opt && opt.early) { const at = out.findLastIndex(x => String(x).startsWith("@area:")); out.splice(at + 1, 0, ...ks); continue; }
     if (!box.length) { out.push(...ks); continue; }
     box.forEach(k => { FAMILY[k] = name; });
     // a card that is one of a Morphe sub-screen's "Hide in ..." rows, alone in its box, goes by that
@@ -1984,8 +2015,13 @@ document.addEventListener("pointerdown", e => {
   // the row when the row was; a part too small or too wide to read as a source falls back to its row
   const row = el && el.closest(".row"), r = el && el.getBoundingClientRect();
   const own = el && (el.matches("button, .c, .pick") && r.width >= 16 && r.height >= 12 && r.width < 300 || !row);
-  cardTap = el && !el.closest("#dlg") ? { el: own ? el : row, key: el.closest("[data-row]")?.dataset.row, cls: own && el !== row ? el.classList[0] : null, t: performance.now() } : null;
+  // (a menu card's place and corners are kept too: the menu may be drawn again before its screen grows from it)
+  const card = el && el.closest("#picker .pick");
+  cardTap = el && !el.closest("#dlg") ? { el: own ? el : row, key: el.closest("[data-row]")?.dataset.row, cls: own && el !== row ? el.classList[0] : null, t: performance.now(), card: card ? { rect: card.getBoundingClientRect(), radius: getComputedStyle(card).borderRadius } : null } : null;
 }, true);
+// a press the system took over (a Back swipe from the screen's edge starts as a press on whatever is
+// under the finger) is no tap: nothing grows from that button later
+document.addEventListener("pointercancel", () => { cardTap = null; }, true);
 const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 function cardRect(o) {
   if (!o) return null;
@@ -2043,14 +2079,14 @@ function closeDialog() {
 // perfect, give it to every popup menu): the screen menu from the button that opened it, the preview's
 // tray of buttons that are off from its pill. open: it grows out of src; closing: it shrinks back into src.
 // Transform and opacity only, the dialogs' timing and spring; the popup's own CSS transition is held.
-function popFrom(el, src, open, done) {
+function popFrom(el, src, open, done, spring = "--spring") {
   const r = !GLIDE_REDUCED.matches && el && el.isConnected && src && src.isConnected && src.getBoundingClientRect();
   if (!r || r.width < 4 || r.height < 4) { if (done) done(); return null; }
   if (el._pop) el._pop.cancel();
   el.style.transition = "none"; el.style.transformOrigin = "50% 50%"; // cardFrames scales about the middle
   const [from, to] = cardFrames(el, r);
   const a = el._pop = el.animate(open ? [{ ...from, opacity: 0 }, { offset: .25, opacity: 1 }, { ...to, opacity: 1 }] : [{ ...to, opacity: 1 }, { offset: .55, opacity: .85 }, { ...from, opacity: 0 }],
-    { duration: open ? DLG_OPEN_MS : DLG_CLOSE_MS, easing: open ? cssVar("--spring") || "ease-out" : "cubic-bezier(.4, 0, .2, 1)" });
+    { duration: open ? DLG_OPEN_MS : DLG_CLOSE_MS, easing: open ? cssVar(spring) || cssVar("--spring") || "ease-out" : "cubic-bezier(.4, 0, .2, 1)" });
   const reset = () => { el._pop = null; el.style.transition = el.style.transformOrigin = ""; };
   a.onfinish = () => { if (el._pop !== a) return; reset(); if (done) done(); };
   a.oncancel = () => { if (el._pop === a) reset(); };
@@ -2257,13 +2293,19 @@ window.addEventListener("resize", () => { if (barStays()) $("app").classList.rem
     // preview then bounced up and down on its own. Scrolls during the bar's own move are ignored,
     // and the bar only hides when the list has room to scroll past it.
     if (performance.now() < barMoveUntil) { acc = 0; return; }
+    // On a touch screen the list moves under the finger (and its fling) through rubberBand, which marks those
+    // scrolls. Any other scroll is the page adjusting itself: a card above growing or shrinking (scroll
+    // anchoring), the end of the list coming closer as the bar resizes the list. Those read as scrolling
+    // the other way and flipped the bar (Max, Nov 25, Miscellaneous: it showed and hid again on every swipe).
+    if (sc.__touchOwn && !(performance.now() < (sc.__userScroll || 0))) { acc = 0; return; }
     acc = Math.sign(d) === Math.sign(acc) ? acc + d : d;
     const bar = document.querySelector(".appbar"), hid = app.classList.contains("barhidden");
     if (bar && !hid) app.style.setProperty("--abh", bar.offsetHeight + "px");
     const room = sc.scrollHeight - sc.clientHeight - y, abh = bar ? bar.offsetHeight : 56;
     let want = hid;
     if (y < 8) want = false;
-    else if (acc > 24 && room > abh + 24) want = true;
+    // hidden, the list grows by the bar's height: it must still scroll past the bar then, or barCheck brings it back
+    else if (acc > 24 && room > abh + 24 && sc.scrollHeight - sc.clientHeight - abh > abh + 24) want = true;
     else if (acc < -24) want = false;
     if (want !== hid) { app.classList.toggle("barhidden", want); acc = 0; barMoveUntil = performance.now() + 320; }
   }, { passive: true });

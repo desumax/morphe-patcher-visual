@@ -50,3 +50,7 @@ html.inapp.peekback .editor { z-index: 25; overflow: hidden; background: var(--m
   html.inapp #pickGrid .pg.pvis.pgroups { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   html.inapp #pickGrid .pg.pvis:not(.pgroups) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+/* a card growing into its screen (app-post.js cardGrow): the screen above the menu, the menu still under it */
+html.inapp.cardgrow .editor { z-index: 45; overflow: hidden; background: var(--m-bg); will-change: transform; }
+html.inapp.cardgrow #picker { opacity: 1; transition: none; visibility: visible; }
+html.inapp.cardgrow #picker .pick { opacity: 1; transform: none; transition: none; }

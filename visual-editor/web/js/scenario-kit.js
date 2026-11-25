@@ -440,22 +440,32 @@ scen("look", "fix_status_bar_layout", (box, on) => {
 // bottom and resting right on the navigation bar (Morphe removes the extra room YouTube left under it),
 // shown for YouTube's fixed time, one message at a time. Off is Android's toast: a small pill with the app
 // icon, floating well above the bottom, fading in and out. No lines (Max, Nov 25): the phones tell it.
+// Show messages in YouTube snackbar (NativeSnackbarPatch): On, YouTube's own snackbar (AddToToastAction) rests
+// right on the navigation bar; Off, Android's toast with the app's icon. Copying the link three times in a
+// row (Max, Nov 25 14:35: loop it 3x, 10% faster). Each message comes in and goes with its own animation
+// (WAAPI: the On side's transition used to start late and leave the bar half under the navigation bar).
+const SNACK_LOOP = 2900, SNACK_N = 3; // one copy and its message, 10% quicker than the 3.2 s it was
 scen("look", "native_snackbar", (box, on) => {
   box.innerHTML = device("port", watch7(`<span class="cl7" style="position:absolute;right:4px;top:4px;display:grid;place-items:center;width:11px;height:11px;border-radius:50%;background:rgba(0,0,0,.55)">${ico7("link", 7)}</span>`) + nav7());
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger");
-  at(250, () => fingerOn(dev, f, dev.querySelector(".cl7"))); at(600, () => tapF(f));
-  at(850, () => {
-    f.classList.remove("show");
-    dev.insertAdjacentHTML("beforeend", on
-      ? `<div class="msg7" style="position:absolute;left:4px;right:4px;bottom:17px;padding:5px 6px;border-radius:4px;background:#f1f1f1;color:#0f0f0f;font-size:6.5px;line-height:1.2;box-shadow:0 2px 6px rgba(0,0,0,.4);transform:translateY(130%);opacity:0;transition:transform .3s var(--ease),opacity .2s">Link copied to clipboard</div>`
-      : `<div class="msg7" style="position:absolute;left:50%;bottom:34px;translate:-50% 0;width:max-content;max-width:86%;padding:3px 8px 3px 4px;border-radius:9px;background:#3a3a3a;color:#fff;font-size:6px;line-height:1.2;display:flex;gap:4px;align-items:center;box-shadow:0 2px 6px rgba(0,0,0,.4);opacity:0;transition:opacity .25s"><span style="width:8px;height:8px;border-radius:50%;background:#ff0033;flex:none;display:grid;place-items:center">${ico7("play", 5)}</span>Link copied to clipboard</div>`);
-    const m = dev.querySelector(".msg7"); void m.offsetWidth; m.style.opacity = 1; if (on) m.style.transform = "none";
-  });
-  // YouTube's snackbar and the toast both go after a short while: the bar slides back down, the toast fades
-  at(3200, () => { const m = dev.querySelector(".msg7"); if (!m) return; m.style.opacity = 0; if (on) m.style.transform = "translateY(130%)"; });
+  const msg = on
+    ? `<div class="msg7" style="position:absolute;left:4px;right:4px;bottom:17px;z-index:3;padding:5px 6px;border-radius:4px;background:#f1f1f1;color:#0f0f0f;font-size:6.5px;line-height:1.2;box-shadow:0 2px 6px rgba(0,0,0,.4);opacity:0">Link copied to clipboard</div>`
+    : `<div class="msg7" style="position:absolute;left:50%;bottom:34px;translate:-50% 0;z-index:3;width:max-content;max-width:86%;padding:3px 8px 3px 4px;border-radius:9px;background:#3a3a3a;color:#fff;font-size:6px;line-height:1.2;display:flex;gap:4px;align-items:center;box-shadow:0 2px 6px rgba(0,0,0,.4);opacity:0"><span style="width:8px;height:8px;border-radius:50%;background:#ff0033;flex:none;display:grid;place-items:center">${ico7("play", 5)}</span>Link copied to clipboard</div>`;
+  const shown = on ? [{ transform: "translateY(6px)", opacity: 0 }, { transform: "none", opacity: 1 }] : [{ opacity: 0 }, { opacity: 1 }];
+  for (let r = 0; r < SNACK_N; r++) {
+    const t = r * SNACK_LOOP;
+    at(t + 220, () => fingerOn(dev, f, dev.querySelector(".cl7"))); at(t + 540, () => tapF(f));
+    at(t + 765, () => {
+      f.classList.remove("show"); dev.querySelector(".msg7")?.remove();
+      dev.insertAdjacentHTML("beforeend", msg);
+      dev.querySelector(".msg7").animate(shown, { duration: on ? 250 : 220, easing: "cubic-bezier(.2, .8, .3, 1)", fill: "forwards" });
+    });
+    // YouTube's snackbar and the toast both go after a short while: the bar slides back down, the toast fades
+    at(t + 2500, () => { const m = dev.querySelector(".msg7"); if (m) m.animate([...shown].reverse(), { duration: 200, easing: "cubic-bezier(.4, 0, 1, 1)", fill: "forwards" }); });
+  }
   return "";
 });
-SCN_HOLD.morphe_native_snackbar = 3900; // the message's whole stay and its going
+SCN_HOLD.morphe_native_snackbar = SNACK_LOOP * SNACK_N + 200; // all three messages, each with its going
 hidePage("look", "override_youtube_music_buttons", "Tapping a YouTube Music link", feed7(big7(6, "Midnight Tapes · Neon Fjord")) + tgt7(`<div style="padding:3px;border-radius:4px;background:#1b1b1b;font-size:6px;display:flex;gap:3px;align-items:center">${ico7("music", 7, "#ff0033")}Opens your preferred music app</div>`), { invert: true, shown: "Music buttons open your preferred music app", hidden: "Music buttons open the stock YouTube Music (stock)" });
 hidePage("look", "settings_search_history", "Searching in settings", search7("speed", `<div style="display:grid;gap:3px">${tgt7(item7("clock", "seekbar"))}${tgt7(item7("clock", "captions"))}${item7("gear", "Playback speed")}</div>`), { invert: true, shown: "Your recent settings searches are listed", hidden: "No search history (stock)" });
 // Show Morphe setting icons: the icons beside the sections of Morphe's own settings screen (not YouTube's

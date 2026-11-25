@@ -412,6 +412,9 @@ function fingerShow(f, x, y, ms = 0) {
 function fingerTo(f, x, y, ms = 0) { fingerShow(f, x, y, ms); }
 function tapF(f) { f.classList.remove("tap"); void f.offsetWidth; f.classList.add("tap"); }
 const miniSeek = (pct = 30, marks = []) => `<div class="msk" style="position:absolute;left:8%;right:8%;bottom:16%;height:3px;background:rgba(255,255,255,.3)"><div class="mp" style="position:absolute;left:0;top:0;bottom:0;width:${pct}%;background:#ff0033;transition:width .9s linear"></div>${marks.map(m => `<i style="position:absolute;left:${m}%;top:-1px;width:2px;height:5px;background:#000"></i>`).join("")}</div>`;
+// the time over the mini seekbar, as YouTube puts it: just above the bar's left end, never on it (Max, Nov 25:
+// "Copy timestamp by default" drew it across the seekbar); one helper for every story with a time
+const miniTime = (txt, cls = "") => `<div class="mtm7${cls ? " " + cls : ""}" style="position:absolute;left:8%;bottom:calc(16% + 6px);font-size:8px;line-height:1;color:#ddd;white-space:nowrap">${txt}</div>`;
 const miniVideo = (i = 0, h = "100%") => `<div style="position:absolute;left:0;right:0;top:0;height:${h};background:${ART[i]}"></div>`;
 function haptic(eventLabel, script) {
   return (box, disabled) => {
@@ -516,10 +519,10 @@ scen("player", "fullscreen_video_scale_button_fullscreen_only", (box, on) => {
   return "";
 });
 scen("player", "copy_video_link_with_timestamp_button", (box, on) => {
-  // The "Copy video link" button: a tap and a tap-and-hold copy two different links. This option
-  // swaps which one is which. Each side shows the button, the gesture, and the link that was copied.
+  // The "Copy video link" button: a tap copies the plain link, or with this option the link with the
+  // time it was paused at. Each side shows the button, the tap, and the link that was copied.
   const [fx, fy] = anchor("morphe_copy_video_link_button", .8, .2);
-  box.innerHTML = device("land", `${miniVideo(0)}<div class="cpb" style="${at_(fx, fy, 22)};display:grid;place-items:center;border-radius:50%;background:rgba(0,0,0,.45);transition:transform .2s,background .2s">${I("link", "ico", 'style="width:14px;height:14px"')}</div>${miniSeek(17)}<div style="position:absolute;left:6px;bottom:12px;font-size:8px;color:#ddd">3:12 / 18:42</div>`);
+  box.innerHTML = device("land", `${miniVideo(0)}<div class="cpb" style="${at_(fx, fy, 22)};display:grid;place-items:center;border-radius:50%;background:rgba(0,0,0,.45);transition:transform .2s,background .2s">${I("link", "ico", 'style="width:14px;height:14px"')}</div>${miniSeek(17)}${miniTime("3:12 / 18:42")}`);
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"), btn = dev.querySelector(".cpb"); const W = dev.clientWidth, H = dev.clientHeight;
   const plain = "youtu.be/cAb1n", timed = "youtu.be/cAb1n?t=192";
   // two lines (Max, Nov 25: three reached down over the time and the seekbar), placed above them
@@ -528,15 +531,14 @@ scen("player", "copy_video_link_with_timestamp_button", (box, on) => {
   const fade = () => dev.querySelectorAll(".toastin").forEach(e => { e.style.transition = "opacity .3s"; e.style.opacity = 0; });
   at(150, () => fingerTo(f, W * fx, H * fy, 350));
   at(800, () => { tapF(f); press(true); }); at(1000, () => { press(false); toast(on ? timed : plain); });
-  at(2900, fade);
-  at(3500, () => { f.classList.add("hold"); press(true); });
-  at(4500, () => { f.classList.remove("hold"); press(false); toast(on ? plain : timed); });
-  at(6600, fade);
+  // only the tap (Max, Nov 25: with the hold shown too, each side's pill took the other side's link in
+  // turn, so the link with the time jumped left and right as the story looped): each side keeps its link
+  at(3600, fade);
   return "";
 });
-SCN_HOLD.morphe_copy_video_link_with_timestamp_button = 7000;
+SCN_HOLD.morphe_copy_video_link_with_timestamp_button = 4200;
 scen("player", "loop_video", (box, on) => {
-  box.innerHTML = device("land", `${miniVideo(2)}<div class="lv7" style="position:absolute;left:8px;bottom:22%;font-size:8px;color:#ddd">0:00 / 0:42</div>${miniSeek(55)}`);
+  box.innerHTML = device("land", `${miniVideo(2)}${miniTime("0:00 / 0:42", "lv7")}${miniSeek(55)}`);
   const dev = box.querySelector(".dev"); const mp = dev.querySelector(".mp"), t = dev.querySelector(".lv7");
   const runClock = (from, to, ms) => { const t0 = performance.now(); const tick = () => { const p = Math.min(1, (performance.now() - t0) / (ms * scStretch)); const s = Math.round(from + (to - from) * p); const tx = `0:${String(s).padStart(2, "0")} / 0:42`; if (t.isConnected && t.textContent !== tx) t.textContent = tx; /* only when the second changes */ if (p < 1 && t.isConnected) requestAnimationFrame(tick); }; tick(); };
   situation("The video reaches its end");
