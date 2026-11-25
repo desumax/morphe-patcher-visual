@@ -1,16 +1,25 @@
 
 **Features**
-- The web view's screen menu matches the app: Reset order in the top bar, grouped cards fill the menu without scrolling, no card marked before one is opened, closing a search started on the menu goes back to it
-- Disable choices sit last in every SponsorBlock section and turn grey when picked
-- New previews for Quick actions top margin, Select text of descriptions and posts, Search comments and Comments carousel filter
-- Ten Flying comments settings get their own preview; the rest no longer flash the whole preview
-- Display area, Comment font size and Travel duration in portrait appear below Separate settings for portrait, which now has a lock
-- Morphe settings show only the Visual settings editor switch above About (the Open visual editor row did nothing)
+- Number settings turn on a 3D wheel; tap the middle or double tap to type the value in a pill above the keyboard
+- Settings are grouped in location boxes (Top, Middle, Bottom area and more) for Player controls, Shorts, Comments, Player menu, Description, Channel and Seekbar
+- The Glass navigation bar preview is drawn like the real bar, and Navigation buttons without labels has its preview
+- Shorts icon style shows the chosen icon set
+- Popups, dropdowns and Import / export grow from the button you tap
+- Flying comments stories follow your Display area, font size and duration; slider comparisons follow the slider live
+- Return YouTube Dislike feed likes, estimated likes and connection alerts show what they do
+- Show messages in YouTube snackbar redrawn from Morphe's code
+- Action bar buttons sit two to a line; Comments carousel filter names are toggles
+- Glass is switched off for good on weak devices after a longer check
 
 **Bug Fixes**
-- Return YouTube Dislike off shows the dislike count as a hidden part with its red outline (it left a small green square)
-- Video action bar layout and Like and Subscribe glow scroll the preview to the action bar when you're scrolled down
-- A hidden part pulses on its own instead of its whole row ('Create a Short' button)
-- Minimal comments button, Sanitize highlighted search links and Search comments drop their extra white sentences
+- The green outline of a part is never cut at the top or bottom
+- In landscape the screen menu keeps its card size and popups fit
+- The Shorts menu no longer restarts its opening animation; Download in Shorts menu is in that same menu
+- About is no longer listed under Shorts
+- The 'Pull up for precise seeking' pill no longer stays on screen in other seekbar settings
+- Menu cards show their longest line in full ('Seekbar & gestures', 'Flying comments')
+- The tour button steps through the tour in order
+- The text caret no longer shows over the preview
+- Copy timestamp by default, Resuming on startup and Spoof app version drop their extra sentences
 
 Add https://github.com/desumax/morphe-patcher-visual as a patch source in Morphe Manager (Expert mode, together with Morphe Patches). Full history: CHANGELOG.md.

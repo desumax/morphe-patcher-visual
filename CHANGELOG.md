@@ -6,6 +6,36 @@ Versions carry no "-" suffix: Manager treats those as prereleases and leaves the
 The patcher engine's own changelog is in docs/PATCHER-CHANGELOG.md.
 
 
+# [0.1.14](https://github.com/desumax/morphe-patcher-visual/compare/v0.1.13...v0.1.14) (2026-11-25)
+
+
+### Features
+
+* **YouTube - Visual settings editor:** Number settings turn on a 3D wheel; tap the middle or double tap to type the value in a pill above the keyboard
+* **YouTube - Visual settings editor:** Settings are grouped in location boxes (Top, Middle, Bottom area and more) for Player controls, Shorts, Comments, Player menu, Description, Channel and Seekbar
+* **YouTube - Visual settings editor:** The Glass navigation bar preview is drawn like the real bar, and Navigation buttons without labels has its preview
+* **YouTube - Visual settings editor:** Shorts icon style shows the chosen icon set
+* **YouTube - Visual settings editor:** Popups, dropdowns and Import / export grow from the button you tap
+* **YouTube - Visual settings editor:** Flying comments stories follow your Display area, font size and duration; slider comparisons follow the slider live
+* **YouTube - Visual settings editor:** Return YouTube Dislike feed likes, estimated likes and connection alerts show what they do
+* **YouTube - Visual settings editor:** Show messages in YouTube snackbar redrawn from Morphe's code
+* **YouTube - Visual settings editor:** Action bar buttons sit two to a line; Comments carousel filter names are toggles
+* **YouTube - Visual settings editor:** Glass is switched off for good on weak devices after a longer check
+
+
+### Bug Fixes
+
+* **YouTube - Visual settings editor:** The green outline of a part is never cut at the top or bottom
+* **YouTube - Visual settings editor:** In landscape the screen menu keeps its card size and popups fit
+* **YouTube - Visual settings editor:** The Shorts menu no longer restarts its opening animation; Download in Shorts menu is in that same menu
+* **YouTube - Visual settings editor:** About is no longer listed under Shorts
+* **YouTube - Visual settings editor:** The 'Pull up for precise seeking' pill no longer stays on screen in other seekbar settings
+* **YouTube - Visual settings editor:** Menu cards show their longest line in full ('Seekbar & gestures', 'Flying comments')
+* **YouTube - Visual settings editor:** The tour button steps through the tour in order
+* **YouTube - Visual settings editor:** The text caret no longer shows over the preview
+* **YouTube - Visual settings editor:** Copy timestamp by default, Resuming on startup and Spoof app version drop their extra sentences
+
+
 # [0.1.13](https://github.com/desumax/morphe-patcher-visual/compare/visual-editor-test-12...v0.1.13) (2026-11-25)
 
 
