@@ -91,9 +91,22 @@ $("list").addEventListener("change", e => {
   el.addEventListener("pointerleave", e => { if (e.target === el) cancelPress(); });
   el.addEventListener("contextmenu", e => { if (e.target.closest("[data-k]")) e.preventDefault(); });
 });
+// The tray of buttons that are off grows out of its pill and shrinks back into it (popFrom), like a dialog:
+// the stage is redrawn without it, so a copy of it shrinks over the new drawing and goes.
+function setTray(open) {
+  const old = !open && $("stage").querySelector(".tray"), ghost = old && old.cloneNode(true);
+  trayOpen = open; renderStage(); if (selected) highlight(selected);
+  const pill = $("stage").querySelector("[data-tray]");
+  if (open) { const t = $("stage").querySelector(".tray"); if (t) { t.style.animation = "none"; popFrom(t, pill, true); } }
+  else if (ghost) {
+    const host = $("stage").querySelector(".video") || $("stage"); ghost.style.animation = "none"; ghost.style.pointerEvents = "none"; ghost.setAttribute("aria-hidden", "true");
+    ghost.querySelectorAll("[data-k]").forEach(x => { x.removeAttribute("data-k"); }); host.appendChild(ghost);
+    if (!popFrom(ghost, pill, false, () => ghost.remove())) ghost.remove();
+  }
+}
 $("stage").addEventListener("click", e => {
-  if (e.target.closest("[data-tray]")) { trayOpen = !trayOpen; renderStage(); if (selected) highlight(selected); return; }
-  if (trayOpen && !e.target.closest(".tray") && !e.target.closest("[data-k]")) { trayOpen = false; renderStage(); if (selected) highlight(selected); }
+  if (e.target.closest("[data-tray]")) { setTray(!trayOpen); return; }
+  if (trayOpen && !e.target.closest(".tray") && !e.target.closest("[data-k]")) setTray(false);
 });
 // mouse wheel scrolls horizontal strips (action bars, chips)
 $("app").addEventListener("wheel", e => {
@@ -111,6 +124,16 @@ $("list").addEventListener("keydown", e => {
 });
 // the shared list editor: remove a chip, add an entry with + or Enter
 const listMsg = (k, msg) => { const box = document.querySelector(`[data-lst="${k}"]`); if (!box) return; box.querySelector(".lerr")?.remove(); if (msg) box.insertAdjacentHTML("beforeend", `<span class="lerr">${esc(msg)}</span>`); };
+// a press on a cell whose title doesn't fit slides the title to show the rest (fitLines / slideLine)
+// The press may select the card and redraw it (and scroll it), so the title is found again by its setting
+// once that has happened, not by the old element or the point under the finger.
+addEventListener("pointerdown", e => {
+  const c = e.target.closest && e.target.closest("#list .kin.duo2 > .row, #list .lchc"); if (!c) return;
+  const lst = c.matches(".lchc") && c.closest("[data-lst]")?.dataset.lst, lch = lst && c.querySelector("[data-lch]")?.dataset.lch;
+  const sel = lst ? `[data-lst="${CSS.escape(lst)}"] .lchc:has([data-lch="${CSS.escape(lch || "")}"]) .lchn` : `.kin.duo2 > [data-row="${CSS.escape(c.dataset.row || "")}"] .ttl`;
+  const go = () => { const t = $("list").querySelector(sel); if (t && t.scrollWidth > t.clientWidth + 1) { t.classList.add("ovf"); slideLine(t); } };
+  setTimeout(go, 60); setTimeout(go, 400); // slideLine ignores a title that is already sliding
+}, true);
 $("list").addEventListener("click", e => {
   const x = e.target.closest(".lx"); if (x) { listRemove(x.closest("[data-lst]").dataset.lst, Number(x.dataset.lx)); return; }
   const ch = e.target.closest("[data-lch]"); if (ch) { tapFeel("tick"); listChoose(ch.closest("[data-lst]").dataset.lst, ch.dataset.lch); return; }

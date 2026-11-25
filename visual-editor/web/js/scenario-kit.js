@@ -669,28 +669,39 @@ scen("shorts", "skip_live_shorts", (box, on) => {
   return on ? "Live streams in the Shorts feed are skipped" : "Live streams show up between Shorts (stock)";
 });
 // Morphe (QuickActionsMarginPatch): the quick actions container under the fullscreen seekbar gets a top
-// margin of this many dp. The row stays at the bottom of the screen, so the space opens above it: the
-// seekbar and time go up. Drawn larger than true size (a 92 px phone), with the gap measured.
+// margin of this many dp (Math.round(dp * density) px; 0 leaves YouTube's own). The row stays at the bottom
+// of the screen, so the space opens above it: the seekbar and time go up. True to scale: the drawn phone is
+// a landscape phone 412 dp tall (Realme GT 8 Pro), so a dp is its height / 412 px (Max, Nov 25: match the
+// scale). The dp label sits on the row's line, right of the buttons, so it never crosses the seekbar.
 scen("watch", "quick_actions_top_margin", (box, v) => {
   // no blue or white lines (Max, Nov 25): the drawing and the dp labels say it
-  const m = Number(v) || 0, px = dp => Math.round(dp * .45), live = scLive;
+  const m = Number(v) || 0, live = scLive;
   const qa = ["like", "dislike", "comment", "save", "share", "plist"].map(n => `<span style="flex:none;display:grid;place-items:center;width:15px;height:10px;border-radius:5px;background:rgba(255,255,255,.16)">${ico7(n, 6, "#fff")}</span>`).join("");
   box.innerHTML = device("land", `<div style="position:absolute;inset:0;background:${ART[3]}"></div><div style="position:absolute;inset:0;background:linear-gradient(transparent 45%,rgba(0,0,0,.55))"></div>
-    <div class="up7" style="position:absolute;left:8px;right:8px;bottom:19px;transition:translate .5s var(--ease)"><b style="display:block;font-size:5.5px;margin-bottom:2px">21:40 / 41:05</b><div style="height:2px;border-radius:1px;background:rgba(255,255,255,.35)"><div style="width:52%;height:100%;background:#f00;border-radius:1px"></div></div></div>
-    <div class="gap7" style="position:absolute;right:4px;bottom:19px;width:2px;height:0;border:solid #ffd21f;border-width:1px 0;background:linear-gradient(#ffd21f,#ffd21f) center/1px 100% no-repeat;transition:height .5s var(--ease);opacity:${m ? 1 : 0}"></div>
+    <div class="up7" style="position:absolute;left:8px;right:8px;bottom:19px"><b style="display:block;font-size:5.5px;margin-bottom:2px">21:40 / 41:05</b><div style="height:2px;border-radius:1px;background:rgba(255,255,255,.35)"><div style="width:52%;height:100%;background:#f00;border-radius:1px"></div></div></div>
+    <div class="gap7" style="position:absolute;right:4px;bottom:19px;width:2px;height:0;border:solid #ffd21f;border-width:1px 0;background:linear-gradient(#ffd21f,#ffd21f) center/1px 100% no-repeat;box-sizing:border-box;opacity:0"></div>
     <div style="position:absolute;left:8px;right:8px;bottom:4px;display:flex;gap:3px">${qa}</div>`);
   const dev = box.querySelector(".dev"), up = dev.querySelector(".up7"), gap = dev.querySelector(".gap7");
-  // the margin opens on its side as you watch; the default side has none
-  // while the slider moves (scLive) the space is drawn at once at its new size, so it follows the finger
-  const open = () => { up.style.translate = `0 -${px(m)}px`; gap.style.height = px(m) + "px"; dev.insertAdjacentHTML("beforeend", `<b class="new7" style="position:absolute;right:9px;bottom:${19 + px(m) / 2}px;translate:0 50%;font-size:5.5px;color:#ffd21f">${m} dp</b>`); };
-  // while the slider moves (scLive) the space follows the finger; from the value this side showed before (the
-  // 24 dp example when the drag starts at the default) it glides there in 150 ms instead of cutting
-  const was = liveFrom("morphe_quick_actions_top_margin", m);
+  const k = dev.clientHeight / 412, px = dp => dp * k;
+  // the space at a size in dp, with the yellow measure beside it (only while there is a space)
+  const set = dp => { up.style.translate = `0 -${px(dp)}px`; gap.style.height = px(dp) + "px"; gap.style.opacity = dp > .5 ? 1 : 0; };
+  const label = () => { if (m) dev.insertAdjacentHTML("beforeend", `<b class="new7" style="position:absolute;right:4px;bottom:5px;font-size:5px;line-height:8px;color:#ffd21f">${m} dp</b>`); };
+  // while the slider moves the space follows the finger, gliding on from where it is drawn right now (the
+  // 24 dp example when the drag starts at the default); otherwise it opens on its side as you watch
+  const g = liveGlide("morphe_quick_actions_top_margin", m);
   if (live) {
-    up.style.transition = gap.style.transition = "none";
-    if (was !== undefined && was !== m) { up.style.translate = `0 -${px(was)}px`; gap.style.height = px(was) + "px"; gap.style.opacity = 1; void up.offsetWidth; up.style.transition = "translate .15s ease-out"; gap.style.transition = "height .15s ease-out, opacity .15s"; gap.style.opacity = m ? 1 : 0; }
-    if (m) open(); else { up.style.translate = "0 0"; gap.style.height = "0"; }
-  } else if (m) at(350, open);
+    set(m); label();
+    if (g && Math.abs(g[0] - m) > .05) {
+      const o = { duration: LIVE_GLIDE_MS, easing: LIVE_GLIDE_EASE };
+      up.animate([{ translate: `0 -${px(g[0])}px` }, { translate: `0 -${px(m)}px` }], o);
+      gap.animate([{ height: px(g[0]) + "px", opacity: g[0] > .5 ? 1 : 0 }, { height: px(m) + "px", opacity: m ? 1 : 0 }], o);
+    }
+  } else if (m) at(350, () => {
+    const o = { duration: 520, easing: "cubic-bezier(.2,.8,.2,1)" };
+    set(m); label();
+    up.animate([{ translate: "0 0" }, { translate: `0 -${px(m)}px` }], o);
+    gap.animate([{ height: "0px", opacity: 0 }, { height: px(m) + "px", opacity: 1 }], o);
+  });
   return "";
 });
 scen("fullscreen", "swipe_ignore_when_locked", (box, on) => {
@@ -1507,11 +1518,18 @@ scen("danmaku", "niconico_comments_timed_comments_with_replay", (box, on) => {
   return on ? "The chat replay and timed comments fly together" : "Only the chat replay flies (stock)";
 });
 
+// The like and dislike pill under a video in the stories. Its labels get room to spare on both sides of the
+// divider: tiny text in the scaled phone is measured at its small size but drawn larger, and on some phones
+// (other font metrics) it came out wider than measured and ran into the divider (Max, Nov 25: "Hidden by
+// owner" clipped). Nothing in it may shrink, so the pill grows instead of cutting a label.
+const likePill7 = (like, dislike) => `<div class="lkp7" style="display:flex;width:max-content;border-radius:8px;background:#272727;font-size:5.5px;align-items:center;white-space:nowrap"><span style="display:flex;flex:none;gap:2px;align-items:center;padding:2px 3px;border-right:1px solid #444">${ico7("like", 6)}<span style="padding-right:1.5px">${like}</span></span><span style="display:flex;flex:none;gap:2px;align-items:center;padding:2px 4px 2px 3px">${ico7("dislike", 6)}${dislike}</span></div>`;
+
 // ---------- Return YouTube Dislike: the settings that act away from the action bar (Max, Nov 25: they did nothing)
 // ReturnYouTubeDislike.createDislikeSpan: on a video whose creator hid the likes, the like button says "Hidden by
 // owner" unless estimated likes are on, which show the like count Return YouTube Dislike estimates
 scen("watch", "ryd_estimated_like", (box, on) => {
-  const pill = `<div style="display:flex;width:max-content;max-width:100%;border-radius:8px;background:#272727;font-size:5.5px;align-items:center;white-space:nowrap"><span style="display:flex;gap:2px;align-items:center;padding:2px 4px;border-right:1px solid #444">${ico7("like", 6)}<span class="lkc7">Like</span></span><span style="display:flex;gap:2px;align-items:center;padding:2px 4px">${ico7("dislike", 6)}2.1K</span></div>`;
+  // the dislike count is left out: the phone is narrow and "Hidden by owner" is what the story is about
+  const pill = likePill7(`<span class="lkc7">Like</span>`, "");
   box.innerHTML = device("port", pageRows(player7(3) + `<b style="font-size:7px">Building a tiny cabin</b>` + pill + row7(2, "Night train to Bodø")));
   const dev = box.querySelector(".dev");
   // the count arrives from Return YouTube Dislike a moment after the page, as it does in the app
@@ -1535,9 +1553,11 @@ function feedLikeBadge({ count, ratio, pos }) {
 function feedLikeScen(key, plan) {
   AWAY.add("morphe_" + key);
   scen("watch", key, (box, v) => {
-    const o = plan(v), d = o.pos === "MIDDLE_RIGHT" ? `<span style="position:absolute;right:3px;top:3px;width:9px;height:9px;border-radius:50%;background:rgba(0,0,0,.6);display:grid;place-items:center">${ico7("clock", 6, "#fff")}</span>` : "";
+    // the Watch later button at the top right is stock and drawn in every place (the badge sits under it at
+    // MIDDLE_RIGHT, FeedEngagementCountsPatch's TOP_BUTTON_DP), so comparing two places flashes only the badge
+    const o = plan(v), d = `<span style="position:absolute;right:3px;top:3px;width:9px;height:9px;border-radius:50%;background:rgba(0,0,0,.6);display:grid;place-items:center">${ico7("clock", 6, "#fff")}</span>`;
     // the stock badges: views at the bottom left (or none where the like row takes its place), the duration at the bottom right
-    const base = `${o.pos === "NEXT_TO_VIEW_COUNT" && (o.count || o.ratio) ? "" : `<span style="position:absolute;left:3px;bottom:3px;background:rgba(0,0,0,.75);border-radius:2px;padding:1px 2.5px;font-size:5px;font-weight:600">1.2M views</span>`}<span style="position:absolute;right:3px;bottom:3px;background:rgba(0,0,0,.75);border-radius:2px;padding:1px 2.5px;font-size:5px;font-weight:600">12:04</span>${d}`;
+    const base = `${o.pos === "NEXT_TO_VIEW_COUNT" && (o.count || o.ratio) ? "" : `<span class="ctx7" style="position:absolute;left:3px;bottom:3px;background:rgba(0,0,0,.75);border-radius:2px;padding:1px 2.5px;font-size:5px;font-weight:600">1.2M views</span>`}<span style="position:absolute;right:3px;bottom:3px;background:rgba(0,0,0,.75);border-radius:2px;padding:1px 2.5px;font-size:5px;font-weight:600">12:04</span>${d}`;
     box.innerHTML = device("port", pageRows(feed7(big7(3, "Building a tiny cabin", base) + row7(2, "Night train to Bodø") + row7(4, "Lo-fi beats"))));
     const dev = box.querySelector(".dev"), th = dev.querySelector("div[style*='height:38px']"); // big7's thumbnail
     // the badge comes in once the counts are fetched, as in the app
@@ -1553,5 +1573,5 @@ feedLikeScen("ryd_feed_like_ratio", on => ({ ...feedNow(), ratio: !!on }));
 feedLikeScen("ryd_feed_counts_position", v => { const n = feedNow(), any = n.count || n.ratio; return { count: any ? n.count : true, ratio: any ? n.ratio : true, pos: String(v) }; });
 // The connection error alerts of Return YouTube Dislike and SponsorBlock, drawn as DeArrow's is
 AWAY.add("morphe_ryd_toast_on_connection_error"); AWAY.add("morphe_sb_toast_on_connection_error");
-hidePage("watch", "ryd_toast_on_connection_error", "Return YouTube Dislike can't reach its server", player7(3) + `<b style="font-size:7px">Building a tiny cabin</b><div style="display:flex;width:max-content;border-radius:8px;background:#272727;font-size:6px;align-items:center"><span style="display:flex;gap:2px;align-items:center;padding:2px 5px;border-right:1px solid #444">${ico7("like", 7)}48K</span><span style="display:flex;gap:2px;align-items:center;padding:2px 5px">${ico7("dislike", 7)}</span></div>` + row7(2, "Night train to Bodø") + tgt7(`<div style="padding:3px 5px;border-radius:8px;background:#323232;font-size:6px;text-align:center">Dislikes are temporarily not available (API timed out)</div>`), { invert: true });
+hidePage("watch", "ryd_toast_on_connection_error", "Return YouTube Dislike can't reach its server", player7(3) + `<b style="font-size:7px">Building a tiny cabin</b>${likePill7("48K", "")}` + row7(2, "Night train to Bodø") + tgt7(`<div style="padding:3px 5px;border-radius:8px;background:#323232;font-size:6px;text-align:center">Dislikes are temporarily not available (API timed out)</div>`), { invert: true });
 hidePage("sponsorblock", "sb_toast_on_connection_error", "SponsorBlock can't reach its server", player7(3, `<div style="position:absolute;left:4px;right:4px;bottom:3px;height:1.5px;background:rgba(255,255,255,.35)"><div style="width:30%;height:100%;background:#f00"></div></div>`) + `<b style="font-size:7px">Building a tiny cabin</b>` + row7(2, "Night train to Bodø") + row7(4, "Lo-fi beats") + tgt7(`<div style="padding:3px 5px;border-radius:8px;background:#323232;font-size:6px;text-align:center">SponsorBlock is temporarily not available (API timed out)</div>`), { invert: true });

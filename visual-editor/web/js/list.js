@@ -66,7 +66,10 @@ function paint(el, html, ...marks) {
 const listTouched = new Set();
 const cardOf = n => { let e = n.nodeType === 1 ? n : n.parentElement; while (e && e.__src === undefined) e = e.parentElement; return e || null; };
 const listNote = recs => recs.forEach(r => { const c = cardOf(r.target); if (c) listTouched.add(c); });
-const listSeen = new MutationObserver(listNote);
+// one-line titles are measured again a frame after anything in the list changed (a selection can change a
+// card's width); only a title whose fit changed gets its class changed
+let fitLinesRaf = 0;
+const listSeen = new MutationObserver(recs => { listNote(recs); if (!fitLinesRaf) fitLinesRaf = requestAnimationFrame(() => { fitLinesRaf = 0; if (typeof fitLines === "function") listQuiet(() => fitLines($("list"))); }); });
 listSeen.observe($("list"), { subtree: true, childList: true, attributes: true, characterData: true });
 // a step that only finishes how new cards are drawn (fitting pills, clamping descriptions): what it sets is
 // part of the card as drawn, not a change to it; anything noticed before it still counts
@@ -356,10 +359,13 @@ function endPickDrag() {
 $("pickGrid").addEventListener("pointerup", endPickDrag);
 $("pickGrid").addEventListener("pointercancel", endPickDrag);
 $("pickGrid").addEventListener("contextmenu", e => { if (e.target.closest(".pick")) e.preventDefault(); });
+let pickFrom = null; // the button the screen menu grew out of (the pill, or App view's back arrow); it closes into it
 function setPicker(open) {
-  pickerOpen = open;
+  const was = pickerOpen; pickerOpen = open;
   if (open && pickDirty) paintPicker(); // a change made in a screen, not drawn yet
+  if (open && !was) { const t = cardTap && performance.now() - cardTap.t < 1500 && cardTap.el; pickFrom = t && t.matches("button") && !t.closest("#picker") ? t : $("secPill"); cardTap = null; }
   $("picker").classList.toggle("open", open); $("pickScrim").classList.toggle("open", open);
+  if (open !== was) popFrom($("picker"), pickFrom || $("secPill"), open);
   if (open) { placeSeg3(); glassSample(); } // drawn while hidden: its thumb is placed once it can be measured
   $("secPill").setAttribute("aria-expanded", String(open));
   document.documentElement.classList.toggle("pickopen", open);
@@ -762,16 +768,130 @@ const kidLock = (k, n) => `<button class="kidbtn kidoff" data-kidpeek="${k}" ari
 // from each title ("Like") and said once on the parent ("Action bar buttons"). It is read from Morphe's
 // titles, so a button Morphe adds joins the grid, and a family that stops matching gets the usual list.
 const COMPACT_MIN = 4;
-const lastWord = x => ((/([A-Za-z]+)\W*$/.exec(String(PREF[x]?.title || "")) || [])[1] || "").toLowerCase();
+const lastWord = x => ((/([A-Za-z]+)\W*$/.exec(String(PREF[x]?.title || "")) || [])[1] || "").toLowerCase().replace(/(.{4,})s$/, "$1"); // "Previous & Next buttons" is one of the buttons
 function compactWord(k) {
   const ks = KIDS[k]; if (!ks || ks.length < COMPACT_MIN) return "";
   if (!ks.every(x => PREF[x].type === "boolean" && !OFF_LIST.has(x) && !KIDS[x] && DIRECT_PARENT[x] === k)) return "";
   const w = lastWord(ks[0]); return w.length > 2 && ks.every(x => lastWord(x) === w) ? w : "";
 }
-const dropWord = (t, w) => t.replace(new RegExp(`\\s+${w}$`, "i"), "").replace(/'([^']+)'$/, "$1"); // 'Live chat' button: Live chat
+const dropWord = (t, w) => t.replace(new RegExp(`\\s+${w}s?$`, "i"), "").replace(/'([^']+)'$/, "$1"); // 'Live chat' button: Live chat
 const withWord = (t, w) => new RegExp(`\\b${w}s?$`, "i").test(t) ? t : `${t} ${w}s`;
+// Cards grouped by where their part sits (Max, Nov 25: "a split based on location", Player → Controls had
+// 19 "button" cards). On a tab in AREAS, the plain on/off cards of each area share one box under the area's
+// name, two to a line, title then toggle, without the repeated word ("Cast" for "Cast button") and without
+// their descriptions. A card of that area with sub-settings (or any other control) follows right after the
+// box, before the next area's box. The tables list Morphe's keys in the order the parts appear; a key the
+// installed Morphe doesn't have is skipped, a key Morphe adds keeps its own card after the areas, and an area
+// with one plain card still gets its box (the card then spans the box), so the areas read top to bottom. Fullscreen keeps its captions (LAYOUT).
+const AREAS = {
+  player: [
+    ["Top area", ["hide_collapse_button", "hide_autoplay_button", "hide_captions_button", "hide_cast_button", "hide_settings_button"]],
+    ["Middle area", ["hide_player_previous_next_buttons", "hide_player_control_buttons_background"]],
+    // Morphe's own buttons sit in the bottom row, left of the Fullscreen button (scenes.js)
+    ["Bottom area", ["hide_fullscreen_button", "loop_video_button", "mute_video_button", "pip_button_overlay", "reload_video_button", "playlist_panel_button", "video_delay_button_overlay", "external_downloader_overlay_button",
+      "copy_video_link_button", "playback_speed_dialog_button", "video_quality_dialog_button", "save_to_watch_later_button", "play_all_button", "fullscreen_video_scale_button"]],
+  ],
+  shorts: [
+    ["Top area", ["hide_shorts_auto_dubbed_label", "hide_shorts_new_posts_button"]],
+    ["Middle area", ["hide_shorts_gesture_hints", "hide_shorts_paused_overlay_buttons"]],
+    ["Right side", ["hide_shorts_like_button", "hide_shorts_comments_button", "hide_shorts_share_button", "hide_shorts_save_button", "hide_shorts_remix_button", "hide_shorts_sound_button"]],
+    // the pills above the channel name, the channel bar, the title and what is under it, the navigation bar
+    ["Bottom area", ["hide_shorts_upcoming_button", "hide_shorts_save_sound_button", "hide_shorts_use_sound_button", "hide_shorts_use_template_button", "hide_shorts_effect_button", "hide_shorts_green_screen_button",
+      "hide_shorts_tagged_products", "hide_shorts_shop_button", "hide_shorts_super_thanks_button", "hide_shorts_location_label", "hide_shorts_hashtag_button", "hide_shorts_info_panel",
+      "hide_shorts_channel_bar", "hide_shorts_subscribe_button", "hide_shorts_join_button", "hide_shorts_video_title", "hide_shorts_preview_comment",
+      "hide_shorts_sound_metadata_label", "hide_shorts_ai_button", "hide_shorts_full_video_link_label", "hide_shorts_navigation_bar"]],
+    // no part on the Shorts player: the entries of its menu, and the places Shorts can be taken out of
+    ["Shorts menu", ["hide_shorts_flyout_audio_track", "hide_shorts_flyout_captions", "shorts_playback_speed_flyout_button", "shorts_download_flyout_button"]],
+    ["Shorts in other places", ["hide_shorts_search", "hide_shorts_search_suggestions", "hide_shorts_subscriptions", "hide_shorts_channel", "hide_shorts_history", "hide_shorts_notifications", "hide_shorts_video_description", "hide_shorts_live_preview"]],
+  ],
+  // the comments sheet scrolls, so its areas are its parts, top to bottom
+  comments: [
+    ["Top of the sheet", ["hide_comments_top_fans_button", "hide_comments_info_button", "hide_comments_filter_bar_options", "hide_timed_reactions", "hide_comments_ai_chat_summary",
+      "hide_comments_community_guidelines", "hide_comments_channel_guidelines", "hide_subscribers_community_guidelines", "hide_comments_by_members_header"]],
+    ["Comment box", ["hide_comments_emoji_button", "hide_comments_timestamp_button", "hide_comments_gif_button", "hide_comments_thanks_button", "hide_comments_create_a_short_button"]],
+    ["On each comment", ["hide_comments_contexts", "hide_comments_menu_button", "hide_comments_translate_button", "hide_comments_dislike_button", "hide_comments_gift_button", "hide_comments_gifs_and_images", "hide_comments_gift_animation_and_cards"]],
+    ["Live chat", ["hide_comments_live_chat_donators_bar", "hide_comments_live_chat_scroll_to_bottom_button", "hide_comments_live_chat_tooltips"]],
+  ],
+  // the player menu is one list: YouTube's entries, the ones Morphe adds, then the last entries
+  flyout: [
+    ["Top of the menu", ["hide_player_flyout_quality", "hide_player_flyout_captions", "hide_player_flyout_speed", "hide_player_flyout_sleep_timer", "hide_player_flyout_loop_video",
+      "hide_player_flyout_ambient_mode", "hide_player_flyout_lock_screen", "hide_player_flyout_stable_volume", "hide_player_flyout_audio_track"]],
+    ["Added by Morphe", ["pip_button_flyout", "save_to_watch_later_flyout_button", "video_delay_button_flyout"]],
+    ["Bottom of the menu", ["hide_player_flyout_listen_with_youtube_music", "hide_player_flyout_watch_in_vr", "hide_player_flyout_on_the_go", "hide_player_flyout_additional_settings", "hide_player_flyout_help"]],
+  ],
+  description: [
+    ["Top area", ["hide_video_details_section", "hide_ai_generated_video_summary_section", "hide_ask_section", "hide_hype_points", "hide_key_concepts_section"]],
+    ["Middle area", ["hide_chapters_section", "hide_search_inside_this_video_section", "hide_transcript_section", "hide_how_this_was_made_section", "hide_corrections_section", "hide_attributes_section"]],
+    ["Bottom area", ["hide_hashtag_section", "hide_info_cards_section", "hide_explore_section", "hide_course_progress_section", "hide_quizzes_section"]],
+  ],
+  channel: [
+    ["Top area", ["hide_links_preview", "hide_subscribe_button_in_channel_page", "hide_join_button", "hide_store_button", "hide_community_button"]],
+    ["Under the header", ["hide_filter_bar_in_channel_page", "hide_members_shelf", "hide_members_only_chip", "hide_posts_shelf"]],
+  ],
+  // the seekbar's parts on the player, then the two families with no part of their own
+  seekbar: [
+    ["On the player", ["hide_player_gesture_hints", "seekbar_thumbnail_preview", "hide_tap_and_hold_gradient", "hide_timestamp", "hide_chapters_timeline_button", "hide_seekbar", "seekbar_custom_color", "custom_seekbar_thumb"]],
+    ["Seeking gestures", ["tap_to_seek", "slide_to_seek", "disable_precise_seeking_gesture", "disable_chapter_skip_double_tap"]],
+    ["Haptics", ["disable_haptic_feedback_chapters", "disable_haptic_feedback_precise_seeking", "disable_haptic_feedback_seek_undo", "disable_haptic_feedback_tap_and_hold", "disable_haptic_feedback_zoom"]],
+  ],
+};
+// What a box's titles say once, dropped from each: the word they share ("Cast button": Cast; "Previous & Next
+// buttons": Previous & Next, but "Paused overlay buttons" keeps it, it would not say what it is; "menu",
+// "section", "haptics"), where the menu is ("... in the Shorts menu"), a lead-in "In" ("In search results"
+// under "Shorts in other places"), and the box's own name ("Live chat tooltips" under "Live chat").
+const AREA_WORDS = /(?:\s+button)?\s+in (?:the )?(?:Shorts menu|player settings flyout)$|\s+(?:button|menu|section|haptics)$|(?<=&.*)\s+buttons$/i;
+function areaTitle(t, box) {
+  const cap = x => x.charAt(0).toUpperCase() + x.slice(1);
+  let d = t.replace(AREA_WORDS, "").replace(/^'([^']+)'$/, "$1").replace(/^In\s+/, "");
+  if (box && d.toLowerCase().startsWith(box.toLowerCase() + " ")) d = d.slice(box.length + 1);
+  return cap(d.trim() || t);
+}
+let FAMILY = {}, AREA_BOX = [], AREA_OVER = {}; // setting -> its area box's name; the boxes on the screen drawn last; titles taken from a sub-screen
+const boxable = k => PREF[k]?.type === "boolean" && !KIDS[k] && !OFF_LIST.has(k) && !cleanBroken(k);
+function gatherAreas(list, rest) {
+  FAMILY = {}; AREA_BOX = []; AREA_OVER = {}; const spec = AREAS[section]; if (!spec) return;
+  const pool = new Set([...list, ...rest]), taken = new Set(), out = [];
+  for (const [name, ks0] of spec) {
+    const ks = ks0.map(x => "morphe_" + x).filter(k => pool.has(k) && !taken.has(k) && !PARENT_OF[k]);
+    ks.forEach(k => taken.add(k));
+    const box = ks.filter(boxable), after = ks.filter(k => !boxable(k));
+    if (!box.length) { out.push(...ks); continue; }
+    box.forEach(k => { FAMILY[k] = name; });
+    // a card that is one of a Morphe sub-screen's "Hide in ..." rows, alone in its box, goes by that
+    // sub-screen's title ("In channel page" of Filter bar, in the Channel tab: Filter bar)
+    box.forEach(k => { const o = overOf(k); if (o && !box.some(x => x !== k && overOf(x) === o)) AREA_OVER[k] = o; });
+    out.push("@area:" + (AREA_BOX.push({ name, keys: box }) - 1), ...after);
+  }
+  list.splice(0, list.length, ...out, ...list.filter(k => !taken.has(k)));
+  for (let i = rest.length - 1; i >= 0; i--) if (taken.has(rest[i])) rest.splice(i, 1);
+}
+function areaCard(i, live) {
+  const a = AREA_BOX[i]; if (!a) return "";
+  return `<div class="shared fam2" data-share="${esc(a.name)}" data-area="${esc(a.name)}"><div class="shead">${esc(a.name)}</div><div class="kin duo2">${a.keys.map(k => rowHTML(k, live(k))).join("")}</div></div>`;
+}
+// One-line titles beside toggles (two-column cells, a list's name toggles): one that doesn't fit is marked
+// (.ovf: it fades out with an ellipsis), and a press slides it right to left to show the rest, then back.
+const FIT_LINE = ":is(.kids, .shared) > .kin.duo2 .ttl, .lchn";
+// An area box whose titles mostly don't fit two to a line (Comments: "Community Guidelines") lists them one
+// to a line instead (.one), measured again at every width, so a wide screen gets its two columns back.
+const overflows = e => e.scrollWidth > e.clientWidth + 1;
+function fitLines(root) {
+  root.querySelectorAll(".shared[data-area] > .kin.duo2").forEach(b => {
+    b.classList.remove("one");
+    const t = [...b.querySelectorAll(":scope > .row .ttl")];
+    if (t.filter(overflows).length * 3 > t.length) b.classList.add("one");
+  });
+  root.querySelectorAll(FIT_LINE).forEach(e => e.classList.toggle("ovf", overflows(e)));
+}
+function slideLine(e) {
+  const over = e.scrollWidth - e.clientWidth; if (over < 2 || e.classList.contains("mq")) return;
+  e.classList.add("mq");
+  const a = e.animate([{ textIndent: "0px" }, { textIndent: -(over + 6) + "px", offset: .42 }, { textIndent: -(over + 6) + "px", offset: .62 }, { textIndent: "0px" }], { duration: 1400 + over * 22, easing: "cubic-bezier(.45,0,.25,1)" });
+  a.onfinish = a.oncancel = () => e.classList.remove("mq");
+}
 // the title a row shows in the list: shortened in a two-column family, the family's word added to its parent
 function rowTitle(k) {
+  if (FAMILY[k]) return AREA_OVER[k] || areaTitle(shownTitle(k), FAMILY[k]);
   const pw = DIRECT_PARENT[k] && compactWord(DIRECT_PARENT[k]); if (pw) return dropWord(shownTitle(k), pw);
   const w = compactWord(k); return w ? withWord(shownTitle(k), w) : shownTitle(k);
 }
@@ -975,6 +1095,7 @@ function renderList() {
   const isLive = k => m.live.includes(k);
   const wantOpen = new Set();
   const withKids = k => {
+    if (k.startsWith("@area:")) return areaCard(+k.slice(6), isLive);
     let out = rowHTML(k, isLive(k));
     const ks = KIDS[k];
     if (ks) {
@@ -997,6 +1118,7 @@ function renderList() {
     const ordered0 = byPosition(top), ordered = [...ordered0.filter(k => !cleanBroken(k)), ...ordered0.filter(cleanBroken)];
     const rest = m.misc.filter(k => !PARENT_OF[k]);
     relate(ordered, rest);
+    gatherAreas(ordered, rest);
     let live = [];
     const lay = LAYOUT[section];
     if (lay) {
@@ -1050,7 +1172,7 @@ function renderList() {
   const textsWere = list.dataset.view === section ? rowTexts(list) : null;
   const fresh = paintList(list, parts, mergeZonePreview); list.dataset.view = section;
   if (textsWere) requestAnimationFrame(() => { if (list.dataset.view === section) swapRowTexts(list, textsWere); });
-  const goneNow = listQuiet(() => { fitOpts(fresh); return hideLocked(list); });
+  const goneNow = listQuiet(() => { fitOpts(fresh); fitLines(list); return hideLocked(list); });
   midFold.forEach((h, grp) => {
     const box = list.querySelector(`[data-kids-of="${grp}"]`), left = (foldingKids.get(grp)?.until ?? 0) - performance.now(); if (!box || left < 30) return;
     box.classList.remove("open");
@@ -1147,7 +1269,7 @@ function syncLocked(k) {
     const want = row.dataset.row === k || !row.classList.contains("dis"), out = isOut(box);
     if (want && out) {
       box.getAnimations().forEach(a => a.cancel()); box.classList.remove("gone", "going"); lastGone.keys.delete(row.dataset.row); changed = true;
-      syncGroups(list); fitOpts(box); sizeAnim(box, true);
+      syncGroups(list); fitOpts(box); listQuiet(() => fitLines(box)); sizeAnim(box, true);
     } else if (!want && !out) {
       lastGone.keys.add(row.dataset.row); changed = true;
       foldAway(box, () => syncGroups(list));
@@ -1473,7 +1595,8 @@ function optGlide() {
 }
 const OPT_PAD = 6; // the least room beside a pill's text
 const LCHIP_CHROME = 8 + 2 + 22 + 2; // left padding, gap, remove button, right padding (4 speeds a row in a ~300px card)
-addEventListener("resize", () => { clearTimeout(fitOpts._t); fitOpts._t = setTimeout(() => fitOpts(), 120); });
+addEventListener("resize", () => { clearTimeout(fitOpts._t); fitOpts._t = setTimeout(() => { fitOpts(); fitLines($("list")); }, 120); });
+if (document.fonts) document.fonts.ready.then(() => fitLines($("list")));
 function hideLocked(list) {
   const gone = new Set();
   list.querySelectorAll(".row.dis[data-row]").forEach(r => {
@@ -1499,7 +1622,7 @@ function headBody(h) {
 }
 function syncHeads(list, before) {
   // a shared card goes once every row in it is gone
-  list.querySelectorAll(".shared").forEach(c => c.classList.toggle("gone", ![...c.children].some(n => n.matches(".row") && !isOut(n))));
+  list.querySelectorAll(".shared").forEach(c => c.classList.toggle("gone", ![...c.querySelectorAll(":scope > .row, :scope > .kin > .row")].some(n => !isOut(n)))); // a family card's rows sit in its grid
   list.querySelectorAll(HEADS).forEach(h => {
     const items = headBody(h).filter(n => !isOut(n)), show = items.length > 0, going = h.classList.contains("going");
     const gn = h.querySelector(".gn"); if (gn && show) gn.textContent = items.length;
@@ -1837,6 +1960,23 @@ function closeDialog() {
   if (!f) return;
   dlg.classList.add("closing"); // stays visible while it shrinks back (taps already go through)
   cardPlay([{ ...f[1], opacity: 1 }, { offset: .55, opacity: .85 }, { ...f[0], opacity: 0 }], { duration: DLG_CLOSE_MS, easing: "cubic-bezier(.4, 0, .2, 1)" }, () => dlg.classList.remove("closing"));
+}
+// The same grow-from-the-button motion for every other popup (Max, Nov 25: the Reset dialog's popup is
+// perfect, give it to every popup menu): the screen menu from the button that opened it, the preview's
+// tray of buttons that are off from its pill. open: it grows out of src; closing: it shrinks back into src.
+// Transform and opacity only, the dialogs' timing and spring; the popup's own CSS transition is held.
+function popFrom(el, src, open, done) {
+  const r = !GLIDE_REDUCED.matches && el && el.isConnected && src && src.isConnected && src.getBoundingClientRect();
+  if (!r || r.width < 4 || r.height < 4) { if (done) done(); return null; }
+  if (el._pop) el._pop.cancel();
+  el.style.transition = "none"; el.style.transformOrigin = "50% 50%"; // cardFrames scales about the middle
+  const [from, to] = cardFrames(el, r);
+  const a = el._pop = el.animate(open ? [{ ...from, opacity: 0 }, { offset: .25, opacity: 1 }, { ...to, opacity: 1 }] : [{ ...to, opacity: 1 }, { offset: .55, opacity: .85 }, { ...from, opacity: 0 }],
+    { duration: open ? DLG_OPEN_MS : DLG_CLOSE_MS, easing: open ? cssVar("--spring") || "ease-out" : "cubic-bezier(.4, 0, .2, 1)" });
+  const reset = () => { el._pop = null; el.style.transition = el.style.transformOrigin = ""; };
+  a.onfinish = () => { if (el._pop !== a) return; reset(); if (done) done(); };
+  a.oncancel = () => { if (el._pop === a) reset(); };
+  return a;
 }
 // Changes that only apply after YouTube restarts (Max, Nov 20). Values are saved as soon as they are
 // changed; leaving asks what to do with these: restart now, keep them for later, or reset them to the

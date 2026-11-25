@@ -1018,8 +1018,10 @@ function flash7(el) {
 // icon, or a part only one phone has, flashes. When more than 8 parts differ the whole drawing differs
 // (a waveform, a different screen): nothing flashes then. One rule for every comparison, no marks needed.
 const DIFF_MAX = 8;
+// .ctx7 marks a stock part a picture leaves out on one side only because the change takes its place (the
+// views badge where the like row continues it): it never flashes on the other side
 function smallPart(e, dev, da) {
-  if (e.closest(".toastin")) return false;
+  if (e.closest(".toastin, .ctx7")) return false;
   const r = e.getBoundingClientRect();
   return r.width > 0 && r.width * r.height <= da * .2;
 }
@@ -1042,7 +1044,11 @@ function diffFlash(box) {
   };
   const [a, b] = devs.map(parts), hits = [[], []];
   new Set([...a.keys(), ...b.keys()]).forEach(k => {
-    const x = a.get(k) || [], y = b.get(k) || [];
+    // parts the same on both phones pair up first, wherever they sit in the order, so one part that only
+    // one phone has does not shift every part after it out of step (Max, Nov 25: Feed thumbnail like
+    // position flashed the duration, the title and the views badge when only the like badge moved)
+    let x = a.get(k) || [], y = b.get(k) || [];
+    const ys = y.slice(); x = x.filter(p => { const i = ys.findIndex(q => q.sig === p.sig); if (i < 0) return true; ys.splice(i, 1); return false; }); y = ys;
     for (let i = 0; i < Math.max(x.length, y.length); i++) {
       if (!x[i] || !y[i]) hits[x[i] ? 0 : 1].push((x[i] || y[i]).e);
       else if (x[i].sig !== y[i].sig) { hits[0].push(x[i].e); hits[1].push(y[i].e); }
@@ -1522,11 +1528,18 @@ function duoValues(k, prev) {
 // didn't follow the slider; neither did any other slider with a comparison, not even on release). One redraw a
 // frame; scLive tells a story it is being redrawn for a slider step, so it can skip its opening motion.
 let scLive = false, liveRaf = 0;
-// What a story last drew on this side for a slider, so a redraw while the slider moves can glide from it
-// instead of cutting (Max, Nov 25: dragging Quick actions top margin from 0 cut from the 24 dp example to
-// the new value). Returns the previous value only during a slider redraw.
-const liveLast = {};
-function liveFrom(k, v) { const id = k + "|" + (scSide ? scSide.i : 0), was = liveLast[id]; liveLast[id] = v; return scLive ? was : undefined; }
+// A slider's picture that follows the finger: where its moving part is drawn at this moment, so the next
+// value glides on from there (not from the last value it was heading to) and a fast drag reads as one
+// smooth movement (Max, Nov 25: dragging Quick actions top margin cut from the 24 dp example, then glided
+// in steps). Returns [from, to] while the slider moves, undefined otherwise.
+const liveGlides = {}, LIVE_GLIDE_MS = 260, liveEase = t => 1 - (1 - t) ** 3; // matches LIVE_GLIDE_EASE
+const LIVE_GLIDE_EASE = "cubic-bezier(.33,1,.68,1)";
+function liveGlide(k, v) {
+  const id = k + "|" + (scSide ? scSide.i : 0), g = liveGlides[id], now = performance.now();
+  const at = g ? g.from + (g.to - g.from) * liveEase(Math.min(1, (now - g.t0) / LIVE_GLIDE_MS)) : v;
+  liveGlides[id] = { from: scLive ? at : v, to: v, t0: now };
+  return scLive && g ? [at, v] : undefined;
+}
 function liveScenario(k, before) {
   cancelAnimationFrame(liveRaf);
   liveRaf = requestAnimationFrame(() => { liveRaf = 0; if (selected !== k || !SCN[k]) return; scLive = true; try { playScenario(k, before === undefined || sameVal(before, V(k)) ? undefined : before); } finally { scLive = false; } });

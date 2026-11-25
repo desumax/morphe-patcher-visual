@@ -608,8 +608,8 @@ const CHECKS = [
       const g0 = await gap();
       await p.evaluate(k => { const t = document.querySelector(`#list input[type=range][data-set="${k}"]`); t.value = 4; t.dispatchEvent(new Event("input", { bubbles: true })); }, k);
       await p.waitForTimeout(60); const mid = await gap(); await p.waitForTimeout(500); const end = await gap();
-      ok(g0 > end + 4, `the example side doesn't start wider than 4 dp (${g0} vs ${end})`);
-      ok(mid > end + 2 && mid < g0, `the first slider step cuts instead of gliding: ${g0} → ${mid} → ${end}`);
+      ok(g0 > end + 3, `the example side doesn't start wider than 4 dp (${g0} vs ${end})`);
+      ok(mid > end + 1 && mid < g0, `the first slider step cuts instead of gliding: ${g0} → ${mid} → ${end}`);
       await ctx.close();
     },
   },
@@ -647,6 +647,169 @@ const CHECKS = [
       if (names.includes("Hype")) { await p.locator(`#list [data-lst="${k}"] [data-lch="Hype"]`).click(); await p.waitForTimeout(400); }
       const v = await p.evaluate(k => V(k), k);
       ok(v === "Hype\nmy own", `after Hide on Hype the value is ${JSON.stringify(v)}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "area-boxes-group-by-location",
+    report: "Nov 25: Player → Controls had 19 button cards; split by area (Top, Middle, Bottom) with the plain switches boxed two to a line, cards with sub-settings after their area's box, the same for Shorts, Comments, Player menu, Description, Channel, Seekbar",
+    async run() {
+      const { p, ctx, errors } = await open();
+      const r = await p.evaluate(async () => {
+        setPicker(false);
+        const bad = [], out = {};
+        // every key in the tables is one of Morphe's (a typo or a renamed key would silently drop out)
+        for (const [tab, spec] of Object.entries(AREAS)) for (const [, ks] of spec) ks.forEach(x => { if (!PREF["morphe_" + x]) bad.push(`${tab}: morphe_${x} is not in Morphe's settings`); });
+        for (const tab of Object.keys(AREAS)) {
+          quickSection(tab); renderList(); await new Promise(r => setTimeout(r, 500));
+          const m = MEMBERS[tab], want = [...m.live, ...m.misc].filter(k => !PARENT_OF[k]);
+          const seen = [...document.querySelectorAll("#list .row[data-row]")].filter(r => !r.closest(".kids")).map(r => r.dataset.row);
+          want.forEach(k => { const n = seen.filter(x => x === k).length; if (n !== 1) bad.push(`${tab}: ${k} is listed ${n} times`); });
+          const boxes = [...document.querySelectorAll("#list .shared[data-area]")];
+          boxes.forEach(b => {
+            const spec = AREAS[tab].find(([n]) => n === b.dataset.area);
+            [...b.querySelectorAll(":scope > .kin > .row")].forEach(r => {
+              const k = r.dataset.row;
+              if (!spec || !spec[1].includes(k.replace(/^morphe_/, ""))) bad.push(`${tab}: ${k} is in ${b.dataset.area} but not in its table`);
+              if (PREF[k].type !== "boolean" || KIDS[k]) bad.push(`${tab}: ${k} (not a plain switch) is in a box`);
+              const sum = r.querySelector(".sum"); if (sum && sum.offsetHeight) bad.push(`${tab}: ${k} shows its description in a box`);
+              if (/\bbutton$/i.test(r.querySelector(".ttl").textContent.trim())) bad.push(`${tab}: ${k} still says button`);
+            });
+          });
+          out[tab] = boxes.map(b => b.dataset.area);
+        }
+        // Player: the three areas in order, a card with sub-settings right after its area's box
+        quickSection("player"); renderList(); await new Promise(r => setTimeout(r, 500));
+        const seq = [...document.querySelectorAll("#list .shared[data-area], #list .unit")].map(e => e.dataset.area || e.querySelector(".row").dataset.row);
+        return { bad, out, seq, cast: document.querySelector('#list [data-area="Top area"] [data-row="morphe_hide_cast_button"] .ttl')?.textContent.trim() };
+      });
+      ok(!r.bad.length, r.bad.slice(0, 8).join("; "));
+      ok(JSON.stringify(r.out.player) === '["Top area","Middle area","Bottom area"]', `Player boxes: ${r.out.player}`);
+      ok(r.cast === "Cast", `Cast button reads "${r.cast}" in the Top area box`);
+      const at = x => r.seq.indexOf(x);
+      ok(at("Middle area") < at("morphe_hide_player_control_buttons_background") && at("morphe_hide_player_control_buttons_background") < at("Bottom area") && at("Bottom area") < at("morphe_copy_video_link_button"), `order: ${r.seq.join(", ")}`);
+      ok(r.out.shorts.includes("Right side") && r.out.comments.includes("Comment box") && r.out.seekbar.includes("Haptics"), JSON.stringify(r.out));
+      ok(!errors.length, errors.join("; "));
+      await ctx.close();
+    },
+  },
+  {
+    name: "area-box-rows-still-work",
+    report: "Nov 25: the area boxes must not break what a card does: its toggle, the preview tap that selects it, the hidden part's collapse, Morphe's value",
+    async run() {
+      const { p, ctx, errors } = await open();
+      await p.evaluate(async () => { setPicker(false); quickSection("player"); renderList(); await new Promise(r => setTimeout(r, 600)); });
+      // the Hide half of Cast's toggle, in the Top area box
+      await p.locator('#list [data-area="Top area"] [data-row="morphe_hide_cast_button"] .lt7 > span').first().click(); await p.waitForTimeout(500);
+      const v1 = await p.evaluate(() => ({ v: V("morphe_hide_cast_button"), shown: shown("morphe_hide_cast_button") }));
+      ok(v1.v === true && v1.shown === false, `Hide on Cast in its box: ${JSON.stringify(v1)}`);
+      // tapping Captions in the preview selects its row inside the box
+      await p.evaluate(() => { const e = document.querySelector('#stage [data-k="morphe_hide_captions_button"]'); e.scrollIntoView({ block: "center" }); });
+      await p.locator('#stage [data-k="morphe_hide_captions_button"]').first().click(); await p.waitForTimeout(700);
+      const sel = await p.evaluate(() => ({ selected, rowSel: !!document.querySelector('#list [data-area="Top area"] [data-row="morphe_hide_captions_button"].sel') }));
+      ok(sel.selected === "morphe_hide_captions_button" && sel.rowSel, `preview tap: ${JSON.stringify(sel)}`);
+      // the switches design: the box's switch flips Morphe's boolean
+      await p.evaluate(async () => { design = "toggles"; renderBar(); renderList(); await new Promise(r => setTimeout(r, 400)); });
+      await p.locator('#list [data-area="Bottom area"] [data-sw="morphe_mute_video_button"]').click(); await p.waitForTimeout(500);
+      const v2 = await p.evaluate(() => V("morphe_mute_video_button"));
+      ok(v2 === true, `Mute's switch in the Bottom area box: ${v2}`);
+      ok(!errors.length, errors.join("; "));
+      await ctx.close();
+    },
+  },
+  {
+    name: "long-toggle-titles-fade-and-slide",
+    report: "Nov 25: Comments carousel filter cut \"Community\" beside its toggle; a title that doesn't fit fades out with an ellipsis, and pressing its toggle slides it right to left",
+    async run() {
+      const { p, ctx } = await open("index.html", { viewport: { width: 290, height: 740 }, touch: true });
+      const k = "morphe_hide_comments_carousel_filter_strings";
+      await p.evaluate(async k => { setPicker(false); setPref("morphe_hide_comments_carousel", true); commit(); quickSection(sectionOf(k)); renderList(); await new Promise(r => setTimeout(r, 900)); document.querySelector(`#list [data-lst="${k}"]`).scrollIntoView({ block: "center" }); await new Promise(r => setTimeout(r, 300)); }, k);
+      const name = `#list [data-lst="${k}"] .lchc:has([data-lch="Community"]) .lchn`;
+      const st = await p.evaluate(sel => { const e = document.querySelector(sel); return e && { ovf: e.classList.contains("ovf"), over: e.scrollWidth - e.clientWidth }; }, name);
+      ok(st && st.over > 1 && st.ovf, `Community at 290 px: ${JSON.stringify(st)}`);
+      await p.evaluate(sel => { window.__slid = []; const o = Element.prototype.animate; Element.prototype.animate = function (k, t) { if (Array.isArray(k) && k.some(f => "textIndent" in f)) window.__slid.push(this.textContent); return o.call(this, k, t); }; }, name);
+      await p.locator(`#list [data-lst="${k}"] .lchc:has([data-lch="Community"]) [data-lch]`).tap(); await p.waitForTimeout(600); // a real touch, scrolled into view
+      const slid = await p.evaluate(() => window.__slid);
+      ok(slid.includes("Community"), `pressing its toggle doesn't slide the title (slid: ${slid.join(", ")})`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "estimated-likes-label-has-room",
+    report: "Nov 25: Estimated likes: \"Hidden by owner\" was clipped",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        setPicker(false); setPref("morphe_ryd_enabled", true); commit(); quickSection(sectionOf("morphe_ryd_estimated_like")); await new Promise(r => setTimeout(r, 500));
+        select("morphe_ryd_estimated_like", "list"); await new Promise(r => setTimeout(r, 1500));
+        return [...document.querySelectorAll("#canvas .lkc7")].map(l => l.closest('div[style*="background:#272727"]')).map(pl => {
+          let c = pl.parentElement; while (c && getComputedStyle(c).overflow === "visible") c = c.parentElement;
+          const a = pl.getBoundingClientRect(), z = c.getBoundingClientRect(), l = pl.querySelector(".lkc7"), sp = l.parentElement.parentElement.getBoundingClientRect(), lr = l.getBoundingClientRect();
+          return { text: l.textContent, room: z.right - a.right, gap: sp.right - lr.right, shrinks: [...pl.children].some(x => getComputedStyle(x).flexShrink !== "0") };
+        });
+      });
+      ok(r.length === 2, `like pills: ${JSON.stringify(r)}`);
+      // nothing in the pill may shrink (a squeezed label ran into the divider), and the pill fits with room to spare
+      r.forEach(x => ok(x.room >= 8 && x.gap >= 3 && !x.shrinks, `"${x.text}" has no room: ${JSON.stringify(x)}`));
+      await ctx.close();
+    },
+  },
+  {
+    name: "feed-like-position-flashes-only-the-badge",
+    report: "Nov 25: changing Feed thumbnail like position flashed the duration, the title and the views badge",
+    async run() {
+      const { p, ctx } = await open();
+      const k = "morphe_ryd_feed_counts_position";
+      const r = await p.evaluate(async k => {
+        setPicker(false); setPref("morphe_ryd_enabled", true); commit(); quickSection(sectionOf(k)); renderList(); await new Promise(r => setTimeout(r, 500));
+        select(k, "list"); await new Promise(r => setTimeout(r, 1800));
+        const before = V(k); setPref(k, "MIDDLE_RIGHT"); commit(); playScenario(k, before); await new Promise(r => setTimeout(r, 900));
+        const hit = new Set();
+        for (const a of document.getAnimations()) { const t = a.effect?.target; if (!t || !t.closest || !t.closest("#canvas")) continue; if (a.effect.getKeyframes().some(f => "boxShadow" in f && "scale" in f)) hit.add(t); }
+        return [...hit].filter(t => !t.closest(".fb7")).map(t => (t.textContent || t.className.baseVal || t.tagName).trim().slice(0, 20));
+      }, k);
+      ok(!r.length, `unrelated parts flash: ${r.join(", ")}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "every-popup-grows-from-its-button",
+    report: "Nov 25: the Reset dialog's popup grows out of its button; the screen menu and the preview's tray of buttons that are off did not",
+    async run() {
+      const { p, ctx } = await open();
+      const centre = sel => p.evaluate(sel => { const e = document.querySelector(sel); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width }; }, sel);
+      const pill = await centre("#secPill");
+      // the first frame, measured in the same task as the tap (a busy machine let the spring run on before a later read)
+      const tapNow = (btn, sel) => p.evaluate(([btn, sel]) => { const b = document.querySelector(btn); b.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true })); b.click(); const e = document.querySelector(sel); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width }; }, [btn, sel]);
+      const m0 = await tapNow("#secPill", "#picker"); await p.waitForTimeout(500); const m1 = await centre("#picker");
+      ok(m0 && Math.hypot(m0.x - pill.x, m0.y - pill.y) < 60 && m0.w < m1.w * .5, `the screen menu doesn't start at its button: ${JSON.stringify({ pill, m0, m1 })}`);
+      await p.evaluate(() => setPicker(false)); await p.waitForTimeout(400);
+      await p.evaluate(async () => { quickSection("player"); await new Promise(r => setTimeout(r, 600)); });
+      const tp = await centre("#stage [data-tray]");
+      const t0 = await tapNow("#stage [data-tray]", "#stage .tray"); await p.waitForTimeout(500); const t1 = await centre("#stage .tray");
+      ok(t0 && Math.hypot(t0.x - tp.x, t0.y - tp.y) < 60 && t0.w < t1.w * .6, `the tray doesn't start at its pill: ${JSON.stringify({ tp, t0, t1 })}`);
+      await p.click("#stage [data-tray]"); await p.waitForTimeout(80);
+      const c0 = await centre("#stage .tray");
+      ok(c0 && c0.w < t1.w, `the tray doesn't shrink back into its pill: ${JSON.stringify(c0)}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "tab-fill-passes-over-pressed-tab",
+    report: "Nov 25 (phone): the tapped tab's grey was drawn over the moving white fill until it landed",
+    async run() {
+      const { p, ctx } = await open();
+      await p.evaluate(async () => { setPicker(false); quickSection("player"); await new Promise(r => setTimeout(r, 700)); });
+      const tab = '#tabs .tab7[data-tab="flyout"]';
+      await p.evaluate(sel => document.querySelector(sel).scrollIntoView({ inline: "center" }), tab); await p.waitForTimeout(400);
+      const b = await p.locator(tab).boundingBox();
+      await p.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await p.mouse.down(); await p.waitForTimeout(250); await p.mouse.up();
+      await p.waitForTimeout(40);
+      // a phone keeps the press (:active scale, glass brightness) on the tab for a moment after the tap, while
+      // the fill already moves; here the press is put back by hand, as the phone has it
+      const r = await p.evaluate(sel => { const t = document.querySelector(sel); t.style.transform = "scale(.96)"; t.style.filter = "brightness(1.18)"; const cs = getComputedStyle(t); return { gliding: t.parentElement.classList.contains("gliding"), transform: cs.transform, filter: cs.filter }; }, tab);
+      ok(r.gliding, `no glide ran: ${JSON.stringify(r)}`);
+      ok(r.transform === "none" && (r.filter === "none" || !r.filter), `the tapped tab paints over the fill: ${JSON.stringify(r)}`);
       await ctx.close();
     },
   },

@@ -111,7 +111,7 @@ input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer
 /* a list's names as toggles (listChoices in list.js), two to a line like a family of switches */
 .ctl.lch2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; margin-top: 8px; }
 .lchc { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; min-height: 34px; }
-.lchn { min-width: 0; overflow-wrap: anywhere; font-size: 14px; color: var(--m-on); }
+.lchn { flex: 1; min-width: 0; font-size: 14px; color: var(--m-on); }
 .lch2 .lt7 { height: 30px; font-size: 11px; } .lch2 .lt7 > span { min-width: 30px; padding: 0 5px; }
 .ctl.lst, .fallback .ctl.lst { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 6px; align-items: center; }
 /* every chip is as wide as the widest one (fitPills sets the columns); text centred, remove button at the end */
