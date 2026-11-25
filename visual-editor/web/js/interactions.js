@@ -19,6 +19,14 @@ const PROXY_K = { morphe_seekbar_custom_color: "morphe_hide_seekbar" };
 // options) scrolls the preview there first (Max, Nov 24: scrolled down on the video page, "Video action bar
 // layout" and "Like and Subscribe glow" left the action bar out of view). Its proxy part when it has one.
 const FOCUS_K = { morphe_video_action_bar_layout: '[data-k="morphe_hide_action_bar"]', morphe_disable_like_subscribe_glow: '[data-k="morphe_hide_action_bar"]' };
+// ...and the ones whose screen goes all the way back to its top instead, so the part is seen with the video,
+// title and channel above it, as when the page opens (Max, Nov 25: centring the action bar was not enough)
+const FOCUS_TOP = new Set(["morphe_video_action_bar_layout", "morphe_disable_like_subscribe_glow"]);
+function scrollStageTop() {
+  let moved = false;
+  document.querySelectorAll("#stage *").forEach(b => { if (b.scrollTop > 0 && /auto|scroll/.test(getComputedStyle(b).overflowY)) { b.scrollTo({ top: 0, behavior: "smooth" }); moved = true; } });
+  return moved;
+}
 function focusEls(k) {
   const pr = proxyEls(k); if (pr.length) return pr;
   return FOCUS_K[k] ? [...document.querySelectorAll(`#stage ${FOCUS_K[k]}`)].filter(e => e.getClientRects().length) : [];
@@ -78,7 +86,7 @@ function highlight(k, flash = true, reveal = false) {
   // wait until a growing (ghost-revealed or restored) element has its full size, then scroll to it
   const liveEls = () => [...document.querySelectorAll(`#stage [data-k="${k}"], #stage [data-also~="${k}"]`)];
   // a setting with no part of its own still scrolls to where it acts (focusEls), without an outline of its own
-  const go = () => { if (selected !== k) return; const live = liveEls(); els.splice(0, els.length, ...live); fT(finishAll, revealInStage(live.length ? live : focusEls(k)) ? 340 : 0); };
+  const go = () => { if (selected !== k) return; const live = liveEls(); els.splice(0, els.length, ...live); fT(finishAll, (!live.length && FOCUS_TOP.has(k) ? scrollStageTop() : revealInStage(live.length ? live : focusEls(k))) ? 340 : 0); };
   fT(() => {
     if (selected !== k) return;
     const growing = liveEls().flatMap(e => e.getAnimations()).filter(a => a.playState === "running" && isFinite(a.effect?.getComputedTiming().endTime) && a.effect?.getComputedTiming().fill !== "forwards");

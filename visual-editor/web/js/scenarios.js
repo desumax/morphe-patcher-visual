@@ -1514,6 +1514,14 @@ function duoValues(k, prev) {
   const r = !sameVal(cur, d) ? cur : prev !== undefined && !sameVal(prev, d) ? prev : (other ?? cur);
   return [[d, lab(d)], [r, lab(r)]];
 }
+// A slider whose setting has a comparison redraws it while it moves (Max, Nov 25: Quick actions top margin
+// didn't follow the slider; neither did any other slider with a comparison, not even on release). One redraw a
+// frame; scLive tells a story it is being redrawn for a slider step, so it can skip its opening motion.
+let scLive = false, liveRaf = 0;
+function liveScenario(k, before) {
+  cancelAnimationFrame(liveRaf);
+  liveRaf = requestAnimationFrame(() => { liveRaf = 0; if (selected !== k || !SCN[k]) return; scLive = true; try { playScenario(k, before === undefined || sameVal(before, V(k)) ? undefined : before); } finally { scLive = false; } });
+}
 function playScenario(k, prevValue) {
   const fn = SCN[k]; if (!fn) return;
   if (!hintOk(k, V(k), prevValue === undefined ? V(k) : prevValue, ...duoValues(k, prevValue).map(s => s[0]))) return; // a value without a story: shown plainly (core.js)

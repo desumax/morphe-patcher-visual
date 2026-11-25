@@ -378,7 +378,7 @@ const CHECKS = [
   },
   {
     name: "preview-scrolls-to-where-a-setting-acts",
-    report: "Nov 24: scrolled down on the video page, Video action bar layout (and its options) and Like and Subscribe glow didn't bring the preview to the action bar",
+    report: "Nov 24: scrolled down on the video page, Video action bar layout (and its options) and Like and Subscribe glow didn't bring the preview to the action bar; Nov 25: it should go to the very top",
     async run() {
       const { p, ctx } = await open();
       for (const k of ["morphe_video_action_bar_layout", "morphe_disable_like_subscribe_glow"]) {
@@ -386,10 +386,9 @@ const CHECKS = [
           setPicker(false); quickSection("watch"); await new Promise(r => setTimeout(r, 500));
           const sc = document.querySelector("#stage .inner-scroll"); sc.scrollTop = sc.scrollHeight; await new Promise(r => setTimeout(r, 200));
           select(k, "list"); await new Promise(r => setTimeout(r, 1300));
-          const b = sc.getBoundingClientRect(), t = document.querySelector('#stage [data-k="morphe_hide_action_bar"]').getBoundingClientRect();
-          return t.top >= b.top - 2 && t.bottom <= b.bottom + 2;
+          return sc.scrollTop;
         }, k);
-        ok(r, `${k}: the action bar stayed out of view`);
+        ok(r < 2, `${k}: the video page is ${Math.round(r)}px down instead of at its top (Nov 25: scroll to the very top)`);
       }
       await ctx.close();
     },
@@ -478,6 +477,49 @@ const CHECKS = [
       });
       ok(!r.bad.length, `Disable is not the last choice in: ${r.bad.join(", ")}`);
       ok(r.k && r.grey === true, `a chosen Disable is not grey (${r.k}: ${r.grey})`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "ryd-and-alert-settings-do-something",
+    report: "Nov 25: Estimated likes, Feed thumbnail like position / count / percentage and Connection error alerts did nothing",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        setPicker(false); setPref("morphe_ryd_enabled", true); setPref("morphe_sb_enabled", true); commit();
+        const bad = [];
+        for (const k of ["morphe_ryd_estimated_like", "morphe_ryd_feed_counts_position", "morphe_ryd_feed_like_count", "morphe_ryd_feed_like_ratio", "morphe_ryd_toast_on_connection_error", "morphe_sb_toast_on_connection_error"]) {
+          quickSection(sectionOf(k)); await new Promise(r => setTimeout(r, 400));
+          if (k === "morphe_ryd_feed_counts_position") { const b = state[k]; setPref(k, "MIDDLE_RIGHT"); afterChange(k, b); } else select(k, "list");
+          await new Promise(r => setTimeout(r, 1800));
+          const devs = [...document.querySelectorAll("#canvas.show .dev")];
+          if (devs.length !== 2 || devs[0].innerHTML === devs[1].innerHTML) bad.push(k);
+          select("morphe_ryd_enabled", "list"); await new Promise(r => setTimeout(r, 300));
+        }
+        return bad;
+      });
+      ok(!r.length, `no difference drawn for: ${r.join(", ")}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "slider-comparison-follows-slider",
+    report: "Nov 25: adjusting the Quick actions top margin slider did not change its animation live; its white and blue lines go",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        const k = "morphe_quick_actions_top_margin";
+        setPicker(false); quickSection(sectionOf(k)); await new Promise(r => setTimeout(r, 500)); select(k, "list"); await new Promise(r => setTimeout(r, 1200));
+        const sl = document.querySelector(`#list input[type="range"][data-set="${k}"]`); if (!sl) return { err: "no slider" };
+        for (const v of [6, 10, 14]) { sl.value = v; sl.dispatchEvent(new Event("input", { bubbles: true })); await new Promise(r => setTimeout(r, 120)); }
+        await new Promise(r => setTimeout(r, 200));
+        const labels = [...document.querySelectorAll("#canvas .dl7 > span")].map(e => e.textContent.trim());
+        const lines = [...document.querySelectorAll("#canvas .sf7, #canvas .sit")].filter(e => e.offsetHeight && e.textContent.trim()).map(e => e.textContent.trim());
+        return { labels, lines };
+      });
+      ok(!r.err, r.err);
+      ok(r.labels.includes("14 dp"), `the comparison still shows ${JSON.stringify(r.labels)} after the slider moved to 14`);
+      ok(!r.lines.length, `white or blue lines remain: ${JSON.stringify(r.lines)}`);
       await ctx.close();
     },
   },

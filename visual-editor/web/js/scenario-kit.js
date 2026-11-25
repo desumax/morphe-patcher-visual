@@ -656,8 +656,8 @@ scen("shorts", "skip_live_shorts", (box, on) => {
 // margin of this many dp. The row stays at the bottom of the screen, so the space opens above it: the
 // seekbar and time go up. Drawn larger than true size (a 92 px phone), with the gap measured.
 scen("watch", "quick_actions_top_margin", (box, v) => {
-  situation("Fullscreen: the seekbar over the quick actions", true);
-  const m = Number(v) || 0, px = dp => Math.round(dp * .45);
+  // no blue or white lines (Max, Nov 25): the drawing and the dp labels say it
+  const m = Number(v) || 0, px = dp => Math.round(dp * .45), live = scLive;
   const qa = ["like", "dislike", "comment", "save", "share", "plist"].map(n => `<span style="flex:none;display:grid;place-items:center;width:15px;height:10px;border-radius:5px;background:rgba(255,255,255,.16)">${ico7(n, 6, "#fff")}</span>`).join("");
   box.innerHTML = device("land", `<div style="position:absolute;inset:0;background:${ART[3]}"></div><div style="position:absolute;inset:0;background:linear-gradient(transparent 45%,rgba(0,0,0,.55))"></div>
     <div class="up7" style="position:absolute;left:8px;right:8px;bottom:19px;transition:translate .5s var(--ease)"><b style="display:block;font-size:5.5px;margin-bottom:2px">21:40 / 41:05</b><div style="height:2px;border-radius:1px;background:rgba(255,255,255,.35)"><div style="width:52%;height:100%;background:#f00;border-radius:1px"></div></div></div>
@@ -665,8 +665,10 @@ scen("watch", "quick_actions_top_margin", (box, v) => {
     <div style="position:absolute;left:8px;right:8px;bottom:4px;display:flex;gap:3px">${qa}</div>`);
   const dev = box.querySelector(".dev"), up = dev.querySelector(".up7"), gap = dev.querySelector(".gap7");
   // the margin opens on its side as you watch; the default side has none
-  if (m) at(350, () => { up.style.translate = `0 -${px(m)}px`; gap.style.height = px(m) + "px"; dev.insertAdjacentHTML("beforeend", `<b class="new7" style="position:absolute;right:9px;bottom:${19 + px(m) / 2}px;translate:0 50%;font-size:5.5px;color:#ffd21f">${m} dp</b>`); });
-  return m ? `${m} dp of space above the quick actions` : "The seekbar sits right on the quick actions (stock)";
+  // while the slider moves (scLive) the space is drawn at once at its new size, so it follows the finger
+  const open = () => { up.style.translate = `0 -${px(m)}px`; gap.style.height = px(m) + "px"; dev.insertAdjacentHTML("beforeend", `<b class="new7" style="position:absolute;right:9px;bottom:${19 + px(m) / 2}px;translate:0 50%;font-size:5.5px;color:#ffd21f">${m} dp</b>`); };
+  if (m) { if (live) { up.style.transition = gap.style.transition = "none"; open(); } else at(350, open); }
+  return "";
 });
 scen("fullscreen", "swipe_ignore_when_locked", (box, on) => {
   situation("Swiping while the screen is locked"); // no blue line (Max, Nov 20)
@@ -1464,3 +1466,52 @@ scen("danmaku", "niconico_comments_timed_comments_with_replay", (box, on) => {
   at(1400, () => toast7(dev, on ? "Chat replay + timed comments" : "Chat replay only", "72%"));
   return on ? "The chat replay and timed comments fly together" : "Only the chat replay flies (stock)";
 });
+
+// ---------- Return YouTube Dislike: the settings that act away from the action bar (Max, Nov 25: they did nothing)
+// ReturnYouTubeDislike.createDislikeSpan: on a video whose creator hid the likes, the like button says "Hidden by
+// owner" unless estimated likes are on, which show the like count Return YouTube Dislike estimates
+scen("watch", "ryd_estimated_like", (box, on) => {
+  situation("A video whose creator hid its likes", true);
+  const pill = `<div style="display:flex;width:max-content;max-width:100%;border-radius:8px;background:#272727;font-size:5.5px;align-items:center;white-space:nowrap"><span style="display:flex;gap:2px;align-items:center;padding:2px 4px;border-right:1px solid #444">${ico7("like", 6)}<span class="lkc7">Like</span></span><span style="display:flex;gap:2px;align-items:center;padding:2px 4px">${ico7("dislike", 6)}2.1K</span></div>`;
+  box.innerHTML = device("port", pageRows(player7(3) + `<b style="font-size:7px">Building a tiny cabin</b>` + pill + row7(2, "Night train to Bodø")));
+  const dev = box.querySelector(".dev");
+  // the count arrives from Return YouTube Dislike a moment after the page, as it does in the app
+  at(450, () => { const l = dev.querySelector(".lkc7"), was = l.textContent; l.textContent = on ? "~41K" : "Hidden by owner"; l.classList.add("chg7"); textSwap(l, was); });
+  return on ? "An estimated like count" : "“Hidden by owner”";
+});
+// FeedEngagementCountsPatch: a badge on feed thumbnails with the like icon and count and/or the like ratio
+// (with a like bar under it). Its place: in one row continuing the view count badge at the bottom
+// (NEXT_TO_VIEW_COUNT), stacked at the middle of the right edge under the Watch later button (MIDDLE_RIGHT), or
+// stacked at the top left (TOP_LEFT). One picture for its three settings.
+const FEED_POS = ["NEXT_TO_VIEW_COUNT", "MIDDLE_RIGHT", "TOP_LEFT"];
+function feedLikeBadge({ count, ratio, pos }) {
+  if (!count && !ratio) return "";
+  const bar = ratio ? `<i style="display:block;height:1.5px;margin-top:1px;border-radius:1px;background:linear-gradient(90deg,#f1f1f1 96%,#ff4e45 96%)"></i>` : "";
+  const c = count ? `<span style="display:flex;gap:1.5px;align-items:center">${ico7("like", 5.5, "#fff")}48K</span>` : "", r = ratio ? `<span>96%</span>` : "";
+  const box7 = "background:rgba(0,0,0,.75);border-radius:2px;padding:1px 2.5px;font-size:5px;font-weight:600;color:#fff;line-height:1.2";
+  if (pos === "NEXT_TO_VIEW_COUNT") return `<div class="fb7" style="position:absolute;left:3px;bottom:3px;${box7};display:grid"><div style="display:flex;gap:3px;align-items:center"><span>1.2M views</span><span style="width:.5px;align-self:stretch;background:#888"></span>${c}${r}</div>${bar}</div>`;
+  const at7 = pos === "MIDDLE_RIGHT" ? "right:3px;top:50%;translate:0 -30%" : "left:3px;top:3px";
+  return `<div class="fb7" style="position:absolute;${at7};${box7};display:grid;justify-items:center;gap:1px">${c}${r}${bar}</div>`;
+}
+function feedLikeScen(key, plan) {
+  scen("watch", key, (box, v) => {
+    const o = plan(v), d = o.pos === "MIDDLE_RIGHT" ? `<span style="position:absolute;right:3px;top:3px;width:9px;height:9px;border-radius:50%;background:rgba(0,0,0,.6);display:grid;place-items:center">${ico7("clock", 6, "#fff")}</span>` : "";
+    situation(o.sit, true);
+    // the stock badges: views at the bottom left (or none where the like row takes its place), the duration at the bottom right
+    const base = `${o.pos === "NEXT_TO_VIEW_COUNT" && (o.count || o.ratio) ? "" : `<span style="position:absolute;left:3px;bottom:3px;background:rgba(0,0,0,.75);border-radius:2px;padding:1px 2.5px;font-size:5px;font-weight:600">1.2M views</span>`}<span style="position:absolute;right:3px;bottom:3px;background:rgba(0,0,0,.75);border-radius:2px;padding:1px 2.5px;font-size:5px;font-weight:600">12:04</span>${d}`;
+    box.innerHTML = device("port", pageRows(feed7(big7(3, "Building a tiny cabin", base) + row7(2, "Night train to Bodø") + row7(4, "Lo-fi beats"))));
+    const dev = box.querySelector(".dev"), th = dev.querySelector("div[style*='height:38px']"); // big7's thumbnail
+    // the badge comes in once the counts are fetched, as in the app
+    const badge = feedLikeBadge(o);
+    if (badge && th) at(400, () => { th.insertAdjacentHTML("beforeend", badge); const b = th.querySelector(".fb7"); b.classList.add("chg7"); b.animate([{ opacity: 0, scale: .8 }, { opacity: 1, scale: 1 }], { duration: 260, easing: "ease-out" }); if (o.pos === "NEXT_TO_VIEW_COUNT") th.querySelectorAll(":scope > span").forEach(s => { if (/views/.test(s.textContent)) s.remove(); }); });
+    return "";
+  });
+}
+const feedNow = () => ({ count: !!V("morphe_ryd_feed_like_count"), ratio: !!V("morphe_ryd_feed_like_ratio"), pos: String(V("morphe_ryd_feed_counts_position") || "NEXT_TO_VIEW_COUNT") });
+feedLikeScen("ryd_feed_like_count", on => ({ ...feedNow(), count: !!on, sit: "Feed thumbnails" }));
+feedLikeScen("ryd_feed_like_ratio", on => ({ ...feedNow(), ratio: !!on, sit: "Feed thumbnails" }));
+// the place only shows with something in it: with neither switched on, the picture shows both
+feedLikeScen("ryd_feed_counts_position", v => { const n = feedNow(), any = n.count || n.ratio; return { count: any ? n.count : true, ratio: any ? n.ratio : true, pos: String(v), sit: any ? "Feed thumbnails" : "Feed thumbnails, with the like count and percentage on" }; });
+// The connection error alerts of Return YouTube Dislike and SponsorBlock, drawn as DeArrow's is
+hidePage("watch", "ryd_toast_on_connection_error", "Return YouTube Dislike can't reach its server", player7(3) + `<b style="font-size:7px">Building a tiny cabin</b><div style="display:flex;width:max-content;border-radius:8px;background:#272727;font-size:6px;align-items:center"><span style="display:flex;gap:2px;align-items:center;padding:2px 5px;border-right:1px solid #444">${ico7("like", 7)}48K</span><span style="display:flex;gap:2px;align-items:center;padding:2px 5px">${ico7("dislike", 7)}</span></div>` + row7(2, "Night train to Bodø") + tgt7(`<div style="padding:3px 5px;border-radius:8px;background:#323232;font-size:6px;text-align:center">Dislikes are temporarily not available (API timed out)</div>`), { invert: true });
+hidePage("sponsorblock", "sb_toast_on_connection_error", "SponsorBlock can't reach its server", player7(3, `<div style="position:absolute;left:4px;right:4px;bottom:3px;height:1.5px;background:rgba(255,255,255,.35)"><div style="width:30%;height:100%;background:#f00"></div></div>`) + `<b style="font-size:7px">Building a tiny cabin</b>` + row7(2, "Night train to Bodø") + row7(4, "Lo-fi beats") + tgt7(`<div style="padding:3px 5px;border-radius:8px;background:#323232;font-size:6px;text-align:center">SponsorBlock is temporarily not available (API timed out)</div>`), { invert: true });

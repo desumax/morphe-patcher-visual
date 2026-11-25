@@ -902,7 +902,8 @@ DEMOS.morphe_video_action_bar_layout = v => {
   // back at the start; parts whose pop origin was worked out at the clipped edge get it again
   if (!demoStep) onDemoStop(() => { row.__tw = (row.__tw || 0) + 1; row.scrollLeft = 0; row.querySelectorAll('[style*="--pop"]').forEach(popOrigin); });
   const fwd = demoStep % 2 === 0, [x0, y] = at(row, fwd ? .82 : .25), x1 = at(row, fwd ? .25 : .82)[0];
+  // the sideways drag, 15% quicker than it was (650 ms, Max, Nov 25)
   place(f, x0, y); f.classList.add("hold");
-  dT(() => { place(f, x1, y, 650); scrollTween(row, fwd ? Math.min(max, 220) : 0, 650); }, 120);
-  hideF(f, 900);
+  dT(() => { place(f, x1, y, 553); scrollTween(row, fwd ? Math.min(max, 220) : 0, 553); }, 120);
+  hideF(f, 780);
 };

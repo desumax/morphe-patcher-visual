@@ -181,6 +181,7 @@ $("list").addEventListener("input", e => {
     // the whole preview on every step flashed parts of it
     if (LIVE_HUD[k] && selected === k) LIVE_HUD[k]();
     else { if (selected !== k) stopScenario(); selected = k; renderStage(); highlight(k, false); if (LIVE_HUD[k]) LIVE_HUD[k](); }
+    if (SCN[k] && t.type === "range") liveScenario(k, JSON.parse(t.dataset.before)); // its comparison follows the slider
   }
 });
 $("list").addEventListener("change", e => {
@@ -188,7 +189,7 @@ $("list").addEventListener("change", e => {
   ensureMod();
   const before = "before" in t.dataset ? JSON.parse(t.dataset.before) : state[k]; delete t.dataset.before;
   setPref(k, t.type === "range" || t.type === "number" ? Number(t.value) : t.type === "color" ? fromColor(k, t.value) : coerce(k, t.value));
-  if (t.type === "range" || t.type === "color") { commit(); select(k); if (returnTo) afterChange(k, before); } else afterChange(k, before);
+  if (t.type === "range" || t.type === "color") { commit(); select(k); if (SCN[k] && t.type === "range") liveScenario(k, before); if (returnTo) afterChange(k, before); } else afterChange(k, before);
 });
 
 $("secPill").onclick = () => setPicker(!pickerOpen);
