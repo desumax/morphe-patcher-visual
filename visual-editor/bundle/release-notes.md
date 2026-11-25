@@ -1,25 +1,20 @@
 
 **Features**
-- Number settings turn on a 3D wheel; tap the middle or double tap to type the value in a pill above the keyboard
-- Settings are grouped in location boxes (Top, Middle, Bottom area and more) for Player controls, Shorts, Comments, Player menu, Description, Channel and Seekbar
-- The Glass navigation bar preview is drawn like the real bar, and Navigation buttons without labels has its preview
-- Shorts icon style shows the chosen icon set
-- Popups, dropdowns and Import / export grow from the button you tap
-- Flying comments stories follow your Display area, font size and duration; slider comparisons follow the slider live
-- Return YouTube Dislike feed likes, estimated likes and connection alerts show what they do
-- Show messages in YouTube snackbar redrawn from Morphe's code
-- Action bar buttons sit two to a line; Comments carousel filter names are toggles
-- Glass is switched off for good on weak devices after a longer check
+- Menu cards grow into their screen, and the menu from the back arrow settles with half the bounce
+- Value wheel stands upright beside the title, keeps the row height and turns at a speed set by its range
+- Disable new design pill is tighter and a softer red
+- Player controls background sits right after the three area boxes, Player menu toggles are grouped, and Shorts menu follows the preview order
+- Show messages in YouTube snackbar plays three times, faster
+- Copy timestamp by default: each side keeps its link, and the time sits above the seekbar
+- Hands in every story are sized from their phone, so none is too big on a small phone
 
 **Bug Fixes**
-- The green outline of a part is never cut at the top or bottom
-- In landscape the screen menu keeps its card size and popups fit
-- The Shorts menu no longer restarts its opening animation; Download in Shorts menu is in that same menu
-- About is no longer listed under Shorts
-- The 'Pull up for precise seeking' pill no longer stays on screen in other seekbar settings
-- Menu cards show their longest line in full ('Seekbar & gestures', 'Flying comments')
-- The tour button steps through the tour in order
-- The text caret no longer shows over the preview
-- Copy timestamp by default, Resuming on startup and Spoof app version drop their extra sentences
+- Back swipe from Navigation shows the card menu once, with no second pop-in, ghost or text resize
+- Leaving the redesign for YouTube's settings fades out instead of flashing white
+- Miscellaneous: the top bar follows only your finger
+- Edit video effects and other code values open in Morphe instead of showing garbled chips
+- Show messages in YouTube snackbar no longer clips its right side
+- Menu cards fit their longest line in the web view too
+- Video action bar layout: the finger stays on the action bar while the page scrolls back to its top
 
 Add https://github.com/desumax/morphe-patcher-visual as a patch source in Morphe Manager (Expert mode, together with Morphe Patches). Full history: CHANGELOG.md.
