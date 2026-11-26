@@ -82,6 +82,7 @@ const P = {
   vibration: "M0 15h2V9H0v6zm3 2h2V7H3v10zm19-8v6h2V9h-2zm-3 8h2V7h-2v10zM16.5 3h-9C6.67 3 6 3.67 6 4.5v15c0 .83.67 1.5 1.5 1.5h9c.83 0 1.5-.67 1.5-1.5v-15c0-.83-.67-1.5-1.5-1.5zM16 19H8V5h8v14z",
   phone7: "M16.5 3h-9C6.67 3 6 3.67 6 4.5v15c0 .83.67 1.5 1.5 1.5h9c.83 0 1.5-.67 1.5-1.5v-15c0-.83-.67-1.5-1.5-1.5zM16 19H8V5h8v14z",
   image: "M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z",
+  font: "M2.5 4v3h5v12h3V7h5V4h-13zm19 5h-9v3h3v7h3v-7h3V9z",
   tv: "M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z",
   eye: "M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z",
   gesture: "M9 11.24V7.5a2.5 2.5 0 0 1 5 0v3.74c1.21-.81 2-2.18 2-3.74C16 5.01 13.99 3 11.5 3S7 5.01 7 7.5c0 1.56.79 2.93 2 3.74zm9.84 4.63-4.54-2.26c-.17-.07-.35-.11-.54-.11H13v-6c0-.83-.67-1.5-1.5-1.5S10 6.67 10 7.5v10.74l-3.43-.72c-.08-.01-.15-.03-.24-.03-.31 0-.59.13-.79.33l-.79.8 4.94 4.94c.27.27.65.44 1.06.44h6.79c.75 0 1.33-.55 1.44-1.28l.75-5.27c.01-.07.02-.14.02-.2 0-.62-.38-1.16-.91-1.38z",
@@ -166,7 +167,7 @@ const SECTIONS = [
 const GROUPS = [
   { id: "g_player", icon: "play", title: "Player", tabs: [["player", "Controls"], ["seekbar", "Seekbar & gestures"], ["fullscreen", "Fullscreen"], ["flyout", "Player menu"], ["miniplayer", "Miniplayer"]] },
   { id: "g_playback", icon: "speed", title: "Playback", tabs: [["playback", "Video & audio"], ["behaviour", "Behaviour"], ["endscreen", "End screen"], ["captions", "Captions"], ["sponsorblock", "SponsorBlock"]] },
-  { id: "g_watch", icon: "like", title: "Watch page", tabs: [["watch", "Actions"], ["description", "Description"], ["comments", "Comments"], ["danmaku", "Flying comments"], ["ambient", "Ambient mode"]] },
+  { id: "g_watch", icon: "like", title: "Watch page", tabs: [["watch", "Actions"], ["description", "Description"], ["ambient", "Ambient mode"], ["comments", "Comments"], ["danmaku", "Flying comments"]] },
   { id: "g_feed", icon: "home", title: "Feed", tabs: [["feed", "Home"], ["shorts", "Shorts"], ["ads", "Ads"], ["dearrow", "DeArrow"]] },
   { id: "g_browse", icon: "layout", title: "Browsing", tabs: [["channel", "Channel page"], ["explore", "Explore menu"], ["nav", "Navigation"]] },
   { id: "g_app", icon: "palette", title: "App", tabs: [["look", "App look"], ["snackbar", "Snackbar"], ["misc", "Miscellaneous"]] },
@@ -302,9 +303,14 @@ const store = {
   save() { try { localStorage.setItem(LS, JSON.stringify({ state: changedOnly(), section })); } catch { /* storage unavailable */ } },
 };
 
+// defaults Morphe works out while it runs, as its code does: the first choice this version offers
+// (SplashAnimationPatch.getDefaultStyle: Morphe Glow 1 where the app has Rive animations, 21.30+, otherwise
+// Morphe Color, since Morphe's patches include Custom branding)
+const COMPUTED_DEFAULTS = { morphe_splash_screen_style: ["RIVE_GLOW_MORPHE", "MORPHE_COLOR"] };
 function initialValue(p) {
   let d = p.default;
   const vals = (p.entries || []).map(e => e.value);
+  if (d == null && COMPUTED_DEFAULTS[p.key]) d = COMPUTED_DEFAULTS[p.key].find(v => vals.includes(v)) ?? d;
   if (p.type === "boolean") return d === true;
   if (p.type === "integer" || p.type === "long" || p.type === "float") {
     if (typeof d === "number") return d;

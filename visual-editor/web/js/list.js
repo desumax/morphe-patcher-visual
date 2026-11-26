@@ -608,8 +608,8 @@ function controlFor(k) {
     return `<div class="ctl side whl">${wheelHTML(k, Math.min(0, n), Infinity, st, n, dis)}<input class="wsrc" type="number" value="${v}" data-set="${k}" ${dis} tabindex="-1" aria-hidden="true" step="${st}"></div>`;
   }
   if (p.type === "string") {
-    // Morphe opens the system file picker for these; the preview does the same and draws the image
-    if (p.widget === "NonInteractivePreference" && /_file$/.test(k)) return `<div class="ctl"><label class="opt filepick" ${dis ? 'aria-disabled="true"' : ""}>${I("image")}${v ? "Change image" : "Choose image"}<input type="file" accept="image/*" data-file="${k}" ${dis} hidden></label>${v ? `<span class="val">${esc(v)}</span>` : ""}</div>`;
+    // Morphe opens the system file picker for these; the preview does the same (FILE_PICK: what each one takes)
+    if (p.widget === "NonInteractivePreference" && /_file$/.test(k)) { const fp = FILE_PICK[k] || FILE_PICK.image; return `<div class="ctl side"><label class="opt filepick" ${dis ? 'aria-disabled="true"' : ""}>${I(fp.icon)}${v ? "Change " + fp.word : "Choose " + fp.word}<input type="file" accept="${fp.accept}" data-file="${k}" ${dis} hidden></label>${v ? `<span class="val">${esc(v)}</span>` : ""}</div>`; }
     if (/color/.test(k) && /^#/.test(String(v))) return `<div class="ctl side"><input type="color" value="#${String(v).slice(-6)}" data-set="${k}" ${dis} aria-label="${esc(shownTitle(k))}"><span class="val">${esc(v)}</span></div>`;
     if (isListBox(k)) return listBox(k, dis);
     return `<div class="ctl"><input type="text" value="${esc(v)}" data-set="${k}" ${dis} aria-label="${esc(shownTitle(k))}"></div>`;
@@ -980,6 +980,14 @@ function areaCard(i, live) {
 }
 // One-line titles beside toggles (two-column cells, a list's name toggles): one that doesn't fit is marked
 // (.ovf: it fades out with an ellipsis), and a press slides it right to left to show the rest, then back.
+// What a file setting's picker takes, as Morphe's own picker does: the seekbar thumb asks for an image
+// (CustomSeekbarThumbPreference: image/*); the font asks for any file and keeps only a .ttf or .otf, with
+// Morphe's message for anything else (CustomFontFilePreference; Max, Nov 25: it said "Choose image" and took
+// only images).
+const FILE_PICK = {
+  image: { icon: "image", word: "image", accept: "image/*" },
+  morphe_custom_font_file: { icon: "font", word: "font", accept: ".ttf,.otf,font/ttf,font/otf", only: /\.(ttf|otf)$/i, bad: "The picked file is not a TTF or OTF font" },
+};
 const FIT_LINE = ":is(.kids, .shared) > .kin.duo2 .ttl, .lchn";
 // An area box whose titles mostly don't fit two to a line (Comments: "Community Guidelines") lists them one
 // to a line instead (.one), measured again at every width, so a wide screen gets its two columns back.
@@ -991,12 +999,29 @@ function fitLines(root) {
     if (t.filter(overflows).length * 3 > t.length) b.classList.add("one");
   });
   root.querySelectorAll(FIT_LINE).forEach(e => e.classList.toggle("ovf", overflows(e)));
+  resumeSlide();
 }
-function slideLine(e) {
+// The slide goes far enough for the last letter to clear the fade at the right edge (it stopped 6 px
+// past the edge, so a short overflow like "Course progress" never showed its end), and the start of the
+// line is only faded once it has moved (--mql). The press usually redraws the card a moment later, which
+// threw the sliding title away mid-slide, so every title broke off after about 0.4 s: fitLines, which runs
+// after every redraw, finds the new title by its setting and carries the slide on from the same point
+// (Max, Nov 25: "broken universally").
+const MQ_FADE = 10;
+let mqLast = null;
+function slideLine(e, key, from = 0) {
   const over = e.scrollWidth - e.clientWidth; if (over < 2 || e.classList.contains("mq")) return;
   e.classList.add("mq");
-  const a = e.animate([{ textIndent: "0px" }, { textIndent: -(over + 6) + "px", offset: .42 }, { textIndent: -(over + 6) + "px", offset: .62 }, { textIndent: "0px" }], { duration: 1400 + over * 22, easing: "cubic-bezier(.45,0,.25,1)" });
+  const d = -(over + MQ_FADE + 4) + "px", l = MQ_FADE + "px", dur = 1600 + over * 22;
+  const a = e.animate([{ textIndent: "0px", "--mql": "0px" }, { "--mql": l, offset: .12 }, { textIndent: d, "--mql": l, offset: .42 }, { textIndent: d, "--mql": l, offset: .62 }, { "--mql": l, offset: .88 }, { textIndent: "0px", "--mql": "0px" }], { duration: dur, easing: "cubic-bezier(.45,0,.25,1)" });
+  if (from) a.currentTime = Math.min(from, dur - 1);
   a.onfinish = a.oncancel = () => e.classList.remove("mq");
+  mqLast = key ? { key, el: e, t0: performance.now() - from, dur } : null;
+}
+function resumeSlide() {
+  const m = mqLast; if (!m || m.el.isConnected) return;
+  const at = performance.now() - m.t0; if (at >= m.dur) { mqLast = null; return; }
+  const t = $("list").querySelector(m.key); if (t) slideLine(t, m.key, at);
 }
 // the title a row shows in the list: shortened in a two-column family, the family's word added to its parent
 function rowTitle(k) {

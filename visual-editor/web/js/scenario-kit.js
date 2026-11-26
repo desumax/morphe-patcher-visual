@@ -56,10 +56,18 @@ function fingerOn(dev, f, el, fx = .5, fy = .5, ms = 0) {
 // Every "mark, then remove" story (a part of the page outlined in red, then folded away) runs on one
 // clock, so all of them change speed together (Max, Nov 24: 30% faster than the 350 / 1050 / 1700 ms
 // they had). The fold itself is .tgt7's transition (motion.css), sped up the same way.
+// A part that fills the phone up to its edges (a scrim, a gradient) has its red outline drawn inside
+// itself: drawn outside, the phone cut off all but one side, which read as a stray red line across the
+// video (Max, Nov 25: Tap and hold gradient).
+function atEdges7(e) {
+  const d = e.closest(".dev"); if (!d) return false;
+  const r = e.getBoundingClientRect(), o = d.getBoundingClientRect(), s = o.width / (d.offsetWidth || 1), c = d.clientLeft * s, k = 2.5 * s;
+  return [r.left - o.left - c < k, o.right - c - r.right < k, r.top - o.top - c < k, o.bottom - c - r.bottom < k].filter(Boolean).length >= 2;
+}
 const MARK_T = { mark: 245, gone: 735, unmark: 1190 };
 function markGone(targets, remove, o = {}) {
   const t = [...targets];
-  at(MARK_T.mark, () => t.forEach(e => { e.classList.remove("instant7"); if (o.reveal) e.classList.remove("gone7"); e.classList.add("mark7"); }));
+  at(MARK_T.mark, () => t.forEach(e => { e.classList.remove("instant7"); if (o.reveal) e.classList.remove("gone7"); e.classList.toggle("in7", atEdges7(e)); e.classList.add("mark7"); }));
   at(MARK_T.gone, () => { if (remove) t.forEach(e => e.classList.add("gone7")); if (o.then) o.then(); });
   at(MARK_T.unmark, () => t.forEach(e => e.classList.remove("mark7")));
 }
@@ -287,7 +295,7 @@ hidePage("feed", "hide_notifications_menu_header", "Tapping the bell: the Notifi
 hidePage("feed", "hide_notify_me_button", "An upcoming premiere in the feed", feed7(big7(6, "Premieres Friday 18:00", `<span style="position:absolute;left:3px;bottom:3px;padding:0 3px;border-radius:2px;background:rgba(0,0,0,.7);font-size:5px">UPCOMING</span>`) + `<div style="display:flex;justify-content:flex-end;margin-top:-2px">${tgt7(`<span style="padding:2px 6px;border-radius:7px;background:#f1f1f1;color:#000;font-size:6px;display:inline-flex;gap:2px;align-items:center">${ico7("bell", 7, "#000")}Notify me</span>`, 1)}</div>` + row7(3, "Building a tiny cabin")), { hidden: "No reminder button on upcoming streams and premieres" });
 hidePage("feed", "hide_search_term_thumbnails", "Search suggestions", search7("cab", `<div style="display:grid;gap:3px">${["cabin build", "cabin tour", "cabin in the woods"].map((t, i) => `<div style="display:flex;gap:4px;align-items:center;font-size:6.5px">${ico7("search", 7)}<span style="flex:1">${t}</span>${tgt7(`<div style="width:20px;height:11px;border-radius:2px;background:${ART[i + 2]}"></div>`, 1)}</div>`).join("")}</div>`));
 hidePage("feed", "hide_show_more_button", "Search results", search7("cabin", row7(2, "Cabin build in 30 days") + row7(3, "Cabin tour") + tgt7(`<div style="text-align:center;font-size:6px;padding:2px;border:1px solid #333;border-radius:8px">Show more</div>`) + row7(4, "Off-grid cabin")));
-hidePage("feed", "hide_subscribed_channels_bar", "Subscriptions", top7("Subscriptions", ["search"]) + tgt7(`<div style="display:flex;gap:4px">${[0, 1, 2, 3, 4].map(i => `<span style="width:13px;height:13px;border-radius:50%;background:${AV[i]}"></span>`).join("")}</div>`) + row7(3, "Building a tiny cabin") + row7(5, "Why ice is slippery"));
+hidePage("feed", "hide_subscribed_channels_bar", "Subscriptions", top7("Subscriptions", ["search"]) + tgt7(`<div style="display:flex;gap:5px">${[0, 1, 2, 3].map(i => `<span style="width:13px;height:13px;border-radius:50%;background:${AV[i]}"></span>`).join("")}</div>`) + row7(3, "Building a tiny cabin") + row7(5, "Why ice is slippery"));
 hidePage("feed", "hide_subscribed_channels_bar_names", "Subscriptions", top7("Subscriptions", ["search"]) + `<div style="display:flex;gap:5px">${["Fjord", "Pocket", "Tapes", "Nico"].map((n, i) => `<div style="display:grid;justify-items:center;gap:1px"><span style="width:13px;height:13px;border-radius:50%;background:${AV[i]}"></span>${tgt7(`<span style="font-size:5px">${n}</span>`)}</div>`).join("")}</div>` + row7(3, "Building a tiny cabin"));
 hidePage("feed", "hide_unavailable_videos_hidden_banner", "A playlist with removed videos", top7("Road trip mix", ["search", "more"]) + tgt7(`<div style="padding:3px;border-radius:3px;background:#1b1b1b;font-size:6px;color:#aaa">2 unavailable videos are hidden</div>`) + row7(1, "Night train to Bodø") + row7(2, "Lo-fi beats"));
 hidePage("feed", "hide_web_search_results", "Search results", search7("how to split wood", row7(2, "Splitting wood the easy way") + tgt7(`<div style="padding:3px;border-radius:3px;background:#1b1b1b;font-size:6px">${ico7("search", 7)} Results from the web · wikihow.com</div>`) + row7(3, "Axe vs maul")));
@@ -303,15 +311,19 @@ scen("feed", "open_channel_of_live_avatar", (box, on) => {
   at(850, () => { f.classList.remove("show"); dev.querySelector(".pg7").innerHTML = on ? top7("Pocket Science", ["search", "more"]) + `<div style="height:16px;border-radius:2px;background:${ART[5]}"></div><div style="display:flex;gap:4px;align-items:center"><span style="width:14px;height:14px;border-radius:50%;background:${AV[5]}"></span><b style="font-size:7px">Pocket Science</b></div>${row7(1, "Live now")}${row7(2, "Why ice is slippery")}` : player7(5, `<span style="position:absolute;left:3px;top:3px;background:#cc0000;font-size:5px;font-weight:700;padding:0 3px;border-radius:2px">LIVE</span>`) + chat7([[1, "ola", "wow!!"], [2, "mia", "green!"], [3, "ken", "😍"]]); });
   return on ? "The avatar opens the channel" : "The avatar opens the live stream (stock)";
 });
+// the middle of an element in the phone's own px (its drawing is scaled on screen)
+const rowMid = (dev, el) => { const d = dev.getBoundingClientRect(), r = el.getBoundingClientRect(), z = d.width / dev.clientWidth; return (r.top - d.top + r.height / 2) / z; };
 scen("feed", "playlist_long_press_drag", (box, on) => {
-  situation("Reordering a playlist");
   box.innerHTML = device("port", pageRows(top7("Road trip mix", ["search", "more"]) + `<div class="pl7" style="display:grid;gap:4px;position:relative">${[1, 2, 3, 4].map(i => `<div class="pi7" style="transition:transform .3s">${row7(i, ["Night train to Bodø", "Lo-fi beats", "Fjord drive", "Coffee jazz"][i - 1])}</div>`).join("")}</div>`));
   const dev = box.querySelector(".dev"), f = box.querySelector("#scFinger"), it = dev.querySelectorAll(".pi7"); const W = dev.clientWidth, H = dev.clientHeight;
-  at(250, () => holdAt(f, W * .5, H * .15));
+  // the finger holds the first row and moves exactly as far as the row does (Max, Nov 25: it ended a row
+  // above the row it carried): both come from the rows' own places, measured in the phone
+  const pitch = it[1].offsetTop - it[0].offsetTop, y0 = rowMid(dev, it[0]);
+  at(250, () => holdAt(f, W * .5, y0));
   at(1000, () => { if (!on) { f.classList.remove("hold", "show"); sheet7(dev, sheetRows([["clock", "Save to Watch later"], ["close", "Remove from playlist"]])); return; } it[0].style.transform = "scale(1.05)"; it[0].style.background = "#333"; });
-  at(1300, () => { if (!on) return; fingerTo(f, W * .5, H * .37, 600); it[0].style.transform = "translateY(42px) scale(1.05)"; it[1].style.transform = "translateY(-21px)"; it[2].style.transform = "translateY(-21px)"; });
-  at(2000, () => { if (!on) return; f.classList.remove("hold", "show"); it[0].style.transform = "translateY(42px)"; it[0].style.background = ""; });
-  return on ? "Hold anywhere on a row and drag it to a new place" : "Hold opens the menu; drag only from the small handle (stock)";
+  at(1300, () => { if (!on) return; fingerTo(f, W * .5, y0 + 2 * pitch, 600); const mv = (f.style.transition.match(/top ([^,]+)/) || [0, `${600 * scStretch}ms var(--ease)`])[1]; it.forEach(e => { e.style.transition = "transform " + mv; }); /* the rows move with the finger's own timing */ it[0].style.transform = `translateY(${2 * pitch}px) scale(1.05)`; it[1].style.transform = `translateY(${-pitch}px)`; it[2].style.transform = `translateY(${-pitch}px)`; });
+  at(2000, () => { if (!on) return; f.classList.remove("hold", "show"); it[0].style.transform = `translateY(${2 * pitch}px)`; it[0].style.background = ""; });
+  return ""; // no sentences (Max, Nov 25): the drag and the menu say it
 });
 scen("feed", "playlist_wide_drag_handles", (box, on) => {
   situation("Grabbing a playlist row to move it");
@@ -493,17 +505,109 @@ scen("look", "spoof_app_version", (box, on) => {
   // (no message pill naming what the version brings back, Max, Nov 25: the version shown is the story)
   return "";
 });
-// Morphe: "Use the theme color for text and icons". Stock keeps text and icons white; on, they take the theme colour.
+// Morphe: "Use the theme color for text and icons" (ThemeColorPatch.getForegroundColor): the text and icons
+// YouTube draws in its own white (#F1F1F1, dark theme) or black (#0F0F0F, light theme) take the colour of the
+// other theme instead, so the dark theme writes in your light theme's colour. Drawn with your colours: the
+// dark theme unless it is App default (then nothing changes there, and the light theme is shown); when the
+// other theme's colour is too close to the stock white / black to see, Light pink / Material You (Primary)
+// stand in so the change can be seen.
+// (Max, Nov 25: the look must follow the theme settings as Morphe's code does; it used to show a made-up teal.)
 scen("look", "theme_color_change_foreground", (box, on) => {
-  situation("Your custom theme colour is teal");
+  const dark = V("morphe_theme_color_dark") !== "APP_DEFAULT", bg = themeColor(dark), stock = dark ? "#f1f1f1" : "#0f0f0f";
+  const near = (x, y) => [1, 3, 5].every(i => Math.abs(parseInt(x.substr(i, 2), 16) - parseInt(y.substr(i, 2), 16)) < 24);
+  let ink = themeColor(!dark); if (near(ink, stock)) ink = dark ? "#fccff3" : youColor("MATERIAL_YOU_PRIMARY", true);
   const items = [["clock", "History"], ["plist", "Playlists"], ["dl", "Downloads"], ["gear", "Settings"]];
-  box.innerHTML = device("port", pageRows(top7("You", ["cast", "search", "gear"]) + `<div style="display:grid;gap:3px">${items.map(([i, t]) => `<div class="fg7" style="display:flex;gap:5px;align-items:center;font-size:7px;color:#f1f1f1;fill:#f1f1f1;transition:color .4s,fill .4s">${I(i, "ico", 'style="width:9px;height:9px;fill:inherit;transition:fill .4s"')}<span>${t}</span></div>`).join("")}</div><div style="height:10px;border-radius:5px;background:#26a69a;width:60%"></div>`));
-  const dev = box.querySelector(".dev");
-  dev.querySelectorAll(".pg7 > div:first-child svg").forEach(e => { e.style.transition = "fill .4s"; });
-  toast7(dev, on ? "Text and icons take the theme colour" : "Text and icons stay white", "78%");
-  at(300, () => { if (!on) return; dev.querySelectorAll(".fg7").forEach(e => { e.style.color = "#4db6ac"; e.style.fill = "#4db6ac"; }); dev.querySelectorAll(".pg7 > div:first-child svg").forEach(e => { e.style.fill = "#4db6ac"; }); });
-  return on ? "Text and icons use your theme colour" : "Text and icons stay white (stock)";
+  box.innerHTML = device("port", pageRows(top7("You", ["cast", "search", "gear"]) + `<div style="display:grid;gap:3px">${items.map(([i, t]) => `<div class="fg7" style="display:flex;gap:5px;align-items:center;font-size:7px;color:${stock};fill:${stock};transition:color .4s,fill .4s">${I(i, "ico", 'style="width:9px;height:9px;fill:inherit;transition:fill .4s"')}<span>${t}</span></div>`).join("")}</div>`));
+  const dev = box.querySelector(".dev"), pg = dev.querySelector(".pg7") || dev;
+  dev.style.background = bg; pg.style.background = bg; pg.style.color = stock;
+  dev.querySelectorAll(".pg7 > div:first-child svg").forEach(e => { e.style.transition = "fill .4s"; e.style.fill = stock; });
+  at(300, () => { if (!on) return; dev.querySelectorAll(".fg7").forEach(e => { e.style.color = ink; e.style.fill = ink; }); pg.style.color = ink; dev.querySelectorAll(".pg7 > div:first-child svg").forEach(e => { e.style.fill = ink; }); });
+  return "";
 });
+// Startup animation (Max, Nov 25: it did nothing): opening the app from the home screen, as Morphe plays it.
+// Drawn from SplashAnimationPatch and Morphe's own animation file (custom-branding/raw/morphe_startup_animation
+// .json, 42 frames at 60 fps): the Morphe mark's left pillar (#1E5AA8) and right pillar (#00AFAE) grow up from
+// their feet with a small overshoot (frames 0-18 and 3-21), the wave (gradient #1E5AA8 to #00AFAE) rises 26 units
+// into place (5-21), the mark grows from 33.3 to 37% (0-28) and a white sheen sweeps across it (23-39).
+// - Color / Monochrome: YouTube's own one-second logo animation, in red or in the theme's foreground colour.
+// - Morphe Color / Morphe Monochrome: the Morphe animation above, in its colours or in the foreground colour.
+// - Glow / Morphe Glow 1 / Morphe Glow 2 (Rive, 21.30+ and 21.39+): the logo comes into focus out of a coloured
+//   glow, for as long as Startup animation duration says (1200 ms by default); a tap skips it.
+// - Disabled: Android's splash shows the plain icon for a moment and the app opens.
+// The splash is drawn in the theme's background colour (Morphe's splash theme follows the theme colour).
+const MORPHE_MARK = {
+  wave: "M127 108C93 108 83 133 83 148L83 202C113 169 158 229 163 235C191 267 207 322 256 324C304 322 323 268 349 235C349 235 394 161 429 155C429 127 418 108 385 108C351 108 327 158 310 180C293 202 285 226 256 226C227 226 218 201 202 180C185 158 161 108 127 108Z",
+  right: "M349 285L349 370C350 391 368 408 389 408C410 408 428 391 429 370L429 182C418 168 355 245 349 285Z",
+  left: "M123 140C102 140 84 157 83 178L83 370C84 391 102 408 123 408C144 408 162 391 163 370L163 178C162 157 144 140 123 140Z",
+};
+let markN = 0;
+function morpheMark(size, mono) {
+  const id = "mm" + (++markN), fill = c => mono ? mono : c;
+  return `<svg class="mark7" viewBox="83 108 346 300" style="width:${size}px;height:${size * 300 / 346}px;overflow:visible"><defs><linearGradient id="${id}g" gradientUnits="userSpaceOnUse" x1="83" y1="216" x2="429" y2="216"><stop offset="0" stop-color="${fill("#1e5aa8")}"/><stop offset="1" stop-color="${fill("#00afae")}"/></linearGradient>
+    <clipPath id="${id}c"><path d="${MORPHE_MARK.wave}"/><path d="${MORPHE_MARK.left}"/><path d="${MORPHE_MARK.right}"/></clipPath></defs>
+    <path class="pl7" d="${MORPHE_MARK.left}" fill="${fill("#1e5aa8")}" style="transform-origin:123px 408px"/><path class="pr7" d="${MORPHE_MARK.right}" fill="${fill("#00afae")}" style="transform-origin:389px 408px"/>
+    <path class="wv7" d="${MORPHE_MARK.wave}" fill="url(#${id}g)"/><g clip-path="url(#${id}c)"><rect class="sh7" x="-32" y="-104" width="64" height="720" fill="#fff" fill-opacity=".55" transform="translate(0 0)" style="transform:translate(-120px,0) rotate(20deg);transform-box:view-box;transform-origin:0 256px"/></g></svg>`;
+}
+// YouTube's logo: the rounded red tile with its white play triangle (or the theme's foreground colour)
+const ytLogo = (size, mono, bg) => `<svg class="ytl7" viewBox="0 0 28 20" style="width:${size}px;height:${size * 20 / 28}px"><rect width="28" height="20" rx="5.6" fill="${mono || "#ff0033"}"/><path d="M11.2 5.6v8.8l7.6-4.4z" fill="${mono ? bg : "#fff"}"/></svg>`;
+const LOTTIE_EASE = "cubic-bezier(.2,.2,.1,1)", F60 = n => n * 1000 / 60;
+function playMorpheMark(svg) {
+  const o = (f0, f1) => ({ delay: F60(f0), duration: F60(f1 - f0), easing: LOTTIE_EASE, fill: "both" });
+  svg.querySelector(".pl7").animate([{ transform: "scaleY(0)" }, { transform: "scaleY(1.06)", offset: 12 / 18 }, { transform: "scaleY(1)" }], o(0, 18));
+  svg.querySelector(".pr7").animate([{ transform: "scaleY(0)" }, { transform: "scaleY(1.06)", offset: 12 / 18 }, { transform: "scaleY(1)" }], o(3, 21));
+  svg.querySelector(".wv7").animate([{ transform: "translateY(26px)" }, { transform: "translateY(0)" }], o(5, 21));
+  svg.animate([{ transform: "scale(.9)" }, { transform: "scale(1)" }], o(0, 28));
+  svg.querySelector(".sh7").animate([{ transform: "translate(-40px,0) rotate(20deg)" }, { transform: "translate(560px,0) rotate(20deg)" }], { delay: F60(23), duration: F60(16), easing: "cubic-bezier(.45,0,.8,.2)", fill: "both" });
+}
+const SPLASH_RIVE = new Set(["RIVE_GLOW", "RIVE_GLOW_MORPHE", "RIVE_GLOW_MORPHE_2"]);
+function splashStory(box, style, glowMs) {
+  const bg = themeColor(true), ink = themeInk(true), mono = /BLACK_AND_WHITE|MONOCHROME/.test(style) ? ink : null;
+  const morphe = /^MORPHE|^RIVE_GLOW_MORPHE/.test(style);
+  const icon = `<span style="width:20px;height:20px;border-radius:6px;background:#0f1a2b;display:grid;place-items:center">${morpheMark(13)}</span>`;
+  const apps = ["#3ddc84", "#4285f4", "#ea4335", "#fbbc04", "#a142f4", "#24c1e0", "#f6aea9"];
+  box.innerHTML = device("port", `<div class="hs7" style="position:absolute;inset:0;background:linear-gradient(160deg,#22304f,#3b2a55 55%,#1b1e2b);display:grid;grid-template-columns:repeat(4,1fr);align-content:end;gap:9px 0;justify-items:center;padding:0 6px 26px">
+      ${apps.map(c => `<span style="width:20px;height:20px;border-radius:6px;background:${c};opacity:.85"></span>`).join("")}<span class="ic7">${icon}</span></div>
+    <div class="spl7" style="position:absolute;inset:0;background:${bg};display:grid;place-items:center;opacity:0;clip-path:circle(0 at 80% 84%)"></div>
+    <div class="app7" style="position:absolute;inset:0;opacity:0">${pageRows(feed7(`${big7(2, "Night train to Bodø")}${big7(4, "Building a tiny cabin")}`)).replace("background:#0f0f0f", `background:${bg}`)}</div>`);
+  const dev = box.querySelector(".dev"), f = dev.querySelector(".finger"), spl = dev.querySelector(".spl7"), app = dev.querySelector(".app7");
+  const ic = dev.querySelector(".ic7"), W = dev.clientWidth, H = dev.clientHeight;
+  const r = ic.getBoundingClientRect(), d = dev.getBoundingClientRect(), k = d.width / (dev.offsetWidth || 1);
+  const ix = (r.left - d.left + r.width / 2) / k - dev.clientLeft, iy = (r.top - d.top + r.height / 2) / k - dev.clientTop;
+  spl.style.clipPath = `circle(0 at ${ix}px ${iy}px)`;
+  at(120, () => fingerTo(f, ix, iy));
+  at(420, () => tapF(f));
+  const T0 = 540, open = () => spl.animate([{ opacity: 0, clipPath: `circle(0 at ${ix}px ${iy}px)` }, { opacity: 1, clipPath: `circle(${Math.hypot(W, H)}px at ${ix}px ${iy}px)` }], { duration: 260, easing: "cubic-bezier(.2,.8,.2,1)", fill: "forwards" });
+  // the splash lasts as long as the style plays, in real time (at() stretches a story to fill its round)
+  const show = ms => later(() => app.animate([{ opacity: 0, transform: "scale(.96)" }, { opacity: 1, transform: "none" }], { duration: 220, easing: "ease-out", fill: "forwards" }), 260 + ms);
+  at(T0, () => { f.classList.remove("show"); open(); });
+  if (style === "DISABLED") { // Android's own splash: the plain icon, then the app
+    at(T0, () => { spl.innerHTML = icon.replace("width:20px;height:20px", "width:26px;height:26px"); show(220); });
+    return;
+  }
+  if (SPLASH_RIVE.has(style)) { // the logo comes into focus out of its glow, as long as the duration says
+    const ms = Math.max(200, Number(glowMs) || 1200), logo = morphe ? morpheMark(34, mono) : ytLogo(34, mono, bg);
+    const glow = morphe ? "radial-gradient(circle,rgba(30,90,168,.9),rgba(0,175,174,.55) 45%,transparent 70%)" : "radial-gradient(circle,rgba(255,0,51,.85),rgba(255,120,60,.5) 45%,transparent 70%)";
+    at(T0, () => {
+      spl.innerHTML = `<div style="position:relative;display:grid;place-items:center"><i class="gl7" style="position:absolute;width:80px;height:80px;border-radius:50%;background:${glow}"></i><div class="lg7" style="position:relative">${logo}</div></div>`;
+      spl.querySelector(".gl7").animate([{ opacity: 0, transform: "scale(.4)" }, { opacity: 1, transform: "scale(1.1)", offset: .45 }, { opacity: 0, transform: "scale(1.5)" }], { duration: ms, easing: "ease-out", fill: "both" });
+      spl.querySelector(".lg7").animate([{ opacity: 0, filter: "blur(6px)", transform: "scale(1.25)" }, { opacity: 1, filter: "blur(0)", transform: "scale(1)", offset: .6 }, { opacity: 1, filter: "blur(0)", transform: "scale(1)" }], { duration: ms, easing: "cubic-bezier(.2,.8,.2,1)", fill: "both" });
+      show(ms);
+    });
+    return;
+  }
+  if (morphe) { at(T0, () => { spl.innerHTML = morpheMark(34, mono); playMorpheMark(spl.querySelector("svg")); show(F60(42) + 120); }); return; }
+  // YouTube's own logo animation (one second): the tile pops in, the triangle follows
+  at(T0, () => {
+    spl.innerHTML = ytLogo(34, mono, bg);
+    const s = spl.querySelector("svg");
+    s.animate([{ transform: "scale(0)" }, { transform: "scale(1.12)", offset: .45 }, { transform: "scale(.96)", offset: .7 }, { transform: "scale(1)" }], { duration: 700, easing: "cubic-bezier(.2,.8,.2,1)", fill: "both" });
+    s.querySelector("path").animate([{ opacity: 0, transform: "scale(.3)" }, { opacity: 1, transform: "scale(1)" }], { delay: 300, duration: 400, easing: "cubic-bezier(.2,.8,.2,1)", fill: "both" });
+    s.querySelector("path").style.transformOrigin = "14px 10px";
+    show(1000);
+  });
+}
+scen("look", "splash_screen_style", (box, v) => { splashStory(box, String(v), V("morphe_splash_screen_duration")); return ""; });
+scen("look", "splash_screen_duration", (box, v) => { const st = String(V("morphe_splash_screen_style")); splashStory(box, SPLASH_RIVE.has(st) ? st : "RIVE_GLOW_MORPHE", v); return ""; });
 scen("look", "custom_filter", (box, on) => {
   situation("Your own custom filter");
   box.innerHTML = device("port", pageRows(feed7(big7(3, "Building a tiny cabin") + tgt7(`<div style="padding:3px;border-radius:3px;background:#1b1b1b;font-size:6px">Sponsored shelf you don't want</div>`) + row7(4, "Night train to Bodø"))));
@@ -526,7 +630,7 @@ scen("nav", "disable_toolbar_navigation_tabs", (box, on) => {
 hidePage("nav", "hide_toolbar_microphone_button", "The search bar", search7("", "").replace(ico7("mic"), tgt7(ico7("mic"), 1)) + `<div style="display:grid;gap:3px">${item7("clock", "cabin build")}${item7("clock", "lo-fi beats")}</div>`);
 // A small watch page for the Ambient mode comparisons: the film's glow under the player (.amg7), or with
 // enhanced: the whole page lit (.aml7). Same film and colours as the live preview (AMB_ART, AMB_GLOW).
-const ambPage = (enh) => `<div class="pg7" style="position:absolute;inset:0;background:#0f0f0f;overflow:hidden">${enh ? `<div class="aml7" style="position:absolute;inset:-12px;background:${AMB_ART};background-size:100% 60%;background-repeat:no-repeat;filter:blur(6px) saturate(1.3);opacity:.8;transition:opacity .45s"></div>` : `<div class="amg7" style="position:absolute;left:-15%;right:-15%;top:30px;height:60px;background:${AMB_GLOW};filter:blur(5px);transition:opacity .45s"></div>`}<div style="position:relative;height:44px;background:${enh ? "transparent" : "#000"}"><div style="position:absolute;left:0;right:0;top:7px;bottom:7px;background:${AMB_ART}"></div></div><div style="position:relative;padding:5px 6px;display:grid;gap:4px;font-size:7px;color:#ddd"><b style="font-size:7px">Building a tiny cabin</b><div style="display:flex;gap:3px">${chip7("Like")}${chip7("Share")}${chip7("Save")}</div>${row7(2, "Up next · Night train")}${row7(4, "Up next · Lo-fi beats")}${row7(1, "Up next · Rain on a roof")}</div></div>`;
+const ambPage = (enh) => `<div class="pg7" style="position:absolute;inset:0;background:#0f0f0f;overflow:hidden">${enh ? `<div class="aml7" style="position:absolute;inset:-12px;background:${AMB_ART};background-size:100% 60%;background-repeat:no-repeat;filter:blur(6px) saturate(1.3);opacity:.8;transition:opacity .45s"></div>` : `<div class="amg7" style="position:absolute;left:-15%;right:-15%;top:30px;height:60px;background:${AMB_GLOW};filter:blur(5px);transition:opacity .45s"></div>`}<div class="apl7" style="position:relative;height:44px;background:${enh ? "transparent" : "#000"}"><div style="position:absolute;left:0;right:0;top:7px;bottom:7px;background:${AMB_ART}"></div></div><div class="acn7" style="position:relative;padding:5px 6px;display:grid;gap:4px;font-size:7px;color:#ddd"><b style="font-size:7px">Building a tiny cabin</b><div style="display:flex;gap:3px">${chip7("Like")}${chip7("Share")}${chip7("Save")}</div>${row7(2, "Up next · Night train")}${row7(4, "Up next · Lo-fi beats")}${row7(1, "Up next · Rain on a roof")}</div></div>`;
 // Bypass Ambient mode restrictions: battery saver comes on. Stock turns the glow off to save power; on, it stays.
 scen("ambient", "bypass_ambient_mode_restrictions", (box, on) => {
   situation("Battery saver turns on");
@@ -536,15 +640,32 @@ scen("ambient", "bypass_ambient_mode_restrictions", (box, on) => {
   at(900, () => { if (!on) glow.style.opacity = 0; toast7(dev, on ? "The glow stays on" : "The glow is switched off", "80%"); });
   return "";
 });
-// Dim while scrolling (enhanced): the page scrolls; the light dims while it moves, then comes back.
+// Dim while scrolling (Morphe AmbientLightController): a touch on the page below the player, or the page
+// scrolling after it, dims the light to a quarter (DIMMED_STRENGTH 64 of 256) in 180 ms; while the page
+// scrolls the player gets shorter and crops the video. When nothing has been touched for the Dim duration
+// the light comes back over 1.6 s (RESTORE_DURATION_MS). Off: the light stays as it is. (Max, Nov 25: the
+// story did not actually show scrolling; no sentences.)
+SCN_HOLD.morphe_enhanced_ambient_mode_dim_while_scrolling = 3600;
 scen("ambient", "enhanced_ambient_mode_dim_while_scrolling", (box, on) => {
-  situation("Scrolling the watch page");
   box.innerHTML = device("port", ambPage(true));
   const dev = box.querySelector(".dev"), lit = dev.querySelector(".aml7"), f = box.querySelector("#scFinger"), W = dev.clientWidth, H = dev.clientHeight;
-  at(250, () => fingerTo(f, W * .5, H * .75)); at(500, () => fingerTo(f, W * .5, H * .4, 600));
-  at(550, () => { if (on) lit.style.opacity = .25; toast7(dev, on ? "The light dims while you scroll" : "The light stays bright", "80%"); });
-  at(1200, () => { f.classList.remove("show"); });
-  at(1700, () => { lit.style.opacity = .8; });
+  const pl = dev.querySelector(".apl7"), cn = dev.querySelector(".acn7"); pl.style.zIndex = 2; // the page scrolls under the player
+  cn.insertAdjacentHTML("beforeend", row7(3, "Up next · Fjord drive") + row7(5, "Up next · Coffee jazz") + row7(0, "Up next · Cabin tour"));
+  at(150, () => fingerTo(f, W * .55, H * .82));
+  at(450, () => {
+    f.classList.add("hold");
+    if (on) { lit.style.transition = "opacity .18s linear"; lit.style.opacity = .2; } // the touch dims it
+  });
+  at(600, () => {
+    // the finger pushes the page up: the rows scroll, the player gets shorter
+    fingerTo(f, W * .55, H * .38, 750);
+    // the rows that pass the player's bottom edge go out of sight there (clip-path follows the scroll)
+    pl.style.transition = cn.style.transition = ["height", "transform", "clip-path"].map(x => `${x} ${750 * scStretch}ms cubic-bezier(.3,0,.3,1)`).join(",");
+    cn.style.clipPath = "inset(0 0 0 0)"; void cn.offsetWidth;
+    pl.style.height = "28px"; cn.style.transform = "translateY(-46px)"; cn.style.clipPath = "inset(46px 0 0 0)";
+  });
+  at(1350, () => { f.classList.remove("hold", "show"); cn.style.transition = ["transform", "clip-path"].map(x => `${x} ${500 * scStretch}ms cubic-bezier(.1,.6,.3,1)`).join(","); cn.style.transform = "translateY(-58px)"; cn.style.clipPath = "inset(58px 0 0 0)"; }); // a short fling after the lift
+  at(2000, () => { if (on) { lit.style.transition = `opacity ${1600 * scStretch}ms ease`; lit.style.opacity = .8; } }); // nothing touched: the light comes back
   return "";
 });
 scen("ambient", "disable_fullscreen_ambient_mode", (box, on) => {
@@ -688,6 +809,10 @@ scen("shorts", "skip_live_shorts", (box, on) => {
 // of the screen, so the space opens above it: the seekbar and time go up. True to scale: the drawn phone is
 // a landscape phone 412 dp tall (Realme GT 8 Pro), so a dp is its height / 412 px (Max, Nov 25: match the
 // scale). The dp label sits on the row's line, right of the buttons, so it never crosses the seekbar.
+// a phone's inner height, measured once per phone size: reading it from a phone just drawn laid the whole
+// page out again at every value of a slider (Max, Nov 25: the wheel lagged)
+const DEV_INNER = {};
+const devInnerH = dev => DEV_INNER[dev.style.height + "/" + dev.className] ??= dev.clientHeight;
 scen("watch", "quick_actions_top_margin", (box, v) => {
   // no blue or white lines (Max, Nov 25): the drawing and the dp labels say it
   const m = Number(v) || 0, live = scLive;
@@ -697,7 +822,7 @@ scen("watch", "quick_actions_top_margin", (box, v) => {
     <div class="gap7" style="position:absolute;right:4px;bottom:19px;width:2px;height:0;border:solid #ffd21f;border-width:1px 0;background:linear-gradient(#ffd21f,#ffd21f) center/1px 100% no-repeat;box-sizing:border-box;opacity:0"></div>
     <div style="position:absolute;left:8px;right:8px;bottom:4px;display:flex;gap:3px">${qa}</div>`);
   const dev = box.querySelector(".dev"), up = dev.querySelector(".up7"), gap = dev.querySelector(".gap7");
-  const k = dev.clientHeight / 412, px = dp => dp * k;
+  const k = devInnerH(dev) / 412, px = dp => dp * k;
   // the space at a size in dp, with the yellow measure beside it (only while there is a space)
   const set = dp => { up.style.translate = `0 -${px(dp)}px`; gap.style.height = px(dp) + "px"; gap.style.opacity = dp > .5 ? 1 : 0; };
   const label = () => { if (m) dev.insertAdjacentHTML("beforeend", `<b class="new7" style="position:absolute;right:4px;bottom:5px;font-size:5px;line-height:8px;color:#ffd21f">${m} dp</b>`); };
@@ -892,7 +1017,7 @@ hidePage("description", "hide_ask_gemini_button", "", panel7("Ask about this vid
   ${tgt7(`<div style="display:flex;gap:3px;align-items:center;justify-content:center;padding:2px;border-radius:6px;border:1px solid #444">${ico7("spark", 6)}Ask Gemini</div>`)}`));
 hidePage("captions", "hide_sync_button", "", panel7("Transcript", ["0:12 · Today we start the roof", "0:31 · First the rafters go up", "0:48 · Then the boards, one by one", "1:05 · Time for the shingles"].map((t, n) => `<div style="color:${n === 1 ? "#fff" : "#aaa"}">${t}</div>`).join("") + tgt7(`<div style="justify-self:center;padding:2px 6px;border-radius:8px;background:#f1f1f1;color:#0f0f0f;width:max-content;margin:0 auto">Sync to video time</div>`)));
 hidePage("comments", "hide_subscribers_community_guidelines", "Before posting in a channel's community", top7("Fjord & Timber", ["more"]) + tgt7(`<div style="padding:3px;border-radius:3px;background:#1b1b1b;font-size:6px">Please follow the community guidelines · Got it</div>`) + cmt7(2, "Love the roof!"));
-hidePage("seekbar", "hide_tap_and_hold_gradient", "Holding the video for 2× speed", `<div style="position:absolute;inset:0;background:${ART[3]}"></div><div class="tgt7" style="position:absolute;left:0;right:0;top:0;height:40%;background:linear-gradient(rgba(0,0,0,.75),transparent)"></div><div class="toastin" style="top:6px;z-index:2">2× ▶▶</div>`, { dev: "land", raw: true });
+hidePage("seekbar", "hide_tap_and_hold_gradient", "Holding the video for 2× speed", `<div style="position:absolute;inset:0;background:${ART[3]}"></div><div class="tgt7 fade7" style="position:absolute;left:0;right:0;top:0;bottom:60%;background:linear-gradient(rgba(0,0,0,.75),transparent)"></div><div class="toastin" style="top:6px;z-index:2">2× ▶▶</div>`, { dev: "land", raw: true });
 // Morphe (OnTheGoSheet): the player menu's On-the-go opens Morphe's own panel right under the video:
 // a handle, "On-the-go" and ✕, the thumbnail, title and channel, a time bar, big previous / −10 /
 // play-pause / +10 / next buttons, then audio mode (headset) and speed. Audio mode slides the panel up
@@ -1269,7 +1394,6 @@ hidePage("dearrow", "dearrow_connection_toast", "DeArrow can't reach its server"
 // preview flipped between both without saying which was which.)
 SCN_HOLD.morphe_narrow_navigation_buttons = 1800;
 scen("nav", "narrow_navigation_buttons", (box, on) => {
-  situation("The bar at the bottom");
   const tabs = [["home", "Home"], ["shorts", "Shorts"], ["plus", ""], ["subs", "Subs"], ["you", "You"]];
   box.innerHTML = device("port", pageRows(feed7(big7(3, "Building a tiny cabin") + row7(2, "Night train"))) + `<div class="chg7" style="position:absolute;left:0;right:0;bottom:0;height:19px;background:#0f0f0f;border-top:1px solid #222;display:flex;justify-content:center;align-items:center">${tabs.map(([n, t]) => `<span class="nb7" style="display:grid;justify-items:center;gap:1px;font-size:4.5px;line-height:1;flex:1 1 0;min-width:0;transition:flex .52s var(--ease)">${ico7(n, 8)}<span>${t}</span></span>`).join("")}</div>`);
   // Nov 24 (Max: broken): 16 px buttons filled nearly the whole 92 px bar, so both sides looked the same.
@@ -1278,7 +1402,7 @@ scen("nav", "narrow_navigation_buttons", (box, on) => {
   // four plays per loop and 15% faster than v146 (Max, Nov 24): body 1800 ms (4 runs, stretch 1.3), the
   // pull starts at 320 x 1.3 = 416 ms (was 480) and takes .52 s (was .6)
   if (on) at(320, () => box.querySelectorAll(".nb7").forEach(e => { e.style.flex = "0 0 14px"; }));
-  return on ? "The buttons sit close together in the middle" : "The buttons spread over the whole width (stock)";
+  return ""; // no sentences (Max, Nov 25): the bars say it
 });
 
 function inScope(p, scopes) { return scopes.some(([s, sub]) => p.screen === s && (p.subScreen || null) === sub); }
@@ -1319,10 +1443,10 @@ const MANUAL_PARENT = {
   // with the swap on, Create lives in the top bar (its own toggle there); this one only acts on the bottom bar
   morphe_hide_create_button: { key: "morphe_swap_create_with_notifications_button", mode: "not" },
   morphe_hide_toolbar_notification_button: { key: "morphe_swap_create_with_notifications_button", mode: "not" },
-  // with the glass bar on, the style only decides Default vs Translucent, which glass already overrides
-  morphe_navigation_bar_style: { key: "morphe_navigation_bar_glass", mode: "not" },
 };
-const NOT_PARENT = { morphe_navigation_bar_glass: "morphe_navigation_bar_style" }; // avoid a loop with the line above
+// Navigation bar style is its own card above Glass navigation bar (Max, Nov 25): nested in the glass card,
+// its Opaque made the glass bar unavailable and took the glass bar and Narrow navigation buttons with it
+const NOT_PARENT = {};
 // Two settings that are alternatives, not a setting and its sub-option: the second stays its own row,
 // greyed out (with its lock) while the first is on. Enhanced Ambient mode takes the place of Ambient mode,
 // so nesting "Ambient mode" under "Enhanced Ambient mode" read as one of Enhanced's options (Max, Nov 23 PM).
@@ -1369,14 +1493,25 @@ function buildKids() {
   for (const k in PARENT_OF) { let r = PARENT_OF[k], g = 0; while (PARENT_OF[r] && g++ < 6) r = PARENT_OF[r]; PARENT_OF[k] = r; }
   for (const k in PARENT_OF) (KIDS[PARENT_OF[k]] = KIDS[PARENT_OF[k]] || []).push(k);
 }
-function kidVisible(k, depth = 0) {
+function availBlockedByParent(k) {
+  const up = new Set(); let d = DIRECT_PARENT[k], g = 0; while (d && g++ < 8) { up.add(d); d = DIRECT_PARENT[d]; } if (PARENT_OF[k]) up.add(PARENT_OF[k]);
+  const keys = unmetClauses(k).flatMap(c => [...c.matchAll(/[SD]\("([^"]+)"\)/g)].map(m => m[1]));
+  return !keys.length || keys.some(x => up.has(x)) || !keys.some(x => PREF[x] && inVersion(x));
+}
+function kidVisible(k, depth = 0, from = null) {
   const m = MANUAL_PARENT[k];
   if (m && m.always) return true;
   if (m && (m.mode === "not" ? !!state[m.key] : !state[m.key])) return false;
-  if (!(classicParentsOk(k) && availOk(k))) return false;
+  // a parent that is unavailable only because of the sub-option asking does not take that sub-option with
+  // it: Navigation bar style sits in the glass bar's card, and its Opaque makes the glass bar unavailable,
+  // which hid the style itself, so it could not be set back (Max, Nov 25)
+  if (!classicParentsOk(k)) return false;
+  // unavailable because of a setting beside it, not above it (the glass bar while Navigation bar style is
+  // Opaque): the card stays, locked, and leads to that setting; only a parent's state folds a card away
+  if (!availOk(k) && !(from && availKeys(k).includes(from)) && availBlockedByParent(k)) return false;
   // a sub-sub-option also hides with its own parent
   const d = DIRECT_PARENT[k];
-  return !d || !PARENT_OF[d] || depth > 6 || kidVisible(d, depth + 1);
+  return !d || !PARENT_OF[d] || depth > 6 || kidVisible(d, depth + 1, k);
 }
 const sectionKeys = () => MEMBERS[section] ? [...MEMBERS[section].live, ...MEMBERS[section].misc] : [];
 const sectionOf0 = k => SECTIONS.find(s => MEMBERS[s.id].live.includes(k) || MEMBERS[s.id].misc.includes(k))?.id || "misc";
@@ -1565,8 +1700,12 @@ function feedLikeBadge({ count, ratio, pos }) {
   const c = count ? `<span style="display:flex;gap:1.5px;align-items:center">${ico7("like", 5.5, "#fff")}48K</span>` : "", r = ratio ? `<span>96%</span>` : "";
   const box7 = "background:rgba(0,0,0,.75);border-radius:2px;padding:1px 2.5px;font-size:5px;font-weight:600;color:#fff;line-height:1.2";
   if (pos === "NEXT_TO_VIEW_COUNT") return `<div class="fb7" style="position:absolute;left:3px;bottom:3px;${box7};display:grid"><div style="display:flex;gap:3px;align-items:center"><span>1.2M views</span><span style="width:.5px;align-self:stretch;background:#888"></span>${c}${r}</div>${bar}</div>`;
-  const at7 = pos === "MIDDLE_RIGHT" ? "right:3px;top:50%;translate:0 -30%" : "left:3px;top:3px";
-  return `<div class="fb7" style="position:absolute;${at7};${box7};display:grid;justify-items:center;gap:1px">${c}${r}${bar}</div>`;
+  // stacked: the like bar spans the badge right under the ratio (it had no width in the centred grid, so
+  // the badge only showed an empty strip at its bottom, Max, Nov 25), and at MIDDLE_RIGHT the badge ends
+  // under the Watch later button and above the duration badge (FeedEngagementCountsPatch: top =
+  // max(minTop, middle - height / 2), which is about 12 px on this thumbnail) instead of covering either
+  const at7 = pos === "MIDDLE_RIGHT" ? "right:3px;top:12.5px" : "left:3px;top:3px";
+  return `<div class="fb7" style="position:absolute;${at7};${box7};font-size:4.6px;line-height:1.05;display:grid;justify-items:center;gap:.5px;padding-bottom:1px">${c}${r}${bar.replace("margin-top:1px", "margin-top:0;justify-self:stretch")}</div>`;
 }
 function feedLikeScen(key, plan) {
   AWAY.add("morphe_" + key);
