@@ -6,6 +6,18 @@ Versions carry no "-" suffix: Manager treats those as prereleases and leaves the
 The patcher engine's own changelog is in docs/PATCHER-CHANGELOG.md.
 
 
+# [0.1.17](https://github.com/desumax/morphe-patcher-visual/compare/v0.1.16...v0.1.17) (2026-11-26)
+
+
+### Bug Fixes
+
+* **YouTube - Visual settings editor:** Menu cards open without a pop or flash at the end (every card)
+* **YouTube - Visual settings editor:** The top bar follows only your finger, so scrolling no longer hides and shows it by itself
+* **YouTube - Visual settings editor:** Steadier scrolling: hiding or showing the top bar no longer restyles the whole page
+* **YouTube - Visual settings editor:** No stray green glass block in SponsorBlock
+* **YouTube - Visual settings editor:** A slow swipe start no longer pops the hold line or a hidden preview part into view
+
+
 # [0.1.16](https://github.com/desumax/morphe-patcher-visual/compare/v0.1.15...v0.1.16) (2026-11-26)
 
 
