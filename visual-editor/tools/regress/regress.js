@@ -1353,6 +1353,170 @@ const CHECKS = [
     },
   },
   {
+    name: "setting-never-hides-itself",
+    report: "Nov 25 (15:17): Navigation bar style broke and disappeared when Opaque was chosen (Opaque makes the glass bar unavailable, and the style row sat in the glass bar's card)",
+    async run() {
+      const { p, ctx } = await open();
+      // every switch and every option of every setting with a parent: picking a value never hides the row
+      // it was picked on
+      const r = await p.evaluate(() => {
+        const bad = []; let n = 0;
+        for (const k of Object.keys(PARENT_OF)) {
+          const pr = PREF[k]; if (!pr) continue;
+          const vals = pr.type === "boolean" ? [true, false] : (pr.entries || []).map(e => e.value);
+          if (!vals.length) continue;
+          const was = state[k];
+          for (const v of vals) {
+            setPref(k, v === undefined ? was : v);
+            if (!kidVisible(k)) continue; // hidden for another reason before the pick
+            for (const w of vals) { if (w === v) continue; setPref(k, w); n++; if (!kidVisible(k)) bad.push(`${k.replace("morphe_", "")} = ${w}`); setPref(k, v); }
+          }
+          setPref(k, was);
+        }
+        return { n, bad: [...new Set(bad)].slice(0, 8) };
+      });
+      ok(r.n > 100, `picks tried: ${r.n}`);
+      ok(!r.bad.length, `rows that hide themselves: ${r.bad.join(", ")}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "stories-as-asked-nov25-1517",
+    report: "Nov 25 (15:17): Navigation bar animations loops 4 times; Narrow navigation buttons, Long press to reorder playlist videos, Search within channel without white sentences; Search within channel half-faded with Morphe's channel search icon; Open Shorts with reviewed; Subscribed channels bar shows 4 icons like Subscribed channel names; Dim while scrolling actually scrolls",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        const wait = ms => new Promise(r => setTimeout(r, ms));
+        const go = async k => { setPicker(false); quickSection(sectionOf(k)); await wait(400); select(k, "list"); };
+        const words = () => [...document.querySelectorAll("#canvas .sit, #canvas .sf7")].filter(e => e.offsetHeight && e.textContent.trim()).map(e => e.textContent.trim());
+        const out = { lines: [], runs: 0, tapped: false, icon: false, crop: false, avatars: [], scrolled: false, dimOn: 1, dimOff: 0 };
+        for (const k of ["morphe_narrow_navigation_buttons", "morphe_playlist_long_press_drag", "morphe_channel_search", "morphe_shorts_player_type", "morphe_enhanced_ambient_mode_dim_while_scrolling"]) {
+          await go(k);
+          const seen = new Set();
+          for (let t = 0; t < 2600; t += 130) {
+            await wait(130); words().forEach(w => seen.add(w));
+            const devs = [...document.querySelectorAll("#canvas .dev")];
+            if (k === "morphe_channel_search") { if (devs.some(d => d.innerHTML.includes("M3,11a8,8"))) out.icon = true; if (devs.length && devs.every(d => d.classList.contains("crop7"))) out.crop = true; }
+            if (k === "morphe_enhanced_ambient_mode_dim_while_scrolling") devs.forEach((d, i) => {
+              const c = d.querySelector(".acn7"), l = d.querySelector(".aml7"); if (!c || !l) return;
+              if (new DOMMatrix(getComputedStyle(c).transform).m42 < -20) out.scrolled = true;
+              const o = +getComputedStyle(l).opacity; if (i) out.dimOn = Math.min(out.dimOn, o); else out.dimOff = Math.max(out.dimOff, o);
+            });
+          }
+          if (seen.size) out.lines.push(`${k.replace("morphe_", "")}: ${[...seen].join(" / ")}`);
+        }
+        const nk = "morphe_navigation_bar_animations"; const L = SCN_HOLD[nk] || SC_HOLD; out.runs = Math.floor(SC_TOTAL / (L * 1.45));
+        await go(nk);
+        for (let t = 0; t < 1500 && !out.tapped; t += 40) { await wait(40); if (document.querySelector("#canvas .tap, #scFinger.tap")) out.tapped = true; }
+        for (const k of ["morphe_hide_subscribed_channels_bar", "morphe_hide_subscribed_channels_bar_names"]) {
+          await go(k); await wait(300);
+          const d = document.querySelector("#canvas .dev");
+          out.avatars.push(d ? [...d.querySelectorAll('span[style*="border-radius:50%"]')].filter(e => e.style.width === "13px").length : -1);
+        }
+        return out;
+      });
+      ok(!r.lines.length, `stories still have sentences: ${r.lines.join("; ")}`);
+      ok(r.runs >= 4, `Navigation bar animations plays ${r.runs} times per loop (4)`);
+      ok(r.tapped, "Navigation bar animations: the finger never taps the tab");
+      ok(r.icon, "Search within channel does not draw Morphe's channel search icon");
+      ok(r.crop, "Search within channel phones are not half phones");
+      ok(r.avatars[0] === 4 && r.avatars[1] === 4, `subscribed channels bar icons ${r.avatars.join(" / ")} (4 / 4)`);
+      ok(r.scrolled, "Dim while scrolling: the page never scrolls");
+      ok(r.dimOn < .4 && r.dimOff > .6, `Dim while scrolling: light on ${r.dimOn.toFixed(2)} (dims), off ${r.dimOff.toFixed(2)} (stays)`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "nav-style-own-card-opaque-hides-nothing",
+    report: "Nov 25 (16:12): with Navigation bar style on Opaque, Narrow navigation buttons and Glass navigation bar hid; Navigation bar style should be its own card above Glass navigation bar",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        const k = "morphe_navigation_bar_style";
+        setPicker(false); quickSection(sectionOf(k)); await new Promise(r => setTimeout(r, 500)); select(k, "list"); await new Promise(r => setTimeout(r, 500));
+        document.querySelector(`[data-set="${k}"][data-val="OPAQUE"]`).click(); await new Promise(r => setTimeout(r, 1200));
+        const row = x => document.querySelector(`#list .row[data-k="${x}"]`);
+        const vis = x => { const e = row(x); return !!e && !e.classList.contains("hide") && e.offsetHeight > 0; };
+        const top = x => row(x) ? row(x).getBoundingClientRect().top : NaN;
+        return { parent: DIRECT_PARENT[k] || "", glass: vis("morphe_navigation_bar_glass"), narrow: vis("morphe_narrow_navigation_buttons"), style: vis(k), above: top(k) < top("morphe_navigation_bar_glass") };
+      });
+      ok(r.parent !== "morphe_navigation_bar_glass", "Navigation bar style is still inside the Glass navigation bar card");
+      ok(r.style && r.glass && r.narrow, `with Opaque: style ${r.style}, glass ${r.glass}, narrow ${r.narrow} (all shown)`);
+      ok(r.above, "Navigation bar style is not above Glass navigation bar");
+      await ctx.close();
+    },
+  },
+  {
+    name: "channel-search-off-leaves-the-channel",
+    report: "Nov 25 (16:12): Search within channel: the Off animation was not correct (YouTube's results showed inside the channel page)",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        const k = "morphe_channel_search";
+        setPicker(false); quickSection(sectionOf(k)); await new Promise(r => setTimeout(r, 400)); select(k, "list");
+        await new Promise(r => setTimeout(r, 2900));
+        const off = document.querySelector("#canvas .dev");
+        return { banner: !!off && [...off.querySelectorAll("b")].some(b => /Fjord/.test(b.textContent) && +getComputedStyle(b.closest("div")).opacity > .5), results: !!off && !!off.querySelector(".res7") };
+      });
+      ok(r.results, "the Off phone never shows YouTube's results page");
+      ok(!r.banner, "the Off phone still shows the channel page under the results");
+      await ctx.close();
+    },
+  },
+  {
+    name: "playlist-drag-finger-on-the-row",
+    report: "Nov 25 (16:12): Long press to reorder playlist videos: on the On side the finger was not on the row it dragged",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        const k = "morphe_playlist_long_press_drag";
+        setPicker(false); quickSection(sectionOf(k)); await new Promise(r => setTimeout(r, 400)); select(k, "list");
+        const worst = [];
+        for (let t = 0; t < 2600; t += 60) {
+          await new Promise(r => setTimeout(r, 60));
+          const d = document.querySelectorAll("#canvas .dev")[1]; if (!d) continue;
+          const f = d.parentElement.querySelector("#scFinger.hold, .finger.hold") || document.querySelectorAll("#canvas #scFinger")[1];
+          const row = d.querySelector(".pi7"); if (!f || !row || !f.classList.contains("hold") || row.style.background !== "rgb(51, 51, 51)") continue;
+          const fr = f.getBoundingClientRect(), rr = row.getBoundingClientRect(), z = d.getBoundingClientRect().width / d.clientWidth;
+          const tip = fr.top; // the finger box is 0 x 0 at the touch point
+          worst.push(Math.abs(tip - (rr.top + rr.height / 2)) / z);
+        }
+        return { n: worst.length, max: worst.length ? Math.max(...worst) : 0 };
+      });
+      ok(r.n > 3, `drag frames seen: ${r.n}`);
+      ok(r.max < 9, `the finger is ${r.max.toFixed(1)} px off the dragged row`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "entering-is-leaving-reversed",
+    report: "Nov 26: leaving the redesign is smooth, make it 15% faster; entering was clunky with a hitch: make it the same animation in reverse, equally smooth",
+    async run() {
+      const ctx = await browser.newContext({ viewport: { width: 412, height: 896 }, hasTouch: true, isMobile: true });
+      const p = await ctx.newPage();
+      await p.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
+      await p.addInitScript(() => {
+        try { localStorage.setItem("morphe-visual-editor-v1-tutorial", "1"); } catch (e) { /* none */ }
+        window.__anims = []; const real = Element.prototype.animate;
+        Element.prototype.animate = function (kf, o) { if (this.id === "app") window.__anims.push({ kf: JSON.parse(JSON.stringify(kf)), d: typeof o === "number" ? o : o && o.duration, e: o && o.easing }); return real.call(this, kf, o); };
+      });
+      await p.goto(BASE + "app/index.html"); await sleep(1500);
+      const r = await p.evaluate(async () => {
+        const enter = window.__anims[0] || null;
+        window.MorpheApp = Object.assign(window.MorpheApp || {}, { close() {} });
+        morpheBack(); await new Promise(r => setTimeout(r, 400));
+        return { enter, leave: window.__anims[window.__anims.length - 1] || null, n: window.__anims.length };
+      });
+      ok(r.enter && r.leave && r.n >= 2, `entering or leaving did not animate the editor: ${JSON.stringify(r)}`);
+      const a = r.enter.kf, b = r.leave.kf, last = b[b.length - 1];
+      ok(a[0].opacity === 0 && /scale\(\.9\)|scale\(0\.9\)/.test(a[0].transform) && a[0].borderRadius === last.borderRadius, `entering does not start where leaving ends: ${JSON.stringify(a[0])} vs ${JSON.stringify(last)}`);
+      ok(+a[a.length - 1].opacity === 1 && /scale\(1\)/.test(a[a.length - 1].transform), `entering does not end on the editor: ${JSON.stringify(a[a.length - 1])}`);
+      ok(r.leave.d === 170 && r.enter.d === r.leave.d, `durations: leave ${r.leave.d} ms (170, 15% faster than 200), enter ${r.enter.d} ms (the same)`);
+      ok(r.enter.e === "cubic-bezier(0, 0, .6, 1)" && r.leave.e === "cubic-bezier(.4, 0, 1, 1)", `curves are not mirrored: enter ${r.enter.e}, leave ${r.leave.e}`);
+      await ctx.close();
+    },
+  },
+  {
     name: "gesture-hint-not-stuck",
     report: "Nov 25 (12:49): the 'Pull up for precise seeking' pill stayed on screen in Slide to seek, Precise seeking gesture and others",
     async run() {
@@ -1389,10 +1553,172 @@ const CHECKS = [
           seen.push(Math.round(tip - rr.top));
           if (tip < rr.top - 12 || tip > rr.bottom + 12) bad.push(Math.round(tip - rr.top));
         }
-        return { bad, shown, seen: seen.slice(0, 12) };
+        return { bad, shown, seen: seen.slice(0, 40) };
       });
       ok(r.shown > 5, `the finger hardly shows (${r.shown} samples)`);
-      ok(!r.bad.length, `the finger is off the action bar row by ${r.bad.slice(0, 5).join(", ")} px`);
+      ok(!r.bad.length, `the finger is off the action bar row by ${r.bad.slice(0, 5).join(", ")} px; ${r.seen.join(" ")}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "feed-like-badge-stacked-fits",
+    report: "Nov 25 (14:58): Feed thumbnail like position, the right side black pill: its bottom border is too large (the like bar had no width, and the badge covered the duration)",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        const wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
+        setPicker(false); setPref("morphe_ryd_enabled", true);
+        for (const v of ["MIDDLE_RIGHT", "TOP_LEFT"]) {
+          setPref("morphe_ryd_feed_counts_position", v); goToSetting("morphe_ryd_feed_counts_position"); await wait(1800);
+          const b = [...document.querySelectorAll("#canvas .fb7")].pop(); if (!b) { out[v] = "no badge"; continue; }
+          const bar = b.querySelector("i"), br = b.getBoundingClientRect(), th = b.parentElement;
+          const others = [...th.querySelectorAll(":scope > span")].map(e => e.getBoundingClientRect());
+          const hit = others.some(o => Math.min(o.right, br.right) - Math.max(o.left, br.left) > 1 && Math.min(o.bottom, br.bottom) - Math.max(o.top, br.top) > 1);
+          out[v] = { bar: bar ? Math.round(bar.getBoundingClientRect().width / br.width * 100) : -1, hit, dbg: JSON.stringify([br, ...others].map(o => [o.left, o.top, o.right, o.bottom].map(Math.round))) };
+        }
+        return out;
+      });
+      for (const [v, x] of Object.entries(r)) {
+        ok(typeof x === "object", `${v}: ${x}`);
+        ok(x.bar > 60, `${v}: the like bar is ${x.bar}% of the badge's width`);
+        ok(!x.hit, `${v}: the badge covers another thumbnail badge ${x.dbg}`);
+      }
+      await ctx.close();
+    },
+  },
+  {
+    name: "long-title-slide-shows-the-end",
+    report: "Nov 25 (14:58): Course progress, the scrolling animation for a title that is too long is broken universally (it stopped with the last letters still under the fade)",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        const wait = ms => new Promise(r => setTimeout(r, ms)), k = "morphe_hide_course_progress_section";
+        setPicker(false); quickSection(sectionOf(k)); await wait(700);
+        const row = document.querySelector(`#list .kin.duo2 > [data-row="${k}"]`); if (!row) return "no pair cell";
+        row.scrollIntoView({ block: "center" }); await wait(300);
+        const t0 = row.querySelector(".ttl"), over = t0.scrollWidth - t0.clientWidth;
+        row.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+        let min = 0, ran = false;
+        for (let i = 0; i < 70; i++) { await wait(40); const t = document.querySelector(`#list .kin.duo2 > [data-row="${k}"] .ttl`); if (!t) continue; if (t.classList.contains("mq")) ran = true; min = Math.min(min, parseFloat(getComputedStyle(t).textIndent) || 0); (window.tr7 ||= []).push(Math.round(parseFloat(getComputedStyle(t).textIndent)) + (t.classList.contains("mq") ? "m" : "") + t.getAnimations().length); }
+        return { over, min, ran, tr: (window.tr7 || []).join(" ") };
+      });
+      ok(typeof r === "object", String(r));
+      ok(r.over > 1, `the title fits (${r.over}px over), nothing to slide`);
+      ok(r.ran, "the press didn't start the slide");
+      ok(-r.min >= r.over + 10, `the slide went ${-r.min}px for ${r.over}px of overflow, so the end stayed under the 10px fade ${r.tr}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "info-cards-section-holds-its-parts",
+    report: "Nov 25 (14:58): are the sub settings under Info cards section correct? (Morphe's sub-settings sit inside YouTube's infocards section, but the preview drew them outside it, so hiding the section left them all showing)",
+    async run() {
+      const { p, ctx } = await open();
+      const k = "morphe_hide_info_cards_section";
+      await p.evaluate(async k => { setPicker(false); goToSetting(k); await new Promise(r => setTimeout(r, 900)); }, k);
+      await p.click(`#list [data-sw="${k}"]`); await sleep(1500);
+      const left = await p.evaluate(() => ["featured_videos_section", "featured_playlists_section", "featured_channels_section", "featured_links_section", "channel_links_section", "subscribe_button"]
+        .filter(x => [...document.querySelectorAll(`[data-k="morphe_hide_${x}"]`)].some(e => !e.closest("#list") && e.getBoundingClientRect().height > 1)));
+      ok(!left.length, `Info cards section hidden, but these still show: ${left.join(", ")}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "wheel-turn-stays-light",
+    report: "Nov 25 (14:58): in web view, the Quick actions top margin wheel is very laggy (every value redrew the covered preview and measured the comparison from scratch)",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        const wait = ms => new Promise(r => setTimeout(r, ms)), k = "morphe_quick_actions_top_margin";
+        setPicker(false); goToSetting(k); await wait(1500);
+        const src = document.querySelector(`#list [data-wheel="${k}"]`)?.parentElement.querySelector(".wsrc"); if (!src) return "no wheel";
+        if (!$("canvas").classList.contains("show")) return "no comparison";
+        const r0 = renderCount; let probes = 0;
+        const mo = new MutationObserver(rs => rs.forEach(x => x.addedNodes.forEach(n => { if (n.classList && n.classList.contains("probe7")) probes++; })));
+        mo.observe($("canvas"), { childList: true, subtree: true });
+        for (let i = 1; i <= 10; i++) { src.value = String(i); src.dispatchEvent(new Event("input", { bubbles: true })); await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0))); }
+        mo.disconnect();
+        return { renders: renderCount - r0, probes };
+      });
+      ok(typeof r === "object", String(r));
+      ok(r.renders === 0, `the covered preview was redrawn ${r.renders} times for 10 values`);
+      ok(r.probes <= 16, `the comparison was measured from scratch ${r.probes / 4} times for 10 values`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "theme-backgrounds-as-morphe",
+    report: "Nov 25 (14:58): the look must react to Dark theme background, Custom dark background and Light theme background as the Morphe code expects; Light theme background did nothing",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        const wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
+        const look = async (sel, prefs) => { for (const [k, v] of Object.entries(prefs)) setPref(k, v); commit(); goToSetting(sel); await wait(900); const e = document.querySelector("#stage .look7"); return e ? getComputedStyle(e).backgroundColor : "none"; };
+        const ed = () => getComputedStyle($("phone")).getPropertyValue("--m-bg").trim();
+        setPicker(false);
+        out.light = await look("morphe_theme_color_light", { morphe_theme_color_light: "LIGHT_GREEN" });
+        out.custom = await look("morphe_theme_color_dark_custom", { morphe_theme_color_dark: "CUSTOM", morphe_theme_color_dark_custom: "#80123456" });
+        out.customEd = ed();
+        out.bad = await look("morphe_theme_color_dark_custom", { morphe_theme_color_dark_custom: "not a colour" });
+        out.named = await look("morphe_theme_color_dark_custom", { morphe_theme_color_dark_custom: "Navy" });
+        out.dark = await look("morphe_theme_color_dark", { morphe_theme_color_dark: "DARK_RED" });
+        for (const t of ["m3", "glass"]) { theme = t; applyTheme(); out["ed_" + t] = ed(); }
+        return out;
+      });
+      ok(r.light === "rgb(204, 255, 204)", `Light theme background Light green: the App look preview shows ${r.light}`);
+      ok(r.custom === "rgb(18, 52, 86)", `Custom dark background #80123456 (made opaque, as Morphe does): ${r.custom}`);
+      ok(r.customEd === "#123456", `the editor's background with a custom dark theme: ${r.customEd}`);
+      ok(r.bad === "rgb(15, 15, 15)", `a custom colour that isn't one falls back to #0F0F0F: ${r.bad}`);
+      ok(r.named === "rgb(0, 0, 128)", `a colour name (Navy), as Android reads it: ${r.named}`);
+      ok(r.dark === "rgb(41, 0, 0)", `Dark theme background Dark red: ${r.dark}`);
+      ok(r.ed_m3 === "#290000" && r.ed_glass === "#290000", `the Morphe and Glass designs follow the dark theme: ${r.ed_m3} / ${r.ed_glass}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "startup-animation-plays",
+    report: "Nov 25 (14:58): Startup animation doesn't do anything: fix and animate it, based on the Morphe code",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        const wait = ms => new Promise(r => setTimeout(r, ms)), k = "morphe_splash_screen_style", out = { def: defaults[k] };
+        setPicker(false);
+        for (const v of ["FPS_60_ONE_SECOND", "MORPHE_MONOCHROME", "DISABLED"]) {
+          setPref(k, v); commit(); goToSetting(k); await wait(2600);
+          const sides = [...document.querySelectorAll("#canvas .dl7")];
+          out[v] = sides.map(c => { const s = c.querySelector(".spl7"); return !s ? "none" : s.querySelector(".ytl7") ? "yt" : s.querySelector("span > .mark7") ? "icon" : s.querySelector(".mark7") ? (s.querySelector(".pl7").getAttribute("fill") === "#1e5aa8" ? "morphe" : "morphe-mono") : s.innerHTML.trim() ? "icon" : "empty"; }).join("|");
+        }
+        return out;
+      });
+      ok(r.def === "MORPHE_COLOR", `Morphe's own default here is Morphe Color, the editor starts on ${r.def}`);
+      ok(r.FPS_60_ONE_SECOND === "morphe|yt", `Color: ${r.FPS_60_ONE_SECOND}`);
+      ok(r.MORPHE_MONOCHROME === "morphe|morphe-mono", `Morphe Monochrome: ${r.MORPHE_MONOCHROME}`);
+      ok(r.DISABLED === "morphe|icon", `Disabled: ${r.DISABLED}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "font-picker-takes-fonts",
+    report: "Nov 25 (16:32): Custom font file says Choose image and only lets you pick images",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        const wait = ms => new Promise(r => setTimeout(r, ms)), k = "morphe_custom_font_file";
+        setPicker(false); setPref("morphe_custom_font_type", "CUSTOM"); commit(); goToSetting(k); await wait(900);
+        const l = document.querySelector(`#list label.filepick:has([data-file="${k}"])`), inp = l && l.querySelector("input");
+        const t = document.querySelector(`#list label.filepick:has([data-file="morphe_custom_seekbar_thumb_file"]) input`);
+        return l ? { text: l.textContent.trim(), accept: inp.accept, thumb: t ? t.accept : "image/*" } : "no picker";
+      });
+      ok(typeof r === "object", String(r));
+      ok(/font/i.test(r.text) && !/image/i.test(r.text), `the font picker reads "${r.text}"`);
+      ok(/\.ttf/.test(r.accept) && /\.otf/.test(r.accept) && !/image/.test(r.accept), `the font picker takes "${r.accept}"`);
+      ok(r.thumb === "image/*", `the seekbar thumb picker takes "${r.thumb}"`);
+      const f = p.locator('#list input[data-file="morphe_custom_font_file"]');
+      await f.setInputFiles({ name: "photo.png", mimeType: "image/png", buffer: Buffer.from([137, 80, 78, 71]) }); await sleep(300);
+      const v1 = await p.evaluate(() => state.morphe_custom_font_file);
+      ok(!v1, `a picture was taken as the font (${v1})`);
+      await f.setInputFiles({ name: "Inter.ttf", mimeType: "font/ttf", buffer: Buffer.from([0, 1, 0, 0]) }); await sleep(300);
+      ok(await p.evaluate(() => state.morphe_custom_font_file) === "Inter.ttf", "a .ttf font was not taken");
       await ctx.close();
     },
   },
