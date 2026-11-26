@@ -6,6 +6,27 @@ Versions carry no "-" suffix: Manager treats those as prereleases and leaves the
 The patcher engine's own changelog is in docs/PATCHER-CHANGELOG.md.
 
 
+# [0.1.16](https://github.com/desumax/morphe-patcher-visual/compare/v0.1.15...v0.1.16) (2026-11-26)
+
+
+### Features
+
+* **YouTube - Visual settings editor:** Entering the redesign plays the leave motion backwards, and leaving is 15% faster
+* **YouTube - Visual settings editor:** Navigation bar style is its own card above Glass navigation bar
+* **YouTube - Visual settings editor:** Search within channel shows Morphe's icon and results sheet; the Off side goes to YouTube's results page
+* **YouTube - Visual settings editor:** Open Shorts with: the Short grows from its tile into the chosen player
+* **YouTube - Visual settings editor:** Dim while scrolling scrolls the page for real; Navigation bar animations plays four times with its tap
+* **YouTube - Visual settings editor:** Subscribed channels bar shows four channels; Custom font file asks for TTF or OTF
+* **YouTube - Visual settings editor:** New stories for the theme colours and Startup animation
+
+
+### Bug Fixes
+
+* **YouTube - Visual settings editor:** With Opaque navigation bar style, Glass navigation bar (locked) and Narrow navigation buttons stay visible
+* **YouTube - Visual settings editor:** Long press to reorder playlist videos: the finger stays on the dragged row
+* **YouTube - Visual settings editor:** Extra sentences removed from several stories
+
+
 # [0.1.15](https://github.com/desumax/morphe-patcher-visual/compare/v0.1.14...v0.1.15) (2026-11-25)
 
 
