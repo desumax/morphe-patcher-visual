@@ -1,6 +1,6 @@
 {
-  "created_at": "2026-11-26T15:55:58",
-  "description": "### Test 17 (2026-11-26)\n\n**Bug Fixes**\n- Menu cards open without a pop or flash at the end (every card)\n- The top bar follows only your finger, so scrolling no longer hides and shows it by itself\n- Steadier scrolling: hiding or showing the top bar no longer restyles the whole page\n- No stray green glass block in SponsorBlock\n- A slow swipe start no longer pops the hold line or a hidden preview part into view",
-  "download_url": "https://github.com/desumax/morphe-patcher-visual/releases/download/v0.1.17/morphe-visual-editor-0.1.17.mpp",
-  "version": "0.1.17"
+  "created_at": "2026-11-26T17:16:48",
+  "description": "### Test 18 (2026-11-26)\n\n**Bug Fixes**\n- Every main menu card's screen grows from the card's own edges (the top cards started at the top of the menu)",
+  "download_url": "https://github.com/desumax/morphe-patcher-visual/releases/download/v0.1.18/morphe-visual-editor-0.1.18.mpp",
+  "version": "0.1.18"
 }
