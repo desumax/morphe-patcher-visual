@@ -1704,6 +1704,331 @@ const CHECKS = [
     },
   },
   {
+    name: "outlines-follow-the-parts-shape",
+    report: "Nov 28: Action bar: the green outline doesn't curve to the element, rounded elements get a rounded-square outline; for all UI elements",
+    async run() {
+      const { p, ctx } = await open();
+      // the ring's corner radius against the shape it surrounds: half the height for a pill or a round button
+      const ring = k => p.evaluate(async k => {
+        setPicker(false); goToSetting(k); await new Promise(r => setTimeout(r, 900));
+        const e = document.querySelector(`#stage [data-k="${k}"]`); if (!e) return null;
+        const fit = e.classList.contains("fit"), st = getComputedStyle(e, fit ? "::before" : null), r = e.getBoundingClientRect();
+        const h = fit ? r.height - parseFloat(e.style.getPropertyValue("--ft")) - parseFloat(e.style.getPropertyValue("--fb")) : r.height;
+        const w = fit ? r.width - parseFloat(e.style.getPropertyValue("--fl")) - parseFloat(e.style.getPropertyValue("--fr")) : r.width;
+        return { rad: parseFloat(st.borderTopLeftRadius), half: Math.min(w, h) / 2, glow: getComputedStyle(e, "::after").borderTopLeftRadius };
+      }, k);
+      const want = { morphe_hide_channel_bar: "the channel pill", morphe_hide_channel_profile_subscribe_button: "the Subscribe pill", morphe_hide_like_dislike_button: "the Like and Dislike pill", morphe_hide_cast_button: "the round Cast button", morphe_hide_autoplay_button: "the Autoplay switch" };
+      const bad = [];
+      for (const [k, what] of Object.entries(want)) {
+        const r = await ring(k);
+        if (!r) { bad.push(`${k}: not in the preview`); continue; }
+        if (r.rad < r.half * .85) bad.push(`${what} (${k}): ring corners ${r.rad}px on a ${(r.half * 2).toFixed(0)}px tall shape`);
+      }
+      ok(!bad.length, "the outline doesn't follow the part's shape:\n       " + bad.join("\n       "));
+      await ctx.close();
+    },
+  },
+  {
+    name: "hidden-parent-locks-what-it-contains",
+    report: "Nov 28: Action bar > Subscribe button does not work when Channel and Subscribe button is hidden; Join button appears as if it were in the Action bar; Channel bar being hidden just hides the profile picture",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        setPicker(false); goToSetting("morphe_hide_channel_profile_subscribe_button"); await new Promise(r => setTimeout(r, 700));
+        const out = {};
+        setPref("morphe_hide_channel_profile_button", true); commit();
+        out.subLocked = !parentsOk("morphe_hide_channel_profile_subscribe_button");
+        setPref("morphe_hide_channel_profile_button", false); setPref("morphe_hide_channel_bar", true); commit();
+        out.profLocked = !parentsOk("morphe_hide_channel_profile_button");
+        // Hide channel bar removes the whole channel element: avatar, name and Subscribe
+        const sub = document.querySelector('#stage [data-k="morphe_hide_channel_profile_subscribe_button"]');
+        out.subShown = !!(sub && sub.getClientRects().length);
+        setPref("morphe_hide_channel_bar", false); setPref("morphe_hide_join_membership_button", false); commit();
+        const join = document.querySelector('#stage [data-k="morphe_hide_join_membership_button"]');
+        out.joinInChannel = !!(join && join.closest('[data-k="morphe_hide_channel_profile_button"]') && join.closest('[data-k="morphe_hide_channel_profile_subscribe_button"]'));
+        return out;
+      });
+      ok(r.subLocked, "Subscribe button is not locked while Channel and Subscribe button is hidden");
+      ok(r.profLocked, "Channel and Subscribe button is not locked while Channel bar is hidden");
+      ok(!r.subShown, "Hide channel bar left the Subscribe button (and name) in the preview");
+      ok(r.joinInChannel, "the Join button is not part of the channel element next to Subscribe");
+      await ctx.close();
+    },
+  },
+  {
+    name: "feed-like-badge-fits-its-thumbnail",
+    report: "Nov 28: Feed thumbnail like position: black pill 10% smaller, elements centred in it, a larger YouTube window so the pill's place reads clearly",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        setPicker(false); goToSetting("morphe_ryd_feed_counts_position"); await new Promise(r => setTimeout(r, 1600));
+        const b = document.querySelector("#canvas .fb7"); if (!b) return null;
+        const th = b.closest(".th7"), dev = b.closest(".dev"), q = b.getBoundingClientRect(), t = th.getBoundingClientRect(), d = dev.getBoundingClientRect();
+        const dur = [...th.querySelectorAll(":scope > span")].find(s => /12:04/.test(s.textContent)).getBoundingClientRect();
+        const row = b.firstElementChild.getBoundingClientRect(), k = d.width / dev.offsetWidth;
+        return { fs: parseFloat(getComputedStyle(b).fontSize), ratio: t.width / t.height, full: (t.width / k) / dev.clientWidth, over: q.right - dur.left, side: Math.abs((row.left - q.left) - (q.right - row.right)) / k };
+      });
+      ok(r, "no like badge drawn");
+      ok(r.fs <= 4.55, `the badge text is ${r.fs}px (10% smaller than 5px is 4.5px)`);
+      ok(r.ratio > 1.7 && r.full > .99, `the thumbnail is ${r.ratio.toFixed(2)}:1 and ${(r.full * 100).toFixed(0)}% of the screen wide`);
+      ok(r.over < 0, `the badge runs ${r.over.toFixed(1)}px into the duration badge`);
+      ok(r.side < .6, `the badge's contents are ${r.side.toFixed(1)}px off its middle`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "story-hands-sized-per-story",
+    report: "Nov 28: Rolling number animations: finger icon 20% smaller; Open system share sheet: finger icon 10% smaller",
+    async run() {
+      const { p, ctx } = await open();
+      const size = k => p.evaluate(async k => { setPicker(false); goToSetting(k); await new Promise(r => setTimeout(r, 700)); const d = document.querySelector("#canvas .dev"); return d ? [parseFloat(d.style.getPropertyValue("--fz7")), ...DEV_SIZE[d.classList.contains("land") ? "land" : "port"]] : null; }, k);
+      for (const [k, f] of [["morphe_disable_rolling_number_animations", .8], ["morphe_open_system_share_sheet", .9]]) {
+        const s = await size(k); ok(s, `${k}: no phone`);
+        const base = Math.min(40, Math.min(s[1], s[2]) * .3);
+        ok(Math.abs(s[0] - base * f) < .2, `${k}: hand ${s[0]}px, want ${(base * f).toFixed(1)}px (${f * 100}% of ${base.toFixed(1)}px)`);
+      }
+      await ctx.close();
+    },
+  },
+  {
+    name: "discretion-dialog-tap-lands-on-its-button",
+    report: "Nov 28: Remove viewer discretion dialog: the area to press is faded, and the finger spawns at the wrong part instead of pressing I understand",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        stopScenario(); setPicker(false); goToSetting("morphe_remove_viewer_discretion_dialog");
+        const t0 = performance.now(); let hit = null;
+        while (performance.now() - t0 < 4000 && !hit) {
+          await new Promise(r => requestAnimationFrame(r));
+          const f = document.querySelector("#canvas .dev #scFinger.tap");
+          if (f) { const dev = f.closest(".dev"), b = dev.querySelector(".ok7").getBoundingClientRect(), q = f.getBoundingClientRect(), d = dev.getBoundingClientRect(), k = d.width / dev.offsetWidth, band = devBand(dev);
+            hit = { inside: q.left >= b.left - 1 && q.left <= b.right + 1 && q.top >= b.top - 1 && q.top <= b.bottom + 1, below: (b.bottom - d.top) / k - band[1] }; }
+        }
+        return hit;
+      });
+      ok(r, "the hand never tapped");
+      ok(r.inside, "the hand tapped outside the I understand button");
+      ok(r.below <= 0, `the I understand button reaches ${r.below.toFixed(0)}px into the faded cut`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "comparisons-keep-their-place-as-the-preview-resizes",
+    report: "Nov 28: Remove viewer discretion dialog: on the second loop the preview moves up when it should stay put; may happen everywhere, bug pass",
+    async run() {
+      const { p, ctx } = await open();
+      await p.evaluate(() => { setPicker(false); quickSection("watch"); }); await new Promise(r => setTimeout(r, 400));
+      const keys = await p.evaluate(() => Object.keys(SCN).filter(k => PREF[k]));
+      const bad = [];
+      for (const k of keys) {
+        const r = await p.evaluate(async k => {
+          stopScenario(); pairMemo = null; playScenario(k); await new Promise(r => setTimeout(r, 120));
+          const top = () => { const d = document.querySelector("#canvas .scbox"); return d ? d.getBoundingClientRect().top : null; };
+          if (scTurns) return null; // a story that turns a phone stays in the middle (its turn sweeps past both ends) and is laid out again mid-story anyway
+          const c = $("canvas"), a = top();
+          // the preview area still opening (or closing) while a round is on screen: the canvas grows
+          c.style.bottom = "-60px"; await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+          const b = top(); c.style.bottom = ""; return a === null ? null : b - a;
+        }, k);
+        if (r !== null && Math.abs(r) > 1) bad.push(`${k}: moved ${r.toFixed(0)}px`);
+      }
+      await p.evaluate(() => stopScenario());
+      ok(keys.length > 100, `setup: only ${keys.length} comparisons found`);
+      ok(!bad.length, `${bad.length} comparison(s) move when the preview's height changes:\n       ` + bad.slice(0, 12).join("\n       "));
+      await ctx.close();
+    },
+  },
+  {
+    name: "wheel-flashes-only-on-first-press",
+    report: "Nov 28: at the end of the wheel animation the UI element flashes green every time; for sliders the flash must happen only on the first press or a press on the setting's card, not after every adjustment",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        const k = "morphe_caption_scale", wait = ms => new Promise(r => setTimeout(r, ms));
+        setPicker(false); goToSetting(k); await wait(1800);
+        let n = 0; const mo = new MutationObserver(ms => ms.forEach(m => { if (m.target.classList && m.target.classList.contains("flash") && !(m.oldValue || "").includes("flash")) n++; }));
+        mo.observe(document.getElementById("app"), { subtree: true, attributes: true, attributeFilter: ["class"], attributeOldValue: true });
+        const wh = () => document.querySelector(`#list .wheel[data-wheel="${k}"]`);
+        const press = el => { const b = el.getBoundingClientRect(), o = { bubbles: true, pointerId: 7, clientX: b.left + b.width / 2, clientY: b.top + b.height / 2, button: 0, isPrimary: true, pointerType: "touch" }; el.dispatchEvent(new PointerEvent("pointerdown", o)); el.dispatchEvent(new PointerEvent("pointercancel", o)); };
+        const out = {};
+        // a turn that comes to rest, then a second press on the same wheel
+        wheelGlide(wh(), Number(wh().dataset.pos) + 2); await wait(1200);
+        press(wh()); await wait(700);
+        out.adjust = n;
+        // pressing the wheel of a setting that is not selected yet: its first press flashes
+        setPicker(false); goToSetting("morphe_hide_captions_button"); await wait(1800); n = 0;
+        setPicker(false); quickSection("captions"); await wait(600);
+        const w2 = wh(); if (w2) { w2.scrollIntoView({ block: "center" }); await wait(300); press(w2); await wait(900); }
+        out.first = w2 ? n : -1; mo.disconnect();
+        return out;
+      });
+      ok(r.adjust === 0, `the preview flashed ${r.adjust} time(s) after the wheel came to rest or was pressed again`);
+      ok(r.first !== -1, "setup: the wheel was not in the list");
+      ok(r.first > 0, "the first press on the wheel did not flash its part");
+      await ctx.close();
+    },
+  },
+  {
+    name: "wheel-fills-its-card-height",
+    report: "Nov 28 (14:15): revert the 20% shorter wheels; a wheel runs the full height of its card again",
+    async run() {
+      const { p, ctx } = await open();
+      const m = k => p.evaluate(async k => { setPicker(false); goToSetting(k); await new Promise(r => setTimeout(r, 700)); const w = document.querySelector(`#list .wheel[data-wheel="${k}"]`); if (!w) return null; return [w.getBoundingClientRect().height, w.parentElement.getBoundingClientRect().height]; }, k);
+      for (const k of ["morphe_caption_scale", "morphe_enhanced_ambient_mode_dim_duration"]) {
+        const r = await m(k); ok(r, `setup: ${k} wheel not found`);
+        ok(Math.abs(r[0] - r[1]) < 1.5, `${k}: the wheel is ${r[0].toFixed(0)}px in a ${r[1].toFixed(0)}px control (it should fill it)`);
+      }
+      await ctx.close();
+    },
+  },
+  {
+    name: "wheel-fling-overshoots-a-little",
+    report: "Nov 28: make the wheel overshoot slightly more than it does from flings",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        const k = "morphe_enhanced_ambient_mode_blur", wait = ms => new Promise(r => setTimeout(r, ms));
+        setPicker(false); goToSetting(k); await wait(900);
+        const el = document.querySelector(`#list .wheel[data-wheel="${k}"]`); if (!el) return null;
+        if (el.classList.contains("off")) { el.classList.remove("off"); }
+        const b = el.getBoundingClientRect(), x = b.left + b.width / 2; let y = b.top + b.height / 2;
+        const ev = (t, y) => el.dispatchEvent(new PointerEvent(t, { bubbles: true, pointerId: 9, clientX: x, clientY: y, button: 0, isPrimary: true, pointerType: "touch" }));
+        ev("pointerdown", y); for (let i = 0; i < 6; i++) { await new Promise(r => requestAnimationFrame(r)); y -= 14; ev("pointermove", y); } ev("pointerup", y);
+        const p0 = Number(el.dataset.pos), seen = []; const t0 = performance.now();
+        while (performance.now() - t0 < 1400) { await new Promise(r => requestAnimationFrame(r)); seen.push(Number(el.dataset.pos)); }
+        const to = seen[seen.length - 1], dir = Math.sign(to - p0) || 1;
+        return { over: Math.max(...seen.map(v => (v - to) * dir)), moved: Math.abs(to - p0) };
+      });
+      ok(r, "setup: wheel not found");
+      ok(r.moved >= 1, `setup: the fling moved the wheel only ${r.moved.toFixed(2)} values`);
+      ok(r.over > .1, `the fling overshot by only ${r.over.toFixed(2)} of a value`);
+      ok(r.over < .5, `the fling overshot by ${r.over.toFixed(2)}: it would tick on to the next value`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "light-strength-is-the-lights-opacity",
+    report: "Nov 28: Light strength doesn't appear to do anything (AmbientLightController: the light's paint alpha is the strength)",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        setPicker(false); goToSetting("morphe_enhanced_ambient_mode_strength"); await new Promise(r => setTimeout(r, 600));
+        const at = v => { setPrefs({ morphe_enhanced_ambient_mode: true, morphe_enhanced_ambient_mode_strength: v }); const d = document.createElement("div"); d.innerHTML = SCENES.ambient(); const l = d.querySelector('[data-k="morphe_enhanced_ambient_mode"] > div'); return l ? Number(l.style.opacity) : null; };
+        return [at(10), at(100)];
+      });
+      ok(r[0] != null, "setup: light layer not found");
+      ok(Math.abs(r[0] - .1) < .01 && Math.abs(r[1] - 1) < .01, `the light's opacity is ${r[0]} at 10% and ${r[1]} at 100% (Morphe: 0.1 and 1)`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "player-overlay-opacity-dims-the-video-not-the-buttons",
+    report: "Nov 28 correctness pass: Player overlay opacity is the dark scrim (CustomPlayerOverlayOpacityPatch), Control buttons background opacity the round backgrounds behind the buttons (HidePlayerOverlayButtonsPatch)",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        setPicker(false); goToSetting("morphe_player_overlay_opacity"); await new Promise(r => setTimeout(r, 600));
+        const alpha = c => { const m = /rgba?\(([^)]+)\)/.exec(c || ""); if (!m) return 0; const a = m[1].split(",").map(Number); return a.length > 3 ? a[3] : 1; };
+        const at = v => { setPrefs(v); renderStage(); const st = document.getElementById("stage"), ctrls = st.querySelector(".ctrls"), btn = st.querySelector('.ctrls [data-k="morphe_hide_cast_button"] .pbtn'), scrim = st.querySelector(".pscrim");
+          return { ctrls: ctrls ? Number(getComputedStyle(ctrls).opacity) : null, btn: btn ? alpha(getComputedStyle(btn).backgroundColor) : null, scrim: scrim ? alpha(getComputedStyle(scrim).backgroundColor) : null }; };
+        return { clear: at({ morphe_player_overlay_opacity: 0, morphe_player_control_buttons_background_opacity: 90, morphe_hide_player_control_buttons_background: false }),
+          full: at({ morphe_player_overlay_opacity: 100, morphe_player_control_buttons_background_opacity: 90 }),
+          hidden: at({ morphe_hide_player_control_buttons_background: true }) };
+      });
+      ok(r.clear.ctrls === 1, `the buttons fade to ${r.clear.ctrls} at overlay opacity 0 (Morphe keeps them, only the scrim goes)`);
+      ok(r.clear.scrim != null && r.clear.scrim < .01 && r.full.scrim > .3, `the scrim is ${r.clear.scrim} at 0% and ${r.full.scrim} at 100%`);
+      ok(r.clear.btn != null && Math.abs(r.clear.btn - .9) < .02, `a control button's round background is ${r.clear.btn} at 90% (Morphe: 0.9)`);
+      ok(r.hidden.btn != null && r.hidden.btn < .01, `with the backgrounds hidden a button still has ${r.hidden.btn}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "sliders-move-over-morphes-range",
+    report: "Nov 28 correctness pass: the wheels and previews used guessed ranges (caption size up to 300%, Morphe stops at 150%); SeekBarConfig ranges and clampToRange are the truth",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        const wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
+        for (const k of ["morphe_caption_scale", "morphe_enhanced_ambient_mode_strength", "morphe_niconico_comments_font_size", "morphe_swipe_speed_zone_height"]) {
+          setPicker(false); goToSetting(k); await wait(500);
+          const w = document.querySelector(`#list .wheel[data-wheel="${k}"]`); out[k] = w ? [+w.dataset.min, +w.dataset.max, +w.dataset.step] : null;
+        }
+        setPrefs({ morphe_caption_scale: 300 }); const d = document.createElement("div"); d.innerHTML = SCENES.captions();
+        out.capPx = parseFloat(d.querySelector("#capLine").style.fontSize);
+        return out;
+      });
+      const want = { morphe_caption_scale: [30, 150, 5], morphe_enhanced_ambient_mode_strength: [10, 100, 5], morphe_niconico_comments_font_size: [12, 40, 1], morphe_swipe_speed_zone_height: [5, 75, 1] };
+      for (const k in want) ok(r[k] && r[k].join() === want[k].join(), `${k} wheel runs ${r[k]} (Morphe: ${want[k]})`);
+      ok(Math.abs(r.capPx - 21) < .2, `a caption size of 300% draws ${r.capPx}px captions (Morphe clamps to 150%: 21px)`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "material-you-themes-colour-new-content-indicators",
+    report: "Nov 28 correctness pass: Material You (Pure black) looked the same as Pure black; Morphe colours the new content dot and the notification count from the Material You palette (ThemeColorPatch.getIndicatorColor)",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        setPicker(false); goToSetting("morphe_theme_color_dark"); await new Promise(r => setTimeout(r, 600));
+        const at = v => { setPrefs({ morphe_theme_color_dark: v }); const d = document.createElement("div"); d.innerHTML = SCENES.look(); const n = d.querySelector(".ncount7"); const d2 = document.createElement("div"); d2.innerHTML = SCENES.nav(); const dot = d2.querySelector('[data-k="morphe_hide_navigation_new_content_dot"] > span');
+          return [n ? n.style.background : null, dot ? dot.style.background : null]; };
+        return { black: at("PURE_BLACK"), you: at("MATERIAL_YOU_PURE_BLACK") };
+      });
+      ok(r.black[0] && r.you[0], "setup: no notification count on the bell");
+      ok(r.black[0] !== r.you[0], `the count is ${r.you[0]} with Material You (Pure black), the same as Pure black`);
+      ok(r.black[1] && r.black[1] !== r.you[1], `the Subscriptions dot is ${r.you[1]} with Material You (Pure black) and ${r.black[1]} with Pure black`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "story-pills-stay-off-dialogs-and-sheets",
+    report: "Nov 28 (14:35): Remove viewer discretion dialog, the black pill overlaps the dialog in the animation; the same rule for every story that opens a dialog or a sheet",
+    async run() {
+      const { p, ctx } = await open();
+      const keys = await p.evaluate(() => Object.keys(SCN).filter(k => inVersion(k) && /sheet7\(|dlg7/.test(String(SCN[k]))));
+      ok(keys.includes("morphe_remove_viewer_discretion_dialog"), "setup: the discretion story was not found");
+      const bad = [];
+      for (const k of keys) {
+        const r = await p.evaluate(async k => {
+          setPicker(false); goToSetting(k); const out = new Set(), t0 = performance.now();
+          const box = e => e.getBoundingClientRect(), op = e => { let o = 1; for (let x = e; x && !x.classList.contains("dev"); x = x.parentElement) o *= parseFloat(getComputedStyle(x).opacity); return o; };
+          while (performance.now() - t0 < 3600) {
+            await new Promise(r => setTimeout(r, 60));
+            for (const dev of document.querySelectorAll("#canvas .dev")) {
+              const panels = [...dev.querySelectorAll(".dlg7, .sh7")].filter(e => op(e) > .6).map(box);
+              for (const t of dev.querySelectorAll(".toastin")) {
+                if (op(t) < .6 || t.getAnimations().some(a => a.playState === "running")) continue;
+                const a = box(t);
+                for (const b of panels) { const w = Math.min(a.right, b.right) - Math.max(a.left, b.left), h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top); if (w > 2 && h > 2) out.add(`"${t.textContent.trim()}" on a ${b.height > 0 ? "panel" : ""} by ${Math.round(h)}px`); }
+              }
+            }
+          }
+          return [...out];
+        }, k);
+        if (r.length) bad.push(`${k.slice(7)}: ${r.join(", ")}`);
+      }
+      ok(!bad.length, `pills drawn over a dialog or sheet: ${bad.join("; ")}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "discretion-pills-sit-under-the-dialog",
+    report: "Nov 28 (14:55, 15:05): Remove viewer discretion dialog, move the pills on both sides to the bottom part (the first fix moved them above the dialog), then even lower",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        setPicker(false); goToSetting("morphe_remove_viewer_discretion_dialog"); await new Promise(r => setTimeout(r, 1500));
+        return [...document.querySelectorAll("#canvas .dev")].map(d => { const t = d.querySelector(".t7"), g = d.querySelector(".dlg7"), k = d.getBoundingClientRect().height / d.offsetHeight, b = d.getBoundingClientRect();
+          return { k, pill: t && t.getBoundingClientRect().top, pillB: t && t.getBoundingClientRect().bottom, dlg: g && g.getBoundingClientRect().bottom, bandB: b.top + (d.clientTop + devBand(d)[1]) * k }; });
+      });
+      ok(r.length === 2 && r.every(x => x.pill != null), "setup: two phones with a pill");
+      for (const x of r) ok(x.pill >= x.dlg + 1 && x.pillB <= x.bandB + .5 && x.bandB - x.pillB < 12, `a pill sits at ${Math.round(x.pill)}-${Math.round(x.pillB)}px; it belongs under the dialog (${Math.round(x.dlg)}px) at the bottom of the shown phone (${Math.round(x.bandB)}px)`);
+      for (const x of r) ok((x.pill - x.dlg) / x.k >= 18, `a pill is only ${((x.pill - x.dlg) / x.k).toFixed(0)} phone px under the dialog (it belongs well below it, 18 or more)`);
+      ok(Math.abs(r[0].pillB - r[1].pillB) < 1, `the two pills end at ${Math.round(r[0].pillB)}px and ${Math.round(r[1].pillB)}px (the same height on both phones)`);
+      await ctx.close();
+    },
+  },
+  {
     name: "gesture-hint-not-stuck",
     report: "Nov 25 (12:49): the 'Pull up for precise seeking' pill stayed on screen in Slide to seek, Precise seeking gesture and others",
     async run() {
