@@ -24,6 +24,9 @@ for line in (ROOT / "CHANGELOG.md").read_text(encoding="utf-8").splitlines():
         versions.append((m.group(1) or m.group(2)).strip())
 if not versions:
     errors.append("CHANGELOG.md has no release heading Manager can read")
+for v in sorted(set(versions)):
+    if versions.count(v) > 1:
+        errors.append(f"{v} has {versions.count(v)} entries; Manager would list it twice")
 for v in versions:
     if "-" in v:
         errors.append(f"{v}: Manager hides versions with '-' from a stable source's changelog")

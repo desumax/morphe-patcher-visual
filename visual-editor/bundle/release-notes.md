@@ -1,16 +1,14 @@
 
-**Features**
-- Drag and drop: the miniplayer settles into the nearest corner
-- The Morphe design keeps Morphe Manager's dark colours and card edge
-- The preview follows Morphe's code for light strength, player overlay and button background opacity, slider ranges and Material You indicators
-- Outlines follow each part's shape; hidden channel parts lock what they contain (Channel and Subscribe button)
-- Remove viewer discretion dialog gets its own story, with its messages under the dialog
-
 **Bug Fixes**
-- Every main menu card's screen grows from the card's own edges (the top cards started at the top of the menu)
-- Settings described as "Prevents ..." read "Allows ..." instead of carrying an Off tag
-- Comparisons stay put at the top instead of shifting
+- A main menu card's screen grows from the card's own edges
+- Drag and drop settles in a corner, as in Morphe; no Off tag on settings that only prevent something
+- Morphe design uses Morphe Manager's colours
+- Outlines follow each part's own shape
+- Hiding a channel part locks the settings it contains
+- Comparisons keep the same position on every loop
+- Previews follow Morphe's code for Light strength, player overlay, slider ranges and Material You indicators
+- Wheels overshoot a little on flings and no longer flash after each change; they keep the full card height
 - Story messages step off dialogs and sheets instead of sitting on their edge
-- Wheels run the full height of their card and no longer flash after each change
+- Remove viewer discretion dialog shows more of its phones, with its messages lower, under the dialog
 
 Add https://github.com/desumax/morphe-patcher-visual as a patch source in Morphe Manager (Expert mode, together with Morphe Patches). Full history: CHANGELOG.md.

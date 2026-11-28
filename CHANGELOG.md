@@ -9,22 +9,18 @@ The patcher engine's own changelog is in docs/PATCHER-CHANGELOG.md.
 # [0.1.18](https://github.com/desumax/morphe-patcher-visual/compare/v0.1.17...v0.1.18) (2026-11-28)
 
 
-### Features
-
-* **YouTube - Visual settings editor:** Drag and drop: the miniplayer settles into the nearest corner
-* **YouTube - Visual settings editor:** The Morphe design keeps Morphe Manager's dark colours and card edge
-* **YouTube - Visual settings editor:** The preview follows Morphe's code for light strength, player overlay and button background opacity, slider ranges and Material You indicators
-* **YouTube - Visual settings editor:** Outlines follow each part's shape; hidden channel parts lock what they contain (Channel and Subscribe button)
-* **YouTube - Visual settings editor:** Remove viewer discretion dialog gets its own story, with its messages under the dialog
-
-
 ### Bug Fixes
 
-* **YouTube - Visual settings editor:** Every main menu card's screen grows from the card's own edges (the top cards started at the top of the menu)
-* **YouTube - Visual settings editor:** Settings described as "Prevents ..." read "Allows ..." instead of carrying an Off tag
-* **YouTube - Visual settings editor:** Comparisons stay put at the top instead of shifting
+* **YouTube - Visual settings editor:** A main menu card's screen grows from the card's own edges
+* **YouTube - Visual settings editor:** Drag and drop settles in a corner, as in Morphe; no Off tag on settings that only prevent something
+* **YouTube - Visual settings editor:** Morphe design uses Morphe Manager's colours
+* **YouTube - Visual settings editor:** Outlines follow each part's own shape
+* **YouTube - Visual settings editor:** Hiding a channel part locks the settings it contains
+* **YouTube - Visual settings editor:** Comparisons keep the same position on every loop
+* **YouTube - Visual settings editor:** Previews follow Morphe's code for Light strength, player overlay, slider ranges and Material You indicators
+* **YouTube - Visual settings editor:** Wheels overshoot a little on flings and no longer flash after each change; they keep the full card height
 * **YouTube - Visual settings editor:** Story messages step off dialogs and sheets instead of sitting on their edge
-* **YouTube - Visual settings editor:** Wheels run the full height of their card and no longer flash after each change
+* **YouTube - Visual settings editor:** Remove viewer discretion dialog shows more of its phones, with its messages lower, under the dialog
 
 
 # [0.1.17](https://github.com/desumax/morphe-patcher-visual/compare/v0.1.16...v0.1.17) (2026-11-26)
