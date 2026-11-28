@@ -18,7 +18,7 @@ The patcher engine's own changelog is in docs/PATCHER-CHANGELOG.md.
 ### Bug Fixes
 
 * **YouTube - Visual settings editor:** Every main menu card's screen grows from the card's own edges (the top cards started at the top of the menu)
-* **YouTube - Visual settings editor:** Settings described as "Prevents ..." no longer get a misleading Off tag
+* **YouTube - Visual settings editor:** Settings described as "Prevents ..." read "Allows ..." instead of carrying an Off tag
 
 
 # [0.1.17](https://github.com/desumax/morphe-patcher-visual/compare/v0.1.16...v0.1.17) (2026-11-26)
