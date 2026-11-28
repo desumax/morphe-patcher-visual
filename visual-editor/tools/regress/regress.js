@@ -1839,6 +1839,148 @@ const CHECKS = [
     },
   },
   {
+    name: "wheel-flashes-only-on-first-press",
+    report: "Nov 28: at the end of the wheel animation the UI element flashes green every time; for sliders the flash must happen only on the first press or a press on the setting's card, not after every adjustment",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        const k = "morphe_caption_scale", wait = ms => new Promise(r => setTimeout(r, ms));
+        setPicker(false); goToSetting(k); await wait(1800);
+        let n = 0; const mo = new MutationObserver(ms => ms.forEach(m => { if (m.target.classList && m.target.classList.contains("flash") && !(m.oldValue || "").includes("flash")) n++; }));
+        mo.observe(document.getElementById("app"), { subtree: true, attributes: true, attributeFilter: ["class"], attributeOldValue: true });
+        const wh = () => document.querySelector(`#list .wheel[data-wheel="${k}"]`);
+        const press = el => { const b = el.getBoundingClientRect(), o = { bubbles: true, pointerId: 7, clientX: b.left + b.width / 2, clientY: b.top + b.height / 2, button: 0, isPrimary: true, pointerType: "touch" }; el.dispatchEvent(new PointerEvent("pointerdown", o)); el.dispatchEvent(new PointerEvent("pointercancel", o)); };
+        const out = {};
+        // a turn that comes to rest, then a second press on the same wheel
+        wheelGlide(wh(), Number(wh().dataset.pos) + 2); await wait(1200);
+        press(wh()); await wait(700);
+        out.adjust = n;
+        // pressing the wheel of a setting that is not selected yet: its first press flashes
+        setPicker(false); goToSetting("morphe_hide_captions_button"); await wait(1800); n = 0;
+        setPicker(false); quickSection("captions"); await wait(600);
+        const w2 = wh(); if (w2) { w2.scrollIntoView({ block: "center" }); await wait(300); press(w2); await wait(900); }
+        out.first = w2 ? n : -1; mo.disconnect();
+        return out;
+      });
+      ok(r.adjust === 0, `the preview flashed ${r.adjust} time(s) after the wheel came to rest or was pressed again`);
+      ok(r.first !== -1, "setup: the wheel was not in the list");
+      ok(r.first > 0, "the first press on the wheel did not flash its part");
+      await ctx.close();
+    },
+  },
+  {
+    name: "wheel-is-shorter-than-its-card",
+    report: "Nov 28: reduce the wheels' height by 20%, unless the description has more lines and so more room for the wheel (dynamic)",
+    async run() {
+      const { p, ctx } = await open();
+      const m = k => p.evaluate(async k => { setPicker(false); goToSetting(k); await new Promise(r => setTimeout(r, 700)); const w = document.querySelector(`#list .wheel[data-wheel="${k}"]`); if (!w) return null; return [w.getBoundingClientRect().height, w.closest(".row").getBoundingClientRect().height]; }, k);
+      const one = await m("morphe_caption_scale"), tall = await m("morphe_enhanced_ambient_mode_dim_duration");
+      ok(one && tall, "setup: wheels not found");
+      ok(one[0] <= 79 * .82, `a one-line card's wheel is ${one[0].toFixed(0)}px (79px less 20% is 63px)`);
+      ok(tall[0] >= tall[1] - 30, `a card with a long description (${tall[1].toFixed(0)}px) keeps a short ${tall[0].toFixed(0)}px wheel`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "wheel-fling-overshoots-a-little",
+    report: "Nov 28: make the wheel overshoot slightly more than it does from flings",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        const k = "morphe_enhanced_ambient_mode_blur", wait = ms => new Promise(r => setTimeout(r, ms));
+        setPicker(false); goToSetting(k); await wait(900);
+        const el = document.querySelector(`#list .wheel[data-wheel="${k}"]`); if (!el) return null;
+        if (el.classList.contains("off")) { el.classList.remove("off"); }
+        const b = el.getBoundingClientRect(), x = b.left + b.width / 2; let y = b.top + b.height / 2;
+        const ev = (t, y) => el.dispatchEvent(new PointerEvent(t, { bubbles: true, pointerId: 9, clientX: x, clientY: y, button: 0, isPrimary: true, pointerType: "touch" }));
+        ev("pointerdown", y); for (let i = 0; i < 6; i++) { await new Promise(r => requestAnimationFrame(r)); y -= 14; ev("pointermove", y); } ev("pointerup", y);
+        const p0 = Number(el.dataset.pos), seen = []; const t0 = performance.now();
+        while (performance.now() - t0 < 1400) { await new Promise(r => requestAnimationFrame(r)); seen.push(Number(el.dataset.pos)); }
+        const to = seen[seen.length - 1], dir = Math.sign(to - p0) || 1;
+        return { over: Math.max(...seen.map(v => (v - to) * dir)), moved: Math.abs(to - p0) };
+      });
+      ok(r, "setup: wheel not found");
+      ok(r.moved >= 1, `setup: the fling moved the wheel only ${r.moved.toFixed(2)} values`);
+      ok(r.over > .1, `the fling overshot by only ${r.over.toFixed(2)} of a value`);
+      ok(r.over < .5, `the fling overshot by ${r.over.toFixed(2)}: it would tick on to the next value`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "light-strength-is-the-lights-opacity",
+    report: "Nov 28: Light strength doesn't appear to do anything (AmbientLightController: the light's paint alpha is the strength)",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        setPicker(false); goToSetting("morphe_enhanced_ambient_mode_strength"); await new Promise(r => setTimeout(r, 600));
+        const at = v => { setPrefs({ morphe_enhanced_ambient_mode: true, morphe_enhanced_ambient_mode_strength: v }); const d = document.createElement("div"); d.innerHTML = SCENES.ambient(); const l = d.querySelector('[data-k="morphe_enhanced_ambient_mode"] > div'); return l ? Number(l.style.opacity) : null; };
+        return [at(10), at(100)];
+      });
+      ok(r[0] != null, "setup: light layer not found");
+      ok(Math.abs(r[0] - .1) < .01 && Math.abs(r[1] - 1) < .01, `the light's opacity is ${r[0]} at 10% and ${r[1]} at 100% (Morphe: 0.1 and 1)`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "player-overlay-opacity-dims-the-video-not-the-buttons",
+    report: "Nov 28 correctness pass: Player overlay opacity is the dark scrim (CustomPlayerOverlayOpacityPatch), Control buttons background opacity the round backgrounds behind the buttons (HidePlayerOverlayButtonsPatch)",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        setPicker(false); goToSetting("morphe_player_overlay_opacity"); await new Promise(r => setTimeout(r, 600));
+        const alpha = c => { const m = /rgba?\(([^)]+)\)/.exec(c || ""); if (!m) return 0; const a = m[1].split(",").map(Number); return a.length > 3 ? a[3] : 1; };
+        const at = v => { setPrefs(v); renderStage(); const st = document.getElementById("stage"), ctrls = st.querySelector(".ctrls"), btn = st.querySelector('.ctrls [data-k="morphe_hide_cast_button"] .pbtn'), scrim = st.querySelector(".pscrim");
+          return { ctrls: ctrls ? Number(getComputedStyle(ctrls).opacity) : null, btn: btn ? alpha(getComputedStyle(btn).backgroundColor) : null, scrim: scrim ? alpha(getComputedStyle(scrim).backgroundColor) : null }; };
+        return { clear: at({ morphe_player_overlay_opacity: 0, morphe_player_control_buttons_background_opacity: 90, morphe_hide_player_control_buttons_background: false }),
+          full: at({ morphe_player_overlay_opacity: 100, morphe_player_control_buttons_background_opacity: 90 }),
+          hidden: at({ morphe_hide_player_control_buttons_background: true }) };
+      });
+      ok(r.clear.ctrls === 1, `the buttons fade to ${r.clear.ctrls} at overlay opacity 0 (Morphe keeps them, only the scrim goes)`);
+      ok(r.clear.scrim != null && r.clear.scrim < .01 && r.full.scrim > .3, `the scrim is ${r.clear.scrim} at 0% and ${r.full.scrim} at 100%`);
+      ok(r.clear.btn != null && Math.abs(r.clear.btn - .9) < .02, `a control button's round background is ${r.clear.btn} at 90% (Morphe: 0.9)`);
+      ok(r.hidden.btn != null && r.hidden.btn < .01, `with the backgrounds hidden a button still has ${r.hidden.btn}`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "sliders-move-over-morphes-range",
+    report: "Nov 28 correctness pass: the wheels and previews used guessed ranges (caption size up to 300%, Morphe stops at 150%); SeekBarConfig ranges and clampToRange are the truth",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        const wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
+        for (const k of ["morphe_caption_scale", "morphe_enhanced_ambient_mode_strength", "morphe_niconico_comments_font_size", "morphe_swipe_speed_zone_height"]) {
+          setPicker(false); goToSetting(k); await wait(500);
+          const w = document.querySelector(`#list .wheel[data-wheel="${k}"]`); out[k] = w ? [+w.dataset.min, +w.dataset.max, +w.dataset.step] : null;
+        }
+        setPrefs({ morphe_caption_scale: 300 }); const d = document.createElement("div"); d.innerHTML = SCENES.captions();
+        out.capPx = parseFloat(d.querySelector("#capLine").style.fontSize);
+        return out;
+      });
+      const want = { morphe_caption_scale: [30, 150, 5], morphe_enhanced_ambient_mode_strength: [10, 100, 5], morphe_niconico_comments_font_size: [12, 40, 1], morphe_swipe_speed_zone_height: [5, 75, 1] };
+      for (const k in want) ok(r[k] && r[k].join() === want[k].join(), `${k} wheel runs ${r[k]} (Morphe: ${want[k]})`);
+      ok(Math.abs(r.capPx - 21) < .2, `a caption size of 300% draws ${r.capPx}px captions (Morphe clamps to 150%: 21px)`);
+      await ctx.close();
+    },
+  },
+  {
+    name: "material-you-themes-colour-new-content-indicators",
+    report: "Nov 28 correctness pass: Material You (Pure black) looked the same as Pure black; Morphe colours the new content dot and the notification count from the Material You palette (ThemeColorPatch.getIndicatorColor)",
+    async run() {
+      const { p, ctx } = await open();
+      const r = await p.evaluate(async () => {
+        setPicker(false); goToSetting("morphe_theme_color_dark"); await new Promise(r => setTimeout(r, 600));
+        const at = v => { setPrefs({ morphe_theme_color_dark: v }); const d = document.createElement("div"); d.innerHTML = SCENES.look(); const n = d.querySelector(".ncount7"); const d2 = document.createElement("div"); d2.innerHTML = SCENES.nav(); const dot = d2.querySelector('[data-k="morphe_hide_navigation_new_content_dot"] > span');
+          return [n ? n.style.background : null, dot ? dot.style.background : null]; };
+        return { black: at("PURE_BLACK"), you: at("MATERIAL_YOU_PURE_BLACK") };
+      });
+      ok(r.black[0] && r.you[0], "setup: no notification count on the bell");
+      ok(r.black[0] !== r.you[0], `the count is ${r.you[0]} with Material You (Pure black), the same as Pure black`);
+      ok(r.black[1] && r.black[1] !== r.you[1], `the Subscriptions dot is ${r.you[1]} with Material You (Pure black) and ${r.black[1]} with Pure black`);
+      await ctx.close();
+    },
+  },
+  {
     name: "gesture-hint-not-stuck",
     report: "Nov 25 (12:49): the 'Pull up for precise seeking' pill stayed on screen in Slide to seek, Precise seeking gesture and others",
     async run() {
