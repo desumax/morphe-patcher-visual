@@ -21,6 +21,23 @@ The patcher engine's own changelog is in docs/PATCHER-CHANGELOG.md.
 * **YouTube - Visual settings editor:** Settings described as "Prevents ..." read "Allows ..." instead of carrying an Off tag
 
 
+# [0.1.18](https://github.com/desumax/morphe-patcher-visual/compare/v0.1.17...v0.1.18) (2026-11-28)
+
+
+### Bug Fixes
+
+* **YouTube - Visual settings editor:** A main menu card's screen grows from the card's own edges
+* **YouTube - Visual settings editor:** Drag and drop settles in a corner, as in Morphe; no Off tag on settings that only prevent something
+* **YouTube - Visual settings editor:** Morphe design uses Morphe Manager's colours
+* **YouTube - Visual settings editor:** Outlines follow each part's own shape
+* **YouTube - Visual settings editor:** Hiding a channel part locks the settings it contains
+* **YouTube - Visual settings editor:** Comparisons keep the same position on every loop
+* **YouTube - Visual settings editor:** Previews follow Morphe's code for Light strength, player overlay, slider ranges and Material You indicators
+* **YouTube - Visual settings editor:** Wheels overshoot a little on flings and no longer flash after each change; they keep the full card height
+* **YouTube - Visual settings editor:** Story messages step off dialogs and sheets instead of sitting on their edge
+* **YouTube - Visual settings editor:** Remove viewer discretion dialog shows more of its phones, with its messages lower, under the dialog
+
+
 # [0.1.17](https://github.com/desumax/morphe-patcher-visual/compare/v0.1.16...v0.1.17) (2026-11-26)
 
 

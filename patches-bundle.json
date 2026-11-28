@@ -1,6 +1,6 @@
 {
-  "created_at": "2026-11-28T10:50:04",
-  "description": "### Test 18 (2026-11-28)\n\n**Features**\n- Drag and drop: the miniplayer settles into the nearest corner\n- The Morphe design keeps Morphe Manager's dark colours and card edge\n\n**Bug Fixes**\n- Every main menu card's screen grows from the card's own edges (the top cards started at the top of the menu)\n- Settings described as \"Prevents ...\" read \"Allows ...\" instead of carrying an Off tag",
+  "created_at": "2026-11-28T14:10:18",
+  "description": "### Test 18 (2026-11-28)\n\n**Bug Fixes**\n- A main menu card's screen grows from the card's own edges\n- Drag and drop settles in a corner, as in Morphe; no Off tag on settings that only prevent something\n- Morphe design uses Morphe Manager's colours\n- Outlines follow each part's own shape\n- Hiding a channel part locks the settings it contains\n- Comparisons keep the same position on every loop\n- Previews follow Morphe's code for Light strength, player overlay, slider ranges and Material You indicators\n- Wheels overshoot a little on flings and no longer flash after each change; they keep the full card height\n- Story messages step off dialogs and sheets instead of sitting on their edge\n- Remove viewer discretion dialog shows more of its phones, with its messages lower, under the dialog",
   "download_url": "https://github.com/desumax/morphe-patcher-visual/releases/download/v0.1.18/morphe-visual-editor-0.1.18.mpp",
   "version": "0.1.18"
 }
