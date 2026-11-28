@@ -284,6 +284,14 @@ const state = new Proxy(prefValues, {
   set(t, k) { throw new TypeError(`Change settings with setPref(${JSON.stringify(String(k))}, value), not state[k] = value`); },
   deleteProperty(t, k) { throw new TypeError(`Settings can't be deleted (${String(k)})`); },
 });
+// A slider's value as Morphe reads it: SeekBarPreference.clampToRange keeps every read inside the range the
+// slider registers (catalogue "range", from its SeekBarConfig); an empty or broken value reads as the default.
+// Every preview that draws a slider's value reads it through here, so it moves over Morphe's range only.
+function slid(k, raw = V(k)) {
+  const n = Number(raw), d = Number(defaults[k]), r = PREF[k] && PREF[k].range;
+  const v = raw === "" || raw == null || !Number.isFinite(n) ? (Number.isFinite(d) ? d : 0) : n;
+  return r ? Math.max(r.min, Math.min(r.max, v)) : v;
+}
 function setPref(k, v) { if (prefValues[k] === v && k in prefValues) return; prefValues[k] = v; changedPrefs.add(k); }
 function setPrefs(values) { for (const k in values) setPref(k, values[k]); }
 function loadPrefs(values) { for (const k in values) prefValues[k] = values[k]; }
@@ -339,6 +347,25 @@ function stockOf(k) {
 }
 const V = k => (mode === "orig" ? stockOf(k) : prefValues[k]); // the hot read: straight from the values, not through the guard
 function shown(k) { const v = V(k); return isHideKey(k) ? !v : !!v; }
+// Settings Morphe gives no parent although the part one hides sits inside the part another hides, so
+// with that one hidden the other can never show (read from Morphe's filters). The editor locks them under
+// it like a sub-setting (Max, Nov 28: Subscribe button did nothing while Channel and Subscribe button was
+// hidden). Only pairs where the outer setting removes every place the inner part can appear:
+//   Subscribe button (|compact_channel_bar_animated_buttons.e) sits in the channel element that Channel
+//   and Subscribe button removes (|compact_channel_bar.e), and that element is a compact_channel_bar,
+//   which Hide channel bar removes everywhere (LayoutComponentsFilter matches the path).
+const COVERED_BY = {
+  morphe_hide_channel_profile_subscribe_button: "morphe_hide_channel_profile_button",
+  morphe_hide_channel_profile_button: "morphe_hide_channel_bar",
+};
+function addCoveredParents(prefs) {
+  const by = Object.fromEntries(prefs.map(p => [p.key, p]));
+  for (const [k, outer] of Object.entries(COVERED_BY)) {
+    const p = by[k]; if (!p || !by[outer]) continue;
+    p.parents = p.parents || [];
+    if (!p.parents.some(x => x.key === outer)) p.parents.push({ key: outer, mode: "not", covered: true });
+  }
+}
 function parentsOk(k) { return classicParentsOk(k) && availOk(k); }
 function classicParentsOk(k) {
   const p = PREF[k]; if (!p || !p.parents || !p.parents.length) return true;
